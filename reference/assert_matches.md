@@ -1,7 +1,7 @@
-# Assert Output Matches Pattern
+# Assert that an output matches a regular expression
 
-Create an assertion that validates the output matches a regular
-expression.
+`assert_matches()` checks that an output field matches a Perl-compatible
+regular expression.
 
 ## Usage
 
@@ -19,39 +19,64 @@ assert_matches(
 
 - field:
 
-  The output field to check. If NULL, checks the entire output.
+  The output field to check. With `NULL`, the whole output is checked,
+  which suits outputs with a single field. A missing field fails the
+  check.
 
 - pattern:
 
-  The regular expression pattern to match.
+  A regular expression (Perl syntax).
 
 - message:
 
-  Optional custom error message. If NULL, generates a default.
+  The message shown when the check fails, which
+  [`with_assertions()`](https://jameshwade.github.io/dsprrr/reference/with_assertions.md)
+  also sends back to the model on a retry. With `NULL`, a message naming
+  the field and pattern.
 
 - ignore_case:
 
-  Logical. If TRUE, matching is case-insensitive. Default FALSE.
+  If `TRUE`, ignore case when matching.
 
 - type:
 
-  "assert" for hard assertion (default), "suggest" for soft suggestion.
+  `"assert"` (the default) for a hard assertion, which makes
+  [`with_assertions()`](https://jameshwade.github.io/dsprrr/reference/with_assertions.md)
+  retry when it fails, or `"suggest"` for a soft one, which only gives a
+  warning.
 
 ## Value
 
-An Assertion object
+An assertion for
+[`assertion_set()`](https://jameshwade.github.io/dsprrr/reference/assertions.md)
+or
+[`with_assertions()`](https://jameshwade.github.io/dsprrr/reference/with_assertions.md).
+
+## See also
+
+Other assertions:
+[`assert_contains()`](https://jameshwade.github.io/dsprrr/reference/assert_contains.md),
+[`assert_custom()`](https://jameshwade.github.io/dsprrr/reference/assert_custom.md),
+[`assert_length()`](https://jameshwade.github.io/dsprrr/reference/assert_length.md),
+[`assert_not_contains()`](https://jameshwade.github.io/dsprrr/reference/assert_not_contains.md),
+[`assert_not_empty()`](https://jameshwade.github.io/dsprrr/reference/assert_not_empty.md),
+[`assert_not_matches()`](https://jameshwade.github.io/dsprrr/reference/assert_not_matches.md),
+[`assert_one_of()`](https://jameshwade.github.io/dsprrr/reference/assert_one_of.md),
+[`assert_range()`](https://jameshwade.github.io/dsprrr/reference/assert_range.md),
+[`assertions`](https://jameshwade.github.io/dsprrr/reference/assertions.md),
+[`with_assertions()`](https://jameshwade.github.io/dsprrr/reference/with_assertions.md)
 
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-# Must start with capital letter
-assert_matches("answer", "^[A-Z]", "Must start with capital letter")
-
-# Must be a valid email format (simple check)
-assert_matches("email", "^[^@]+@[^@]+\\.[^@]+$", "Must be valid email")
-
-# Must end with period
-assert_matches("summary", "\\.$", "Must end with period")
-} # }
+assert_matches("answer", "^[A-Z]", "Start with a capital letter")
+#> 
+#> ── Hard Assertion 
+#> • Field: any field
+#> • Message: "Start with a capital letter"
+assert_matches("email", "^[^@]+@[^@]+\\.[^@]+$", "Return a valid email address")
+#> 
+#> ── Hard Assertion 
+#> • Field: any field
+#> • Message: "Return a valid email address"
 ```

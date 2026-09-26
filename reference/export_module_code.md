@@ -1,8 +1,11 @@
-# Export Module Configuration as R Code
+# Export a program as standalone R code
 
-Generate R code containing the complete program artifact and its
-restoration call. This preserves nested graphs and exact schemas without
-hand-rendering module fields.
+`export_module_code()` writes R code that rebuilds a program: the
+complete program artifact (see
+[`program_artifact()`](https://jameshwade.github.io/dsprrr/reference/program-artifact.md))
+followed by a call to
+[`restore_module_config()`](https://jameshwade.github.io/dsprrr/reference/restore_module_config.md).
+Nested programs and exact output schemas are preserved.
 
 ## Usage
 
@@ -21,42 +24,37 @@ export_module_code(
 
 - module:
 
-  A DSPrrr module to export.
+  A module or composed program.
 
 - name:
 
-  Character; variable name for the module in generated code. Default is
-  "mod".
+  Variable name for the program in the generated code (default `"mod"`).
 
 - include_demos:
 
-  Logical; whether to include demonstration examples in the generated
-  code. Default is TRUE.
+  Whether to include the demonstrations (default `TRUE`).
 
 - file:
 
-  Optional file path to write the code to. If NULL (default), returns
-  the code as a character string. Existing files are atomically replaced
-  only after the staged output parses successfully.
+  Optional path. When given, the code is written there; an existing file
+  is replaced only after the new code parses.
 
-- registry:
+- registry, trusted:
 
-  Named runtime registry; see
-  [program-artifact](https://jameshwade.github.io/dsprrr/reference/program-artifact.md).
-
-- trusted:
-
-  Whether trusted runtime values may be embedded. Standalone code export
-  rejects registry and embedded runtime references.
+  As in
+  [`program_artifact()`](https://jameshwade.github.io/dsprrr/reference/program-artifact.md).
+  Standalone code cannot embed registry or trusted runtime references,
+  so programs that need them are rejected; use
+  [`save_program()`](https://jameshwade.github.io/dsprrr/reference/program-artifact.md)
+  for those.
 
 ## Value
 
-If `file` is NULL, returns the R code as a character string. If `file`
-is specified, writes it atomically and returns the code invisibly.
+The code as a single string, invisibly when `file` is given.
 
 ## See also
 
-Other optimizer accessors:
+Other optimization results:
 [`apply_best_config()`](https://jameshwade.github.io/dsprrr/reference/apply_best_config.md),
 [`best_demos()`](https://jameshwade.github.io/dsprrr/reference/best_demos.md),
 [`best_params()`](https://jameshwade.github.io/dsprrr/reference/best_params.md),
@@ -65,18 +63,40 @@ Other optimizer accessors:
 [`optimization_summary()`](https://jameshwade.github.io/dsprrr/reference/optimization_summary.md),
 [`top_trials()`](https://jameshwade.github.io/dsprrr/reference/top_trials.md)
 
+Other persistence:
+[`pin_module_config()`](https://jameshwade.github.io/dsprrr/reference/pin_module_config.md),
+[`pin_trace()`](https://jameshwade.github.io/dsprrr/reference/pin_trace.md),
+[`pin_vitals_log()`](https://jameshwade.github.io/dsprrr/reference/pin_vitals_log.md),
+[`program-artifact`](https://jameshwade.github.io/dsprrr/reference/program-artifact.md),
+[`restore_module_config()`](https://jameshwade.github.io/dsprrr/reference/restore_module_config.md)
+
 ## Examples
 
 ``` r
-if (FALSE) {
 mod <- module(signature("text -> sentiment"))
-optimize_grid(mod, data, metric, parameters = list(temperature = c(0.3, 1.0)))
+path <- tempfile(fileext = ".R")
+export_module_code(mod, name = "sentiment_mod", file = path)
+#> Module code written to /tmp/Rtmp9ba7jM/file1ac26c1d19d2.R
 
-# Get code as string
-code <- export_module_code(mod)
-cat(code)
-
-# Write to file
-export_module_code(mod, file = "optimized_module.R")
-}
+# Running the file rebuilds the program
+source(path)
+#> ✔ Restored program artifact
+#> ℹ Root module: <PredictModule>
+#> ℹ Artifact version: 6
+sentiment_mod
+#> 
+#> ── PredictModule ──
+#> 
+#> ── Signature 
+#> 
+#> ── Signature ──
+#> 
+#> ── Inputs 
+#> • text: "string" - Input: text
+#> 
+#> ── Output 
+#> Type: "object(sentiment: string)"
+#> 
+#> ── Instructions 
+#> Given the fields `text`, produce the fields `sentiment`.
 ```

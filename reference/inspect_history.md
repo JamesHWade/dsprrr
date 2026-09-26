@@ -1,7 +1,8 @@
-# Inspect LLM Call History
+# List recent model calls
 
-Returns a tibble of recent LLM calls across all modules. Similar to
-DSPy's `dspy.inspect_history(n)`.
+`inspect_history()` returns the most recent model calls of the session
+as a tibble, across all modules, like DSPy's `dspy.inspect_history()`.
+It can also write them to a plain-text transcript.
 
 ## Usage
 
@@ -18,58 +19,77 @@ inspect_history(
 
 - n:
 
-  Number of recent calls to return. Default is 10.
+  Number of recent calls to return.
 
 - include_prompts:
 
-  Logical; whether to include full prompt text. Default is TRUE.
+  If `TRUE` (the default), include the full prompt text.
 
 - include_responses:
 
-  Logical; whether to include full response text. Default is TRUE.
+  If `TRUE` (the default), include the full response text.
 
 - file:
 
-  Optional file path or writable connection. When supplied, a
-  human-readable transcript of the selected history is written without
-  ANSI styling.
+  A file path or writable connection. If given, the selected calls are
+  also written there as a plain-text transcript.
 
 ## Value
 
-A tibble with one row per LLM call containing:
+A tibble with one row per call and columns `timestamp`, `source` (the
+module class that made the call), `model`, `tokens_in`, `tokens_out`,
+`cost` (in US dollars, when known), `duration_s`, `program_artifact_id`,
+`trace_context`, and `prompt` and `response` when requested. With no
+recorded calls, an empty tibble and a message.
 
-- `timestamp`: When the call was made
+## Details
 
-- `source`: The module class that originated the call
+The history is kept in memory for the session and holds the most recent
+100 calls by default (`options(dsprrr.prompt_history_max = )`).
+Prediction modules
+([`module()`](https://jameshwade.github.io/dsprrr/reference/module.md),
+[`chain_of_thought()`](https://jameshwade.github.io/dsprrr/reference/chain_of_thought.md))
+and
+[`rag_module()`](https://jameshwade.github.io/dsprrr/reference/rag_module.md),
+[`react()`](https://jameshwade.github.io/dsprrr/reference/react.md),
+[`rlm_module()`](https://jameshwade.github.io/dsprrr/reference/rlm_module.md)
+and [`flex()`](https://jameshwade.github.io/dsprrr/reference/flex.md)
+modules add their calls to it; calls made inside wrappers and pipelines,
+and by
+[`run_async()`](https://jameshwade.github.io/dsprrr/reference/run_async.md)
+or
+[`run_stream()`](https://jameshwade.github.io/dsprrr/reference/run_stream.md),
+are not recorded.
+[`clear_prompt_history()`](https://jameshwade.github.io/dsprrr/reference/clear_prompt_history.md)
+empties it.
 
-- `model`: The model used
+## See also
 
-- `tokens_in`: Input tokens
-
-- `tokens_out`: Output tokens
-
-- `cost`: Cost in USD (if available)
-
-- `duration_s`: Duration in seconds (if available)
-
-- `program_artifact_id`: Exact executable program identity, when
-  available
-
-- `trace_context`: Caller-supplied correlation context
-
-- `prompt`: Full prompt text (if `include_prompts = TRUE`)
-
-- `response`: Full response text (if `include_responses = TRUE`)
+Other inspection:
+[`accessors`](https://jameshwade.github.io/dsprrr/reference/accessors.md),
+[`clear_prompt_history()`](https://jameshwade.github.io/dsprrr/reference/clear_prompt_history.md),
+[`clear_traces()`](https://jameshwade.github.io/dsprrr/reference/clear_traces.md),
+[`export_traces()`](https://jameshwade.github.io/dsprrr/reference/export_traces.md),
+[`get_last_prompt()`](https://jameshwade.github.io/dsprrr/reference/get_last_prompt.md),
+[`session_cost()`](https://jameshwade.github.io/dsprrr/reference/session_cost.md),
+[`summarize_traces()`](https://jameshwade.github.io/dsprrr/reference/summarize_traces.md)
 
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-# View last 5 LLM calls
+# Empty until a module has called a model
 inspect_history(n = 5)
+#> No LLM calls recorded yet
+#> # A tibble: 0 × 0
 
-# Get history as tibble for analysis
+if (FALSE) { # \dontrun{
+qa <- module(signature("question -> answer"))
+run(qa, question = "What is 2 + 2?", .llm = ellmer::chat_openai(model = "gpt-6-luna"))
+
 history <- inspect_history(n = 20)
-sum(history$cost)  # Total cost
+sum(history$cost, na.rm = TRUE)
+
+# A plain-text transcript for sharing
+inspect_history(n = 20, file = tempfile(fileext = ".txt"))
 } # }
 ```

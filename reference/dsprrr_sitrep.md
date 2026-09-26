@@ -1,8 +1,10 @@
-# dsprrr Situation Report
+# Report dsprrr's configuration
 
-Displays a comprehensive overview of your dsprrr configuration,
-including API keys, default chat settings, prompt history, and package
-versions. Inspired by `usethis::git_sitrep()`.
+`dsprrr_sitrep()` prints what dsprrr will use and what it has done this
+session: package versions, the default chat, which API keys are set, the
+prompt history, dsprrr options and the response cache. It is modelled on
+`usethis::git_sitrep()` and is a good first step when calls do not
+behave as expected.
 
 ## Usage
 
@@ -12,54 +14,78 @@ dsprrr_sitrep()
 
 ## Value
 
-Invisibly returns a list with configuration details:
+A list, invisibly, with `dsprrr_version`, `ellmer_version`,
+`has_default_chat`, `provider` and `model` of the default chat,
+`api_keys` (whether `OPENAI_API_KEY`, `ANTHROPIC_API_KEY` and
+`GOOGLE_API_KEY` are set), `n_calls` and `prompt_history_count` (entries
+in the prompt history), `prompt_history_max`, and the cache settings and
+state (`cache_enabled`, `cache_disk_path`, `cache_disk_private`,
+`cache_degraded`, `cache_privacy_status` and, when caching is on,
+`cache_stats`). Once calls have been recorded, it also has
+`total_tokens_in`, `total_tokens_out` and `total_cost`.
 
-- `has_default_chat`: Logical, whether a default chat is configured
+## Details
 
-- `provider`: Character, name of the default provider
+The default chat shown is the one
+[`get_default_chat()`](https://jameshwade.github.io/dsprrr/reference/get_default_chat.md)
+returns with `create = FALSE`, so a chat that would be created from an
+API key on first use is reported as not configured. The report makes no
+model calls.
 
-- `model`: Character, name of the default model
+## See also
 
-- `api_keys`: Named list of API key availability (logical)
-
-- `n_calls`: Integer, number of LLM calls this session
-
-- `prompt_history_count`: Integer, entries in prompt history
-
-- `prompt_history_max`: Integer, maximum history size
-
-- `ellmer_version`: Character, installed ellmer version
-
-- `dsprrr_version`: Character, installed dsprrr version
+Other configuration:
+[`cache_stats()`](https://jameshwade.github.io/dsprrr/reference/cache_stats.md),
+[`clear_cache()`](https://jameshwade.github.io/dsprrr/reference/clear_cache.md),
+[`configure_cache()`](https://jameshwade.github.io/dsprrr/reference/configure_cache.md),
+[`dsp_configure()`](https://jameshwade.github.io/dsprrr/reference/dsp_configure.md),
+[`get_default_chat()`](https://jameshwade.github.io/dsprrr/reference/get_default_chat.md),
+[`is_reasoning_model()`](https://jameshwade.github.io/dsprrr/reference/is_reasoning_model.md),
+[`with_lm()`](https://jameshwade.github.io/dsprrr/reference/with_lm.md)
 
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-dsprrr_sitrep()
-#> dsprrr configuration
-#> --------------------------------------------------------
-#>
-#> -- Packages --
-#> [OK] ellmer 0.2.0
-#> [OK] dsprrr 0.1.0
-#>
-#> -- Default Chat --
-#> [OK] OpenAI (gpt-4o-mini)
-#>   Source: Auto-detected from OPENAI_API_KEY
-#>
-#> -- API Keys --
-#> [OK] OPENAI_API_KEY
-#> [OK] ANTHROPIC_API_KEY
-#> [missing] GOOGLE_API_KEY
-#>
-#> -- Session State --
-#> • Prompt history: 12 / 100 entries
-#> • LLM calls: 15
-#> • Tokens: 2,450 in / 890 out
-#>
-#> -- Options --
-#> • dsprrr.verbose: TRUE
-#> • dsprrr.quiet: FALSE
-} # }
+status <- dsprrr_sitrep()
+#> 
+#> ── dsprrr configuration ────────────────────────────────────────────────────────
+#> 
+#> ── Packages ──
+#> 
+#> ✔ ellmer 0.5.0 (OK)
+#> ✔ dsprrr 0.0.0.9000
+#> 
+#> 
+#> ── Default Chat ──
+#> 
+#> ✖ Not configured
+#> Run `dsp_configure()` or set an API key
+#> 
+#> 
+#> ── API Keys ──
+#> 
+#> ✖ OPENAI_API_KEY
+#> ✖ ANTHROPIC_API_KEY
+#> ✖ GOOGLE_API_KEY
+#> 
+#> 
+#> ── Session State ──
+#> 
+#> • Prompt history: 0 / 100 entries
+#> 
+#> 
+#> ── Options ──
+#> 
+#> Using defaults (no options set)
+#> 
+#> 
+#> ── Cache ──
+#> 
+#> ✔ Cache tiers: memory, disk
+#> • Disk path: /home/runner/.cache/R/dsprrr
+#> ℹ Private disk permissions will be checked on first use
+#> ℹ No cache activity yet
+#> 
+status$has_default_chat
+#> [1] FALSE
 ```

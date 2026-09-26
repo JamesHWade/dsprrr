@@ -1,12 +1,9 @@
-# Execute an LLM Module
+# Run a module on named inputs
 
-Execute a module with the provided inputs to generate LLM output. This
-is the primary function for running modules created with
-[`module()`](https://jameshwade.github.io/dsprrr/reference/module.md).
-
-Supports both single inputs and batch processing. Batch execution can be
-parallelised, but is conservative by default to avoid reusing LLM
-clients across workers.
+`run()` calls a module with inputs named after its signature's input
+fields and returns the outputs. Give a vector instead of a single value
+to run a batch: each element is one call, and length-1 inputs are
+recycled.
 
 ## Usage
 
@@ -18,141 +15,166 @@ run(module, ...)
 
 - module:
 
-  A DSPrrr module (e.g., created with
-  [`module()`](https://jameshwade.github.io/dsprrr/reference/module.md))
+  A module, such as one created with
+  [`module()`](https://jameshwade.github.io/dsprrr/reference/module.md),
+  [`chain_of_thought()`](https://jameshwade.github.io/dsprrr/reference/chain_of_thought.md),
+  [`react()`](https://jameshwade.github.io/dsprrr/reference/react.md),
+  [`module_fn()`](https://jameshwade.github.io/dsprrr/reference/module_fn.md)
+  or
+  [`pipeline()`](https://jameshwade.github.io/dsprrr/reference/pipeline.md).
 
 - ...:
 
-  Named arguments corresponding to the module's signature inputs. Can be
-  single values or vectors for batch processing. RLM is the exception:
-  every supplied value is one context variable regardless of its R
-  length; use
+  Inputs named after the signature's input fields, followed by any of
+  the runtime arguments described below. RLM modules
+  ([`rlm_module()`](https://jameshwade.github.io/dsprrr/reference/rlm_module.md))
+  treat every value as one context object whatever its length; use
   [`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md)
-  for multiple RLM invocations. Additional parameters:
-
-  .llm
-
-  :   An ellmer chat object for LLM interaction (optional)
-
-  .verbose
-
-  :   Logical indicating whether to print debug information
-
-  .concurrency
-
-  :   A validated policy created by
-      [`concurrency_control()`](https://jameshwade.github.io/dsprrr/reference/concurrency_control.md).
-      Omission uses sequential execution.
-
-  .progress
-
-  :   Logical indicating whether to show progress bar for batch
-      processing (default TRUE)
-
-  .return_format
-
-  :   Character, either "simple" (default) or "structured". "simple"
-      returns just the output, "structured" returns list with output,
-      chat, and metadata.
-
-  .trace_context
-
-  :   A named, JSON-compatible list copied into run metadata and traces.
-      Credential-like fields and runtime objects are rejected before
-      execution.
-
-  .cache
-
-  :   Logical or NULL. Per-call cache control. If NULL (default), uses
-      global config. If TRUE, attempts to use cache (no effect if
-      caching globally disabled). If FALSE, bypasses cache for this call
-      only.
+  to run them several times.
 
 ## Value
 
-For single inputs with `.return_format = "simple"`, the parsed output
-according to the module's signature. Object-shaped outputs remain named
-records for both scalar and batch calls. For single inputs with
-.return_format="structured": A list with components:
+With `.return_format = "simple"`, the outputs as a named list with one
+element per output field, for example `list(answer = "4")`. A signature
+whose output type is a bare ellmer type (such as
+[`ellmer::type_enum()`](https://ellmer.tidyverse.org/reference/type_boolean.html))
+returns the bare value instead. A batch returns a list with one such
+result per input element.
 
-- output: The parsed output
-
-- chat: The ellmer chat object used
-
-- metadata: Additional metadata (tokens used, latency, etc.)
-
-For batch inputs: A list of results matching the input length. Empty
-batches return a zero-length list (with class `dsprrr_batch_result` for
-structured output).
+With `.return_format = "structured"`, a list of class `dsprrr_result`
+with elements `output` (as above), `chat` (the ellmer Chat used) and
+`metadata` (model, prompt, token counts, cost, latency, cache status and
+error). A batch returns a list of these with class
+`dsprrr_batch_result`. Use
+[`get_output()`](https://jameshwade.github.io/dsprrr/reference/accessors.md),
+[`get_metadata()`](https://jameshwade.github.io/dsprrr/reference/accessors.md)
+or
+[`get_cost()`](https://jameshwade.github.io/dsprrr/reference/accessors.md)
+to read them.
 
 ## Details
 
-**Retry Behavior:** ellmer automatically retries failed requests up to 3
-times (configurable via `options(ellmer_max_tries = n)`). This handles
-transient errors like rate limits and connection failures. See ellmer
-documentation for more details.
+ellmer retries failed requests (see `options(ellmer_max_tries = )`). A
+failure that remains raises an error for a single input. In a batch, a
+failed row becomes `NA` with a warning, and with
+`.return_format = "structured"` its message is in `metadata$error`.
 
-Zero-length inputs form an empty batch only when every input is zero
-length. Empty batches return immediately without resolving a Chat or
-touching cache, trace, or prompt-history state. Mixing zero-length and
-non-empty inputs is an error.
-
-RLM inputs use scalar object semantics: vectors, lists, matrices, data
-frames, and fitted models each remain one `.context` variable for one
-investigation. Use
+Batches must have inputs of one common length, or length 1. If every
+input has length zero, `run()` returns an empty list without calling the
+model. Modules with their own execution loop, such as
+[`react()`](https://jameshwade.github.io/dsprrr/reference/react.md),
+accept single inputs only; use
 [`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md)
-for multiple RLM invocations and list-columns for rich per-row objects.
+for them.
 
-Scalar and batch Predict calls record one trace per attempted row.
-Structured metadata reports usage, error, cache, backend, and
-batch-index fields. Native ellmer and mirai workers return row records
-that are committed to module and global trace state by the parent in
-input order. Specialized Predict subclasses, such as ReAct, preserve
-their scalar `forward()` method and currently reject vectorized inputs
-rather than bypassing specialized logic.
+An input can also be an ellmer content object, such as
+`ellmer::content_image_file("receipt.png")`; prediction modules send it
+to the model along with the text of the prompt.
 
-Trace context is correlation-only: it is not included in prompts,
-provider requests, cache keys, or program artifact identity. Each
-attempted execution also records `program_artifact_id`, derived from the
-program's existing artifact integrity digest. `program_artifact_id` is a
-reserved field: for a registry-backed program, call
-[`program_artifact_id()`](https://jameshwade.github.io/dsprrr/reference/program-artifact.md)
-once with its registry to bind the verified runtime references before
-execution.
+Each call records a trace on the module (see
+[`export_traces()`](https://jameshwade.github.io/dsprrr/reference/export_traces.md)).
+Prediction modules also add every model call to the session's prompt
+history (see
+[`inspect_history()`](https://jameshwade.github.io/dsprrr/reference/inspect_history.md)).
+
+## Runtime arguments
+
+These arguments start with a dot so they cannot clash with input names.
+Any other dot-prefixed name is an error.
+
+- `.llm`:
+
+  An ellmer Chat to use for this call. It takes precedence over the chat
+  stored on the module, a chat set with
+  [`with_lm()`](https://jameshwade.github.io/dsprrr/reference/with_lm.md)
+  or
+  [`local_lm()`](https://jameshwade.github.io/dsprrr/reference/with_lm.md),
+  and the default chat; see
+  [`get_default_chat()`](https://jameshwade.github.io/dsprrr/reference/get_default_chat.md)
+  for the full order.
+
+- `.cache`:
+
+  `NULL` (the default) follows
+  [`configure_cache()`](https://jameshwade.github.io/dsprrr/reference/configure_cache.md).
+  `FALSE` skips the response cache for this call. `TRUE` uses it when
+  caching is enabled globally and has no effect otherwise.
+
+- `.concurrency`:
+
+  A policy from
+  [`concurrency_control()`](https://jameshwade.github.io/dsprrr/reference/concurrency_control.md)
+  for batch inputs. The default runs rows one after another.
+
+- `.return_format`:
+
+  `"simple"` (the default) returns the outputs; `"structured"` also
+  returns the Chat and call metadata (see Value).
+
+- `.show_prompt`:
+
+  If `TRUE`, print a preview before the call: the instructions (first
+  200 characters), the input field names, the output type and the number
+  of demos. It does not show the filled-in prompt; use
+  [`get_last_prompt()`](https://jameshwade.github.io/dsprrr/reference/get_last_prompt.md)
+  after the call for that.
+
+- `.trace_context`:
+
+  A named, JSON-compatible list copied into the call metadata and
+  traces, for example `list(request_id = "abc")`. It is never sent to
+  the model and is not part of cache keys. Credential-like field names
+  and runtime objects are rejected.
+
+- `.progress`:
+
+  Show a progress bar for batch inputs. Default `TRUE`.
+
+- `.verbose`:
+
+  If `TRUE`, print the rendered input section of each prompt. Default
+  `FALSE`.
 
 ## See also
 
-- [`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md)
-  for running a module on a data frame
-
-- [`evaluate()`](https://jameshwade.github.io/dsprrr/reference/evaluate.md)
-  for running with metric evaluation
-
-- [`module()`](https://jameshwade.github.io/dsprrr/reference/module.md)
-  for creating modules
+Other execution:
+[`concurrency_control()`](https://jameshwade.github.io/dsprrr/reference/concurrency_control.md),
+[`evaluate()`](https://jameshwade.github.io/dsprrr/reference/evaluate.md),
+[`predict.Module()`](https://jameshwade.github.io/dsprrr/reference/predict.Module.md),
+[`run_async()`](https://jameshwade.github.io/dsprrr/reference/run_async.md),
+[`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md),
+[`run_stream()`](https://jameshwade.github.io/dsprrr/reference/run_stream.md),
+[`stream_async()`](https://jameshwade.github.io/dsprrr/reference/stream_async.md),
+[`stream_listener()`](https://jameshwade.github.io/dsprrr/reference/stream_listener.md)
 
 ## Examples
 
 ``` r
+# A function-backed module runs without a model
+shout <- module_fn("text -> reply", function(text) toupper(text))
+run(shout, text = "hello")
+#> $reply
+#> [1] "HELLO"
+#> 
+
 if (FALSE) { # \dontrun{
-# Single input
-llm <- ellmer::chat_openai()
-result <- signature("text -> sentiment") |>
-  module() |>
-  run(text = "I love this!", .llm = llm)
+llm <- ellmer::chat_openai(model = "gpt-6-luna")
+classify <- module(
+  signature("text -> sentiment: enum('positive', 'negative', 'neutral')")
+)
 
-# Batch processing
-results <- signature("text -> sentiment") |>
-  module() |>
-  run(text = c("I love this!", "This is bad"), .llm = llm)
+# One input returns a named list
+result <- run(classify, text = "I love this!", .llm = llm)
+result$sentiment
 
-# Structured return
-result <- signature("text -> sentiment") |>
-  module() |>
-  run(text = "Great!", .llm = llm, .return_format = "structured")
-# Access: result$output, result$chat, result$metadata
+# A vector runs a batch: one result per element
+run(classify, text = c("I love this!", "This is bad"), .llm = llm)
 
-# Configure ellmer retry behavior (if needed)
-options(ellmer_max_tries = 5)
+# Structured results carry the Chat and call metadata
+res <- run(classify, text = "Great!", .llm = llm, .return_format = "structured")
+res$metadata$cost
+
+# Skip the response cache for one call
+run(classify, text = "Great!", .llm = llm, .cache = FALSE)
 } # }
 ```

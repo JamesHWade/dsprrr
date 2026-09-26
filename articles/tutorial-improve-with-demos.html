@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Tutorial 4: Improving with Examples • dsprrr</title>
+<title>Tutorial 4: Improve with examples • dsprrr</title>
 <!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="../favicon-96x96.png">
 <link rel="icon" type="”image/svg+xml”" href="../favicon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
@@ -17,7 +17,7 @@
 <link href="../deps/Fira_Code-0.4.10/font.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Tutorial 4: Improving with Examples">
+<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Tutorial 4: Improve with examples">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -36,67 +36,67 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
-<li class="nav-item"><a class="nav-link" href="../articles/getting-started.html">Get Started</a></li>
+<li class="nav-item"><a class="nav-link" href="../articles/tutorial-hello-world.html">Get started</a></li>
 <li class="active nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-tutorials" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Tutorials</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-tutorials">
-<li><h6 class="dropdown-header" data-toc-skip>Learning Path</h6></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-hello-world.html">1. Your First LLM Call</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-build-classifier.html">2. Building a Classifier</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-structured-outputs.html">3. Structured Outputs</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-improve-with-demos.html">4. Improving with Examples</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-optimize-your-module.html">5. Optimization</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-deploy-to-production.html">6. Production</a></li>
+<li><a class="dropdown-item" href="../articles/tutorial-hello-world.html">1. Your first LLM call</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-build-classifier.html">2. Build a classifier</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-structured-outputs.html">3. Extract structured data</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-improve-with-demos.html">4. Improve with examples</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-optimize-your-module.html">5. Optimize a module</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-deploy-to-production.html">6. Save and reuse a module</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Advanced Tutorials</h6></li>
-    <li><a class="dropdown-item" href="../articles/text-adventure.html">Build an AI Game Master</a></li>
-    <li><a class="dropdown-item" href="../articles/llms-txt.html">Generate Package Docs</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-rlm-dsprrr.html">Investigate a Regression with RLM</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Projects</h6></li>
+    <li><a class="dropdown-item" href="../articles/llms-txt.html">Generate an llms.txt file</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-rlm-dsprrr.html">Investigate a regression with RLM</a></li>
+    <li><a class="dropdown-item" href="../articles/text-adventure.html">Build a text adventure</a></li>
   </ul>
 </li>
 <li class="nav-item dropdown">
-  <button class="nav-link dropdown-toggle" type="button" id="dropdown-how-to-guides" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">How-to Guides</button>
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-how-to-guides" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">How-to guides</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-how-to-guides">
-<li><a class="dropdown-item" href="../articles/troubleshooting.html">Troubleshooting</a></li>
-    <li><a class="dropdown-item" href="../articles/compilation-optimization.html">Compile &amp; Optimize</a></li>
-    <li><a class="dropdown-item" href="../articles/vitals-recipes.html">Evaluate with Vitals</a></li>
-    <li><a class="dropdown-item" href="../articles/rag-workflows.html">Build RAG Pipelines</a></li>
-    <li><a class="dropdown-item" href="../articles/chaining-modules.html">Chaining Modules</a></li>
-    <li><a class="dropdown-item" href="../articles/calibrated-decisions.html">Calibrated Decisions</a></li>
-    <li><a class="dropdown-item" href="../articles/orchestration.html">Deploy to Production</a></li>
+<li><h6 class="dropdown-header" data-toc-skip>Build</h6></li>
+    <li><a class="dropdown-item" href="../articles/advanced-modules.html">Choose a module type</a></li>
+    <li><a class="dropdown-item" href="../articles/chaining-modules.html">Chain modules into pipelines</a></li>
+    <li><a class="dropdown-item" href="../articles/rag-workflows.html">Retrieval-augmented generation</a></li>
+    <li><a class="dropdown-item" href="../articles/calibrated-decisions.html">Calibrated decisions</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Integrations</h6></li>
-    <li><a class="dropdown-item" href="../articles/vitals-integration.html">Vitals Package</a></li>
-    <li><a class="dropdown-item" href="../articles/tidymodels-integration.html">tidymodels</a></li>
-    <li><a class="dropdown-item" href="../articles/advanced-ellmer.html">Advanced ellmer</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Measure and improve</h6></li>
+    <li><a class="dropdown-item" href="../articles/compilation-optimization.html">Compile and optimize</a></li>
+    <li><a class="dropdown-item" href="../articles/advanced-optimization.html">Choose an optimizer</a></li>
+    <li><a class="dropdown-item" href="../articles/vitals-recipes.html">Evaluate with vitals</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Run</h6></li>
+    <li><a class="dropdown-item" href="../articles/models-and-providers.html">Models, providers and streaming</a></li>
+    <li><a class="dropdown-item" href="../articles/orchestration.html">Run dsprrr in pipelines</a></li>
+    <li><a class="dropdown-item" href="../articles/tidymodels-integration.html">Use dsprrr with tidymodels</a></li>
+    <li><a class="dropdown-item" href="../articles/troubleshooting.html">Troubleshooting</a></li>
   </ul>
 </li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-concepts" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Concepts</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-concepts">
-<li><a class="dropdown-item" href="../articles/concepts-dspy-philosophy.html">The DSPy Philosophy</a></li>
-    <li><a class="dropdown-item" href="../articles/dspy-comparison.html">dsprrr vs. DSPy</a></li>
-    <li><a class="dropdown-item" href="../articles/concepts-signatures-modules.html">Signatures &amp; Modules</a></li>
-    <li><a class="dropdown-item" href="../articles/concepts-optimization-theory.html">How Optimization Works</a></li>
-    <li><a class="dropdown-item" href="../articles/concepts-why-metrics-matter.html">Why Metrics Matter</a></li>
-    <li><a class="dropdown-item" href="../articles/how-rlm-works.html">How RLMs Work</a></li>
+<li><a class="dropdown-item" href="../articles/concepts-signatures-modules.html">How dsprrr works</a></li>
+    <li><a class="dropdown-item" href="../articles/concepts-why-metrics-matter.html">Metrics and evaluation</a></li>
+    <li><a class="dropdown-item" href="../articles/concepts-optimization-theory.html">How optimization works</a></li>
+    <li><a class="dropdown-item" href="../articles/dspy-comparison.html">dsprrr for DSPy users</a></li>
+    <li><a class="dropdown-item" href="../articles/how-rlm-works.html">How RLM works</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Deep Dives</h6></li>
-    <li><a class="dropdown-item" href="../articles/flex-optimization.html">Flex: Optimize the Whole Program</a></li>
-    <li><a class="dropdown-item" href="../articles/advanced-modules.html">Advanced Reasoning</a></li>
-    <li><a class="dropdown-item" href="../articles/advanced-optimization.html">Advanced Optimization</a></li>
-    <li><a class="dropdown-item" href="../articles/omni-meta-optimization.html">Composing Optimizers with Omni</a></li>
-    <li><a class="dropdown-item" href="../articles/agentic-optimization-harnesses.html">Agentic Optimization Harnesses</a></li>
-    <li><a class="dropdown-item" href="../articles/reasoning-models.html">Reasoning Models</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Experimental</h6></li>
+    <li><a class="dropdown-item" href="../articles/flex-optimization.html">Flex: optimize a whole program</a></li>
+    <li><a class="dropdown-item" href="../articles/omni-meta-optimization.html">Compose optimizers with Omni</a></li>
+    <li><a class="dropdown-item" href="../articles/agentic-optimization-harnesses.html">Agentic optimization harnesses</a></li>
   </ul>
 </li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-reference" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Reference</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-reference">
-<li><a class="dropdown-item" href="../articles/cheatsheet.html">Quick Reference</a></li>
-    <li><a class="dropdown-item" href="../reference/index.html">API Documentation</a></li>
+<li><a class="dropdown-item" href="../reference/index.html">Function reference</a></li>
+    <li><a class="dropdown-item" href="../articles/cheatsheet.html">Quick reference</a></li>
   </ul>
 </li>
+<li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul>
 <ul class="navbar-nav">
 <li class="nav-item"><form class="form-inline" role="search">
@@ -123,7 +123,7 @@
 
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
-      <img src="../logo.svg" class="logo" alt=""><h1>Tutorial 4: Improving with Examples</h1>
+      <img src="../logo.svg" class="logo" alt=""><h1>Tutorial 4: Improve with examples</h1>
             
       
       <small class="dont-index">Source: <a href="https://github.com/JamesHWade/dsprrr/blob/main/vignettes/tutorial-improve-with-demos.Rmd" class="external-link"><code>vignettes/tutorial-improve-with-demos.Rmd</code></a></small>
@@ -132,119 +132,95 @@
 
     
     
-<p>In <a href="tutorial-structured-outputs.html">Tutorial 3</a>, you
-built extractors that return structured data. But how do you make them
-more accurate? The answer: <strong>show the LLM examples of correct
-behavior</strong>.</p>
-<p>This technique—called few-shot learning—is one of the most powerful
-ways to improve LLM performance. Our running example here is support
-ticket triage: a classification task ambiguous enough that a handful of
-labeled examples makes a measurable difference. The same
-recipe—baseline, examples, re-measure—works for the sentiment classifier
-from Tutorial 2 and the extractors from Tutorial 3.</p>
-<p><strong>Time</strong>: 25-30 minutes</p>
-<div class="section level2">
-<h2 id="what-youll-build">What You’ll Build<a class="anchor" aria-label="anchor" href="#what-youll-build"></a>
-</h2>
-<p>A classifier that learns from examples, with measurable accuracy
-improvement.</p>
-</div>
-<div class="section level2">
-<h2 id="prerequisites">Prerequisites<a class="anchor" aria-label="anchor" href="#prerequisites"></a>
-</h2>
-<ul>
-<li>Completed <a href="tutorial-structured-outputs.html">Tutorial
-3</a>
-</li>
-<li>
-<code>OPENAI_API_KEY</code> set in your environment</li>
-</ul>
+<p>A module can return the right shape and still pick the wrong answer.
+By the end of this tutorial you can measure how often a support-ticket
+classifier is right, add worked examples (demos) to its prompt by hand
+or with <code>LabeledFewShot</code>, and check with
+<code><a href="../reference/evaluate.html">evaluate()</a></code> whether they helped.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/dsprrr" class="external-link">dsprrr</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ellmer.tidyverse.org" class="external-link">ellmer</a></span><span class="op">)</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://tibble.tidyverse.org/" class="external-link">tibble</a></span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">chat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-5-mini"</span><span class="op">)</span></span></code></pre></div>
-</div>
+<span><span class="va">chat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-luna"</span><span class="op">)</span></span></code></pre></div>
+<p>The answers on this page were recorded with <code>gpt-5-mini</code>
+and are replayed when the site is built, so <code>gpt-6-luna</code> may
+word them differently.</p>
 <div class="section level2">
-<h2 id="step-1-the-problem">Step 1: The Problem<a class="anchor" aria-label="anchor" href="#step-1-the-problem"></a>
+<h2 id="a-ticket-classifier">A ticket classifier<a class="anchor" aria-label="anchor" href="#a-ticket-classifier"></a>
 </h2>
-<p>Let’s build a customer support ticket classifier:</p>
+<p>The classifier sorts support tickets into four categories:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
-<span> <span class="st">"ticket -&gt; category: enum('billing', 'technical', 'shipping', 'general')"</span>,</span>
+<span>  <span class="st">"ticket -&gt; category: enum('billing', 'technical', 'shipping', 'general')"</span>,</span>
 <span>  instructions <span class="op">=</span> <span class="st">"Classify the customer support ticket."</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">classifier</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span><span class="op">)</span></span></code></pre></div>
-<p>Test it:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">classifier</span>, ticket <span class="op">=</span> <span class="st">"My package hasn't arrived yet"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
+<span><span class="co">#&gt; $category</span></span>
+<span><span class="co">#&gt; [1] "shipping"</span></span>
 <span></span>
 <span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">classifier</span>, ticket <span class="op">=</span> <span class="st">"I was charged twice for my order"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
+<span><span class="co">#&gt; $category</span></span>
+<span><span class="co">#&gt; [1] "billing"</span></span>
 <span></span>
-<span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">classifier</span>, ticket <span class="op">=</span> <span class="st">"The app keeps crashing when I try to login"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span></code></pre></div>
-<p>This works, but how do we know it’s accurate? And how do we improve
-it?</p>
+<span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">classifier</span>, ticket <span class="op">=</span> <span class="st">"The app keeps crashing when I try to login"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
+<span><span class="co">#&gt; $category</span></span>
+<span><span class="co">#&gt; [1] "technical"</span></span></code></pre></div>
+<p>Three right answers on tickets you picked yourself say little about
+accuracy. For that you need tickets with known answers.</p>
 </div>
 <div class="section level2">
-<h2 id="step-2-create-training-data">Step 2: Create Training Data<a class="anchor" aria-label="anchor" href="#step-2-create-training-data"></a>
+<h2 id="measure-a-baseline">Measure a baseline<a class="anchor" aria-label="anchor" href="#measure-a-baseline"></a>
 </h2>
-<p>First, create labeled examples as an ordinary tibble:</p>
+<p>Label some tickets with the category you expect. Treat them as a test
+set: they are for scoring the classifier, not for showing to it.</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">trainset</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
-<span>  ticket <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
-<span>    <span class="st">"I was charged twice for the same item"</span>,</span>
-<span>    <span class="st">"How do I update my payment method?"</span>,</span>
-<span>    <span class="st">"The website won't load on my phone"</span>,</span>
-<span>    <span class="st">"My password reset email never arrived"</span>,</span>
-<span>    <span class="st">"When will my order ship?"</span>,</span>
-<span>    <span class="st">"Can I change my delivery address?"</span>,</span>
-<span>    <span class="st">"The product arrived damaged"</span>,</span>
-<span>    <span class="st">"I need a refund for my subscription"</span>,</span>
-<span>    <span class="st">"How do I contact customer service?"</span>,</span>
-<span>    <span class="st">"What are your business hours?"</span></span>
-<span>  <span class="op">)</span>,</span>
-<span>  category <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
-<span>    <span class="st">"billing"</span>,</span>
-<span>    <span class="st">"billing"</span>,</span>
-<span>    <span class="st">"technical"</span>,</span>
-<span>    <span class="st">"technical"</span>,</span>
-<span>    <span class="st">"shipping"</span>,</span>
-<span>    <span class="st">"shipping"</span>,</span>
-<span>    <span class="st">"shipping"</span>,</span>
-<span>    <span class="st">"billing"</span>,</span>
-<span>    <span class="st">"general"</span>,</span>
-<span>    <span class="st">"general"</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">trainset</span></span></code></pre></div>
-<p>Input columns are matched with expected output columns during
-compilation.</p>
-</div>
-<div class="section level2">
-<h2 id="step-3-measure-baseline-accuracy">Step 3: Measure Baseline Accuracy<a class="anchor" aria-label="anchor" href="#step-3-measure-baseline-accuracy"></a>
-</h2>
-<p>Before improving, let’s measure current performance:</p>
+<code class="sourceCode R"><span><span class="va">tickets</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tribble.html" class="external-link">tribble</a></span><span class="op">(</span></span>
+<span>  <span class="op">~</span><span class="va">ticket</span>,                                  <span class="op">~</span><span class="va">category</span>,</span>
+<span>  <span class="st">"I was charged twice for the same item"</span>,  <span class="st">"billing"</span>,</span>
+<span>  <span class="st">"How do I update my payment method?"</span>,     <span class="st">"billing"</span>,</span>
+<span>  <span class="st">"The website won't load on my phone"</span>,     <span class="st">"technical"</span>,</span>
+<span>  <span class="st">"My password reset email never arrived"</span>,  <span class="st">"technical"</span>,</span>
+<span>  <span class="st">"When will my order ship?"</span>,               <span class="st">"shipping"</span>,</span>
+<span>  <span class="st">"Can I change my delivery address?"</span>,      <span class="st">"shipping"</span>,</span>
+<span>  <span class="st">"The product arrived damaged"</span>,            <span class="st">"shipping"</span>,</span>
+<span>  <span class="st">"I need a refund for my subscription"</span>,    <span class="st">"billing"</span>,</span>
+<span>  <span class="st">"How do I contact customer service?"</span>,     <span class="st">"general"</span>,</span>
+<span>  <span class="st">"What are your business hours?"</span>,          <span class="st">"general"</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>Run the classifier on every ticket and compare its answers with the
+labels. <code><a href="../reference/run_dataset.html">run_dataset()</a></code> returns your columns plus a
+<code>result</code> column holding the module’s answer for each row.
+Take the predictions from <code>result</code>: the <code>category</code>
+column in the output is your label, copied from the input.</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">baseline_results</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_dataset.html">run_dataset</a></span><span class="op">(</span><span class="va">classifier</span>, <span class="va">trainset</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
-<span><span class="va">baseline_results</span></span></code></pre></div>
-<p>Calculate accuracy:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">correct</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">baseline_results</span><span class="op">$</span><span class="va">category</span> <span class="op">==</span> <span class="va">trainset</span><span class="op">$</span><span class="va">category</span><span class="op">)</span></span>
-<span><span class="va">total</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">trainset</span><span class="op">)</span></span>
-<span><span class="va">baseline_accuracy</span> <span class="op">&lt;-</span> <span class="va">correct</span> <span class="op">/</span> <span class="va">total</span></span>
+<code class="sourceCode R"><span><span class="va">baseline_results</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_dataset.html">run_dataset</a></span><span class="op">(</span><span class="va">classifier</span>, <span class="va">tickets</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Baseline accuracy:"</span>, <span class="fu">scales</span><span class="fu">::</span><span class="fu"><a href="https://scales.r-lib.org/reference/percent_format.html" class="external-link">percent</a></span><span class="op">(</span><span class="va">baseline_accuracy</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Correct:"</span>, <span class="va">correct</span>, <span class="st">"out of"</span>, <span class="va">total</span>, <span class="st">"\n"</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">predicted</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span><span class="va">baseline_results</span><span class="op">$</span><span class="va">result</span>, \<span class="op">(</span><span class="va">r</span><span class="op">)</span> <span class="va">r</span><span class="op">$</span><span class="va">category</span>, <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">predicted</span> <span class="op">==</span> <span class="va">tickets</span><span class="op">$</span><span class="va">category</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] 1</span></span>
+<span></span>
+<span><span class="co"># The tickets it got wrong</span></span>
+<span><span class="va">tickets</span><span class="op">[</span><span class="va">predicted</span> <span class="op">!=</span> <span class="va">tickets</span><span class="op">$</span><span class="va">category</span>, <span class="op">]</span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 0 × 2</span></span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># ℹ 2 variables: ticket &lt;chr&gt;, category &lt;chr&gt;</span></span></span></code></pre></div>
+<p>In the recorded run, gpt-5-mini labels all ten tickets correctly, so
+the list of misses is empty. That is the check to make before adding
+demos. Demos lengthen every prompt, and they can only help on tickets
+the model gets wrong, so with this baseline there is nothing for them to
+fix. When your baseline does miss tickets, read the misses: they tell
+you which kinds of ticket need an example.</p>
+<p>The rest of this tutorial adds demos anyway, to show how, and
+measures them on the same ten tickets.</p>
 </div>
 <div class="section level2">
-<h2 id="step-4-add-manual-demonstrations">Step 4: Add Manual Demonstrations<a class="anchor" aria-label="anchor" href="#step-4-add-manual-demonstrations"></a>
+<h2 id="add-demos-by-hand">Add demos by hand<a class="anchor" aria-label="anchor" href="#add-demos-by-hand"></a>
 </h2>
-<p>The simplest way to improve: show the LLM examples. Add them via the
-<code>demos</code> parameter:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<p>A demo is a worked example: an input and the output you want for it.
+Pass a list of them to <code><a href="../reference/module.html">module()</a></code>:</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">classifier_with_demos</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span></span>
 <span>  <span class="va">sig</span>,</span>
 <span>  demos <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
@@ -262,187 +238,100 @@ compilation.</p>
 <span>    <span class="op">)</span></span>
 <span>  <span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p>Each demo has <code>inputs</code> (a list of input values) and
-<code>output</code> (a list of expected outputs).</p>
-<p>Test the improved classifier:</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">classifier_with_demos</span>, ticket <span class="op">=</span> <span class="st">"I need a receipt for my purchase"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
+<span><span class="co">#&gt; $category</span></span>
+<span><span class="co">#&gt; [1] "billing"</span></span>
 <span></span>
-<span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">classifier_with_demos</span>, ticket <span class="op">=</span> <span class="st">"The button doesn't respond when clicked"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">classifier_with_demos</span>, ticket <span class="op">=</span> <span class="st">"The button doesn't respond when clicked"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
+<span><span class="co">#&gt; $category</span></span>
+<span><span class="co">#&gt; [1] "technical"</span></span></code></pre></div>
+<p>dsprrr puts the demos in the prompt, ahead of the new ticket. This is
+the prompt for the second call:</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="fu"><a href="../reference/get_last_prompt.html">get_last_prompt</a></span><span class="op">(</span><span class="op">)</span><span class="op">$</span><span class="va">prompt</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Classify the customer support ticket.</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Example 1:</span></span>
+<span><span class="co">#&gt; ticket: I was charged twice for the same item</span></span>
+<span><span class="co">#&gt; Output: {"category":"billing"}</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Example 2:</span></span>
+<span><span class="co">#&gt; ticket: The app crashes on startup</span></span>
+<span><span class="co">#&gt; Output: {"category":"technical"}</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Example 3:</span></span>
+<span><span class="co">#&gt; ticket: My package is late</span></span>
+<span><span class="co">#&gt; Output: {"category":"shipping"}</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; # Input: ticket</span></span>
+<span><span class="co">#&gt; ticket: The button doesn't respond when clicked</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="step-5-measure-improvement">Step 5: Measure Improvement<a class="anchor" aria-label="anchor" href="#step-5-measure-improvement"></a>
+<h2 id="sample-demos-with-labeledfewshot">Sample demos with <code>LabeledFewShot</code><a class="anchor" aria-label="anchor" href="#sample-demos-with-labeledfewshot"></a>
 </h2>
-<p>Run on the same test set:</p>
+<p><code>LabeledFewShot</code> builds demos from the rows of a labeled
+data frame instead. dsprrr calls objects like this teleprompters:
+<code><a href="../reference/compile.html">compile()</a></code> applies one to a module and returns a new module,
+leaving the original unchanged. Here the rows come from
+<code>tickets</code>, which is a shortcut with a cost, explained
+below.</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">improved_results</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_dataset.html">run_dataset</a></span><span class="op">(</span><span class="va">classifier_with_demos</span>, <span class="va">trainset</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="va">classifier</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="fu"><a href="../reference/LabeledFewShot.html">LabeledFewShot</a></span><span class="op">(</span>k <span class="op">=</span> <span class="fl">3L</span><span class="op">)</span>, <span class="va">tickets</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">correct_improved</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">improved_results</span><span class="op">$</span><span class="va">category</span> <span class="op">==</span> <span class="va">trainset</span><span class="op">$</span><span class="va">category</span><span class="op">)</span></span>
-<span><span class="va">improved_accuracy</span> <span class="op">&lt;-</span> <span class="va">correct_improved</span> <span class="op">/</span> <span class="va">total</span></span>
-<span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Baseline accuracy:"</span>, <span class="fu">scales</span><span class="fu">::</span><span class="fu"><a href="https://scales.r-lib.org/reference/percent_format.html" class="external-link">percent</a></span><span class="op">(</span><span class="va">baseline_accuracy</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Improved accuracy:"</span>, <span class="fu">scales</span><span class="fu">::</span><span class="fu"><a href="https://scales.r-lib.org/reference/percent_format.html" class="external-link">percent</a></span><span class="op">(</span><span class="va">improved_accuracy</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Improvement:"</span>, <span class="fu">scales</span><span class="fu">::</span><span class="fu"><a href="https://scales.r-lib.org/reference/percent_format.html" class="external-link">percent</a></span><span class="op">(</span><span class="va">improved_accuracy</span> <span class="op">-</span> <span class="va">baseline_accuracy</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/best_demos.html">best_demos</a></span><span class="op">(</span><span class="va">compiled</span>, as_tibble <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 3 × 2</span></span></span>
+<span><span class="co">#&gt;   ticket                             output   </span></span>
+<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>                              <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>    </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> The website won't load on my phone technical</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> What are your business hours?      general  </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> How do I update my payment method? billing</span></span></code></pre></div>
+<p><code>LabeledFewShot</code> does not look for good examples. It
+samples <code>k</code> rows at random, with a fixed seed
+(<code>seed = 123L</code> by default) so that you get the same rows each
+time. This sample has a technical, a general and a billing ticket, and
+no shipping ticket, so check what it picked before you rely on it.</p>
 </div>
 <div class="section level2">
-<h2 id="step-6-automatic-demo-selection-with-labeledfewshot">Step 6: Automatic Demo Selection with LabeledFewShot<a class="anchor" aria-label="anchor" href="#step-6-automatic-demo-selection-with-labeledfewshot"></a>
+<h2 id="compare-the-versions">Compare the versions<a class="anchor" aria-label="anchor" href="#compare-the-versions"></a>
 </h2>
-<p>Manually picking demos is tedious. The <code>LabeledFewShot</code>
-teleprompter automatically selects good examples from your training
-data:</p>
+<p><code><a href="../reference/evaluate.html">evaluate()</a></code> runs a module on every row of a data frame
+and scores each answer with a metric.
+<code>metric_exact_match(field = "category")</code> scores 1 when the
+returned <code>category</code> equals the row’s <code>category</code>
+column and 0 otherwise, so the mean score is accuracy:</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Create a teleprompter that selects 3 examples</span></span>
-<span><span class="va">teleprompter</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/LabeledFewShot.html">LabeledFewShot</a></span><span class="op">(</span>k <span class="op">=</span> <span class="fl">3L</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Compile the module with the teleprompter</span></span>
-<span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span></span>
-<span>  program <span class="op">=</span> <span class="va">classifier</span>,</span>
-<span>  teleprompter <span class="op">=</span> <span class="va">teleprompter</span>,</span>
-<span>  trainset <span class="op">=</span> <span class="va">trainset</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p>The <code><a href="../reference/compile.html">compile()</a></code> function takes your module, a teleprompter
-strategy, and training data. It returns an improved module with
-automatically selected demonstrations.</p>
-</div>
-<div class="section level2">
-<h2 id="step-7-check-what-was-selected">Step 7: Check What Was Selected<a class="anchor" aria-label="anchor" href="#step-7-check-what-was-selected"></a>
-</h2>
-<p>See which examples the teleprompter chose:</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># The compiled module now has demos</span></span>
-<span><span class="va">compiled</span><span class="op">$</span><span class="va">demos</span></span></code></pre></div>
-</div>
-<div class="section level2">
-<h2 id="step-8-compare-all-three-versions">Step 8: Compare All Three Versions<a class="anchor" aria-label="anchor" href="#step-8-compare-all-three-versions"></a>
-</h2>
-<p>Let’s see how each version performs:</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Run all three on the test set</span></span>
-<span><span class="va">results_baseline</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_dataset.html">run_dataset</a></span><span class="op">(</span><span class="va">classifier</span>, <span class="va">trainset</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
-<span><span class="va">results_manual</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_dataset.html">run_dataset</a></span><span class="op">(</span><span class="va">classifier_with_demos</span>, <span class="va">trainset</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
-<span><span class="va">results_compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_dataset.html">run_dataset</a></span><span class="op">(</span><span class="va">compiled</span>, <span class="va">trainset</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Calculate accuracies</span></span>
-<span><span class="va">acc_baseline</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">results_baseline</span><span class="op">$</span><span class="va">category</span> <span class="op">==</span> <span class="va">trainset</span><span class="op">$</span><span class="va">category</span><span class="op">)</span></span>
-<span><span class="va">acc_manual</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">results_manual</span><span class="op">$</span><span class="va">category</span> <span class="op">==</span> <span class="va">trainset</span><span class="op">$</span><span class="va">category</span><span class="op">)</span></span>
-<span><span class="va">acc_compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">results_compiled</span><span class="op">$</span><span class="va">category</span> <span class="op">==</span> <span class="va">trainset</span><span class="op">$</span><span class="va">category</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">comparison</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
-<span>  Version <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Baseline (no demos)"</span>, <span class="st">"Manual demos (3)"</span>, <span class="st">"LabeledFewShot (3)"</span><span class="op">)</span>,</span>
-<span>  Accuracy <span class="op">=</span> <span class="fu">scales</span><span class="fu">::</span><span class="fu"><a href="https://scales.r-lib.org/reference/percent_format.html" class="external-link">percent</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">acc_baseline</span>, <span class="va">acc_manual</span>, <span class="va">acc_compiled</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">comparison</span></span></code></pre></div>
-</div>
-<div class="section level2">
-<h2 id="step-9-using-built-in-metrics">Step 9: Using Built-in Metrics<a class="anchor" aria-label="anchor" href="#step-9-using-built-in-metrics"></a>
-</h2>
-<p>dsprrr provides metrics for common evaluation tasks. Use
-<code><a href="../reference/metric_exact_match.html">metric_exact_match()</a></code> for classification:</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">metric</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"category"</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Evaluate the compiled module</span></span>
-<span><span class="va">eval_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span><span class="va">compiled</span>, <span class="va">trainset</span>, metric <span class="op">=</span> <span class="va">metric</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
+<span><span class="va">versions</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>  <span class="st">"no demos"</span> <span class="op">=</span> <span class="va">classifier</span>,</span>
+<span>  <span class="st">"hand-written demos"</span> <span class="op">=</span> <span class="va">classifier_with_demos</span>,</span>
+<span>  <span class="st">"LabeledFewShot demos"</span> <span class="op">=</span> <span class="va">compiled</span></span>
+<span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">eval_result</span></span></code></pre></div>
-<p>The <code><a href="../reference/evaluate.html">evaluate()</a></code> function returns detailed results
-including: - <code>mean_score</code>: Overall accuracy -
-<code>scores</code>: Per-example scores - <code>predictions</code>: What
-the model predicted</p>
-</div>
-<div class="section level2">
-<h2 id="step-10-varying-the-number-of-examples">Step 10: Varying the Number of Examples<a class="anchor" aria-label="anchor" href="#step-10-varying-the-number-of-examples"></a>
-</h2>
-<p>More examples aren’t always better. Let’s compare:</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">results</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span></span>
-<span></span>
-<span><span class="kw">for</span> <span class="op">(</span><span class="va">k</span> <span class="kw">in</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1L</span>, <span class="fl">2L</span>, <span class="fl">3L</span>, <span class="fl">4L</span>, <span class="fl">5L</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="va">tp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/LabeledFewShot.html">LabeledFewShot</a></span><span class="op">(</span>k <span class="op">=</span> <span class="va">k</span><span class="op">)</span></span>
-<span>  <span class="va">compiled_k</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">classifier</span>, <span class="va">tp</span>, <span class="va">trainset</span><span class="op">)</span></span>
-<span></span>
-<span>  <span class="va">eval_k</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span><span class="va">compiled_k</span>, <span class="va">trainset</span>, metric <span class="op">=</span> <span class="va">metric</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
-<span></span>
-<span>  <span class="va">results</span><span class="op">[[</span><span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">as.character</a></span><span class="op">(</span><span class="va">k</span><span class="op">)</span><span class="op">]</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
-<span>    k <span class="op">=</span> <span class="va">k</span>,</span>
-<span>    accuracy <span class="op">=</span> <span class="va">eval_k</span><span class="op">$</span><span class="va">mean_score</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">}</span></span>
-<span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/do.call.html" class="external-link">do.call</a></span><span class="op">(</span><span class="va">rbind</span>, <span class="va">results</span><span class="op">)</span></span></code></pre></div>
-<p>You’ll often find that 2-4 examples works best. Too many can confuse
-the LLM or exceed context limits.</p>
-</div>
-<div class="section level2">
-<h2 id="what-you-learned">What You Learned<a class="anchor" aria-label="anchor" href="#what-you-learned"></a>
-</h2>
-<p>In this tutorial, you:</p>
-<ol style="list-style-type: decimal">
-<li>Created labeled training data as a tibble</li>
-<li>Measured baseline accuracy before improving</li>
-<li>Added manual demonstrations with the <code>demos</code>
-parameter</li>
-<li>Used <code>LabeledFewShot</code> for automatic demo selection</li>
-<li>Compiled modules with <code><a href="../reference/compile.html">compile()</a></code>
-</li>
-<li>Evaluated with <code><a href="../reference/metric_exact_match.html">metric_exact_match()</a></code>
-</li>
-<li>Experimented with different numbers of examples</li>
-</ol>
-</div>
-<div class="section level2">
-<h2 id="why-demos-work">Why Demos Work<a class="anchor" aria-label="anchor" href="#why-demos-work"></a>
-</h2>
-<p>LLMs are excellent at pattern matching. When you show examples of
-correct behavior: - They understand the <strong>format</strong> you want
-- They learn <strong>edge cases</strong> specific to your domain - They
-pick up on <strong>subtle distinctions</strong> between categories</p>
-<p>This is called “in-context learning”—the LLM learns from the examples
-in the prompt without any weight updates.</p>
-</div>
-<div class="section level2">
-<h2 id="the-few-shot-trade-off">The Few-Shot Trade-off<a class="anchor" aria-label="anchor" href="#the-few-shot-trade-off"></a>
-</h2>
-<table class="table">
-<thead><tr class="header">
-<th>More Examples</th>
-<th>Fewer Examples</th>
-</tr></thead>
-<tbody>
-<tr class="odd">
-<td>Better pattern coverage</td>
-<td>Lower token costs</td>
-</tr>
-<tr class="even">
-<td>More edge cases shown</td>
-<td>Faster inference</td>
-</tr>
-<tr class="odd">
-<td>Risk of context overflow</td>
-<td>May miss edge cases</td>
-</tr>
-</tbody>
-</table>
-<p>Start with 2-3 examples, measure, and adjust.</p>
-</div>
-<div class="section level2">
-<h2 id="next-steps">Next Steps<a class="anchor" aria-label="anchor" href="#next-steps"></a>
-</h2>
-<p>You’ve improved your module with examples. But what about other
-parameters—temperature, instructions, templates? Continue to:</p>
-<ul>
-<li>
-<strong><a href="tutorial-optimize-your-module.html">Tutorial 5:
-Finding Best Configuration</a></strong> — Grid search over
-parameters</li>
-<li>
-<strong><a href="cheatsheet.html">Quick Reference</a></strong> — All
-metrics and teleprompters</li>
-<li>
-<strong><a href="concepts-optimization-theory.html">How Optimization
-Works</a></strong> — The theory behind teleprompters</li>
-</ul>
+<span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span></span>
+<span>  <span class="va">versions</span>,</span>
+<span>  \<span class="op">(</span><span class="va">m</span><span class="op">)</span> <span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span><span class="va">m</span>, <span class="va">tickets</span>, metric <span class="op">=</span> <span class="va">metric</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span><span class="op">$</span><span class="va">mean_score</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">numeric</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="co">#&gt;             no demos   hand-written demos LabeledFewShot demos </span></span>
+<span><span class="co">#&gt;                    1                    1                    1</span></span></code></pre></div>
+<p>All three versions score 1. On this task, the recorded model does as
+well without demos as with them.</p>
+<p>The comparison also favors the demo versions, because some of the
+scored tickets sit in their prompts with the answers attached: the first
+hand-written demo is ticket 1 word for word, and
+<code>LabeledFewShot</code> drew tickets 2, 3 and 10. On your own data,
+draw demos from a training set and score every version on tickets
+outside it. Make that test set large enough to trust, too: with ten
+tickets, one answer moves accuracy by 10 points.</p>
+<p>Every demo adds tokens to every call. If you try several values of
+<code>k</code>, keep the smallest one that scores as well as the larger
+ones.</p>
+<p>Next, <a href="tutorial-optimize-your-module.html">Tutorial 5</a>
+splits the data into training and test sets and lets dsprrr search over
+instructions and demos.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

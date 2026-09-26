@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>How Prompt Optimization Works • dsprrr</title>
+<title>How optimization works • dsprrr</title>
 <!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="../favicon-96x96.png">
 <link rel="icon" type="”image/svg+xml”" href="../favicon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
@@ -17,7 +17,7 @@
 <link href="../deps/Fira_Code-0.4.10/font.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="How Prompt Optimization Works">
+<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="How optimization works">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -36,67 +36,67 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
-<li class="nav-item"><a class="nav-link" href="../articles/getting-started.html">Get Started</a></li>
+<li class="nav-item"><a class="nav-link" href="../articles/tutorial-hello-world.html">Get started</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-tutorials" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Tutorials</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-tutorials">
-<li><h6 class="dropdown-header" data-toc-skip>Learning Path</h6></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-hello-world.html">1. Your First LLM Call</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-build-classifier.html">2. Building a Classifier</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-structured-outputs.html">3. Structured Outputs</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-improve-with-demos.html">4. Improving with Examples</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-optimize-your-module.html">5. Optimization</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-deploy-to-production.html">6. Production</a></li>
+<li><a class="dropdown-item" href="../articles/tutorial-hello-world.html">1. Your first LLM call</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-build-classifier.html">2. Build a classifier</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-structured-outputs.html">3. Extract structured data</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-improve-with-demos.html">4. Improve with examples</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-optimize-your-module.html">5. Optimize a module</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-deploy-to-production.html">6. Save and reuse a module</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Advanced Tutorials</h6></li>
-    <li><a class="dropdown-item" href="../articles/text-adventure.html">Build an AI Game Master</a></li>
-    <li><a class="dropdown-item" href="../articles/llms-txt.html">Generate Package Docs</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-rlm-dsprrr.html">Investigate a Regression with RLM</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Projects</h6></li>
+    <li><a class="dropdown-item" href="../articles/llms-txt.html">Generate an llms.txt file</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-rlm-dsprrr.html">Investigate a regression with RLM</a></li>
+    <li><a class="dropdown-item" href="../articles/text-adventure.html">Build a text adventure</a></li>
   </ul>
 </li>
 <li class="nav-item dropdown">
-  <button class="nav-link dropdown-toggle" type="button" id="dropdown-how-to-guides" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">How-to Guides</button>
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-how-to-guides" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">How-to guides</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-how-to-guides">
-<li><a class="dropdown-item" href="../articles/troubleshooting.html">Troubleshooting</a></li>
-    <li><a class="dropdown-item" href="../articles/compilation-optimization.html">Compile &amp; Optimize</a></li>
-    <li><a class="dropdown-item" href="../articles/vitals-recipes.html">Evaluate with Vitals</a></li>
-    <li><a class="dropdown-item" href="../articles/rag-workflows.html">Build RAG Pipelines</a></li>
-    <li><a class="dropdown-item" href="../articles/chaining-modules.html">Chaining Modules</a></li>
-    <li><a class="dropdown-item" href="../articles/calibrated-decisions.html">Calibrated Decisions</a></li>
-    <li><a class="dropdown-item" href="../articles/orchestration.html">Deploy to Production</a></li>
+<li><h6 class="dropdown-header" data-toc-skip>Build</h6></li>
+    <li><a class="dropdown-item" href="../articles/advanced-modules.html">Choose a module type</a></li>
+    <li><a class="dropdown-item" href="../articles/chaining-modules.html">Chain modules into pipelines</a></li>
+    <li><a class="dropdown-item" href="../articles/rag-workflows.html">Retrieval-augmented generation</a></li>
+    <li><a class="dropdown-item" href="../articles/calibrated-decisions.html">Calibrated decisions</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Integrations</h6></li>
-    <li><a class="dropdown-item" href="../articles/vitals-integration.html">Vitals Package</a></li>
-    <li><a class="dropdown-item" href="../articles/tidymodels-integration.html">tidymodels</a></li>
-    <li><a class="dropdown-item" href="../articles/advanced-ellmer.html">Advanced ellmer</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Measure and improve</h6></li>
+    <li><a class="dropdown-item" href="../articles/compilation-optimization.html">Compile and optimize</a></li>
+    <li><a class="dropdown-item" href="../articles/advanced-optimization.html">Choose an optimizer</a></li>
+    <li><a class="dropdown-item" href="../articles/vitals-recipes.html">Evaluate with vitals</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Run</h6></li>
+    <li><a class="dropdown-item" href="../articles/models-and-providers.html">Models, providers and streaming</a></li>
+    <li><a class="dropdown-item" href="../articles/orchestration.html">Run dsprrr in pipelines</a></li>
+    <li><a class="dropdown-item" href="../articles/tidymodels-integration.html">Use dsprrr with tidymodels</a></li>
+    <li><a class="dropdown-item" href="../articles/troubleshooting.html">Troubleshooting</a></li>
   </ul>
 </li>
 <li class="active nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-concepts" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Concepts</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-concepts">
-<li><a class="dropdown-item" href="../articles/concepts-dspy-philosophy.html">The DSPy Philosophy</a></li>
-    <li><a class="dropdown-item" href="../articles/dspy-comparison.html">dsprrr vs. DSPy</a></li>
-    <li><a class="dropdown-item" href="../articles/concepts-signatures-modules.html">Signatures &amp; Modules</a></li>
-    <li><a class="dropdown-item" href="../articles/concepts-optimization-theory.html">How Optimization Works</a></li>
-    <li><a class="dropdown-item" href="../articles/concepts-why-metrics-matter.html">Why Metrics Matter</a></li>
-    <li><a class="dropdown-item" href="../articles/how-rlm-works.html">How RLMs Work</a></li>
+<li><a class="dropdown-item" href="../articles/concepts-signatures-modules.html">How dsprrr works</a></li>
+    <li><a class="dropdown-item" href="../articles/concepts-why-metrics-matter.html">Metrics and evaluation</a></li>
+    <li><a class="dropdown-item" href="../articles/concepts-optimization-theory.html">How optimization works</a></li>
+    <li><a class="dropdown-item" href="../articles/dspy-comparison.html">dsprrr for DSPy users</a></li>
+    <li><a class="dropdown-item" href="../articles/how-rlm-works.html">How RLM works</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Deep Dives</h6></li>
-    <li><a class="dropdown-item" href="../articles/flex-optimization.html">Flex: Optimize the Whole Program</a></li>
-    <li><a class="dropdown-item" href="../articles/advanced-modules.html">Advanced Reasoning</a></li>
-    <li><a class="dropdown-item" href="../articles/advanced-optimization.html">Advanced Optimization</a></li>
-    <li><a class="dropdown-item" href="../articles/omni-meta-optimization.html">Composing Optimizers with Omni</a></li>
-    <li><a class="dropdown-item" href="../articles/agentic-optimization-harnesses.html">Agentic Optimization Harnesses</a></li>
-    <li><a class="dropdown-item" href="../articles/reasoning-models.html">Reasoning Models</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Experimental</h6></li>
+    <li><a class="dropdown-item" href="../articles/flex-optimization.html">Flex: optimize a whole program</a></li>
+    <li><a class="dropdown-item" href="../articles/omni-meta-optimization.html">Compose optimizers with Omni</a></li>
+    <li><a class="dropdown-item" href="../articles/agentic-optimization-harnesses.html">Agentic optimization harnesses</a></li>
   </ul>
 </li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-reference" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Reference</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-reference">
-<li><a class="dropdown-item" href="../articles/cheatsheet.html">Quick Reference</a></li>
-    <li><a class="dropdown-item" href="../reference/index.html">API Documentation</a></li>
+<li><a class="dropdown-item" href="../reference/index.html">Function reference</a></li>
+    <li><a class="dropdown-item" href="../articles/cheatsheet.html">Quick reference</a></li>
   </ul>
 </li>
+<li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul>
 <ul class="navbar-nav">
 <li class="nav-item"><form class="form-inline" role="search">
@@ -123,7 +123,7 @@
 
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
-      <img src="../logo.svg" class="logo" alt=""><h1>How Prompt Optimization Works</h1>
+      <img src="../logo.svg" class="logo" alt=""><h1>How optimization works</h1>
             
       
       <small class="dont-index">Source: <a href="https://github.com/JamesHWade/dsprrr/blob/main/vignettes/concepts-optimization-theory.Rmd" class="external-link"><code>vignettes/concepts-optimization-theory.Rmd</code></a></small>
@@ -132,606 +132,303 @@
 
     
     
-<p>This article explains how dsprrr optimizes prompts and bounded
-program structure automatically. Understanding the theory helps you
-choose the right optimizer and configure it effectively.</p>
+<p>An optimizer takes a module, labeled examples and usually a metric,
+and searches for a version of the module that scores higher. This page
+explains what that search can change, how the metric and the data splits
+steer it, why the winning score overstates the result, and where the
+model calls go. For the code, see <a href="compilation-optimization.html">Compile and optimize</a> and <a href="advanced-optimization.html">Choose an optimizer</a>.</p>
 <div class="section level2">
-<h2 id="the-optimization-problem">The Optimization Problem<a class="anchor" aria-label="anchor" href="#the-optimization-problem"></a>
+<h2 id="what-the-search-can-change">What the search can change<a class="anchor" aria-label="anchor" href="#what-the-search-can-change"></a>
 </h2>
-<p>When you build an LLM application, you’re implicitly defining an
-optimization problem:</p>
-<p><strong>Given</strong>: - A task specification (signature) - Training
-examples with expected outputs - An evaluation metric</p>
-<p><strong>Find</strong>: - The program configuration that maximizes
-metric performance</p>
-<p>Traditional prompt engineering solves this by hand: you write
-prompts, test them, and tweak them. Most dsprrr optimizers automate that
-prompt search; experimental Flex lets GEPA optimize how the module
-executes, including predictor structure and, in executable mode, R logic
-and selected tools.</p>
-</div>
-<div class="section level2">
-<h2 id="what-gets-optimized">What Gets Optimized<a class="anchor" aria-label="anchor" href="#what-gets-optimized"></a>
-</h2>
-<p>LLM performance depends on several factors that can be tuned:</p>
-<div class="section level3">
-<h3 id="instructions">1. Instructions<a class="anchor" aria-label="anchor" href="#instructions"></a>
-</h3>
-<p>The system prompt or task description:</p>
-<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Original</span></span>
-<span><span class="va">sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
-<span> <span class="st">"text -&gt; sentiment"</span>,</span>
-<span> instructions <span class="op">=</span> <span class="st">"Classify the sentiment."</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Variant 1</span></span>
-<span><span class="va">sig_detailed</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
-<span> <span class="st">"text -&gt; sentiment"</span>,</span>
-<span> instructions <span class="op">=</span> <span class="st">"Analyze the emotional tone. Consider word choice, context, and implicit meanings."</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Variant 2</span></span>
-<span><span class="va">sig_concise</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
-<span> <span class="st">"text -&gt; sentiment"</span>,</span>
-<span> instructions <span class="op">=</span> <span class="st">"positive, negative, or neutral?"</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p>Different instructions can dramatically affect performance. The right
-wording depends on the model, the task, and the data distribution.</p>
-</div>
-<div class="section level3">
-<h3 id="demonstrations-few-shot-examples">2. Demonstrations (Few-Shot Examples)<a class="anchor" aria-label="anchor" href="#demonstrations-few-shot-examples"></a>
-</h3>
-<p>Examples shown to the model before the actual input:</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># No demos</span></span>
-<span><span class="va">mod</span><span class="op">$</span><span class="va">demos</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># With demos</span></span>
-<span><span class="va">mod</span><span class="op">$</span><span class="va">demos</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>inputs <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>text <span class="op">=</span> <span class="st">"I love this!"</span><span class="op">)</span>, output <span class="op">=</span> <span class="st">"positive"</span><span class="op">)</span>,</span>
-<span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>inputs <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>text <span class="op">=</span> <span class="st">"This is terrible."</span><span class="op">)</span>, output <span class="op">=</span> <span class="st">"negative"</span><span class="op">)</span>,</span>
-<span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>inputs <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>text <span class="op">=</span> <span class="st">"It's okay."</span><span class="op">)</span>, output <span class="op">=</span> <span class="st">"neutral"</span><span class="op">)</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p>More demos aren’t always better. The <em>right</em> demos matter more
-than the <em>number</em> of demos. Demos that are: - Too similar may not
-generalize - Too different may confuse the model - Poorly formatted may
-teach bad patterns</p>
-</div>
-<div class="section level3">
-<h3 id="temperature-and-other-parameters">3. Temperature and Other Parameters<a class="anchor" aria-label="anchor" href="#temperature-and-other-parameters"></a>
-</h3>
-<p>Model generation parameters:</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">mod</span><span class="op">$</span><span class="va">config</span><span class="op">$</span><span class="va">temperature</span> <span class="op">&lt;-</span> <span class="fl">0</span>      <span class="co"># Deterministic</span></span>
-<span><span class="va">mod</span><span class="op">$</span><span class="va">config</span><span class="op">$</span><span class="va">temperature</span> <span class="op">&lt;-</span> <span class="fl">0.7</span>    <span class="co"># Some randomness</span></span>
-<span><span class="va">mod</span><span class="op">$</span><span class="va">config</span><span class="op">$</span><span class="va">temperature</span> <span class="op">&lt;-</span> <span class="fl">1.0</span>    <span class="co"># More creative</span></span></code></pre></div>
-<p>Lower temperature is typically better for classification tasks.
-Higher temperature helps with generation tasks where diversity
-matters.</p>
-</div>
-<div class="section level3">
-<h3 id="prompt-structure">4. Prompt Structure<a class="anchor" aria-label="anchor" href="#prompt-structure"></a>
-</h3>
-<p>How inputs are formatted and combined:</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Template 1: Simple</span></span>
-<span><span class="va">mod</span><span class="op">$</span><span class="va">template</span> <span class="op">&lt;-</span> <span class="st">"{input}"</span></span>
-<span></span>
-<span><span class="co"># Template 2: Structured</span></span>
-<span><span class="va">mod</span><span class="op">$</span><span class="va">template</span> <span class="op">&lt;-</span> <span class="st">"Input: {input}\n\nProvide your analysis:"</span></span>
-<span></span>
-<span><span class="co"># Template 3: Role-based</span></span>
-<span><span class="va">mod</span><span class="op">$</span><span class="va">template</span> <span class="op">&lt;-</span> <span class="st">"You are an expert analyst. Given: {input}\n\nYour assessment:"</span></span></code></pre></div>
-</div>
-</div>
-<div class="section level2">
-<h2 id="the-search-space">The Search Space<a class="anchor" aria-label="anchor" href="#the-search-space"></a>
-</h2>
-<p>The combination of all tunable parameters forms a <strong>search
-space</strong>. For a simple classifier:</p>
+<p>A module’s interface stays fixed: the signature’s input and output
+fields and their types. Optimizers change what the module holds as data,
+mostly the demos and the instructions, and each has its own way of
+producing candidates:</p>
 <table class="table">
+<colgroup>
+<col width="33%">
+<col width="33%">
+<col width="33%">
+</colgroup>
 <thead><tr class="header">
-<th>Parameter</th>
-<th>Possible Values</th>
-<th>Count</th>
+<th>What changes</th>
+<th>Where candidates come from</th>
+<th>Optimizers</th>
 </tr></thead>
 <tbody>
+<tr class="odd">
+<td>Demos</td>
+<td>Labeled rows, copied as they are</td>
+<td>
+<code>LabeledFewShot</code>, <code>GridSearchTeleprompter</code>,
+<code>SIMBA</code>, <code>MIPROv2</code>
+</td>
+</tr>
+<tr class="even">
+<td>Demos</td>
+<td>The module’s own outputs that passed the metric</td>
+<td>
+<code>BootstrapFewShot</code>,
+<code>BootstrapFewShotWithRandomSearch</code>, <code>MIPROv2</code>
+</td>
+</tr>
+<tr class="odd">
+<td>Demos</td>
+<td>Training rows retrieved for each input by similarity</td>
+<td><code>KNNFewShot</code></td>
+</tr>
+<tr class="even">
+<td>Instructions or templates</td>
+<td>Variants that you write</td>
+<td>
+<code>GridSearchTeleprompter</code>,
+<code><a href="../reference/optimize_grid.html">optimize_grid()</a></code>
+</td>
+</tr>
 <tr class="odd">
 <td>Instructions</td>
-<td>5 variants</td>
-<td>5</td>
+<td>A model rewriting them after reading failed rows</td>
+<td>
+<code>COPRO</code>, <code>GEPA</code>, <code>SIMBA</code> (as
+appended rules)</td>
 </tr>
 <tr class="even">
-<td>Temperature</td>
-<td>0, 0.3, 0.7</td>
-<td>3</td>
+<td>Instructions</td>
+<td>A data summary and fixed tips appended</td>
+<td><code>MIPROv2</code></td>
 </tr>
 <tr class="odd">
-<td>Demo count</td>
-<td>0, 2, 4, 8</td>
-<td>4</td>
+<td>Decision thresholds and weights</td>
+<td>Probabilities recorded in one extra pass</td>
+<td><code>ReAnchor</code></td>
 </tr>
 <tr class="even">
-<td>Demo selection</td>
-<td>Random, diverse, similar</td>
-<td>3</td>
+<td>Request settings, such as reasoning effort or temperature</td>
+<td>A grid that you define</td>
+<td><code><a href="../reference/optimize_grid.html">optimize_grid()</a></code></td>
+</tr>
+<tr class="odd">
+<td>The program’s source</td>
+<td>A model rewriting it</td>
+<td>
+<code>GEPA</code> on <code><a href="../reference/flex.html">flex()</a></code> modules,
+<code><a href="../reference/AutoResearch.html">AutoResearch()</a></code>, <code><a href="../reference/MetaHarness.html">MetaHarness()</a></code>
+</td>
 </tr>
 </tbody>
 </table>
-<p>Total configurations: 5 × 3 × 4 × 3 = <strong>180
-combinations</strong></p>
-<p>Evaluating each on a 100-example dataset means 18,000 LLM calls. This
-is why smart search strategies matter.</p>
+<p>The three kinds of demos behave differently. Labeled demos show the
+answers you wrote, but each takes its output from a single column, so a
+demo for a three-field output shows one field. Bootstrapped demos show
+the module’s complete output, including fields your data does not label,
+such as a <code><a href="../reference/chain_of_thought.html">chain_of_thought()</a></code> reasoning field or the
+intermediate steps of a pipeline. They passed the metric, which is not
+the same as being right: if the metric checks one field, the others can
+be wrong. Retrieved demos change with every input, so there is no fixed
+prompt to inspect.</p>
+<p>Instructions are the other main lever, and the right wording depends
+on the model. A rewrite that helps one model can hurt another, which is
+why a search run on a cheaper model should be confirmed on the model you
+will use.</p>
+<p>Two targets go beyond the prompt text. <code>ReAnchor</code> changes
+numbers that are never sent to the model: the threshold that turns a
+probability into <code>TRUE</code>, or the weights that pick an option.
+It records probabilities once and fits the numbers without further
+calls. At the other end, GEPA can treat a whole <code><a href="../reference/flex.html">flex()</a></code>
+program as one candidate and rewrite its source; see <a href="flex-optimization.html">Flex: optimize a whole program</a>.</p>
+<p>Request settings, such as <code>reasoning_effort</code> or
+<code>temperature</code>, are searched only by
+<code><a href="../reference/optimize_grid.html">optimize_grid()</a></code>. Reasoning models such as gpt-6-luna reject
+<code>temperature</code> while they reason, so sweep
+<code>reasoning_effort</code> with them, or turn reasoning off
+(<code>reasoning_effort = "none"</code>) before sweeping
+<code>temperature</code>.</p>
 </div>
 <div class="section level2">
-<h2 id="teleprompters-the-optimization-strategies">Teleprompters: The Optimization Strategies<a class="anchor" aria-label="anchor" href="#teleprompters-the-optimization-strategies"></a>
+<h2 id="how-the-metric-steers-the-search">How the metric steers the search<a class="anchor" aria-label="anchor" href="#how-the-metric-steers-the-search"></a>
 </h2>
-<p>dsprrr calls its optimizers <strong>teleprompters</strong> (from
-DSPy). Each teleprompter implements a different search strategy.</p>
-<div class="section level3">
-<h3 id="labeledfewshot-the-simplest-approach">LabeledFewShot: The Simplest Approach<a class="anchor" aria-label="anchor" href="#labeledfewshot-the-simplest-approach"></a>
-</h3>
-<p>Just add k examples from your training set as demonstrations:</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">tp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/LabeledFewShot.html">LabeledFewShot</a></span><span class="op">(</span>k <span class="op">=</span> <span class="fl">4L</span><span class="op">)</span></span>
-<span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">mod</span>, <span class="va">tp</span>, <span class="va">trainset</span><span class="op">)</span></span></code></pre></div>
-<p><strong>How it works</strong>:</p>
-<ol style="list-style-type: decimal">
-<li>Sample k examples from training data</li>
-<li>Format as demonstrations</li>
-<li>Add to module</li>
-</ol>
-<p><strong>When to use</strong>: - Quick baseline - When you have
-high-quality labeled data - When the task is straightforward</p>
-<p><strong>Limitations</strong>: - Doesn’t optimize demo selection -
-Doesn’t tune other parameters - May pick suboptimal examples</p>
-</div>
-<div class="section level3">
-<h3 id="bootstrapfewshot-self-improving-demonstrations">BootstrapFewShot: Self-Improving Demonstrations<a class="anchor" aria-label="anchor" href="#bootstrapfewshot-self-improving-demonstrations"></a>
-</h3>
-<p>Uses the model to generate demonstrations, keeping only successful
-ones:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">tp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/BootstrapFewShot.html">BootstrapFewShot</a></span><span class="op">(</span></span>
-<span> metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span> max_bootstrapped_demos <span class="op">=</span> <span class="fl">4L</span>,</span>
-<span> max_labeled_demos <span class="op">=</span> <span class="fl">8L</span></span>
-<span><span class="op">)</span></span>
-<span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">mod</span>, <span class="va">tp</span>, <span class="va">trainset</span><span class="op">)</span></span></code></pre></div>
-<p><strong>How it works</strong>:</p>
-<ol style="list-style-type: decimal">
-<li>Start with labeled examples as initial demos</li>
-<li>Run teacher model on remaining training examples</li>
-<li>Score each prediction with your metric</li>
-<li>Keep predictions that score above threshold as new demos</li>
-<li>Optionally repeat for multiple rounds</li>
-</ol>
-<p><strong>Why this works</strong>: The model generates outputs in its
-own “voice”. Demonstrations that match the model’s natural output style
-are more effective than human-written examples.</p>
-<p><strong>When to use</strong>: - When you have a reliable metric -
-When labeled examples don’t transfer well - When you want the model to
-learn its own format</p>
-</div>
-<div class="section level3">
-<h3 id="gridsearchteleprompter-systematic-exploration">GridSearchTeleprompter: Systematic Exploration<a class="anchor" aria-label="anchor" href="#gridsearchteleprompter-systematic-exploration"></a>
-</h3>
-<p>Tests every combination of instruction and template variants:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">variants</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
-<span> id <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"concise"</span>, <span class="st">"detailed"</span>, <span class="st">"structured"</span><span class="op">)</span>,</span>
-<span> instructions <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
-<span>   <span class="st">"Classify sentiment briefly."</span>,</span>
-<span>   <span class="st">"Analyze the emotional tone considering context and nuance."</span>,</span>
-<span>   <span class="st">"Task: Sentiment classification\nOutput: positive, negative, or neutral"</span></span>
-<span> <span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">tp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/GridSearchTeleprompter.html">GridSearchTeleprompter</a></span><span class="op">(</span></span>
-<span> metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span> variants <span class="op">=</span> <span class="va">variants</span></span>
-<span><span class="op">)</span></span>
-<span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">mod</span>, <span class="va">tp</span>, <span class="va">trainset</span><span class="op">)</span></span></code></pre></div>
-<p><strong>How it works</strong>:</p>
-<ol style="list-style-type: decimal">
-<li>Define a grid of parameter configurations</li>
-<li>Evaluate each on a validation set</li>
-<li>Select the best-performing configuration</li>
-</ol>
-<p><strong>When to use</strong>: - When you have specific hypotheses to
-test - When the search space is small - When you need interpretable
-results</p>
-<p><strong>Limitations</strong>: - Scales poorly with parameters - May
-miss optimal combinations not in grid</p>
-</div>
-<div class="section level3">
-<h3 id="bootstrapfewshotwithrandomsearch-combined-strategy">BootstrapFewShotWithRandomSearch: Combined Strategy<a class="anchor" aria-label="anchor" href="#bootstrapfewshotwithrandomsearch-combined-strategy"></a>
-</h3>
-<p>Combines demo bootstrapping with parameter search:</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">tp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/BootstrapFewShotWithRandomSearch.html">BootstrapFewShotWithRandomSearch</a></span><span class="op">(</span></span>
-<span> metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span> num_candidate_programs <span class="op">=</span> <span class="fl">8L</span>,</span>
-<span> max_bootstrapped_demos <span class="op">=</span> <span class="fl">4L</span></span>
-<span><span class="op">)</span></span>
-<span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">mod</span>, <span class="va">tp</span>, <span class="va">trainset</span><span class="op">)</span></span></code></pre></div>
-<p><strong>How it works</strong>:</p>
-<ol style="list-style-type: decimal">
-<li>Generate multiple demo configurations via bootstrapping</li>
-<li>Create candidate programs with different demo subsets</li>
-<li>Evaluate all candidates</li>
-<li>Return the best performer</li>
-</ol>
-<p><strong>When to use</strong>: - When BootstrapFewShot alone isn’t
-enough - When you want to explore demo combinations - When you have
-compute budget for more trials</p>
-</div>
-<div class="section level3">
-<h3 id="simba-embedding-based-selection">SIMBA: Embedding-Based Selection<a class="anchor" aria-label="anchor" href="#simba-embedding-based-selection"></a>
-</h3>
-<p>Uses semantic similarity to select diverse, representative demos:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">tp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/SIMBA.html">SIMBA</a></span><span class="op">(</span></span>
-<span> metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span> max_demos <span class="op">=</span> <span class="fl">4L</span>,</span>
-<span> embed_fn <span class="op">=</span> <span class="fu">embed_openai</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">mod</span>, <span class="va">tp</span>, <span class="va">trainset</span><span class="op">)</span></span></code></pre></div>
-<p><strong>How it works</strong>:</p>
-<ol style="list-style-type: decimal">
-<li>Embed all training examples</li>
-<li>Cluster by semantic similarity</li>
-<li>Select diverse representatives from clusters</li>
-<li>Use as demonstrations</li>
-</ol>
-<p><strong>Why this works</strong>: Coverage matters more than quantity.
-A diverse set of demos shows the model the range of possible inputs and
-appropriate outputs.</p>
-<p><strong>When to use</strong>: - When you have many training examples
-- When examples vary significantly - When you want coverage over the
-input space</p>
-</div>
-<div class="section level3">
-<h3 id="knnfewshot-dynamic-demo-selection">KNNFewShot: Dynamic Demo Selection<a class="anchor" aria-label="anchor" href="#knnfewshot-dynamic-demo-selection"></a>
-</h3>
-<p>Selects demos based on similarity to each test input:</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">tp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/KNNFewShot.html">KNNFewShot</a></span><span class="op">(</span></span>
-<span> metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span> k <span class="op">=</span> <span class="fl">3L</span>,</span>
-<span> embed_fn <span class="op">=</span> <span class="fu">embed_openai</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">mod</span>, <span class="va">tp</span>, <span class="va">trainset</span><span class="op">)</span></span></code></pre></div>
-<p><strong>How it works</strong>:</p>
-<ol style="list-style-type: decimal">
-<li>At compile time: embed all training examples</li>
-<li>At runtime: find k nearest neighbors to the input</li>
-<li>Use those neighbors as demonstrations</li>
-</ol>
-<p><strong>Why this works</strong>: Relevant examples are more helpful
-than random ones. If the input is about sports, sports-related demos are
-more useful than cooking demos.</p>
-<p><strong>When to use</strong>: - When inputs span diverse domains -
-When context-specific demos help - When you can afford embedding costs
-at inference</p>
-</div>
-<div class="section level3">
-<h3 id="copro-instruction-optimization">COPRO: Instruction Optimization<a class="anchor" aria-label="anchor" href="#copro-instruction-optimization"></a>
-</h3>
-<p>Generates and refines instructions using the LLM itself:</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">tp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/COPRO.html">COPRO</a></span><span class="op">(</span></span>
-<span> metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span> breadth <span class="op">=</span> <span class="fl">5L</span>,</span>
-<span> depth <span class="op">=</span> <span class="fl">3L</span></span>
-<span><span class="op">)</span></span>
-<span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">mod</span>, <span class="va">tp</span>, <span class="va">trainset</span><span class="op">)</span></span></code></pre></div>
-<p><strong>How it works</strong>:</p>
-<ol style="list-style-type: decimal">
-<li>Generate breadth instruction candidates</li>
-<li>Evaluate each on training data</li>
-<li>Take top performers, ask LLM to improve them</li>
-<li>Repeat for depth iterations</li>
-</ol>
-<p><strong>Why this works</strong>: LLMs are good at understanding what
-makes instructions effective. They can propose refinements humans
-wouldn’t think of.</p>
-<p><strong>When to use</strong>: - When instructions matter more than
-demos - When you have compute budget for exploration - When you want
-automatically-generated instructions</p>
-</div>
-<div class="section level3">
-<h3 id="miprov2-multi-parameter-optimization">MIPROv2: Multi-Parameter Optimization<a class="anchor" aria-label="anchor" href="#miprov2-multi-parameter-optimization"></a>
-</h3>
-<p>Jointly optimizes instructions and demonstrations:</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">tp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/MIPROv2.html">MIPROv2</a></span><span class="op">(</span></span>
-<span> metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span> num_candidates <span class="op">=</span> <span class="fl">10L</span>,</span>
-<span> init_temperature <span class="op">=</span> <span class="fl">1.4</span></span>
-<span><span class="op">)</span></span>
-<span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">mod</span>, <span class="va">tp</span>, <span class="va">trainset</span><span class="op">)</span></span></code></pre></div>
-<p>Uses Bayesian optimization to jointly search instruction and demo
-combinations. The most general-purpose optimizer when you have compute
-budget for state-of-the-art results.</p>
-</div>
-<div class="section level3">
-<h3 id="gepa-reflective-prompt-evolution">GEPA: Reflective Prompt Evolution<a class="anchor" aria-label="anchor" href="#gepa-reflective-prompt-evolution"></a>
-</h3>
-<p>Uses metric feedback to propose instruction mutations and Pareto
-selection to retain candidates that are useful across objectives:</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">tp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/GEPA.html">GEPA</a></span><span class="op">(</span></span>
-<span> metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span> population_size <span class="op">=</span> <span class="fl">20L</span>,</span>
-<span> generations <span class="op">=</span> <span class="fl">10L</span></span>
-<span><span class="op">)</span></span>
-<span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">mod</span>, <span class="va">tp</span>, <span class="va">trainset</span><span class="op">)</span></span></code></pre></div>
-<p>GEPA reflects on failed examples, proposes revised instructions,
-evaluates them, and keeps a Pareto frontier across metrics. For ordinary
-modules this is reflective prompt evolution: optional crossover combines
-instruction text. When a program contains Flex leaves, GEPA can instead
-select complete <code>module_src</code> values atomically; it never
-splices source text. GEPA is useful when feedback is informative and you
-can afford repeated evaluation. See <a href="flex-optimization.html">Flex: Optimize the Whole Program</a> when
-the implementation itself should be part of the search.</p>
-</div>
-<div class="section level3">
-<h3 id="autoresearch-and-meta-harness-agentic-program-search">AutoResearch and Meta-Harness: Agentic Program Search<a class="anchor" aria-label="anchor" href="#autoresearch-and-meta-harness-agentic-program-search"></a>
-</h3>
-<p>These harnesses use an LLM as an experiment proposer while dsprrr
-retains the trusted evaluator, budget ledger, and accepted program
-state. <code><a href="../reference/AutoResearch.html">AutoResearch()</a></code> gives one persistent agent ownership
-of the experiment loop; <code><a href="../reference/MetaHarness.html">MetaHarness()</a></code> evaluates bounded
-batches from fresh proposer sessions and maintains a scored frontier.
-Both can edit several module-graph components in one candidate and
-require OS-sandboxed code execution by default.</p>
-</div>
+<p>Each candidate ends up as one number: the metric’s mean over some
+rows. The optimizer sees nothing else, which has three consequences.</p>
+<p>The search improves only what the metric measures. In <a href="compilation-optimization.html">Compile and optimize</a>, a search
+scored on the category alone produced a module that got every category
+right and two of three priorities wrong.</p>
+<p>Ties are common. A pass/fail metric on a few rows gives many
+candidates the same score, and optimizers keep the candidate they saw
+first, usually the unchanged module or the first variant. A graded
+metric, such as <code><a href="../reference/metric_f1.html">metric_f1()</a></code> or a custom metric that gives
+partial credit, separates candidates better.</p>
+<p>The metric can say more than a number. A metric built with
+<code><a href="../reference/metric_with_feedback.html">metric_with_feedback()</a></code> also returns a sentence about each
+failure, and GEPA passes those sentences to the model that rewrites the
+instructions. <code><a href="../reference/metric_with_trace.html">metric_with_trace()</a></code> lets a metric score the
+steps a program took, not just its final output. <a href="concepts-why-metrics-matter.html">Metrics and evaluation</a>
+covers how to choose and test a metric.</p>
 </div>
 <div class="section level2">
-<h2 id="choosing-an-optimizer">Choosing an Optimizer<a class="anchor" aria-label="anchor" href="#choosing-an-optimizer"></a>
+<h2 id="training-validation-and-test-rows">Training, validation and test rows<a class="anchor" aria-label="anchor" href="#training-validation-and-test-rows"></a>
 </h2>
-<p>Use this decision tree:</p>
-<pre class="mermaid"><code>flowchart TB
-  Start["Choose an optimizer"]
-  Start --&gt;|Quick baseline| Labeled["LabeledFewShot"]
-  Start --&gt;|Reliable metric, want better demos| Bootstrap["BootstrapFewShot"]
-  Start --&gt;|Specific instruction variants to test| Grid["GridSearchTeleprompter"]
-  Start --&gt;|Best results with compute budget| MIPRO["MIPROv2 or BootstrapFewShotWithRandomSearch"]
-  Start --&gt;|Diverse inputs, need adaptive demos| KNN["KNNFewShot"]
-  Start --&gt;|Explore creatively| GEPA["GEPA"]
-  Start --&gt;|Search a multi-module program with an agent| Harness["AutoResearch or MetaHarness"]</code></pre>
+<p>Optimizers use labeled rows for two jobs. The training rows are
+material: demos are copied or bootstrapped from them, and COPRO, SIMBA
+and GEPA show the model some of the training rows the module got wrong.
+The validation rows are the yardstick that ranks candidates. A third
+set, the test rows, is scored once at the end and never shown to an
+optimizer. <a href="concepts-why-metrics-matter.html">Metrics and
+evaluation</a> shows how to split one table three ways with
+<code><a href="../reference/split_dataset.html">split_dataset()</a></code>.</p>
+<p>When you pass no <code>valset</code>, optimizers fall back in
+different ways:</p>
+<table class="table">
+<colgroup>
+<col width="50%">
+<col width="50%">
+</colgroup>
+<thead><tr class="header">
+<th>Optimizer</th>
+<th>Without <code>valset</code>
+</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><code>GridSearchTeleprompter</code></td>
+<td>Scores on a random fifth of <code>trainset</code> and takes demos
+from the rest</td>
+</tr>
+<tr class="even">
+<td><code>BootstrapFewShotWithRandomSearch</code></td>
+<td>Stops with an error: <code>valset</code> is required</td>
+</tr>
+<tr class="odd">
+<td>
+<code>BetterTogether</code>, <code>Omni</code>
+</td>
+<td>Hold out 10% of <code>trainset</code>
+</td>
+</tr>
+<tr class="even">
+<td>
+<code>COPRO</code>, <code>MIPROv2</code>, <code>SIMBA</code>,
+<code>GEPA</code>
+</td>
+<td>Score candidates on <code>trainset</code> itself</td>
+</tr>
+<tr class="odd">
+<td><code>ReAnchor</code></td>
+<td>Checks fitted settings on folds of <code>trainset</code>;
+<code>valset</code> is only reported</td>
+</tr>
+<tr class="even">
+<td>
+<code>LabeledFewShot</code>, <code>KNNFewShot</code>,
+<code>BootstrapFewShot</code>
+</td>
+<td>Do not rank candidates</td>
+</tr>
+</tbody>
+</table>
+<p>Scoring on <code>trainset</code> rewards candidates that suit the
+training rows, which is exactly what demos copied from those rows do.
+The gain then shrinks, or disappears, on new inputs.</p>
 </div>
 <div class="section level2">
-<h2 id="the-evaluation-loop">The Evaluation Loop<a class="anchor" aria-label="anchor" href="#the-evaluation-loop"></a>
+<h2 id="why-the-winning-score-is-too-high">Why the winning score is too high<a class="anchor" aria-label="anchor" href="#why-the-winning-score-is-too-high"></a>
 </h2>
-<p>All optimizers share a common evaluation pattern:</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Pseudocode for optimizer loop</span></span>
-<span><span class="kw">for</span> <span class="op">(</span><span class="va">candidate</span> <span class="kw">in</span> <span class="va">candidates</span><span class="op">)</span> <span class="op">{</span></span>
-<span> <span class="co"># 1. Create candidate module</span></span>
-<span> <span class="va">mod_candidate</span> <span class="op">&lt;-</span> <span class="fu">copy_module</span><span class="op">(</span><span class="va">base_module</span><span class="op">)</span></span>
-<span> <span class="va">mod_candidate</span> <span class="op">&lt;-</span> <span class="fu">apply_config</span><span class="op">(</span><span class="va">mod_candidate</span>, <span class="va">candidate</span><span class="op">)</span></span>
-<span></span>
-<span> <span class="co"># 2. Evaluate on validation set</span></span>
-<span> <span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span><span class="va">mod_candidate</span>, <span class="va">valset</span>, <span class="va">metric</span><span class="op">)</span></span>
-<span></span>
-<span> <span class="co"># 3. Track score</span></span>
-<span> <span class="va">scores</span><span class="op">[[</span><span class="va">candidate</span><span class="op">$</span><span class="va">id</span><span class="op">]</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="va">result</span><span class="op">$</span><span class="va">mean_score</span></span>
-<span></span>
-<span> <span class="co"># 4. Update best if improved</span></span>
-<span> <span class="kw">if</span> <span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">mean_score</span> <span class="op">&gt;</span> <span class="va">best_score</span><span class="op">)</span> <span class="op">{</span></span>
-<span>   <span class="va">best_score</span> <span class="op">&lt;-</span> <span class="va">result</span><span class="op">$</span><span class="va">mean_score</span></span>
-<span>   <span class="va">best_candidate</span> <span class="op">&lt;-</span> <span class="va">candidate</span></span>
-<span> <span class="op">}</span></span>
+<p>Picking the best of several noisy scores favors the candidate that
+got lucky on the validation rows. Suppose every candidate has the same
+true accuracy, 70%, and each is scored on the same 20 validation rows.
+The expected score of the winner still grows with the number of
+candidates compared:</p>
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
+<span><span class="va">winner_score</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">n_candidates</span>, <span class="va">n_rows</span> <span class="op">=</span> <span class="fl">20</span>, <span class="va">accuracy</span> <span class="op">=</span> <span class="fl">0.7</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Binomial.html" class="external-link">rbinom</a></span><span class="op">(</span><span class="va">n_candidates</span>, <span class="va">n_rows</span>, <span class="va">accuracy</span><span class="op">)</span> <span class="op">/</span> <span class="va">n_rows</span><span class="op">)</span></span>
 <span><span class="op">}</span></span>
 <span></span>
-<span><span class="co"># 5. Apply best configuration</span></span>
-<span><span class="va">final_module</span> <span class="op">&lt;-</span> <span class="fu">apply_config</span><span class="op">(</span><span class="va">base_module</span>, <span class="va">best_candidate</span><span class="op">)</span></span></code></pre></div>
-<p>This loop is the core of all optimization. Different teleprompters
-differ in how they generate candidates.</p>
+<span><span class="va">n_candidates</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">5</span>, <span class="fl">20</span>, <span class="fl">100</span><span class="op">)</span></span>
+<span><span class="va">expected_winner</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span></span>
+<span>  <span class="va">n_candidates</span>,</span>
+<span>  <span class="kw">function</span><span class="op">(</span><span class="va">k</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">replicate</a></span><span class="op">(</span><span class="fl">5000</span>, <span class="fu">winner_score</span><span class="op">(</span><span class="va">k</span><span class="op">)</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">numeric</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span><span class="va">n_candidates</span>, expected_winner <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">expected_winner</span>, <span class="fl">2</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">#&gt;   n_candidates expected_winner</span></span>
+<span><span class="co">#&gt; 1            1            0.70</span></span>
+<span><span class="co">#&gt; 2            5            0.82</span></span>
+<span><span class="co">#&gt; 3           20            0.88</span></span>
+<span><span class="co">#&gt; 4          100            0.93</span></span></code></pre></div>
+<p>None of these candidates is better than the others, yet the best of
+20 looks far better than 70%. Optimizers that compare many candidates on
+the same rows, such as <code>MIPROv2</code>, <code>GEPA</code> and
+<code>BootstrapFewShotWithRandomSearch</code>, report this inflated
+number as <code>best_score</code>. More validation rows shrink the
+effect, and a score on test rows that no step has seen removes it. The
+same holds for your own comparisons: if you try ten optimizers and keep
+the best, score the winner again on fresh rows.</p>
+<p>Two other effects push in the same direction. Training rows reach the
+prompt, as demos, as examples shown to the rewriting model, and in
+<code>SIMBA</code>’s fallback rules, so duplicates or near-duplicates
+between the splits inflate every score. Keep the splits disjoint. And a
+test set that you score after every change slowly turns into a
+validation set; score it once per decision.</p>
 </div>
 <div class="section level2">
-<h2 id="practical-considerations">Practical Considerations<a class="anchor" aria-label="anchor" href="#practical-considerations"></a>
+<h2 id="where-the-model-calls-go">Where the model calls go<a class="anchor" aria-label="anchor" href="#where-the-model-calls-go"></a>
 </h2>
-<div class="section level3">
-<h3 id="data-requirements">Data Requirements<a class="anchor" aria-label="anchor" href="#data-requirements"></a>
-</h3>
+<p>Almost all the calls in a search are spent scoring: the number of
+candidates times the rows each is scored on. Proposing candidates adds
+comparatively little, one call per rewrite. With 200 training rows and
+50 validation rows, the scoring calls come to roughly:</p>
 <table class="table">
+<colgroup>
+<col width="50%">
+<col width="50%">
+</colgroup>
 <thead><tr class="header">
-<th>Optimizer</th>
-<th>Min Training Examples</th>
-<th>Recommended</th>
+<th>Optimizer and settings</th>
+<th>Scoring calls</th>
 </tr></thead>
 <tbody>
 <tr class="odd">
-<td>LabeledFewShot</td>
-<td>k (usually 4)</td>
-<td>20+</td>
+<td>
+<code>GridSearchTeleprompter</code> with 4 variants</td>
+<td>4 × 50 = 200</td>
 </tr>
 <tr class="even">
-<td>BootstrapFewShot</td>
-<td>10</td>
-<td>50+</td>
+<td>
+<code>BootstrapFewShotWithRandomSearch</code>, default 16
+candidates</td>
+<td>16 × 50 = 800, plus bootstrapping</td>
 </tr>
 <tr class="odd">
-<td>GridSearch</td>
-<td>20</td>
-<td>50+</td>
+<td>
+<code>MIPROv2</code> with <code>auto = "light"</code>
+</td>
+<td>16 batches of 5 plus 4 passes over 50 = 280, plus bootstrapping</td>
 </tr>
 <tr class="even">
-<td>MIPROv2</td>
-<td>30</td>
-<td>100+</td>
+<td>
+<code>COPRO</code> with the defaults, <code>breadth = 10L</code> and
+<code>depth = 3L</code>
+</td>
+<td>Up to 30 × 50 = 1,500, plus 50 for the baseline and at least 200 to
+find failures</td>
+</tr>
+<tr class="odd">
+<td>
+<code>GEPA</code> with the defaults, 20 candidates for 10
+generations</td>
+<td>20 × 10 × (50 + 200) = 50,000</td>
 </tr>
 </tbody>
 </table>
-<p>More data generally helps, but with diminishing returns after ~100
-examples.</p>
-</div>
-<div class="section level3">
-<h3 id="compute-costs">Compute Costs<a class="anchor" aria-label="anchor" href="#compute-costs"></a>
-</h3>
-<p>Optimization requires many LLM calls. Rough estimates per
-optimizer:</p>
-<table class="table">
-<thead><tr class="header">
-<th>Optimizer</th>
-<th>LLM Calls (100 examples)</th>
-</tr></thead>
-<tbody>
-<tr class="odd">
-<td>LabeledFewShot</td>
-<td>0 (no evaluation)</td>
-</tr>
-<tr class="even">
-<td>BootstrapFewShot</td>
-<td>100-200</td>
-</tr>
-<tr class="odd">
-<td>GridSearch</td>
-<td>variants × examples</td>
-</tr>
-<tr class="even">
-<td>MIPROv2</td>
-<td>500-2000</td>
-</tr>
-<tr class="odd">
-<td>GEPA</td>
-<td>population × generations × examples</td>
-</tr>
-<tr class="even">
-<td>AutoResearch</td>
-<td>baseline + agent-selected experiments</td>
-</tr>
-<tr class="odd">
-<td>MetaHarness</td>
-<td>baseline + iterations × candidates per iteration</td>
-</tr>
-</tbody>
-</table>
-<p>Use cheaper models during optimization, then evaluate final config on
-your target model.</p>
-</div>
-<div class="section level3">
-<h3 id="validation-strategy">Validation Strategy<a class="anchor" aria-label="anchor" href="#validation-strategy"></a>
-</h3>
-<p>Split your data:</p>
-<ul>
-<li>
-<strong>Training set</strong>: Used to generate demos</li>
-<li>
-<strong>Validation set</strong>: Used to evaluate candidates during
-optimization</li>
-<li>
-<strong>Test set</strong>: Used to evaluate final model (never
-touched during optimization)</li>
-</ul>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Good practice</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">42</span><span class="op">)</span></span>
-<span><span class="va">n</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">data</span><span class="op">)</span></span>
-<span><span class="va">train_idx</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sample.html" class="external-link">sample</a></span><span class="op">(</span><span class="va">n</span>, <span class="fl">0.6</span> <span class="op">*</span> <span class="va">n</span><span class="op">)</span></span>
-<span><span class="va">val_idx</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sample.html" class="external-link">sample</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/sets.html" class="external-link">setdiff</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="va">n</span>, <span class="va">train_idx</span><span class="op">)</span>, <span class="fl">0.2</span> <span class="op">*</span> <span class="va">n</span><span class="op">)</span></span>
-<span><span class="va">test_idx</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sets.html" class="external-link">setdiff</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="va">n</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">train_idx</span>, <span class="va">val_idx</span><span class="op">)</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">trainset</span> <span class="op">&lt;-</span> <span class="va">data</span><span class="op">[</span><span class="va">train_idx</span>, <span class="op">]</span></span>
-<span><span class="va">valset</span> <span class="op">&lt;-</span> <span class="va">data</span><span class="op">[</span><span class="va">val_idx</span>, <span class="op">]</span></span>
-<span><span class="va">testset</span> <span class="op">&lt;-</span> <span class="va">data</span><span class="op">[</span><span class="va">test_idx</span>, <span class="op">]</span></span>
-<span></span>
-<span><span class="co"># Optimize</span></span>
-<span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">mod</span>, <span class="va">tp</span>, <span class="va">trainset</span>, valset <span class="op">=</span> <span class="va">valset</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Final evaluation</span></span>
-<span><span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span><span class="va">compiled</span>, <span class="va">testset</span>, <span class="va">metric</span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="reproducibility">Reproducibility<a class="anchor" aria-label="anchor" href="#reproducibility"></a>
-</h3>
-<p>Use seeds for reproducible optimization:</p>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">tp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/BootstrapFewShot.html">BootstrapFewShot</a></span><span class="op">(</span></span>
-<span> metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span> seed <span class="op">=</span> <span class="fl">42L</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-</div>
-</div>
-<div class="section level2">
-<h2 id="why-optimization-works">Why Optimization Works<a class="anchor" aria-label="anchor" href="#why-optimization-works"></a>
-</h2>
-<p>Prompt optimization works because:</p>
-<ol style="list-style-type: decimal">
-<li><p><strong>LLMs are sensitive</strong>: Small prompt changes cause
-big output changes. This creates a navigable landscape where search can
-find improvements.</p></li>
-<li><p><strong>Metrics provide signal</strong>: Evaluation scores guide
-the search toward better configurations. Without metrics, you’re
-optimizing blind.</p></li>
-<li><p><strong>The search space is structured</strong>: Good prompts
-share characteristics. Optimization exploits this structure.</p></li>
-<li><p><strong>Transfer happens</strong>: Prompts optimized on training
-data often generalize to test data. The improvements aren’t just
-memorization.</p></li>
-</ol>
-</div>
-<div class="section level2">
-<h2 id="connection-to-machine-learning">Connection to Machine Learning<a class="anchor" aria-label="anchor" href="#connection-to-machine-learning"></a>
-</h2>
-<p>Prompt optimization parallels traditional ML:</p>
-<table class="table">
-<thead><tr class="header">
-<th>ML Concept</th>
-<th>Prompt Optimization</th>
-</tr></thead>
-<tbody>
-<tr class="odd">
-<td>Model parameters</td>
-<td>Prompt text, demos</td>
-</tr>
-<tr class="even">
-<td>Training data</td>
-<td>Labeled examples</td>
-</tr>
-<tr class="odd">
-<td>Loss function</td>
-<td>Metric (negated)</td>
-</tr>
-<tr class="even">
-<td>Gradient descent</td>
-<td>Teleprompter search</td>
-</tr>
-<tr class="odd">
-<td>Hyperparameters</td>
-<td>Temperature, demo count</td>
-</tr>
-<tr class="even">
-<td>Validation</td>
-<td>Held-out evaluation</td>
-</tr>
-</tbody>
-</table>
-<p>The key difference: in ML, we update model weights. In prompt
-optimization, we update the text we send to the model. The model itself
-stays fixed.</p>
-</div>
-<div class="section level2">
-<h2 id="further-reading">Further Reading<a class="anchor" aria-label="anchor" href="#further-reading"></a>
-</h2>
-<ul>
-<li>
-<strong><a href="tutorial-optimize-your-module.html">Tutorial:
-Optimize Your Module</a></strong> - Hands-on optimization</li>
-<li>
-<strong><a href="concepts-signatures-modules.html">Understanding
-Signatures &amp; Modules</a></strong> - Core abstractions</li>
-<li>
-<strong><a href="concepts-why-metrics-matter.html">Why Metrics
-Matter</a></strong> - Choosing the right metric</li>
-<li>
-<strong><a href="https://arxiv.org/abs/2310.03714" class="external-link">DSPy
-Paper</a></strong> - Academic foundations</li>
-</ul>
+<p>GEPA’s defaults suit large budgets; the example in <a href="advanced-optimization.html">Choose an optimizer</a> uses a
+population of 6 for 4 generations. That page gives a cost formula for
+each optimizer.</p>
+<p>There are three ways to spend less. Score fewer candidates or fewer
+rows, accepting noisier comparisons. Run the search on a cheaper model
+and confirm the winner on the one you will deploy. Or, with the
+optimizers that support it, cap the search with
+<code><a href="../reference/optimizer_control.html">optimizer_control()</a></code>, which stops at a limit on calls,
+tokens, cost or time and returns the best module found so far.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

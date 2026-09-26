@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Why Metrics Drive Better LLM Applications • dsprrr</title>
+<title>Metrics and evaluation • dsprrr</title>
 <!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="../favicon-96x96.png">
 <link rel="icon" type="”image/svg+xml”" href="../favicon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
@@ -17,7 +17,7 @@
 <link href="../deps/Fira_Code-0.4.10/font.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Why Metrics Drive Better LLM Applications">
+<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Metrics and evaluation">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -36,67 +36,67 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
-<li class="nav-item"><a class="nav-link" href="../articles/getting-started.html">Get Started</a></li>
+<li class="nav-item"><a class="nav-link" href="../articles/tutorial-hello-world.html">Get started</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-tutorials" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Tutorials</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-tutorials">
-<li><h6 class="dropdown-header" data-toc-skip>Learning Path</h6></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-hello-world.html">1. Your First LLM Call</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-build-classifier.html">2. Building a Classifier</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-structured-outputs.html">3. Structured Outputs</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-improve-with-demos.html">4. Improving with Examples</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-optimize-your-module.html">5. Optimization</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-deploy-to-production.html">6. Production</a></li>
+<li><a class="dropdown-item" href="../articles/tutorial-hello-world.html">1. Your first LLM call</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-build-classifier.html">2. Build a classifier</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-structured-outputs.html">3. Extract structured data</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-improve-with-demos.html">4. Improve with examples</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-optimize-your-module.html">5. Optimize a module</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-deploy-to-production.html">6. Save and reuse a module</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Advanced Tutorials</h6></li>
-    <li><a class="dropdown-item" href="../articles/text-adventure.html">Build an AI Game Master</a></li>
-    <li><a class="dropdown-item" href="../articles/llms-txt.html">Generate Package Docs</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-rlm-dsprrr.html">Investigate a Regression with RLM</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Projects</h6></li>
+    <li><a class="dropdown-item" href="../articles/llms-txt.html">Generate an llms.txt file</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-rlm-dsprrr.html">Investigate a regression with RLM</a></li>
+    <li><a class="dropdown-item" href="../articles/text-adventure.html">Build a text adventure</a></li>
   </ul>
 </li>
 <li class="nav-item dropdown">
-  <button class="nav-link dropdown-toggle" type="button" id="dropdown-how-to-guides" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">How-to Guides</button>
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-how-to-guides" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">How-to guides</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-how-to-guides">
-<li><a class="dropdown-item" href="../articles/troubleshooting.html">Troubleshooting</a></li>
-    <li><a class="dropdown-item" href="../articles/compilation-optimization.html">Compile &amp; Optimize</a></li>
-    <li><a class="dropdown-item" href="../articles/vitals-recipes.html">Evaluate with Vitals</a></li>
-    <li><a class="dropdown-item" href="../articles/rag-workflows.html">Build RAG Pipelines</a></li>
-    <li><a class="dropdown-item" href="../articles/chaining-modules.html">Chaining Modules</a></li>
-    <li><a class="dropdown-item" href="../articles/calibrated-decisions.html">Calibrated Decisions</a></li>
-    <li><a class="dropdown-item" href="../articles/orchestration.html">Deploy to Production</a></li>
+<li><h6 class="dropdown-header" data-toc-skip>Build</h6></li>
+    <li><a class="dropdown-item" href="../articles/advanced-modules.html">Choose a module type</a></li>
+    <li><a class="dropdown-item" href="../articles/chaining-modules.html">Chain modules into pipelines</a></li>
+    <li><a class="dropdown-item" href="../articles/rag-workflows.html">Retrieval-augmented generation</a></li>
+    <li><a class="dropdown-item" href="../articles/calibrated-decisions.html">Calibrated decisions</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Integrations</h6></li>
-    <li><a class="dropdown-item" href="../articles/vitals-integration.html">Vitals Package</a></li>
-    <li><a class="dropdown-item" href="../articles/tidymodels-integration.html">tidymodels</a></li>
-    <li><a class="dropdown-item" href="../articles/advanced-ellmer.html">Advanced ellmer</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Measure and improve</h6></li>
+    <li><a class="dropdown-item" href="../articles/compilation-optimization.html">Compile and optimize</a></li>
+    <li><a class="dropdown-item" href="../articles/advanced-optimization.html">Choose an optimizer</a></li>
+    <li><a class="dropdown-item" href="../articles/vitals-recipes.html">Evaluate with vitals</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Run</h6></li>
+    <li><a class="dropdown-item" href="../articles/models-and-providers.html">Models, providers and streaming</a></li>
+    <li><a class="dropdown-item" href="../articles/orchestration.html">Run dsprrr in pipelines</a></li>
+    <li><a class="dropdown-item" href="../articles/tidymodels-integration.html">Use dsprrr with tidymodels</a></li>
+    <li><a class="dropdown-item" href="../articles/troubleshooting.html">Troubleshooting</a></li>
   </ul>
 </li>
 <li class="active nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-concepts" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Concepts</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-concepts">
-<li><a class="dropdown-item" href="../articles/concepts-dspy-philosophy.html">The DSPy Philosophy</a></li>
-    <li><a class="dropdown-item" href="../articles/dspy-comparison.html">dsprrr vs. DSPy</a></li>
-    <li><a class="dropdown-item" href="../articles/concepts-signatures-modules.html">Signatures &amp; Modules</a></li>
-    <li><a class="dropdown-item" href="../articles/concepts-optimization-theory.html">How Optimization Works</a></li>
-    <li><a class="dropdown-item" href="../articles/concepts-why-metrics-matter.html">Why Metrics Matter</a></li>
-    <li><a class="dropdown-item" href="../articles/how-rlm-works.html">How RLMs Work</a></li>
+<li><a class="dropdown-item" href="../articles/concepts-signatures-modules.html">How dsprrr works</a></li>
+    <li><a class="dropdown-item" href="../articles/concepts-why-metrics-matter.html">Metrics and evaluation</a></li>
+    <li><a class="dropdown-item" href="../articles/concepts-optimization-theory.html">How optimization works</a></li>
+    <li><a class="dropdown-item" href="../articles/dspy-comparison.html">dsprrr for DSPy users</a></li>
+    <li><a class="dropdown-item" href="../articles/how-rlm-works.html">How RLM works</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Deep Dives</h6></li>
-    <li><a class="dropdown-item" href="../articles/flex-optimization.html">Flex: Optimize the Whole Program</a></li>
-    <li><a class="dropdown-item" href="../articles/advanced-modules.html">Advanced Reasoning</a></li>
-    <li><a class="dropdown-item" href="../articles/advanced-optimization.html">Advanced Optimization</a></li>
-    <li><a class="dropdown-item" href="../articles/omni-meta-optimization.html">Composing Optimizers with Omni</a></li>
-    <li><a class="dropdown-item" href="../articles/agentic-optimization-harnesses.html">Agentic Optimization Harnesses</a></li>
-    <li><a class="dropdown-item" href="../articles/reasoning-models.html">Reasoning Models</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Experimental</h6></li>
+    <li><a class="dropdown-item" href="../articles/flex-optimization.html">Flex: optimize a whole program</a></li>
+    <li><a class="dropdown-item" href="../articles/omni-meta-optimization.html">Compose optimizers with Omni</a></li>
+    <li><a class="dropdown-item" href="../articles/agentic-optimization-harnesses.html">Agentic optimization harnesses</a></li>
   </ul>
 </li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-reference" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Reference</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-reference">
-<li><a class="dropdown-item" href="../articles/cheatsheet.html">Quick Reference</a></li>
-    <li><a class="dropdown-item" href="../reference/index.html">API Documentation</a></li>
+<li><a class="dropdown-item" href="../reference/index.html">Function reference</a></li>
+    <li><a class="dropdown-item" href="../articles/cheatsheet.html">Quick reference</a></li>
   </ul>
 </li>
+<li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul>
 <ul class="navbar-nav">
 <li class="nav-item"><form class="form-inline" role="search">
@@ -123,7 +123,7 @@
 
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
-      <img src="../logo.svg" class="logo" alt=""><h1>Why Metrics Drive Better LLM Applications</h1>
+      <img src="../logo.svg" class="logo" alt=""><h1>Metrics and evaluation</h1>
             
       
       <small class="dont-index">Source: <a href="https://github.com/JamesHWade/dsprrr/blob/main/vignettes/concepts-why-metrics-matter.Rmd" class="external-link"><code>vignettes/concepts-why-metrics-matter.Rmd</code></a></small>
@@ -132,141 +132,118 @@
 
     
     
-<p>This article explains why metrics are essential for building reliable
-LLM applications and how dsprrr’s evaluation workflow enables systematic
-improvement.</p>
-<div class="section level2">
-<h2 id="the-problem-with-it-looks-good">The Problem with “It Looks Good”<a class="anchor" aria-label="anchor" href="#the-problem-with-it-looks-good"></a>
-</h2>
-<p>Most LLM development follows this pattern:</p>
-<ol style="list-style-type: decimal">
-<li>Write a prompt</li>
-<li>Try a few examples</li>
-<li>Outputs “look good”</li>
-<li>Ship it</li>
-</ol>
-<p>This feels productive but hides a dangerous assumption: <strong>your
-intuition about output quality is reliable</strong>. It isn’t.</p>
-<div class="section level3">
-<h3 id="why-intuition-fails">Why Intuition Fails<a class="anchor" aria-label="anchor" href="#why-intuition-fails"></a>
-</h3>
-<p><strong>Confirmation bias</strong>: You notice examples that work and
-forget ones that don’t. After tweaking a prompt, you test it on the
-example that was failing. It works now. You don’t re-test the examples
-that were working before.</p>
-<p><strong>Incomplete coverage</strong>: You test 5 examples manually.
-Your production data has thousands of variations. The examples you
-tested aren’t representative.</p>
-<p><strong>Changing baselines</strong>: You improve the prompt. But did
-it actually get better, or does it just look different? Without
-quantitative comparison, you can’t know.</p>
-<p><strong>Subjective judgment</strong>: “Good enough” varies by person
-and by mood. What seems acceptable on Friday afternoon might look
-inadequate Monday morning.</p>
-</div>
-</div>
-<div class="section level2">
-<h2 id="metrics-as-ground-truth">Metrics as Ground Truth<a class="anchor" aria-label="anchor" href="#metrics-as-ground-truth"></a>
-</h2>
-<p>A metric converts subjective judgment into objective measurement:</p>
+<p>A metric turns “this output looks right” into a number you can
+compare across prompts, models and optimizer runs. This page shows how
+dsprrr calls a metric, which built-in metric fits which task, what
+<code><a href="../reference/evaluate.html">evaluate()</a></code> reports, and how to keep a score honest.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Without metrics: "This looks right"</span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">mod</span>, text <span class="op">=</span> <span class="st">"I love this product!"</span><span class="op">)</span></span>
-<span><span class="co"># result: "positive"  # Is this correct? Probably?</span></span>
-<span></span>
-<span><span class="co"># With metrics: This IS right (or wrong)</span></span>
-<span><span class="va">score</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span><span class="op">(</span><span class="va">result</span>, <span class="st">"positive"</span><span class="op">)</span></span>
-<span><span class="co"># score: TRUE or FALSE, no ambiguity</span></span></code></pre></div>
-<p>Metrics provide:</p>
-<ul>
-<li>
-<strong>Reproducibility</strong>: Same inputs → same scores, every
-time</li>
-<li>
-<strong>Comparability</strong>: Version A scores 0.78, Version B
-scores 0.82</li>
-<li>
-<strong>Automation</strong>: Evaluate thousands of examples without
-human review</li>
-<li>
-<strong>Progress tracking</strong>: Did this change help or
-hurt?</li>
-</ul>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/dsprrr" class="external-link">dsprrr</a></span><span class="op">)</span></span></code></pre></div>
+<div class="section level2">
+<h2 id="why-reading-outputs-is-not-enough">Why reading outputs is not enough<a class="anchor" aria-label="anchor" href="#why-reading-outputs-is-not-enough"></a>
+</h2>
+<p>Most prompts are tuned by trying a few inputs and reading the
+answers. That misleads in predictable ways. After a tweak you re-test
+the example that was failing, not the ones that already worked. Five
+hand-picked inputs rarely look like production data. A new prompt can
+read differently without being more accurate, and “good enough” depends
+on who is reading and when.</p>
+<p>A metric applied to the same labeled rows every time gives a score
+that is reproducible, comparable between versions, and cheap to
+recompute after every change. Whether the score means anything still
+depends on the rows and on the metric, which the rest of this page
+covers.</p>
 </div>
 <div class="section level2">
-<h2 id="built-in-metrics">Built-in Metrics<a class="anchor" aria-label="anchor" href="#built-in-metrics"></a>
+<h2 id="how-dsprrr-calls-a-metric">How dsprrr calls a metric<a class="anchor" aria-label="anchor" href="#how-dsprrr-calls-a-metric"></a>
 </h2>
-<p>dsprrr provides common metrics out of the box:</p>
-<div class="section level3">
-<h3 id="exact-match">Exact Match<a class="anchor" aria-label="anchor" href="#exact-match"></a>
-</h3>
-<p>For classification and extraction tasks where the answer must be
-exactly right:</p>
+<p>A metric is a function <code>metric(prediction, expected)</code> that
+returns <code>TRUE</code> or <code>FALSE</code>, or a number between 0
+and 1. When <code><a href="../reference/evaluate.html">evaluate()</a></code>, <code><a href="../reference/optimize_grid.html">optimize_grid()</a></code> or
+<code><a href="../reference/compile.html">compile()</a></code> call it, <code>prediction</code> is what
+<code><a href="../reference/run.html">run()</a></code> returned for one row (a named list such as
+<code>list(sentiment = "positive")</code>) and <code>expected</code> is
+that row of your data, as a one-row data frame. Built-in metrics take
+<code>field</code> to say which output to compare with the column of the
+same name:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">metric</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="fu">metric</span><span class="op">(</span><span class="st">"positive"</span>, <span class="st">"positive"</span><span class="op">)</span>  <span class="co"># TRUE</span></span>
-<span><span class="fu">metric</span><span class="op">(</span><span class="st">"Positive"</span>, <span class="st">"positive"</span><span class="op">)</span>  <span class="co"># FALSE (case sensitive by default)</span></span>
+<code class="sourceCode R"><span><span class="va">metric</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"sentiment"</span><span class="op">)</span></span>
+<span><span class="va">row</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span>text <span class="op">=</span> <span class="st">"I love this product"</span>, sentiment <span class="op">=</span> <span class="st">"positive"</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Case insensitive</span></span>
-<span><span class="va">metric</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>ignore_case <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
-<span><span class="fu">metric</span><span class="op">(</span><span class="st">"Positive"</span>, <span class="st">"positive"</span><span class="op">)</span>  <span class="co"># TRUE</span></span>
-<span></span>
-<span><span class="co"># Field extraction for structured outputs</span></span>
-<span><span class="va">metric</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"sentiment"</span><span class="op">)</span></span>
-<span><span class="fu">metric</span><span class="op">(</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>sentiment <span class="op">=</span> <span class="st">"positive"</span>, confidence <span class="op">=</span> <span class="fl">0.9</span><span class="op">)</span>,</span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>sentiment <span class="op">=</span> <span class="st">"positive"</span><span class="op">)</span></span>
-<span><span class="op">)</span>  <span class="co"># TRUE</span></span></code></pre></div>
+<span><span class="fu">metric</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>sentiment <span class="op">=</span> <span class="st">"positive"</span><span class="op">)</span>, <span class="va">row</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] TRUE</span></span>
+<span><span class="fu">metric</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>sentiment <span class="op">=</span> <span class="st">"negative"</span><span class="op">)</span>, <span class="va">row</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] FALSE</span></span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="built-in-metrics">Built-in metrics<a class="anchor" aria-label="anchor" href="#built-in-metrics"></a>
+</h2>
+<div class="section level3">
+<h3 id="exact-match">Exact match<a class="anchor" aria-label="anchor" href="#exact-match"></a>
+</h3>
+<p>For classification and extraction, where the answer must be exactly
+right. Called directly on two values, a metric compares them as given.
+Whitespace is normalized, and case matters unless you set
+<code>ignore_case = TRUE</code>:</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">exact</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="fu">exact</span><span class="op">(</span><span class="st">"positive"</span>, <span class="st">"positive"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] TRUE</span></span>
+<span><span class="fu">exact</span><span class="op">(</span><span class="st">"Positive"</span>, <span class="st">"positive"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] FALSE</span></span>
+<span><span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>ignore_case <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">(</span><span class="st">"Positive"</span>, <span class="st">"positive"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="contains">Contains<a class="anchor" aria-label="anchor" href="#contains"></a>
 </h3>
-<p>For tasks where the answer should include specific content:</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">metric</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metric_contains.html">metric_contains</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="fu">metric</span><span class="op">(</span><span class="st">"The capital of France is Paris."</span>, <span class="st">"Paris"</span><span class="op">)</span>  <span class="co"># TRUE</span></span>
-<span><span class="fu">metric</span><span class="op">(</span><span class="st">"The capital of France is Paris."</span>, <span class="st">"London"</span><span class="op">)</span>  <span class="co"># FALSE</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="f1-score">F1 Score<a class="anchor" aria-label="anchor" href="#f1-score"></a>
-</h3>
-<p>For text generation where partial overlap matters:</p>
+<p><code><a href="../reference/metric_contains.html">metric_contains()</a></code> checks that an output contains a fixed
+pattern, or matches a regular expression with
+<code>fixed = FALSE</code>. It ignores <code>expected</code>, so it
+suits checks that are the same for every row, such as a required keyword
+or disclaimer:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">metric</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metric_f1.html">metric_f1</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="fu">metric</span><span class="op">(</span><span class="st">"the quick brown fox"</span>, <span class="st">"the fast brown fox"</span><span class="op">)</span>  <span class="co"># 0.75</span></span>
-<span><span class="co"># Tokens: {the, quick, brown, fox} vs {the, fast, brown, fox}</span></span>
-<span><span class="co"># Overlap: {the, brown, fox} = 3 tokens</span></span>
-<span><span class="co"># Precision: 3/4, Recall: 3/4, F1: 0.75</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="va">mentions_refund</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metric_contains.html">metric_contains</a></span><span class="op">(</span><span class="st">"refund"</span>, field <span class="op">=</span> <span class="st">"reply"</span>, ignore_case <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span><span class="fu">mentions_refund</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>reply <span class="op">=</span> <span class="st">"We have issued a full Refund."</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] TRUE</span></span>
+<span><span class="fu">mentions_refund</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>reply <span class="op">=</span> <span class="st">"Your order has shipped."</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] FALSE</span></span></code></pre></div>
 </div>
 <div class="section level3">
-<h3 id="custom-metrics">Custom Metrics<a class="anchor" aria-label="anchor" href="#custom-metrics"></a>
+<h3 id="f1-score">F1 score<a class="anchor" aria-label="anchor" href="#f1-score"></a>
 </h3>
-<p>For domain-specific evaluation:</p>
+<p>For free-text answers where partial overlap deserves partial
+credit:</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Check if output is valid JSON</span></span>
-<span><span class="va">metric_valid_json</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">prediction</span>, <span class="va">expected</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="kw"><a href="https://rdrr.io/r/base/conditions.html" class="external-link">tryCatch</a></span><span class="op">(</span><span class="op">{</span></span>
-<span>    <span class="fu">jsonlite</span><span class="fu">::</span><span class="fu"><a href="https://jeroen.r-universe.dev/jsonlite/reference/fromJSON.html" class="external-link">fromJSON</a></span><span class="op">(</span><span class="va">prediction</span><span class="op">)</span></span>
-<span>    <span class="cn">TRUE</span></span>
-<span>  <span class="op">}</span>, error <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">e</span><span class="op">)</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/metric_f1.html">metric_f1</a></span><span class="op">(</span><span class="op">)</span><span class="op">(</span><span class="st">"the quick brown fox"</span>, <span class="st">"the fast brown fox"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] 0.75</span></span></code></pre></div>
+<p>The strings share three of their four tokens (the, brown, fox), so
+precision and recall are both 3/4 and F1 is 0.75.</p>
+</div>
+<div class="section level3">
+<h3 id="custom-metrics">Custom metrics<a class="anchor" aria-label="anchor" href="#custom-metrics"></a>
+</h3>
+<p>Any function with the same two arguments works. Read fields from both
+sides by name:</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">confident_match</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">prediction</span>, <span class="va">expected</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">prediction</span><span class="op">$</span><span class="va">sentiment</span> <span class="op">==</span> <span class="va">expected</span><span class="op">$</span><span class="va">sentiment</span> <span class="op">&amp;&amp;</span> <span class="va">prediction</span><span class="op">$</span><span class="va">confidence</span> <span class="op">&gt;=</span> <span class="fl">0.8</span></span>
 <span><span class="op">}</span></span>
 <span></span>
-<span><span class="co"># Check if sentiment matches with confidence threshold</span></span>
-<span><span class="va">metric_confident_match</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">prediction</span>, <span class="va">expected</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">is.list</a></span><span class="op">(</span><span class="va">prediction</span><span class="op">)</span><span class="op">)</span> <span class="kw"><a href="https://rdrr.io/r/base/function.html" class="external-link">return</a></span><span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span></span>
-<span>  <span class="va">prediction</span><span class="op">$</span><span class="va">sentiment</span> <span class="op">==</span> <span class="va">expected</span><span class="op">$</span><span class="va">sentiment</span> <span class="op">&amp;&amp;</span></span>
-<span>    <span class="va">prediction</span><span class="op">$</span><span class="va">confidence</span> <span class="op">&gt;=</span> <span class="fl">0.8</span></span>
-<span><span class="op">}</span></span></code></pre></div>
+<span><span class="va">row</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span>text <span class="op">=</span> <span class="st">"Great product"</span>, sentiment <span class="op">=</span> <span class="st">"positive"</span><span class="op">)</span></span>
+<span><span class="fu">confident_match</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>sentiment <span class="op">=</span> <span class="st">"positive"</span>, confidence <span class="op">=</span> <span class="fl">0.9</span><span class="op">)</span>, <span class="va">row</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] TRUE</span></span>
+<span><span class="fu">confident_match</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>sentiment <span class="op">=</span> <span class="st">"positive"</span>, confidence <span class="op">=</span> <span class="fl">0.6</span><span class="op">)</span>, <span class="va">row</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] FALSE</span></span></code></pre></div>
 </div>
 <div class="section level3">
-<h3 id="trace-aware-metrics">Trace-Aware Metrics<a class="anchor" aria-label="anchor" href="#trace-aware-metrics"></a>
+<h3 id="trace-aware-metrics">Trace-aware metrics<a class="anchor" aria-label="anchor" href="#trace-aware-metrics"></a>
 </h3>
 <p>Sometimes output correctness is not enough. You may also need to
 score whether the program used tools, stayed within an execution policy,
 or produced a useful trajectory for a reflective optimizer.
 <code><a href="../reference/metric_with_trace.html">metric_with_trace()</a></code> marks a three-argument metric that
-receives a stable program-trace envelope:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+receives a program-trace envelope:</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">metric</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metric_with_trace.html">metric_with_trace</a></span><span class="op">(</span></span>
 <span>  <span class="kw">function</span><span class="op">(</span><span class="va">prediction</span>, <span class="va">expected</span>, <span class="va">program_trace</span><span class="op">)</span> <span class="op">{</span></span>
 <span>    <span class="va">correct</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="va">prediction</span><span class="op">$</span><span class="va">sentiment</span>, <span class="va">expected</span><span class="op">$</span><span class="va">sentiment</span><span class="op">)</span></span>
@@ -284,7 +261,7 @@ receives a stable program-trace envelope:</p>
 <span><span class="op">)</span></span></code></pre></div>
 <p>The envelope contains <code>row_id</code>, <code>epoch</code>,
 <code>status</code>, ordered module <code>events</code>, and per-row
-<code>metadata</code>. The metric may return a scalar score or a
+<code>metadata</code>. The metric may return a scalar score or
 <code>list(score = ..., feedback = ...)</code>, so the same function can
 guide reflective optimizers. Ordinary two-argument metrics continue to
 work unchanged.</p>
@@ -294,49 +271,76 @@ results.</p>
 </div>
 </div>
 <div class="section level2">
-<h2 id="the-evaluation-workflow">The Evaluation Workflow<a class="anchor" aria-label="anchor" href="#the-evaluation-workflow"></a>
+<h2 id="running-an-evaluation">Running an evaluation<a class="anchor" aria-label="anchor" href="#running-an-evaluation"></a>
 </h2>
-<p>dsprrr’s <code><a href="../reference/evaluate.html">evaluate()</a></code> function runs your module on a
-dataset and computes metrics:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Prepare labeled data</span></span>
+<p><code><a href="../reference/evaluate.html">evaluate()</a></code> runs a module on every row of a data frame
+and scores each prediction:</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">llm</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-luna"</span><span class="op">)</span></span>
+<span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
+<span>  <span class="st">"text -&gt; sentiment: enum('positive', 'negative', 'neutral')"</span></span>
+<span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
 <span><span class="va">test_data</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
 <span>  text <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Great product!"</span>, <span class="st">"Terrible service"</span>, <span class="st">"It's okay"</span><span class="op">)</span>,</span>
 <span>  sentiment <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"positive"</span>, <span class="st">"negative"</span>, <span class="st">"neutral"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Evaluate</span></span>
 <span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span></span>
 <span>  <span class="va">mod</span>,</span>
 <span>  data <span class="op">=</span> <span class="va">test_data</span>,</span>
 <span>  metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"sentiment"</span><span class="op">)</span>,</span>
 <span>  .llm <span class="op">=</span> <span class="va">llm</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">result</span><span class="op">$</span><span class="va">mean_score</span>    <span class="co"># 0.67 (2 out of 3 correct)</span></span>
-<span><span class="va">result</span><span class="op">$</span><span class="va">scores</span>        <span class="co"># c(1, 1, 0)</span></span>
-<span><span class="va">result</span><span class="op">$</span><span class="va">predictions</span>   <span class="co"># What the model actually said</span></span>
-<span><span class="va">result</span><span class="op">$</span><span class="va">n_evaluated</span>   <span class="co"># 3</span></span>
-<span><span class="va">result</span><span class="op">$</span><span class="va">n_errors</span>      <span class="co"># 0</span></span>
-<span><span class="va">result</span><span class="op">$</span><span class="va">traces</span>        <span class="co"># Row-aligned program-trace envelopes</span></span></code></pre></div>
-<p>This single function call:</p>
-<ol style="list-style-type: decimal">
-<li>Runs your module on every example</li>
-<li>Applies your metric to each prediction</li>
-<li>Aggregates results into actionable statistics</li>
-</ol>
+<span><span class="op">)</span></span></code></pre></div>
+<p>The result is a list:</p>
+<table class="table">
+<colgroup>
+<col width="50%">
+<col width="50%">
+</colgroup>
+<thead><tr class="header">
+<th>Element</th>
+<th>Contents</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><code>mean_score</code></td>
+<td>The mean score over all rows; rows that failed count as 0</td>
+</tr>
+<tr class="even">
+<td><code>scores</code></td>
+<td>One score per row</td>
+</tr>
+<tr class="odd">
+<td><code>predictions</code></td>
+<td>What the module returned for each row</td>
+</tr>
+<tr class="even">
+<td>
+<code>n_evaluated</code>, <code>n_errors</code>
+</td>
+<td>Rows scored, and rows where the run or the metric failed</td>
+</tr>
+<tr class="odd">
+<td><code>errors</code></td>
+<td>The error messages, if any</td>
+</tr>
+<tr class="even">
+<td><code>traces</code></td>
+<td>One trace envelope per row</td>
+</tr>
+</tbody>
+</table>
 </div>
 <div class="section level2">
-<h2 id="metric-driven-development">Metric-Driven Development<a class="anchor" aria-label="anchor" href="#metric-driven-development"></a>
+<h2 id="metric-driven-development">Metric-driven development<a class="anchor" aria-label="anchor" href="#metric-driven-development"></a>
 </h2>
-<p>With metrics in place, development becomes systematic:</p>
 <div class="section level3">
-<h3 id="start-with-evaluation">1. Start with Evaluation<a class="anchor" aria-label="anchor" href="#start-with-evaluation"></a>
+<h3 id="build-the-evaluation-set-first">1. Build the evaluation set first<a class="anchor" aria-label="anchor" href="#build-the-evaluation-set-first"></a>
 </h3>
-<p>Before writing any prompt, create your evaluation dataset:</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Collect or create labeled examples</span></span>
-<span><span class="va">eval_data</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
+<p>Before writing any prompt, collect labeled examples:</p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">eval_data</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
 <span>  question <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
 <span>    <span class="st">"What is 2+2?"</span>,</span>
 <span>    <span class="st">"What is the capital of France?"</span>,</span>
@@ -344,261 +348,241 @@ dataset and computes metrics:</p>
 <span>  <span class="op">)</span>,</span>
 <span>  answer <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"4"</span>, <span class="st">"Paris"</span>, <span class="st">"Shakespeare"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p>This forces you to define success upfront. What counts as a correct
-answer? What edge cases matter?</p>
+<p>This forces you to define success up front: what counts as a correct
+answer, and which edge cases matter.</p>
 </div>
 <div class="section level3">
-<h3 id="establish-a-baseline">2. Establish a Baseline<a class="anchor" aria-label="anchor" href="#establish-a-baseline"></a>
+<h3 id="establish-a-baseline">2. Establish a baseline<a class="anchor" aria-label="anchor" href="#establish-a-baseline"></a>
 </h3>
-<p>Run evaluation with your initial prompt:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">base_sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
 <span>  <span class="st">"question -&gt; answer"</span>,</span>
 <span>  instructions <span class="op">=</span> <span class="st">"Answer the question directly."</span></span>
 <span><span class="op">)</span></span>
 <span><span class="va">mod_v1</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">base_sig</span><span class="op">)</span></span>
+<span><span class="va">metric</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"answer"</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">baseline</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span><span class="va">mod_v1</span>, <span class="va">eval_data</span>, <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">baseline</span><span class="op">$</span><span class="va">mean_score</span>  <span class="co"># 0.65</span></span></code></pre></div>
-<p>Now you have a number to beat.</p>
+<span><span class="va">baseline</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span><span class="va">mod_v1</span>, <span class="va">eval_data</span>, <span class="va">metric</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
+<span><span class="va">baseline</span><span class="op">$</span><span class="va">mean_score</span></span></code></pre></div>
+<p>That number is the one to beat.</p>
 </div>
 <div class="section level3">
-<h3 id="iterate-with-measurement">3. Iterate with Measurement<a class="anchor" aria-label="anchor" href="#iterate-with-measurement"></a>
+<h3 id="measure-every-change">3. Measure every change<a class="anchor" aria-label="anchor" href="#measure-every-change"></a>
 </h3>
-<p>Every change gets measured:</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Try layered instructions without mutating the baseline signature</span></span>
-<span><span class="va">concise_sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature-transforms.html">append_instructions</a></span><span class="op">(</span><span class="va">base_sig</span>, <span class="st">"Use at most five words."</span><span class="op">)</span></span>
-<span></span>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">concise_sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/with_instructions.html">append_instructions</a></span><span class="op">(</span><span class="va">base_sig</span>, <span class="st">"Use at most five words."</span><span class="op">)</span></span>
 <span><span class="va">mod_v2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">concise_sig</span><span class="op">)</span></span>
-<span><span class="va">v2_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span><span class="va">mod_v2</span>, <span class="va">eval_data</span>, <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">v2_result</span><span class="op">$</span><span class="va">mean_score</span>  <span class="co"># 0.70 - better!</span></span>
+<span><span class="va">v2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span><span class="va">mod_v2</span>, <span class="va">eval_data</span>, <span class="va">metric</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Try adding examples</span></span>
-<span><span class="va">mod_v3</span> <span class="op">&lt;-</span> <span class="va">mod_v2</span><span class="op">$</span><span class="fu">clone</span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="va">mod_v3</span> <span class="op">&lt;-</span> <span class="va">mod_v2</span><span class="op">$</span><span class="fu">copy</span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="va">mod_v3</span><span class="op">$</span><span class="va">demos</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>inputs <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>question <span class="op">=</span> <span class="st">"What is 3+3?"</span><span class="op">)</span>, output <span class="op">=</span> <span class="st">"6"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
-<span><span class="va">v3_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span><span class="va">mod_v3</span>, <span class="va">eval_data</span>, <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">v3_result</span><span class="op">$</span><span class="va">mean_score</span>  <span class="co"># 0.75 - even better!</span></span></code></pre></div>
-<p>No guessing. No “it feels better”. Just numbers.</p>
-<p><code><a href="../reference/signature-transforms.html">append_instructions()</a></code> and
-<code><a href="../reference/signature-transforms.html">with_instructions()</a></code> always return a new signature. This
-makes the baseline and candidate contracts independently reproducible
-during optimization.</p>
-<p>For repeated evaluation, set <code>epochs</code> above one.
-<code><a href="../reference/evaluate.html">evaluate()</a></code> returns the last epoch’s row-aligned traces in
-<code>$traces</code> and all epochs in <code>$epoch_traces</code>,
-alongside the epoch-level score summaries:</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<span><span class="va">v3</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span><span class="va">mod_v3</span>, <span class="va">eval_data</span>, <span class="va">metric</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>v1 <span class="op">=</span> <span class="va">baseline</span><span class="op">$</span><span class="va">mean_score</span>, v2 <span class="op">=</span> <span class="va">v2</span><span class="op">$</span><span class="va">mean_score</span>, v3 <span class="op">=</span> <span class="va">v3</span><span class="op">$</span><span class="va">mean_score</span><span class="op">)</span></span></code></pre></div>
+<p><code><a href="../reference/with_instructions.html">append_instructions()</a></code> and
+<code><a href="../reference/with_instructions.html">with_instructions()</a></code> return a new signature, so
+<code>base_sig</code> and <code>mod_v1</code> stay as they were.
+<code>$copy()</code> gives <code>mod_v3</code> its own demos and an
+empty trace history; <code>$clone()</code> would carry over the traces
+<code>mod_v2</code> has already recorded.</p>
+<p>Model outputs vary from run to run. To see by how much, repeat the
+evaluation with <code>epochs</code>. Each epoch makes fresh calls;
+running the same evaluation again replays all epochs from the response
+cache, so pass <code>.cache = FALSE</code> when you want new
+samples:</p>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">repeated</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span></span>
 <span>  <span class="va">mod_v2</span>,</span>
 <span>  <span class="va">eval_data</span>,</span>
-<span>  <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>  epochs <span class="op">=</span> <span class="fl">3L</span></span>
+<span>  <span class="va">metric</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="va">llm</span>,</span>
+<span>  epochs <span class="op">=</span> <span class="fl">5L</span></span>
 <span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">repeated</span><span class="op">$</span><span class="va">epoch_traces</span><span class="op">)</span> <span class="co"># 3</span></span></code></pre></div>
+<span><span class="va">repeated</span><span class="op">$</span><span class="va">ci_95</span></span></code></pre></div>
+<p>With <code>epochs</code> above one, <code><a href="../reference/evaluate.html">evaluate()</a></code> also
+returns <code>epoch_scores</code>, <code>score_std</code> (the standard
+deviation of the per-epoch means) and <code>ci_95</code>, a 95%
+t-interval around the mean. <code>$traces</code> holds the last epoch’s
+traces and <code>$epoch_traces</code> those of every epoch. The interval
+measures how much the score moves between repeated runs on the same
+rows; it says nothing about how the score would change on different
+rows.</p>
 </div>
 <div class="section level3">
-<h3 id="automate-optimization">4. Automate Optimization<a class="anchor" aria-label="anchor" href="#automate-optimization"></a>
+<h3 id="hold-out-a-test-set">4. Hold out a test set<a class="anchor" aria-label="anchor" href="#hold-out-a-test-set"></a>
 </h3>
-<p>Let the computer search for you:</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/optimize_grid.html">optimize_grid</a></span><span class="op">(</span>  <span class="va">mod</span>,</span>
-<span>  data <span class="op">=</span> <span class="va">train_data</span>,</span>
-<span>  metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>  parameters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    temperature <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">0.3</span>, <span class="fl">0.7</span><span class="op">)</span>,</span>
-<span>    instructions <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Be concise."</span>, <span class="st">"Think step by step."</span>, <span class="st">"Answer directly."</span><span class="op">)</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">)</span></span>
+<p>Before optimizing, split your labeled data (<code>all_data</code>
+here) three ways. <code><a href="../reference/split_dataset.html">split_dataset()</a></code> returns a
+<code>train</code> and a <code>val</code> part, so call it twice:</p>
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">outer</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/split_dataset.html">split_dataset</a></span><span class="op">(</span><span class="va">all_data</span>, prop <span class="op">=</span> <span class="fl">0.8</span>, seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span></span>
+<span><span class="va">testset</span> <span class="op">&lt;-</span> <span class="va">outer</span><span class="op">$</span><span class="va">val</span></span>
 <span></span>
-<span><span class="co"># Best configuration is automatically selected</span></span>
-<span><span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">mod</span><span class="op">)</span><span class="op">$</span><span class="va">best_score</span>  <span class="co"># 0.82</span></span></code></pre></div>
-<p>Optimization only works because metrics provide objective
-feedback.</p>
+<span><span class="va">inner</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/split_dataset.html">split_dataset</a></span><span class="op">(</span><span class="va">outer</span><span class="op">$</span><span class="va">train</span>, prop <span class="op">=</span> <span class="fl">0.75</span>, seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span></span>
+<span><span class="va">trainset</span> <span class="op">&lt;-</span> <span class="va">inner</span><span class="op">$</span><span class="va">train</span></span>
+<span><span class="va">valset</span> <span class="op">&lt;-</span> <span class="va">inner</span><span class="op">$</span><span class="va">val</span></span></code></pre></div>
+<p>That leaves 60% of the rows for training, 20% for validation and 20%
+for the final test. Optimizers draw demonstrations from the training
+rows and can compare candidates on the validation rows, passed as
+<code>compile(..., valset = valset)</code>. Score the test rows once, at
+the end.</p>
+</div>
+<div class="section level3">
+<h3 id="let-an-optimizer-search">5. Let an optimizer search<a class="anchor" aria-label="anchor" href="#let-an-optimizer-search"></a>
+</h3>
+<p>Once the score is trustworthy, an optimizer can try variants for
+you:</p>
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/optimize_grid.html">optimize_grid</a></span><span class="op">(</span></span>
+<span>  <span class="va">mod_v2</span>,</span>
+<span>  data <span class="op">=</span> <span class="va">trainset</span>,</span>
+<span>  metric <span class="op">=</span> <span class="va">metric</span>,</span>
+<span>  parameters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    reasoning_effort <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"none"</span>, <span class="st">"low"</span><span class="op">)</span>,</span>
+<span>    instructions_suffix <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Answer in one word."</span>, <span class="st">"Give only the name or number."</span><span class="op">)</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="va">llm</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">mod_v2</span><span class="op">)</span><span class="op">$</span><span class="va">best_score</span></span>
+<span></span>
+<span><span class="va">final</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span><span class="va">mod_v2</span>, <span class="va">testset</span>, <span class="va">metric</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
+<span><span class="va">final</span><span class="op">$</span><span class="va">mean_score</span></span></code></pre></div>
+<p><code><a href="../reference/optimize_grid.html">optimize_grid()</a></code> scores every combination on
+<code>trainset</code> and updates <code>mod_v2</code> in place with the
+best one. It can only find what the metric rewards, so a metric that
+misses part of the task produces a prompt that misses it too.</p>
 </div>
 </div>
 <div class="section level2">
-<h2 id="choosing-the-right-metric">Choosing the Right Metric<a class="anchor" aria-label="anchor" href="#choosing-the-right-metric"></a>
+<h2 id="choosing-a-metric">Choosing a metric<a class="anchor" aria-label="anchor" href="#choosing-a-metric"></a>
 </h2>
-<p>Different tasks need different metrics:</p>
-<table style="width:100%;" class="table">
+<table class="table">
 <colgroup>
-<col width="20%">
-<col width="63%">
-<col width="16%">
+<col width="33%">
+<col width="33%">
+<col width="33%">
 </colgroup>
 <thead><tr class="header">
 <th>Task</th>
-<th>Recommended Metric</th>
+<th>Metric</th>
 <th>Why</th>
 </tr></thead>
 <tbody>
 <tr class="odd">
 <td>Classification</td>
-<td><code><a href="../reference/metric_exact_match.html">metric_exact_match()</a></code></td>
-<td>Answer must be exactly right</td>
+<td><code>metric_exact_match(field = "label")</code></td>
+<td>The answer must be exactly right</td>
 </tr>
 <tr class="even">
-<td>Extraction</td>
-<td><code>metric_exact_match(field = "...")</code></td>
-<td>Extract specific field</td>
+<td>Extracting one value</td>
+<td><code>metric_exact_match(field = "amount")</code></td>
+<td>Compares one output with the column of the same name</td>
 </tr>
 <tr class="odd">
-<td>Generation</td>
-<td><code><a href="../reference/metric_f1.html">metric_f1()</a></code></td>
-<td>Partial credit for overlap</td>
+<td>Extracting several values</td>
+<td><code>metric_field_match(c("name", "date"))</code></td>
+<td>Every listed field must match</td>
 </tr>
 <tr class="even">
-<td>Yes/No questions</td>
-<td><code>metric_exact_match(ignore_case = TRUE)</code></td>
-<td>“Yes” = “yes”</td>
+<td>Free-text answers</td>
+<td><code>metric_f1(field = "answer")</code></td>
+<td>Partial credit for word overlap</td>
 </tr>
 <tr class="odd">
-<td>Contains keyword</td>
-<td><code><a href="../reference/metric_contains.html">metric_contains()</a></code></td>
-<td>Answer includes key info</td>
+<td>Pass/fail on a graded score</td>
+<td><code>metric_threshold(metric_f1(field = "answer"), 0.8)</code></td>
+<td>Counts a row as correct above a cutoff</td>
 </tr>
 <tr class="even">
-<td>Complex evaluation</td>
-<td>Custom function</td>
-<td>Domain-specific logic</td>
+<td>Yes/no questions</td>
+<td><code>metric_exact_match(field = "answer", ignore_case = TRUE)</code></td>
+<td>“Yes” and “yes” count as equal</td>
+</tr>
+<tr class="odd">
+<td>Required content</td>
+<td><code>metric_contains("refund", field = "reply")</code></td>
+<td>The same fixed pattern for every row; ignores the expected
+value</td>
+</tr>
+<tr class="even">
+<td>Anything else</td>
+<td>A custom function</td>
+<td>Domain-specific rules</td>
 </tr>
 </tbody>
 </table>
 <div class="section level3">
-<h3 id="when-exact-match-is-too-strict">When Exact Match is Too Strict<a class="anchor" aria-label="anchor" href="#when-exact-match-is-too-strict"></a>
+<h3 id="when-exact-match-is-too-strict">When exact match is too strict<a class="anchor" aria-label="anchor" href="#when-exact-match-is-too-strict"></a>
 </h3>
-<p>Sometimes equivalent answers look different:</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># These are all correct, but exact match fails</span></span>
-<span><span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span><span class="op">(</span><span class="st">"4"</span>, <span class="st">"four"</span><span class="op">)</span>           <span class="co"># FALSE</span></span>
-<span><span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span><span class="op">(</span><span class="st">"Paris"</span>, <span class="st">"paris"</span><span class="op">)</span>      <span class="co"># FALSE</span></span>
-<span><span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span><span class="op">(</span><span class="st">"$100"</span>, <span class="st">"100 dollars"</span><span class="op">)</span> <span class="co"># FALSE</span></span></code></pre></div>
-<p>Solutions: - Normalize outputs before comparison - Use
-<code>ignore_case = TRUE</code> - Write a custom metric that handles
-variations - Use F1 for partial credit</p>
-</div>
-<div class="section level3">
-<h3 id="when-f1-is-too-lenient">When F1 is Too Lenient<a class="anchor" aria-label="anchor" href="#when-f1-is-too-lenient"></a>
-</h3>
-<p>F1 gives partial credit for word overlap, but sometimes that’s
-wrong:</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/metric_f1.html">metric_f1</a></span><span class="op">(</span><span class="op">)</span><span class="op">(</span><span class="st">"The answer is yes"</span>, <span class="st">"The answer is no"</span><span class="op">)</span>  <span class="co"># 0.75</span></span>
-<span><span class="co"># High score despite opposite meaning!</span></span></code></pre></div>
-<p>For tasks where meaning matters more than words, consider: - Exact
-match on key fields - Semantic similarity metrics - Model-graded
-evaluation (use another LLM to judge)</p>
-</div>
-</div>
-<div class="section level2">
-<h2 id="the-data-split">The Data Split<a class="anchor" aria-label="anchor" href="#the-data-split"></a>
-</h2>
-<p>Proper evaluation requires data discipline:</p>
+<p>Equivalent answers can look different:</p>
 <div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Split your data</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">42</span><span class="op">)</span></span>
-<span><span class="va">n</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">all_data</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># 60% for training (used during optimization)</span></span>
-<span><span class="va">train_idx</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sample.html" class="external-link">sample</a></span><span class="op">(</span><span class="va">n</span>, <span class="fl">0.6</span> <span class="op">*</span> <span class="va">n</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># 20% for validation (used to select best config)</span></span>
-<span><span class="va">remaining</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sets.html" class="external-link">setdiff</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="va">n</span>, <span class="va">train_idx</span><span class="op">)</span></span>
-<span><span class="va">val_idx</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sample.html" class="external-link">sample</a></span><span class="op">(</span><span class="va">remaining</span>, <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">remaining</span><span class="op">)</span> <span class="op">/</span> <span class="fl">2</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># 20% for test (never touched until final evaluation)</span></span>
-<span><span class="va">test_idx</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sets.html" class="external-link">setdiff</a></span><span class="op">(</span><span class="va">remaining</span>, <span class="va">val_idx</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">trainset</span> <span class="op">&lt;-</span> <span class="va">all_data</span><span class="op">[</span><span class="va">train_idx</span>, <span class="op">]</span></span>
-<span><span class="va">valset</span> <span class="op">&lt;-</span> <span class="va">all_data</span><span class="op">[</span><span class="va">val_idx</span>, <span class="op">]</span></span>
-<span><span class="va">testset</span> <span class="op">&lt;-</span> <span class="va">all_data</span><span class="op">[</span><span class="va">test_idx</span>, <span class="op">]</span></span></code></pre></div>
-<p><strong>Training set</strong>: Used to generate demonstrations and
-optimize prompts.</p>
-<p><strong>Validation set</strong>: Used to compare configurations and
-select the best.</p>
-<p><strong>Test set</strong>: Used once, at the end, to report final
-performance. Never optimize against it.</p>
-<p>If you optimize against your test set, you’re measuring how well you
-overfit, not how well you’ll generalize.</p>
+<code class="sourceCode R"><span><span class="va">exact</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="fu">exact</span><span class="op">(</span><span class="st">"4"</span>, <span class="st">"four"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] FALSE</span></span>
+<span><span class="fu">exact</span><span class="op">(</span><span class="st">"Paris"</span>, <span class="st">"paris"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] FALSE</span></span>
+<span><span class="fu">exact</span><span class="op">(</span><span class="st">"$100"</span>, <span class="st">"100 dollars"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] FALSE</span></span></code></pre></div>
+<p>Normalize outputs before comparing, set
+<code>ignore_case = TRUE</code>, constrain the output type in the
+signature (an <code>int</code> output cannot come back as “four”), write
+a custom metric that accepts the variants, or use F1 for partial
+credit.</p>
 </div>
-<div class="section level2">
-<h2 id="common-pitfalls">Common Pitfalls<a class="anchor" aria-label="anchor" href="#common-pitfalls"></a>
-</h2>
 <div class="section level3">
-<h3 id="testing-on-training-data">Testing on Training Data<a class="anchor" aria-label="anchor" href="#testing-on-training-data"></a>
+<h3 id="when-f1-is-too-lenient">When F1 is too lenient<a class="anchor" aria-label="anchor" href="#when-f1-is-too-lenient"></a>
 </h3>
+<p>F1 rewards shared words, even when the meaning is opposite:</p>
 <div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># WRONG: Evaluate on the same data used for optimization</span></span>
-<span><span class="fu"><a href="../reference/optimize_grid.html">optimize_grid</a></span><span class="op">(</span><span class="va">mod</span>, <span class="va">data</span>, <span class="va">metric</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span><span class="va">mod</span>, <span class="va">data</span>, <span class="va">metric</span><span class="op">)</span>  <span class="co"># Overfit score!</span></span>
-<span></span>
-<span><span class="co"># RIGHT: Use held-out test data</span></span>
-<span><span class="fu"><a href="../reference/optimize_grid.html">optimize_grid</a></span><span class="op">(</span><span class="va">mod</span>, <span class="va">trainset</span>, <span class="va">metric</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span><span class="va">mod</span>, <span class="va">testset</span>, <span class="va">metric</span><span class="op">)</span>  <span class="co"># Honest score</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/metric_f1.html">metric_f1</a></span><span class="op">(</span><span class="op">)</span><span class="op">(</span><span class="st">"The answer is yes"</span>, <span class="st">"The answer is no"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] 0.75</span></span></code></pre></div>
+<p>When meaning matters more than wording, compare the key field
+exactly, or have another model grade the output (see <a href="vitals-recipes.html">Evaluate with vitals</a>).</p>
+</div>
+</div>
+<div class="section level2">
+<h2 id="common-pitfalls">Common pitfalls<a class="anchor" aria-label="anchor" href="#common-pitfalls"></a>
+</h2>
+<div class="section level3">
+<h3 id="scoring-on-the-rows-you-optimized">Scoring on the rows you optimized<a class="anchor" aria-label="anchor" href="#scoring-on-the-rows-you-optimized"></a>
+</h3>
+<p><code>optimization_result(mod)$best_score</code> is the score of the
+winning candidate on the rows the search chose it with, so it is
+optimistic: it measures how well the search fit those rows, not how the
+module will do on new inputs. Report the score on rows the search never
+saw, like <code>final</code> in step 5.</p>
 </div>
 <div class="section level3">
-<h3 id="metric-doesnt-match-task">Metric Doesn’t Match Task<a class="anchor" aria-label="anchor" href="#metric-doesnt-match-task"></a>
+<h3 id="a-metric-that-does-not-fit-the-task">A metric that does not fit the task<a class="anchor" aria-label="anchor" href="#a-metric-that-does-not-fit-the-task"></a>
 </h3>
+<p>Exact match on generated prose, such as product descriptions, scores
+nearly every output 0, so every prompt looks equally bad. Use F1 against
+a reference text, a custom check for the properties you need, or a
+model-graded rubric.</p>
+</div>
+<div class="section level3">
+<h3 id="too-few-examples">Too few examples<a class="anchor" aria-label="anchor" href="#too-few-examples"></a>
+</h3>
+<p>With pass/fail scores, the uncertainty that comes from a small test
+set is easy to compute. Here are exact binomial 95% intervals for 4
+correct answers out of 5, and for 40 out of 50:</p>
 <div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Task: Generate creative stories</span></span>
-<span><span class="co"># WRONG: Exact match (too strict)</span></span>
-<span><span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span><span class="va">mod</span>, <span class="va">data</span>, <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># RIGHT: Custom metric for creativity/coherence</span></span>
-<span><span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span><span class="va">mod</span>, <span class="va">data</span>, <span class="va">metric_story_quality</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/binom.test.html" class="external-link">binom.test</a></span><span class="op">(</span><span class="fl">4</span>, <span class="fl">5</span><span class="op">)</span><span class="op">$</span><span class="va">conf.int</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">2</span><span class="op">]</span>, <span class="fl">2</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] 0.28 0.99</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/binom.test.html" class="external-link">binom.test</a></span><span class="op">(</span><span class="fl">40</span>, <span class="fl">50</span><span class="op">)</span><span class="op">$</span><span class="va">conf.int</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">2</span><span class="op">]</span>, <span class="fl">2</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] 0.66 0.90</span></span></code></pre></div>
+<p>Both score 0.8, but five rows are consistent with a true accuracy
+anywhere from 0.28 to 0.99. Fifty rows narrow that to 0.66 to 0.90,
+which is still wide enough to hide a five-point difference between two
+prompts. Compare versions on the same rows, and grow the test set until
+the differences you care about are larger than this range. The
+<code>ci_95</code> from repeated epochs does not replace this check,
+because it only reflects run-to-run variation on the same rows.</p>
+<p>To watch a metric drive an optimizer end to end, continue with <a href="tutorial-optimize-your-module.html">Tutorial 5: Optimize a
+module</a>.</p>
 </div>
-<div class="section level3">
-<h3 id="too-few-examples">Too Few Examples<a class="anchor" aria-label="anchor" href="#too-few-examples"></a>
-</h3>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># WRONG: 5 examples gives noisy estimates</span></span>
-<span><span class="va">test_tiny</span> <span class="op">&lt;-</span> <span class="va">data</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">5</span>, <span class="op">]</span></span>
-<span><span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span><span class="va">mod</span>, <span class="va">test_tiny</span>, <span class="va">metric</span><span class="op">)</span>  <span class="co"># Could be 0.8 or 0.2 by chance</span></span>
-<span></span>
-<span><span class="co"># RIGHT: 50+ examples for stable estimates</span></span>
-<span><span class="va">test_good</span> <span class="op">&lt;-</span> <span class="va">data</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">50</span>, <span class="op">]</span></span>
-<span><span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span><span class="va">mod</span>, <span class="va">test_good</span>, <span class="va">metric</span><span class="op">)</span>  <span class="co"># Reliable signal</span></span></code></pre></div>
-</div>
-</div>
-<div class="section level2">
-<h2 id="the-payoff">The Payoff<a class="anchor" aria-label="anchor" href="#the-payoff"></a>
-</h2>
-<p>Metric-driven development takes more upfront effort: - Collecting
-labeled data - Choosing appropriate metrics - Maintaining train/val/test
-splits</p>
-<p>But it pays off:</p>
-<ul>
-<li>
-<strong>Confidence</strong>: You know when things work</li>
-<li>
-<strong>Progress</strong>: You can measure improvement</li>
-<li>
-<strong>Debugging</strong>: You can identify failure modes</li>
-<li>
-<strong>Automation</strong>: Optimization becomes possible</li>
-<li>
-<strong>Communication</strong>: Share concrete numbers, not
-vibes</li>
-</ul>
-</div>
-<div class="section level2">
-<h2 id="further-reading">Further Reading<a class="anchor" aria-label="anchor" href="#further-reading"></a>
-</h2>
-<ul>
-<li>
-<strong><a href="tutorial-optimize-your-module.html">Tutorial:
-Optimize Your Module</a></strong> - Metrics in action</li>
-<li>
-<strong><a href="concepts-optimization-theory.html">How Optimization
-Works</a></strong> - Why metrics enable optimization</li>
-<li>
-<strong><a href="../reference/metric_exact_match.html">API
-Reference: Metrics</a></strong> - Built-in metrics</li>
-</ul>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

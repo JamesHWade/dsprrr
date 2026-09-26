@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Tutorial 2: Building a Reusable Classifier • dsprrr</title>
+<title>Tutorial 2: Build a classifier • dsprrr</title>
 <!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="../favicon-96x96.png">
 <link rel="icon" type="”image/svg+xml”" href="../favicon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
@@ -17,7 +17,7 @@
 <link href="../deps/Fira_Code-0.4.10/font.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Tutorial 2: Building a Reusable Classifier">
+<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Tutorial 2: Build a classifier">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -36,67 +36,67 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
-<li class="nav-item"><a class="nav-link" href="../articles/getting-started.html">Get Started</a></li>
+<li class="nav-item"><a class="nav-link" href="../articles/tutorial-hello-world.html">Get started</a></li>
 <li class="active nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-tutorials" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Tutorials</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-tutorials">
-<li><h6 class="dropdown-header" data-toc-skip>Learning Path</h6></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-hello-world.html">1. Your First LLM Call</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-build-classifier.html">2. Building a Classifier</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-structured-outputs.html">3. Structured Outputs</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-improve-with-demos.html">4. Improving with Examples</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-optimize-your-module.html">5. Optimization</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-deploy-to-production.html">6. Production</a></li>
+<li><a class="dropdown-item" href="../articles/tutorial-hello-world.html">1. Your first LLM call</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-build-classifier.html">2. Build a classifier</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-structured-outputs.html">3. Extract structured data</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-improve-with-demos.html">4. Improve with examples</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-optimize-your-module.html">5. Optimize a module</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-deploy-to-production.html">6. Save and reuse a module</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Advanced Tutorials</h6></li>
-    <li><a class="dropdown-item" href="../articles/text-adventure.html">Build an AI Game Master</a></li>
-    <li><a class="dropdown-item" href="../articles/llms-txt.html">Generate Package Docs</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-rlm-dsprrr.html">Investigate a Regression with RLM</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Projects</h6></li>
+    <li><a class="dropdown-item" href="../articles/llms-txt.html">Generate an llms.txt file</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-rlm-dsprrr.html">Investigate a regression with RLM</a></li>
+    <li><a class="dropdown-item" href="../articles/text-adventure.html">Build a text adventure</a></li>
   </ul>
 </li>
 <li class="nav-item dropdown">
-  <button class="nav-link dropdown-toggle" type="button" id="dropdown-how-to-guides" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">How-to Guides</button>
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-how-to-guides" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">How-to guides</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-how-to-guides">
-<li><a class="dropdown-item" href="../articles/troubleshooting.html">Troubleshooting</a></li>
-    <li><a class="dropdown-item" href="../articles/compilation-optimization.html">Compile &amp; Optimize</a></li>
-    <li><a class="dropdown-item" href="../articles/vitals-recipes.html">Evaluate with Vitals</a></li>
-    <li><a class="dropdown-item" href="../articles/rag-workflows.html">Build RAG Pipelines</a></li>
-    <li><a class="dropdown-item" href="../articles/chaining-modules.html">Chaining Modules</a></li>
-    <li><a class="dropdown-item" href="../articles/calibrated-decisions.html">Calibrated Decisions</a></li>
-    <li><a class="dropdown-item" href="../articles/orchestration.html">Deploy to Production</a></li>
+<li><h6 class="dropdown-header" data-toc-skip>Build</h6></li>
+    <li><a class="dropdown-item" href="../articles/advanced-modules.html">Choose a module type</a></li>
+    <li><a class="dropdown-item" href="../articles/chaining-modules.html">Chain modules into pipelines</a></li>
+    <li><a class="dropdown-item" href="../articles/rag-workflows.html">Retrieval-augmented generation</a></li>
+    <li><a class="dropdown-item" href="../articles/calibrated-decisions.html">Calibrated decisions</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Integrations</h6></li>
-    <li><a class="dropdown-item" href="../articles/vitals-integration.html">Vitals Package</a></li>
-    <li><a class="dropdown-item" href="../articles/tidymodels-integration.html">tidymodels</a></li>
-    <li><a class="dropdown-item" href="../articles/advanced-ellmer.html">Advanced ellmer</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Measure and improve</h6></li>
+    <li><a class="dropdown-item" href="../articles/compilation-optimization.html">Compile and optimize</a></li>
+    <li><a class="dropdown-item" href="../articles/advanced-optimization.html">Choose an optimizer</a></li>
+    <li><a class="dropdown-item" href="../articles/vitals-recipes.html">Evaluate with vitals</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Run</h6></li>
+    <li><a class="dropdown-item" href="../articles/models-and-providers.html">Models, providers and streaming</a></li>
+    <li><a class="dropdown-item" href="../articles/orchestration.html">Run dsprrr in pipelines</a></li>
+    <li><a class="dropdown-item" href="../articles/tidymodels-integration.html">Use dsprrr with tidymodels</a></li>
+    <li><a class="dropdown-item" href="../articles/troubleshooting.html">Troubleshooting</a></li>
   </ul>
 </li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-concepts" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Concepts</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-concepts">
-<li><a class="dropdown-item" href="../articles/concepts-dspy-philosophy.html">The DSPy Philosophy</a></li>
-    <li><a class="dropdown-item" href="../articles/dspy-comparison.html">dsprrr vs. DSPy</a></li>
-    <li><a class="dropdown-item" href="../articles/concepts-signatures-modules.html">Signatures &amp; Modules</a></li>
-    <li><a class="dropdown-item" href="../articles/concepts-optimization-theory.html">How Optimization Works</a></li>
-    <li><a class="dropdown-item" href="../articles/concepts-why-metrics-matter.html">Why Metrics Matter</a></li>
-    <li><a class="dropdown-item" href="../articles/how-rlm-works.html">How RLMs Work</a></li>
+<li><a class="dropdown-item" href="../articles/concepts-signatures-modules.html">How dsprrr works</a></li>
+    <li><a class="dropdown-item" href="../articles/concepts-why-metrics-matter.html">Metrics and evaluation</a></li>
+    <li><a class="dropdown-item" href="../articles/concepts-optimization-theory.html">How optimization works</a></li>
+    <li><a class="dropdown-item" href="../articles/dspy-comparison.html">dsprrr for DSPy users</a></li>
+    <li><a class="dropdown-item" href="../articles/how-rlm-works.html">How RLM works</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Deep Dives</h6></li>
-    <li><a class="dropdown-item" href="../articles/flex-optimization.html">Flex: Optimize the Whole Program</a></li>
-    <li><a class="dropdown-item" href="../articles/advanced-modules.html">Advanced Reasoning</a></li>
-    <li><a class="dropdown-item" href="../articles/advanced-optimization.html">Advanced Optimization</a></li>
-    <li><a class="dropdown-item" href="../articles/omni-meta-optimization.html">Composing Optimizers with Omni</a></li>
-    <li><a class="dropdown-item" href="../articles/agentic-optimization-harnesses.html">Agentic Optimization Harnesses</a></li>
-    <li><a class="dropdown-item" href="../articles/reasoning-models.html">Reasoning Models</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Experimental</h6></li>
+    <li><a class="dropdown-item" href="../articles/flex-optimization.html">Flex: optimize a whole program</a></li>
+    <li><a class="dropdown-item" href="../articles/omni-meta-optimization.html">Compose optimizers with Omni</a></li>
+    <li><a class="dropdown-item" href="../articles/agentic-optimization-harnesses.html">Agentic optimization harnesses</a></li>
   </ul>
 </li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-reference" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Reference</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-reference">
-<li><a class="dropdown-item" href="../articles/cheatsheet.html">Quick Reference</a></li>
-    <li><a class="dropdown-item" href="../reference/index.html">API Documentation</a></li>
+<li><a class="dropdown-item" href="../reference/index.html">Function reference</a></li>
+    <li><a class="dropdown-item" href="../articles/cheatsheet.html">Quick reference</a></li>
   </ul>
 </li>
+<li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul>
 <ul class="navbar-nav">
 <li class="nav-item"><form class="form-inline" role="search">
@@ -123,7 +123,7 @@
 
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
-      <img src="../logo.svg" class="logo" alt=""><h1>Tutorial 2: Building a Reusable Classifier</h1>
+      <img src="../logo.svg" class="logo" alt=""><h1>Tutorial 2: Build a classifier</h1>
             
       
       <small class="dont-index">Source: <a href="https://github.com/JamesHWade/dsprrr/blob/main/vignettes/tutorial-build-classifier.Rmd" class="external-link"><code>vignettes/tutorial-build-classifier.Rmd</code></a></small>
@@ -132,134 +132,145 @@
 
     
     
-<p>In <a href="tutorial-hello-world.html">Tutorial 1</a>, you built and
-ran a typed module. Now you will use that same contract across hundreds
-of texts.</p>
-<p>In this tutorial, you’ll build a <strong>reusable module</strong>—a
-classifier you can use over and over.</p>
-<p><strong>Time</strong>: 20-25 minutes</p>
-<div class="section level2">
-<h2 id="what-youll-build">What You’ll Build<a class="anchor" aria-label="anchor" href="#what-youll-build"></a>
-</h2>
-<p>A sentiment classifier that: - Processes single texts or batches -
-Remembers its configuration - Can be saved and reused</p>
-</div>
-<div class="section level2">
-<h2 id="prerequisites">Prerequisites<a class="anchor" aria-label="anchor" href="#prerequisites"></a>
-</h2>
-<ul>
-<li>Completed <a href="tutorial-hello-world.html">Tutorial 1</a>
-</li>
-<li>
-<code>OPENAI_API_KEY</code> set in your environment</li>
-</ul>
+<p>You will build a sentiment classifier and run it three ways: on one
+text, on a vector of texts, and on a data frame with
+<code><a href="../reference/run_dataset.html">run_dataset()</a></code>. It uses the signature syntax from <a href="tutorial-hello-world.html">Tutorial 1</a>.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/dsprrr" class="external-link">dsprrr</a></span><span class="op">)</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ellmer.tidyverse.org" class="external-link">ellmer</a></span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level2">
-<h2 id="step-1-declare-the-classifier">Step 1: Declare the Classifier<a class="anchor" aria-label="anchor" href="#step-1-declare-the-classifier"></a>
-</h2>
-<p>Declare the task once as a signature:</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">sentiment_sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
-<span>  <span class="st">"text -&gt; sentiment: enum('positive', 'negative', 'neutral')"</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p>The signature is the reusable typed contract for every call.</p>
-</div>
-<div class="section level2">
-<h2 id="step-2-create-a-reusable-module">Step 2: Create a Reusable Module<a class="anchor" aria-label="anchor" href="#step-2-create-a-reusable-module"></a>
-</h2>
-<p>Wrap the signature in a reusable module:</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">chat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="va">classifier</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sentiment_sig</span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ellmer.tidyverse.org" class="external-link">ellmer</a></span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">classifier</span></span></code></pre></div>
-<p>Now <code>classifier</code> is an object you can use repeatedly.</p>
+<span><span class="va">chat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-luna"</span><span class="op">)</span></span></code></pre></div>
+<p>The answers on this page were recorded with <code>gpt-4.1</code> and
+are replayed when the site is built, so <code>gpt-6-luna</code> may word
+them differently.</p>
+<div class="section level2">
+<h2 id="define-the-classifier">Define the classifier<a class="anchor" aria-label="anchor" href="#define-the-classifier"></a>
+</h2>
+<p>Start from the sentiment signature in Tutorial 1 and print the
+module:</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">classifier</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"text -&gt; sentiment: enum('positive', 'negative', 'neutral')"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">classifier</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ── <span style="font-weight: bold;">PredictModule</span> ──</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ── Signature</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ── <span style="font-weight: bold;">Signature</span> ──</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ── Inputs</span></span>
+<span><span class="co">#&gt; • <span style="color: #00BB00;">text</span>: <span style="color: #0000BB;">"string"</span> - Input: text</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ── Output</span></span>
+<span><span class="co">#&gt; Type: <span style="color: #0000BB;">"object(sentiment: enum(positive, negative, neutral))"</span></span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ── Instructions</span></span>
+<span><span class="co">#&gt; Given the fields `text`, produce the fields `sentiment`.</span></span></code></pre></div>
+<p>The printout shows the inputs, the output type and the instructions
+that start every prompt. This signature has no instructions of its own,
+so dsprrr wrote a default from the field names.</p>
 </div>
 <div class="section level2">
-<h2 id="step-3-classify-single-texts">Step 3: Classify Single Texts<a class="anchor" aria-label="anchor" href="#step-3-classify-single-texts"></a>
+<h2 id="classify-one-text">Classify one text<a class="anchor" aria-label="anchor" href="#classify-one-text"></a>
 </h2>
-<p>Use <code><a href="../reference/run.html">run()</a></code> to classify:</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">classifier</span>, text <span class="op">=</span> <span class="st">"I absolutely loved this movie!"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
+<span><span class="co">#&gt; $sentiment</span></span>
+<span><span class="co">#&gt; [1] "positive"</span></span></code></pre></div>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">classifier</span>, text <span class="op">=</span> <span class="st">"I absolutely loved this movie!"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span></code></pre></div>
-<p>Try a few more:</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">classifier</span>, text <span class="op">=</span> <span class="st">"This was a complete waste of time."</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
+<span><span class="co">#&gt; $sentiment</span></span>
+<span><span class="co">#&gt; [1] "negative"</span></span>
 <span></span>
 <span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">classifier</span>, text <span class="op">=</span> <span class="st">"It was okay, I guess."</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
+<span><span class="co">#&gt; $sentiment</span></span>
+<span><span class="co">#&gt; [1] "neutral"</span></span>
 <span></span>
 <span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
 <span>  <span class="va">classifier</span>,</span>
 <span>  text <span class="op">=</span> <span class="st">"The service was terrible but the food was amazing."</span>,</span>
 <span>  .llm <span class="op">=</span> <span class="va">chat</span></span>
-<span><span class="op">)</span></span></code></pre></div>
+<span><span class="op">)</span></span>
+<span><span class="co">#&gt; $sentiment</span></span>
+<span><span class="co">#&gt; [1] "neutral"</span></span></code></pre></div>
+<p>The mixed review came back <code>neutral</code>. Whether that is
+right depends on what you need the labels for; instructions, below, let
+you decide.</p>
 </div>
 <div class="section level2">
-<h2 id="step-4-batch-processing">Step 4: Batch Processing<a class="anchor" aria-label="anchor" href="#step-4-batch-processing"></a>
+<h2 id="classify-a-vector-of-texts">Classify a vector of texts<a class="anchor" aria-label="anchor" href="#classify-a-vector-of-texts"></a>
 </h2>
-<p>Here’s where modules shine. Process multiple texts with
-<code><a href="../reference/run_dataset.html">run_dataset()</a></code>:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">reviews</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
-<span>  text <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
-<span>    <span class="st">"Best purchase I've ever made!"</span>,</span>
-<span>    <span class="st">"Broke after one day. Total garbage."</span>,</span>
-<span>    <span class="st">"Does what it says. Nothing special."</span>,</span>
-<span>    <span class="st">"Exceeded all my expectations!"</span>,</span>
-<span>    <span class="st">"Would not recommend to anyone."</span></span>
-<span>  <span class="op">)</span></span>
+<p>Pass a vector and <code><a href="../reference/run.html">run()</a></code> returns a list with one result
+per element, in the same order. Each result is the named list you saw
+above, so <code><a href="https://purrr.tidyverse.org/reference/map.html" class="external-link">purrr::map_chr()</a></code> can pull out the labels:</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">reviews</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>  <span class="st">"Best purchase I've ever made!"</span>,</span>
+<span>  <span class="st">"Broke after one day. Total garbage."</span>,</span>
+<span>  <span class="st">"Does what it says. Nothing special."</span>,</span>
+<span>  <span class="st">"Exceeded all my expectations!"</span>,</span>
+<span>  <span class="st">"Would not recommend to anyone."</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu"><a href="../reference/run_dataset.html">run_dataset</a></span><span class="op">(</span><span class="va">classifier</span>, <span class="va">reviews</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span></code></pre></div>
-<p>All five classifications came back from one dataset operation, while
-dsprrr retained one observable provider attempt per review.</p>
+<span><span class="va">sentiments</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">classifier</span>, text <span class="op">=</span> <span class="va">reviews</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
+<span><span class="fu">purrr</span><span class="fu">::</span><span class="fu"><a href="https://purrr.tidyverse.org/reference/map.html" class="external-link">map_chr</a></span><span class="op">(</span><span class="va">sentiments</span>, <span class="st">"sentiment"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] "positive" "negative" "neutral"  "positive" "negative"</span></span></code></pre></div>
+<p>Each element is still its own request to the model, and by default
+they are sent one after another. <code><a href="../reference/concurrency_control.html">concurrency_control()</a></code> lets
+several run at once.</p>
 </div>
 <div class="section level2">
-<h2 id="step-5-add-instructions">Step 5: Add Instructions<a class="anchor" aria-label="anchor" href="#step-5-add-instructions"></a>
+<h2 id="add-instructions">Add instructions<a class="anchor" aria-label="anchor" href="#add-instructions"></a>
 </h2>
-<p>Add task-specific guidance to the signature:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Define the signature separately</span></span>
-<span><span class="va">sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
+<p>Instructions replace the default line. Use them to settle cases the
+labels leave open, such as mixed reviews:</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
 <span>  <span class="st">"text -&gt; sentiment: enum('positive', 'negative', 'neutral')"</span>,</span>
 <span>  instructions <span class="op">=</span> <span class="st">"Classify the overall sentiment. If mixed, choose the dominant emotion."</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">sig</span></span></code></pre></div>
-<p>Now create a module from the signature:</p>
+<span><span class="va">classifier2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span><span class="op">)</span></span></code></pre></div>
+<p>The new module takes the same inputs, one at a time or as a
+vector:</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">classifier2</span>, text <span class="op">=</span> <span class="st">"This is fantastic!"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
+<span><span class="co">#&gt; $sentiment</span></span>
+<span><span class="co">#&gt; [1] "positive"</span></span></code></pre></div>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">classifier2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">classifier2</span></span></code></pre></div>
-</div>
-<div class="section level2">
-<h2 id="step-6-running-with-run">Step 6: Running with <code>run()</code><a class="anchor" aria-label="anchor" href="#step-6-running-with-run"></a>
-</h2>
-<p>With the full control approach, use <code><a href="../reference/run.html">run()</a></code> to
-execute:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">classifier2</span>, text <span class="op">=</span> <span class="st">"This is fantastic!"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span></code></pre></div>
-<p>Notice you pass the chat object via <code>.llm</code>. This gives you
-flexibility—you can use different LLMs for different calls.</p>
-<p>Batch processing works the same way:</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
 <span>  <span class="va">classifier2</span>,</span>
 <span>  text <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Love it!"</span>, <span class="st">"Hate it!"</span>, <span class="st">"It's fine"</span><span class="op">)</span>,</span>
 <span>  .llm <span class="op">=</span> <span class="va">chat</span></span>
-<span><span class="op">)</span></span></code></pre></div>
+<span><span class="op">)</span></span>
+<span><span class="co">#&gt; [[1]]</span></span>
+<span><span class="co">#&gt; [[1]]$sentiment</span></span>
+<span><span class="co">#&gt; [1] "positive"</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; [[2]]</span></span>
+<span><span class="co">#&gt; [[2]]$sentiment</span></span>
+<span><span class="co">#&gt; [1] "negative"</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; [[3]]</span></span>
+<span><span class="co">#&gt; [[3]]$sentiment</span></span>
+<span><span class="co">#&gt; [1] "neutral"</span></span></code></pre></div>
+<p>This is the full return value of a vectorized call: a list of named
+lists.</p>
 </div>
 <div class="section level2">
-<h2 id="step-7-working-with-data-frames">Step 7: Working with Data Frames<a class="anchor" aria-label="anchor" href="#step-7-working-with-data-frames"></a>
+<h2 id="classify-a-data-frame">Classify a data frame<a class="anchor" aria-label="anchor" href="#classify-a-data-frame"></a>
 </h2>
-<p>Real data often comes in data frames. Use
-<code><a href="../reference/run_dataset.html">run_dataset()</a></code>:</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://tibble.tidyverse.org/" class="external-link">tibble</a></span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">reviews_df</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
+<p><code><a href="../reference/run_dataset.html">run_dataset()</a></code> takes a data frame with a column for each
+input. It returns the data frame with a <code>result</code> list-column
+added, and other columns, like <code>id</code>, come through
+unchanged:</p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">reviews_df</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
 <span>  id <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">4</span>,</span>
 <span>  text <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
 <span>    <span class="st">"Absolutely wonderful experience!"</span>,</span>
@@ -270,15 +281,27 @@ flexibility—you can use different LLMs for different calls.</p>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">results</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_dataset.html">run_dataset</a></span><span class="op">(</span><span class="va">classifier2</span>, <span class="va">reviews_df</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
-<span><span class="va">results</span></span></code></pre></div>
-<p>The results include your original columns plus the
-classification.</p>
+<span><span class="va">results</span><span class="op">$</span><span class="va">sentiment</span> <span class="op">&lt;-</span> <span class="fu">purrr</span><span class="fu">::</span><span class="fu"><a href="https://purrr.tidyverse.org/reference/map.html" class="external-link">map_chr</a></span><span class="op">(</span><span class="va">results</span><span class="op">$</span><span class="va">result</span>, <span class="st">"sentiment"</span><span class="op">)</span></span>
+<span><span class="va">results</span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 4 × 4</span></span></span>
+<span><span class="co">#&gt;      id text                             result           sentiment</span></span>
+<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>                            <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>           <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>    </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span>     1 Absolutely wonderful experience! <span style="color: #949494;">&lt;named list [1]&gt;</span> positive </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span>     2 Never buying from them again.    <span style="color: #949494;">&lt;named list [1]&gt;</span> negative </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span>     3 Solid product, fair price.       <span style="color: #949494;">&lt;named list [1]&gt;</span> positive </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span>     4 Changed my life for the better.  <span style="color: #949494;">&lt;named list [1]&gt;</span> positive</span></span></code></pre></div>
+<p>Like <code><a href="../reference/run.html">run()</a></code>, <code><a href="../reference/run_dataset.html">run_dataset()</a></code> sends one request
+per row. The module records every call, and
+<code>summarize_traces(classifier2)</code> reports how many requests it
+made and the tokens they used.</p>
 </div>
 <div class="section level2">
-<h2 id="step-8-adding-descriptions">Step 8: Adding Descriptions<a class="anchor" aria-label="anchor" href="#step-8-adding-descriptions"></a>
+<h2 id="describe-the-inputs">Describe the inputs<a class="anchor" aria-label="anchor" href="#describe-the-inputs"></a>
 </h2>
-<p>Make your inputs more informative with descriptions:</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<p>A signature can also be built from <code><a href="../reference/input.html">input()</a></code> objects and
+an ellmer type. An input’s description becomes its heading in the
+prompt, in place of the input’s name:</p>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
 <span>  inputs <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"review_text"</span>, description <span class="op">=</span> <span class="st">"Customer review to classify"</span><span class="op">)</span></span>
@@ -293,69 +316,13 @@ classification.</p>
 <span>  <span class="va">detailed_classifier</span>,</span>
 <span>  review_text <span class="op">=</span> <span class="st">"Five stars! Would buy again!"</span>,</span>
 <span>  .llm <span class="op">=</span> <span class="va">chat</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p>Descriptions help the LLM understand what it’s working with.</p>
-</div>
-<div class="section level2">
-<h2 id="step-9-checking-your-work">Step 9: Checking Your Work<a class="anchor" aria-label="anchor" href="#step-9-checking-your-work"></a>
-</h2>
-<p>Modules track their calls. See what happened:</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">classifier2</span><span class="op">$</span><span class="fu">trace_summary</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-<p>This shows you how many calls were made and the token costs.</p>
-</div>
-<div class="section level2">
-<h2 id="what-you-learned">What You Learned<a class="anchor" aria-label="anchor" href="#what-you-learned"></a>
-</h2>
-<p>In this tutorial, you:</p>
-<ol style="list-style-type: decimal">
-<li>Declared a reusable signature and module</li>
-<li>Used <code><a href="../reference/run.html">run()</a></code> for individual inputs</li>
-<li>Used <code><a href="../reference/run_dataset.html">run_dataset()</a></code> for batch processing</li>
-<li>Processed data frames with <code><a href="../reference/run_dataset.html">run_dataset()</a></code>
-</li>
-<li>Added input descriptions for clarity</li>
-<li>Checked your work with <code>trace_summary()</code>
-</li>
-</ol>
-</div>
-<div class="section level2">
-<h2 id="the-module-advantage">The Module Advantage<a class="anchor" aria-label="anchor" href="#the-module-advantage"></a>
-</h2>
-<p>The same module contract scales from exploration to optimization:</p>
-<ol style="list-style-type: decimal">
-<li>
-<strong>Reusability</strong>: Define once, use everywhere</li>
-<li>
-<strong>Efficiency</strong>: Batch processing reduces API calls</li>
-<li>
-<strong>Configuration</strong>: Change settings in one place</li>
-<li>
-<strong>Optimization</strong>: Modules can be improved with training
-data (covered in <a href="tutorial-improve-with-demos.html">Tutorial
-4</a>)</li>
-<li>
-<strong>Tracing</strong>: Track what happened for debugging</li>
-</ol>
-</div>
-<div class="section level2">
-<h2 id="next-steps">Next Steps<a class="anchor" aria-label="anchor" href="#next-steps"></a>
-</h2>
-<p>Your classifier works, but can it handle more complex outputs?
-Continue to:</p>
-<ul>
-<li>
-<strong><a href="tutorial-structured-outputs.html">Tutorial 3:
-Extracting Structured Data</a></strong> — Get multiple fields and nested
-structures</li>
-<li>
-<strong><a href="cheatsheet.html">Quick Reference</a></strong> —
-Module types and methods</li>
-<li>
-<strong><a href="concepts-signatures-modules.html">Understanding
-Signatures &amp; Modules</a></strong> — Why S7 for signatures, R6 for
-modules</li>
-</ul>
+<span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] "positive"</span></span></code></pre></div>
+<p>The output type here is a bare <code><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_enum()</a></code> rather than a
+named field, so <code><a href="../reference/run.html">run()</a></code> returns the label itself instead of a
+list.</p>
+<p>Next, <a href="tutorial-structured-outputs.html">Tutorial 3</a>
+returns several fields at once, including lists and nested records.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

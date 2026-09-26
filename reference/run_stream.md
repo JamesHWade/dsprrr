@@ -1,13 +1,13 @@
-# Run a Module with Streaming Listeners and Status Events
+# Run a module with streaming callbacks
 
-Executes a module (or pipeline) while streaming output to per-field
-listeners and emitting status events. This is dsprrr's analogue of
-DSPy's `streamify()`: use it to surface intermediate progress and
-incremental output in Shiny apps or console tools.
-
-For pipelines, a status event is emitted as each step starts and ends,
-and listeners fire for matching fields at any step — not just the final
-one.
+`run_stream()` runs a module or pipeline like
+[`run()`](https://jameshwade.github.io/dsprrr/reference/run.md), but
+sends output text to
+[`stream_listener()`](https://jameshwade.github.io/dsprrr/reference/stream_listener.md)
+callbacks as it is produced and reports progress through `on_status`. It
+is dsprrr's counterpart to DSPy's `streamify()`, for showing progress in
+Shiny apps or at the console. In a pipeline, listeners fire for matching
+fields at every step, not only the last.
 
 ## Usage
 
@@ -19,83 +19,93 @@ run_stream(module, ..., .llm = NULL, listeners = list(), on_status = NULL)
 
 - module:
 
-  A dsprrr Module or pipeline.
+  A module or a pipeline from
+  [`pipeline()`](https://jameshwade.github.io/dsprrr/reference/pipeline.md).
 
 - ...:
 
-  Named inputs matching the module's signature.
+  Inputs named after the signature's input fields.
 
 - .llm:
 
-  Optional ellmer Chat object.
+  An ellmer Chat; see
+  [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md) for
+  how it is chosen when omitted.
 
 - listeners:
 
   A
-  [`stream_listener()`](https://jameshwade.github.io/dsprrr/reference/stream_listener.md)
-  or list of them.
+  [`stream_listener()`](https://jameshwade.github.io/dsprrr/reference/stream_listener.md),
+  or a list of them.
 
 - on_status:
 
-  Optional function called with status event lists.
+  A function called with a list for each progress event (see below), or
+  `NULL`.
 
 ## Value
 
-The final output (named list for structured outputs, character for plain
-string outputs), invisibly.
+The output, invisibly, in the same form as
+[`run()`](https://jameshwade.github.io/dsprrr/reference/run.md) returns
+it.
 
 ## Details
 
-### Streaming behavior
+### Streaming
 
-- Modules whose output is a single string field are token-streamed:
-  matching listeners receive text chunks as they arrive, and the
-  accumulated text becomes the field's value. Token streaming uses the
-  provider's text mode and requires the `coro` package.
+A prediction module (from
+[`module()`](https://jameshwade.github.io/dsprrr/reference/module.md) or
+[`chain_of_thought()`](https://jameshwade.github.io/dsprrr/reference/chain_of_thought.md))
+whose only output field is a string is streamed chunk by chunk when a
+listener asks for that field; the collected text becomes the field's
+value. This needs the coro package. Any other module runs normally, and
+matching listeners receive the complete value once. When coro is
+installed, a listener on the single string field of a module that is not
+a prediction module (such as
+[`module_fn()`](https://jameshwade.github.io/dsprrr/reference/module_fn.md)
+or [`react()`](https://jameshwade.github.io/dsprrr/reference/react.md))
+is an error, raised before any request is made.
 
-- Modules with multiple or non-string output fields run normally;
-  matching listeners fire once with the completed value.
-
-- Streaming execution does not record traces and bypasses the response
-  cache.
-
-### Specialized modules
-
-One-shot fallback execution uses each module's own `forward()` method,
-so it remains available to specialized modules when no matching token
-listener is active or the output is not token-streamable. Actual token
-streaming uses a direct provider path and is limited to ordinary
-`PredictModule` steps. Unsupported token-stream requests are rejected
-before provider work.
+Streaming runs do not use the response cache and record no traces.
 
 ### Status events
 
-When `on_status` is provided, it is called with a list describing each
-event:
+`on_status` receives lists with these elements:
 
-- `type`: one of `"step_start"`, `"field_start"`, `"field_end"`,
-  `"field_complete"`, `"step_end"`
+- `type`: `"step_start"`, `"field_start"`, `"field_end"` (around
+  streamed text), `"field_complete"` (a field delivered in one piece) or
+  `"step_end"`.
 
-- `step`, `n_steps`: position within the pipeline (both `1` for a single
-  module)
+- `step` and `n_steps`: the step's position in a pipeline; both are 1
+  for a single module.
 
-- `module`: class name of the executing module
+- `module`: the class of the module running the step.
 
-- `field`: the output field name (field events only)
+- `field`: the output field, for field events.
+
+## See also
+
+Other execution:
+[`concurrency_control()`](https://jameshwade.github.io/dsprrr/reference/concurrency_control.md),
+[`evaluate()`](https://jameshwade.github.io/dsprrr/reference/evaluate.md),
+[`predict.Module()`](https://jameshwade.github.io/dsprrr/reference/predict.Module.md),
+[`run()`](https://jameshwade.github.io/dsprrr/reference/run.md),
+[`run_async()`](https://jameshwade.github.io/dsprrr/reference/run_async.md),
+[`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md),
+[`stream_async()`](https://jameshwade.github.io/dsprrr/reference/stream_async.md),
+[`stream_listener()`](https://jameshwade.github.io/dsprrr/reference/stream_listener.md)
 
 ## Examples
 
 ``` r
 if (FALSE) { # \dontrun{
-sig <- signature("question -> answer")
-mod <- module(sig)
-
+writer <- module(signature("question -> answer"))
 run_stream(
-  mod,
-  question = "Tell me a story",
-  .llm = ellmer::chat_openai(),
+  writer,
+  question = "Tell me a short story about a lighthouse.",
+  .llm = ellmer::chat_openai(model = "gpt-6-luna"),
   listeners = stream_listener("answer", function(chunk) cat(chunk)),
-  on_status = function(ev) message("[", ev$type, "] step ", ev$step)
+  on_status = function(event) message("[", event$type, "] step ", event$step)
 )
 } # }
 ```

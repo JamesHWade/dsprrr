@@ -1,9 +1,11 @@
-# Pin a Module Configuration
+# Pin a program to a pins board
 
-Save a complete module program artifact to a pins board for later
-retrieval. This uses the versioned manifest documented in
-[program-artifact](https://jameshwade.github.io/dsprrr/reference/program-artifact.md),
-including nested programs and shared module identity.
+`pin_module_config()` saves a complete program, including nested
+modules, demonstrations and optimization results, to a pins board as an
+`.rds` pin. Read it back with
+[`pins::pin_read()`](https://pins.rstudio.com/reference/pin_read.html)
+and rebuild the program with
+[`restore_module_config()`](https://jameshwade.github.io/dsprrr/reference/restore_module_config.md).
 
 ## Usage
 
@@ -24,82 +26,87 @@ pin_module_config(
 
 - board:
 
-  A pins board object (e.g., from
-  [`pins::board_folder()`](https://pins.rstudio.com/reference/board_folder.html))
+  A pins board, such as `pins::board_folder("pins")`.
 
 - name:
 
-  Character name for the pin
+  Name of the pin.
 
 - module:
 
-  A DSPrrr module whose configuration should be saved
+  The program to save.
 
 - description:
 
-  Optional description for the pin
+  Optional pin description. The default is
+  `"dsprrr program artifact: <name>"`.
 
 - versioned:
 
-  Logical; whether to version the pin (default TRUE)
+  Whether pins keeps earlier versions (default `TRUE`).
 
 - ...:
 
-  Additional arguments passed to
-  [`pins::pin_write()`](https://pins.rstudio.com/reference/pin_read.html)
+  Further arguments passed to
+  [`pins::pin_write()`](https://pins.rstudio.com/reference/pin_read.html).
 
 - registry:
 
   Named runtime registry; see
-  [program-artifact](https://jameshwade.github.io/dsprrr/reference/program-artifact.md).
+  [`program_artifact()`](https://jameshwade.github.io/dsprrr/reference/program-artifact.md).
 
 - trusted:
 
-  Whether trusted runtime values may be embedded. The default is
-  `FALSE`.
+  Whether runtime values may be embedded (default `FALSE`); see
+  [`program_artifact()`](https://jameshwade.github.io/dsprrr/reference/program-artifact.md).
 
 ## Value
 
-The pin name (invisibly)
+`name`, invisibly.
 
 ## Details
 
-The pinned configuration includes:
-
-- Signature specification (inputs, output type, instructions)
-
-- Module configuration (temperature, prompt_style, etc.)
-
-- Optimization state (best parameters, trials summary)
-
-- Metadata (module type, creation timestamp, package version)
+The pin holds the program artifact described in
+[`program_artifact()`](https://jameshwade.github.io/dsprrr/reference/program-artifact.md):
+signatures, configuration, demonstrations, optimization results and the
+structure of composed programs. Chats, credentials, caches and traces
+are not saved. Functions such as tools or retrievers are saved only as
+names in `registry`, or embedded with `trusted = TRUE`.
 
 ## See also
 
-Other orchestration:
-[`orchestration`](https://jameshwade.github.io/dsprrr/reference/orchestration.md),
+Other persistence:
+[`export_module_code()`](https://jameshwade.github.io/dsprrr/reference/export_module_code.md),
 [`pin_trace()`](https://jameshwade.github.io/dsprrr/reference/pin_trace.md),
 [`pin_vitals_log()`](https://jameshwade.github.io/dsprrr/reference/pin_vitals_log.md),
-[`restore_module_config()`](https://jameshwade.github.io/dsprrr/reference/restore_module_config.md),
-[`use_dsprrr_template()`](https://jameshwade.github.io/dsprrr/reference/use_dsprrr_template.md),
-[`validate_workflow()`](https://jameshwade.github.io/dsprrr/reference/validate_workflow.md)
+[`program-artifact`](https://jameshwade.github.io/dsprrr/reference/program-artifact.md),
+[`restore_module_config()`](https://jameshwade.github.io/dsprrr/reference/restore_module_config.md)
 
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-# Create a board and pin a module configuration
-board <- pins::board_folder("pins")
+classifier <- module(signature("text -> sentiment"))
+trainset <- data.frame(
+  text = c("I love it!", "Terrible experience", "It's okay"),
+  sentiment = c("positive", "negative", "neutral")
+)
+compiled <- compile(classifier, LabeledFewShot(k = 2L), trainset)
 
-mod <- signature("text -> sentiment") |>
-  module() |>
-  optimize_grid(data = devset, metric = metric_exact_match())
+board <- pins::board_temp()
+pin_module_config(board, "sentiment-classifier", compiled)
+#> Creating new version '20260926T220050Z-1e06c'
+#> Writing to pin 'sentiment-classifier'
+#> ✔ Pinned program artifact: "sentiment-classifier"
+#> ℹ Root module: <PredictModule>
+#> ℹ Graph nodes: 1
+#> ℹ Compiled: TRUE
 
-pin_module_config(board, "sentiment-classifier-v1", mod,
-                  description = "Optimized sentiment classifier")
-
-# Later, retrieve and reconstruct the module
-config <- pins::pin_read(board, "sentiment-classifier-v1")
-restored_mod <- restore_module_config(config)
-} # }
+# Later, or in another session
+artifact <- pins::pin_read(board, "sentiment-classifier")
+restored <- restore_module_config(artifact)
+#> ✔ Restored program artifact
+#> ℹ Root module: <PredictModule>
+#> ℹ Artifact version: 6
+length(restored$demos)
+#> [1] 2
 ```

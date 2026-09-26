@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Advanced Reasoning Modules • dsprrr</title>
+<title>Choose a module type • dsprrr</title>
 <!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="../favicon-96x96.png">
 <link rel="icon" type="”image/svg+xml”" href="../favicon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
@@ -17,7 +17,7 @@
 <link href="../deps/Fira_Code-0.4.10/font.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Advanced Reasoning Modules">
+<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Choose a module type">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -36,67 +36,67 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
-<li class="nav-item"><a class="nav-link" href="../articles/getting-started.html">Get Started</a></li>
+<li class="nav-item"><a class="nav-link" href="../articles/tutorial-hello-world.html">Get started</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-tutorials" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Tutorials</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-tutorials">
-<li><h6 class="dropdown-header" data-toc-skip>Learning Path</h6></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-hello-world.html">1. Your First LLM Call</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-build-classifier.html">2. Building a Classifier</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-structured-outputs.html">3. Structured Outputs</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-improve-with-demos.html">4. Improving with Examples</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-optimize-your-module.html">5. Optimization</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-deploy-to-production.html">6. Production</a></li>
+<li><a class="dropdown-item" href="../articles/tutorial-hello-world.html">1. Your first LLM call</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-build-classifier.html">2. Build a classifier</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-structured-outputs.html">3. Extract structured data</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-improve-with-demos.html">4. Improve with examples</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-optimize-your-module.html">5. Optimize a module</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-deploy-to-production.html">6. Save and reuse a module</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Advanced Tutorials</h6></li>
-    <li><a class="dropdown-item" href="../articles/text-adventure.html">Build an AI Game Master</a></li>
-    <li><a class="dropdown-item" href="../articles/llms-txt.html">Generate Package Docs</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-rlm-dsprrr.html">Investigate a Regression with RLM</a></li>
-  </ul>
-</li>
-<li class="nav-item dropdown">
-  <button class="nav-link dropdown-toggle" type="button" id="dropdown-how-to-guides" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">How-to Guides</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-how-to-guides">
-<li><a class="dropdown-item" href="../articles/troubleshooting.html">Troubleshooting</a></li>
-    <li><a class="dropdown-item" href="../articles/compilation-optimization.html">Compile &amp; Optimize</a></li>
-    <li><a class="dropdown-item" href="../articles/vitals-recipes.html">Evaluate with Vitals</a></li>
-    <li><a class="dropdown-item" href="../articles/rag-workflows.html">Build RAG Pipelines</a></li>
-    <li><a class="dropdown-item" href="../articles/chaining-modules.html">Chaining Modules</a></li>
-    <li><a class="dropdown-item" href="../articles/calibrated-decisions.html">Calibrated Decisions</a></li>
-    <li><a class="dropdown-item" href="../articles/orchestration.html">Deploy to Production</a></li>
-    <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Integrations</h6></li>
-    <li><a class="dropdown-item" href="../articles/vitals-integration.html">Vitals Package</a></li>
-    <li><a class="dropdown-item" href="../articles/tidymodels-integration.html">tidymodels</a></li>
-    <li><a class="dropdown-item" href="../articles/advanced-ellmer.html">Advanced ellmer</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Projects</h6></li>
+    <li><a class="dropdown-item" href="../articles/llms-txt.html">Generate an llms.txt file</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-rlm-dsprrr.html">Investigate a regression with RLM</a></li>
+    <li><a class="dropdown-item" href="../articles/text-adventure.html">Build a text adventure</a></li>
   </ul>
 </li>
 <li class="active nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-how-to-guides" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">How-to guides</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-how-to-guides">
+<li><h6 class="dropdown-header" data-toc-skip>Build</h6></li>
+    <li><a class="dropdown-item" href="../articles/advanced-modules.html">Choose a module type</a></li>
+    <li><a class="dropdown-item" href="../articles/chaining-modules.html">Chain modules into pipelines</a></li>
+    <li><a class="dropdown-item" href="../articles/rag-workflows.html">Retrieval-augmented generation</a></li>
+    <li><a class="dropdown-item" href="../articles/calibrated-decisions.html">Calibrated decisions</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Measure and improve</h6></li>
+    <li><a class="dropdown-item" href="../articles/compilation-optimization.html">Compile and optimize</a></li>
+    <li><a class="dropdown-item" href="../articles/advanced-optimization.html">Choose an optimizer</a></li>
+    <li><a class="dropdown-item" href="../articles/vitals-recipes.html">Evaluate with vitals</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Run</h6></li>
+    <li><a class="dropdown-item" href="../articles/models-and-providers.html">Models, providers and streaming</a></li>
+    <li><a class="dropdown-item" href="../articles/orchestration.html">Run dsprrr in pipelines</a></li>
+    <li><a class="dropdown-item" href="../articles/tidymodels-integration.html">Use dsprrr with tidymodels</a></li>
+    <li><a class="dropdown-item" href="../articles/troubleshooting.html">Troubleshooting</a></li>
+  </ul>
+</li>
+<li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-concepts" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Concepts</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-concepts">
-<li><a class="dropdown-item" href="../articles/concepts-dspy-philosophy.html">The DSPy Philosophy</a></li>
-    <li><a class="dropdown-item" href="../articles/dspy-comparison.html">dsprrr vs. DSPy</a></li>
-    <li><a class="dropdown-item" href="../articles/concepts-signatures-modules.html">Signatures &amp; Modules</a></li>
-    <li><a class="dropdown-item" href="../articles/concepts-optimization-theory.html">How Optimization Works</a></li>
-    <li><a class="dropdown-item" href="../articles/concepts-why-metrics-matter.html">Why Metrics Matter</a></li>
-    <li><a class="dropdown-item" href="../articles/how-rlm-works.html">How RLMs Work</a></li>
+<li><a class="dropdown-item" href="../articles/concepts-signatures-modules.html">How dsprrr works</a></li>
+    <li><a class="dropdown-item" href="../articles/concepts-why-metrics-matter.html">Metrics and evaluation</a></li>
+    <li><a class="dropdown-item" href="../articles/concepts-optimization-theory.html">How optimization works</a></li>
+    <li><a class="dropdown-item" href="../articles/dspy-comparison.html">dsprrr for DSPy users</a></li>
+    <li><a class="dropdown-item" href="../articles/how-rlm-works.html">How RLM works</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Deep Dives</h6></li>
-    <li><a class="dropdown-item" href="../articles/flex-optimization.html">Flex: Optimize the Whole Program</a></li>
-    <li><a class="dropdown-item" href="../articles/advanced-modules.html">Advanced Reasoning</a></li>
-    <li><a class="dropdown-item" href="../articles/advanced-optimization.html">Advanced Optimization</a></li>
-    <li><a class="dropdown-item" href="../articles/omni-meta-optimization.html">Composing Optimizers with Omni</a></li>
-    <li><a class="dropdown-item" href="../articles/agentic-optimization-harnesses.html">Agentic Optimization Harnesses</a></li>
-    <li><a class="dropdown-item" href="../articles/reasoning-models.html">Reasoning Models</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Experimental</h6></li>
+    <li><a class="dropdown-item" href="../articles/flex-optimization.html">Flex: optimize a whole program</a></li>
+    <li><a class="dropdown-item" href="../articles/omni-meta-optimization.html">Compose optimizers with Omni</a></li>
+    <li><a class="dropdown-item" href="../articles/agentic-optimization-harnesses.html">Agentic optimization harnesses</a></li>
   </ul>
 </li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-reference" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Reference</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-reference">
-<li><a class="dropdown-item" href="../articles/cheatsheet.html">Quick Reference</a></li>
-    <li><a class="dropdown-item" href="../reference/index.html">API Documentation</a></li>
+<li><a class="dropdown-item" href="../reference/index.html">Function reference</a></li>
+    <li><a class="dropdown-item" href="../articles/cheatsheet.html">Quick reference</a></li>
   </ul>
 </li>
+<li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul>
 <ul class="navbar-nav">
 <li class="nav-item"><form class="form-inline" role="search">
@@ -123,7 +123,7 @@
 
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
-      <img src="../logo.svg" class="logo" alt=""><h1>Advanced Reasoning Modules</h1>
+      <img src="../logo.svg" class="logo" alt=""><h1>Choose a module type</h1>
             
       
       <small class="dont-index">Source: <a href="https://github.com/JamesHWade/dsprrr/blob/main/vignettes/advanced-modules.Rmd" class="external-link"><code>vignettes/advanced-modules.Rmd</code></a></small>
@@ -133,1011 +133,522 @@
     
     
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/dsprrr" class="external-link">dsprrr</a></span><span class="op">)</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ellmer.tidyverse.org" class="external-link">ellmer</a></span><span class="op">)</span></span></code></pre></div>
-<div class="section level2">
-<h2 id="overview">Overview<a class="anchor" aria-label="anchor" href="#overview"></a>
-</h2>
-<p>Choose a module by the work it needs to do:</p>
-<ul>
-<li>
-<strong>Step-by-step reasoning</strong> with ChainOfThought</li>
-<li>
-<strong>Multiple attempts</strong> with BestOfN</li>
-<li>
-<strong>Iterative refinement</strong> with Refine</li>
-<li>
-<strong>Ensemble reasoning</strong> with MultiChainComparison</li>
-<li>
-<strong>Exact computation</strong> with ProgramOfThought (code
-generation)</li>
-<li>
-<strong>Hybrid agents</strong> with CodeAct (tools + code
-execution)</li>
-<li>
-<strong>Adaptive investigation</strong> of large or awkward R
-objects with RLM</li>
-<li>
-<strong>Implementation search</strong> across predictors, R logic,
-and tools with Flex</li>
-</ul>
-<p>The sections below show each execution pattern and its tradeoffs.</p>
-</div>
-<div class="section level2">
-<h2 id="chainofthought">ChainOfThought<a class="anchor" aria-label="anchor" href="#chainofthought"></a>
-</h2>
-<p>ChainOfThought (CoT) asks the model for a reasoning field before the
-final answer.</p>
-<div class="section level3">
-<h3 id="why-use-chainofthought">Why Use ChainOfThought?<a class="anchor" aria-label="anchor" href="#why-use-chainofthought"></a>
-</h3>
-<p>Use it when intermediate reasoning is useful to the task or
-evaluator. It adds tokens and does not make the reasoning inherently
-faithful, so evaluate the final output against a task-specific
-metric.</p>
-</div>
-<div class="section level3">
-<h3 id="basic-usage">Basic Usage<a class="anchor" aria-label="anchor" href="#basic-usage"></a>
-</h3>
-<p>The simplest way to use CoT is with
-<code><a href="../reference/chain_of_thought.html">chain_of_thought()</a></code>:</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Create a CoT module</span></span>
-<span><span class="va">math_solver</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/chain_of_thought.html">chain_of_thought</a></span><span class="op">(</span><span class="st">"problem -&gt; solution"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Run it</span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
-<span>  <span class="va">math_solver</span>,</span>
-<span>  problem <span class="op">=</span> <span class="st">"If a train travels 120 miles in 2 hours, what is its average speed?"</span>,</span>
-<span>  .llm <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Result includes both reasoning and answer</span></span>
-<span><span class="va">result</span><span class="op">$</span><span class="va">reasoning</span></span>
-<span><span class="co">#&gt; "To find average speed, I need to divide total distance by total time.</span></span>
-<span><span class="co">#&gt;  Distance = 120 miles, Time = 2 hours.</span></span>
-<span><span class="co">#&gt;  Speed = 120 / 2 = 60 miles per hour."</span></span>
-<span></span>
-<span><span class="va">result</span><span class="op">$</span><span class="va">solution</span></span>
-<span><span class="co">#&gt; "60 miles per hour"</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="signature-transforms">Signature Transforms<a class="anchor" aria-label="anchor" href="#signature-transforms"></a>
-</h3>
-<p>Under the hood, <code><a href="../reference/chain_of_thought.html">chain_of_thought()</a></code> uses
-<code><a href="../reference/with_reasoning.html">with_reasoning()</a></code> to transform the signature. You can use
-this directly for more control:</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Start with a regular signature</span></span>
-<span><span class="va">sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"question -&gt; answer: string"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Transform it to include reasoning</span></span>
-<span><span class="va">cot_sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/with_reasoning.html">with_reasoning</a></span><span class="op">(</span><span class="va">sig</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># The output now includes a reasoning field</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">cot_sig</span><span class="op">@</span><span class="va">output_type</span><span class="op">@</span><span class="va">properties</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] "reasoning" "answer"</span></span>
-<span></span>
-<span><span class="co"># Check if a signature has reasoning</span></span>
-<span><span class="fu"><a href="../reference/has_reasoning.html">has_reasoning</a></span><span class="op">(</span><span class="va">cot_sig</span><span class="op">)</span></span>
-<span><span class="co">#&gt; TRUE</span></span>
-<span><span class="fu"><a href="../reference/has_reasoning.html">has_reasoning</a></span><span class="op">(</span><span class="va">sig</span><span class="op">)</span></span>
-<span><span class="co">#&gt; FALSE</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="custom-reasoning-prefix">Custom Reasoning Prefix<a class="anchor" aria-label="anchor" href="#custom-reasoning-prefix"></a>
-</h3>
-<p>You can customize the reasoning prompt:</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Default: "Let's think step by step in order to"</span></span>
-<span><span class="va">math_cot</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/with_reasoning.html">with_reasoning</a></span><span class="op">(</span></span>
-<span>  <span class="st">"equation -&gt; result"</span>,</span>
-<span>  prefix <span class="op">=</span> <span class="st">"Let me solve this equation carefully:"</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># For code tasks</span></span>
-<span><span class="va">code_cot</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/with_reasoning.html">with_reasoning</a></span><span class="op">(</span></span>
-<span>  <span class="st">"task -&gt; code"</span>,</span>
-<span>  prefix <span class="op">=</span> <span class="st">"Let me break down the implementation:"</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="removing-reasoning">Removing Reasoning<a class="anchor" aria-label="anchor" href="#removing-reasoning"></a>
-</h3>
-<p>For A/B testing CoT vs non-CoT performance:</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">cot_sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/with_reasoning.html">with_reasoning</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span><span class="op">)</span></span>
-<span><span class="va">plain_sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/without_reasoning.html">without_reasoning</a></span><span class="op">(</span><span class="va">cot_sig</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu"><a href="../reference/has_reasoning.html">has_reasoning</a></span><span class="op">(</span><span class="va">plain_sig</span><span class="op">)</span></span>
-<span><span class="co">#&gt; FALSE</span></span></code></pre></div>
-</div>
-</div>
-<div class="section level2">
-<h2 id="bestofn">BestOfN<a class="anchor" aria-label="anchor" href="#bestofn"></a>
-</h2>
-<p>BestOfN addresses output variance by running a module multiple times
-and selecting the best result based on a reward function.</p>
-<div class="section level3">
-<h3 id="why-use-bestofn">Why Use BestOfN?<a class="anchor" aria-label="anchor" href="#why-use-bestofn"></a>
-</h3>
-<p>LLM outputs can be inconsistent. The same prompt might produce
-correct output 70% of the time. BestOfN increases reliability by: -
-Making multiple attempts - Scoring each attempt with a reward function -
-Returning the highest-scoring result - Optionally stopping early when a
-threshold is met</p>
-</div>
-<div class="section level3">
-<h3 id="basic-usage-1">Basic Usage<a class="anchor" aria-label="anchor" href="#basic-usage-1"></a>
-</h3>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Create a QA module</span></span>
-<span><span class="va">qa</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span><span class="op">)</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Wrap with BestOfN (default N=3)</span></span>
-<span><span class="va">reliable_qa</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/best_of_n.html">best_of_n</a></span><span class="op">(</span><span class="va">qa</span>, N <span class="op">=</span> <span class="fl">5</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Run - internally makes up to 5 attempts</span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
-<span>  <span class="va">reliable_qa</span>,</span>
-<span>  question <span class="op">=</span> <span class="st">"What is the capital of France?"</span>,</span>
-<span>  .llm <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="reward-functions">Reward Functions<a class="anchor" aria-label="anchor" href="#reward-functions"></a>
-</h3>
-<p>The power of BestOfN comes from custom reward functions that score
-outputs:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Reward function signature: function(prediction, inputs) -&gt; [0, 1]</span></span>
-<span></span>
-<span><span class="co"># Example: Prefer single-word answers</span></span>
-<span><span class="va">one_word_reward</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">pred</span>, <span class="va">inputs</span><span class="op">)</span> <span class="op">{</span></span>
-<span></span>
-<span>  <span class="va">words</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/strsplit.html" class="external-link">strsplit</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">as.character</a></span><span class="op">(</span><span class="va">pred</span><span class="op">$</span><span class="va">answer</span><span class="op">)</span>, <span class="st">"\\s+"</span><span class="op">)</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span></span>
-<span>  <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">words</span><span class="op">)</span> <span class="op">==</span> <span class="fl">1</span><span class="op">)</span> <span class="fl">1.0</span> <span class="kw">else</span> <span class="fl">0.0</span></span>
-<span><span class="op">}</span></span>
-<span></span>
-<span><span class="co"># Example: Prefer confident answers</span></span>
-<span><span class="va">confidence_reward</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">pred</span>, <span class="va">inputs</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="co"># Check for hedging language</span></span>
-<span>  <span class="va">hedges</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"maybe"</span>, <span class="st">"perhaps"</span>, <span class="st">"possibly"</span>, <span class="st">"might"</span><span class="op">)</span></span>
-<span>  <span class="va">answer</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/chartr.html" class="external-link">tolower</a></span><span class="op">(</span><span class="va">pred</span><span class="op">$</span><span class="va">answer</span><span class="op">)</span></span>
-<span>  <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/any.html" class="external-link">any</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">sapply</a></span><span class="op">(</span><span class="va">hedges</span>, <span class="va">grepl</span>, <span class="va">answer</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="fl">0.3</span> <span class="kw">else</span> <span class="fl">1.0</span></span>
-<span><span class="op">}</span></span>
-<span></span>
-<span><span class="va">wrapper</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/best_of_n.html">best_of_n</a></span><span class="op">(</span></span>
-<span>  <span class="va">qa</span>,</span>
-<span>  N <span class="op">=</span> <span class="fl">5</span>,</span>
-<span>  reward_fn <span class="op">=</span> <span class="va">one_word_reward</span>,</span>
-<span>  threshold <span class="op">=</span> <span class="fl">1.0</span>  <span class="co"># Stop early if we get a one-word answer</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="using-metrics-as-rewards">Using Metrics as Rewards<a class="anchor" aria-label="anchor" href="#using-metrics-as-rewards"></a>
-</h3>
-<p>Convert existing metrics to reward functions with
-<code><a href="../reference/as_reward_fn.html">as_reward_fn()</a></code>:</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># When you have expected values in your inputs</span></span>
-<span><span class="va">wrapper</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/best_of_n.html">best_of_n</a></span><span class="op">(</span></span>
-<span>  <span class="va">qa</span>,</span>
-<span>  N <span class="op">=</span> <span class="fl">3</span>,</span>
-<span>  reward_fn <span class="op">=</span> <span class="fu"><a href="../reference/as_reward_fn.html">as_reward_fn</a></span><span class="op">(</span></span>
-<span>    <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"answer"</span><span class="op">)</span>,</span>
-<span>    expected_field <span class="op">=</span> <span class="st">"expected_answer"</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Run with expected value for reward calculation</span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
-<span>  <span class="va">wrapper</span>,</span>
-<span>  question <span class="op">=</span> <span class="st">"What is 2+2?"</span>,</span>
-<span>  expected_answer <span class="op">=</span> <span class="st">"4"</span>,</span>
-<span>  .llm <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="inspecting-attempts">Inspecting Attempts<a class="anchor" aria-label="anchor" href="#inspecting-attempts"></a>
-</h3>
-<p>After running, you can examine all attempts:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Get attempts from last run</span></span>
-<span><span class="va">attempts</span> <span class="op">&lt;-</span> <span class="va">wrapper</span><span class="op">$</span><span class="fu">get_attempts</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="va">attempts</span></span>
-<span><span class="co">#&gt; # A tibble: 3 x 4</span></span>
-<span><span class="co">#&gt;     run attempt prediction       score</span></span>
-<span><span class="co">#&gt;   &lt;int&gt;   &lt;int&gt; &lt;list&gt;           &lt;dbl&gt;</span></span>
-<span><span class="co">#&gt; 1     1       1 &lt;named list [1]&gt;   0</span></span>
-<span><span class="co">#&gt; 2     1       2 &lt;named list [1]&gt;   1</span></span>
-<span><span class="co">#&gt; 3     1       3 &lt;named list [1]&gt;   0</span></span>
-<span></span>
-<span><span class="co"># Get all attempts across multiple runs</span></span>
-<span><span class="va">all_attempts</span> <span class="op">&lt;-</span> <span class="va">wrapper</span><span class="op">$</span><span class="fu">get_attempts</span><span class="op">(</span>all <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="metadata">Metadata<a class="anchor" aria-label="anchor" href="#metadata"></a>
-</h3>
-<p>BestOfN tracks useful metadata. Use
-<code>.return_format = "structured"</code> to access it:</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Use structured format to access metadata</span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">wrapper</span>, question <span class="op">=</span> <span class="st">"Test"</span>, .llm <span class="op">=</span> <span class="va">llm</span>, .return_format <span class="op">=</span> <span class="st">"structured"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Access metadata fields</span></span>
-<span><span class="va">result</span><span class="op">$</span><span class="va">metadata</span><span class="op">$</span><span class="va">n_attempts</span>     <span class="co"># How many attempts were made</span></span>
-<span><span class="va">result</span><span class="op">$</span><span class="va">metadata</span><span class="op">$</span><span class="va">best_score</span>     <span class="co"># Score of selected result</span></span>
-<span><span class="va">result</span><span class="op">$</span><span class="va">metadata</span><span class="op">$</span><span class="va">all_scores</span>     <span class="co"># Scores of all attempts</span></span>
-<span><span class="va">result</span><span class="op">$</span><span class="va">metadata</span><span class="op">$</span><span class="va">early_stopped</span>  <span class="co"># Did we hit threshold?</span></span>
-<span><span class="va">result</span><span class="op">$</span><span class="va">metadata</span><span class="op">$</span><span class="va">total_tokens</span>   <span class="co"># Tokens across all attempts, or NA if unknown</span></span>
-<span><span class="va">result</span><span class="op">$</span><span class="va">metadata</span><span class="op">$</span><span class="va">cost</span>           <span class="co"># Cost across all attempts, or NA if unknown</span></span>
-<span><span class="va">result</span><span class="op">$</span><span class="va">metadata</span><span class="op">$</span><span class="va">provider_calls</span> <span class="co"># Provider calls across all attempts, or NA</span></span>
-<span></span>
-<span><span class="co"># For batch operations with run_dataset(), use .metadata column:</span></span>
-<span><span class="co"># batch_result$.metadata[[1]]$n_attempts</span></span></code></pre></div>
-</div>
-</div>
-<div class="section level2">
-<h2 id="refine">Refine<a class="anchor" aria-label="anchor" href="#refine"></a>
-</h2>
-<p>Refine extends BestOfN with a feedback loop. After each failed
-attempt, it generates feedback explaining what was wrong and injects
-this into the next attempt.</p>
-<div class="section level3">
-<h3 id="why-use-refine">Why Use Refine?<a class="anchor" aria-label="anchor" href="#why-use-refine"></a>
-</h3>
-<p>While BestOfN makes independent attempts, Refine learns from
-mistakes. Each iteration receives feedback about the previous attempt,
-allowing the model to correct specific issues.</p>
-</div>
-<div class="section level3">
-<h3 id="basic-usage-2">Basic Usage<a class="anchor" aria-label="anchor" href="#basic-usage-2"></a>
-</h3>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Create module that accepts feedback</span></span>
-<span><span class="va">qa</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"question, feedback -&gt; answer"</span><span class="op">)</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># One-word answer reward</span></span>
-<span><span class="va">one_word_reward</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">pred</span>, <span class="va">inputs</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="va">words</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/strsplit.html" class="external-link">strsplit</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">as.character</a></span><span class="op">(</span><span class="va">pred</span><span class="op">$</span><span class="va">answer</span><span class="op">)</span>, <span class="st">"\\s+"</span><span class="op">)</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span></span>
-<span>  <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">words</span><span class="op">)</span> <span class="op">==</span> <span class="fl">1</span><span class="op">)</span> <span class="fl">1.0</span> <span class="kw">else</span> <span class="fl">0.0</span></span>
-<span><span class="op">}</span></span>
-<span></span>
-<span><span class="co"># Wrap with Refine</span></span>
-<span><span class="va">refined</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/refine.html">refine</a></span><span class="op">(</span></span>
-<span>  <span class="va">qa</span>,</span>
-<span>  N <span class="op">=</span> <span class="fl">3</span>,</span>
-<span>  reward_fn <span class="op">=</span> <span class="va">one_word_reward</span>,</span>
-<span>  threshold <span class="op">=</span> <span class="fl">1.0</span>,</span>
-<span>  feedback_template <span class="op">=</span> <span class="st">"Your answer '{prediction}' scored {score}. Please give a single word answer."</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
-<span>  <span class="va">refined</span>,</span>
-<span>  question <span class="op">=</span> <span class="st">"What is the capital of France?"</span>,</span>
-<span>  .llm <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="feedback-templates">Feedback Templates<a class="anchor" aria-label="anchor" href="#feedback-templates"></a>
-</h3>
-<p>Feedback templates use glue syntax with these variables: -
-<code>{score}</code> - The score from the reward function -
-<a href="https://github.com/bbolker/prediction" class="external-link">prediction</a> - The previous output (formatted as string) -
-Any input field names from your signature</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Reference input fields</span></span>
-<span><span class="va">template</span> <span class="op">&lt;-</span> <span class="st">"For the question '{question}', your answer '{prediction}' scored {score}. Try again."</span></span>
-<span></span>
-<span><span class="co"># Be specific about what's wrong</span></span>
-<span><span class="va">template</span> <span class="op">&lt;-</span> <span class="st">"Score: {score}. Your answer was too verbose. Give only the city name."</span></span>
-<span></span>
-<span><span class="co"># Use conditional language</span></span>
-<span><span class="va">template</span> <span class="op">&lt;-</span> <span class="st">"Previous attempt scored {score}/1.0. Focus on precision and brevity."</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="custom-feedback-field">Custom Feedback Field<a class="anchor" aria-label="anchor" href="#custom-feedback-field"></a>
-</h3>
-<p>By default, feedback is injected as a field called
-<code>feedback</code>. You can customize this:</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">refined</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/refine.html">refine</a></span><span class="op">(</span></span>
-<span>  <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"question, hint -&gt; answer"</span><span class="op">)</span><span class="op">)</span>,</span>
-<span>  N <span class="op">=</span> <span class="fl">3</span>,</span>
-<span>  reward_fn <span class="op">=</span> <span class="va">my_reward</span>,</span>
-<span>  feedback_field <span class="op">=</span> <span class="st">"hint"</span>  <span class="co"># Use 'hint' instead of 'feedback'</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="feedback-history">Feedback History<a class="anchor" aria-label="anchor" href="#feedback-history"></a>
-</h3>
-<p>Track the feedback generated across iterations:</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">refined</span>, question <span class="op">=</span> <span class="st">"Test"</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Get feedback from last run</span></span>
-<span><span class="va">refined</span><span class="op">$</span><span class="fu">get_feedback_history</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] "Your answer 'The capital is Paris' scored 0..."</span></span>
-<span><span class="co">#&gt; [2] "Your answer 'Paris, France' scored 0..."</span></span>
-<span></span>
-<span><span class="co"># Get all feedback across runs</span></span>
-<span><span class="va">refined</span><span class="op">$</span><span class="fu">get_feedback_history</span><span class="op">(</span>all <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
-</div>
-</div>
-<div class="section level2">
-<h2 id="multichaincomparison">MultiChainComparison<a class="anchor" aria-label="anchor" href="#multichaincomparison"></a>
-</h2>
-<p>MultiChainComparison (MCC) runs several independent reasoning chains
-and asks a final model call to synthesize one answer.</p>
-<div class="section level3">
-<h3 id="why-use-multichaincomparison">Why Use MultiChainComparison?<a class="anchor" aria-label="anchor" href="#why-use-multichaincomparison"></a>
-</h3>
-<p>MCC: - Generates M diverse reasoning attempts (using temperature for
-variation) - Compares all attempts in a synthesis step - Produces one
-answer from the compared attempts</p>
-</div>
-<div class="section level3">
-<h3 id="basic-usage-3">Basic Usage<a class="anchor" aria-label="anchor" href="#basic-usage-3"></a>
-</h3>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Create MCC module</span></span>
-<span><span class="va">mcc</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/multi_chain_comparison.html">multi_chain_comparison</a></span><span class="op">(</span></span>
-<span>  <span class="st">"question -&gt; answer"</span>,</span>
-<span>  M <span class="op">=</span> <span class="fl">3</span>,           <span class="co"># Number of reasoning chains</span></span>
-<span>  temperature <span class="op">=</span> <span class="fl">0.7</span> <span class="co"># Higher = more diversity</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
-<span>  <span class="va">mcc</span>,</span>
-<span>  question <span class="op">=</span> <span class="st">"What are the pros and cons of renewable energy?"</span>,</span>
-<span>  .llm <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Result is synthesized from all chains</span></span>
-<span><span class="va">result</span><span class="op">$</span><span class="va">reasoning</span></span>
-<span><span class="va">result</span><span class="op">$</span><span class="va">answer</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="using-the-module-factory">Using the Module Factory<a class="anchor" aria-label="anchor" href="#using-the-module-factory"></a>
-</h3>
-<p>MCC is also available via the <code><a href="../reference/module.html">module()</a></code> factory:</p>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">mcc</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/multi_chain_comparison.html">multi_chain_comparison</a></span><span class="op">(</span></span>
-<span>  <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"context, question -&gt; answer"</span><span class="op">)</span>,</span>
-<span>  M <span class="op">=</span> <span class="fl">5</span>,</span>
-<span>  temperature <span class="op">=</span> <span class="fl">0.8</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="custom-inner-module">Custom Inner Module<a class="anchor" aria-label="anchor" href="#custom-inner-module"></a>
-</h3>
-<p>By default, MCC uses ChainOfThought for the inner module. You can
-provide your own:</p>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Use a custom CoT module</span></span>
-<span><span class="va">cot</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/chain_of_thought.html">chain_of_thought</a></span><span class="op">(</span></span>
-<span>  <span class="st">"question -&gt; answer"</span>,</span>
-<span>  prefix <span class="op">=</span> <span class="st">"Let me analyze this from multiple angles:"</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">mcc</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/multi_chain_comparison.html">multi_chain_comparison</a></span><span class="op">(</span></span>
-<span>  <span class="st">"question -&gt; answer"</span>,</span>
-<span>  inner_module <span class="op">=</span> <span class="va">cot</span>,</span>
-<span>  M <span class="op">=</span> <span class="fl">5</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="custom-comparison-template">Custom Comparison Template<a class="anchor" aria-label="anchor" href="#custom-comparison-template"></a>
-</h3>
-<p>Customize how attempts are compared:</p>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">mcc</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/multi_chain_comparison.html">multi_chain_comparison</a></span><span class="op">(</span></span>
-<span>  <span class="st">"question -&gt; answer"</span>,</span>
-<span>  M <span class="op">=</span> <span class="fl">3</span>,</span>
-<span>  comparison_template <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span></span>
-<span>    <span class="st">"You have {M} expert analyses of the same question.\n\n"</span>,</span>
-<span>    <span class="st">"{attempts_text}\n\n"</span>,</span>
-<span>    <span class="st">"Synthesize these into a single authoritative answer. "</span>,</span>
-<span>    <span class="st">"Note where experts agree and resolve any disagreements."</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="inspecting-chains">Inspecting Chains<a class="anchor" aria-label="anchor" href="#inspecting-chains"></a>
-</h3>
-<p>View the individual reasoning chains:</p>
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">mcc</span>, question <span class="op">=</span> <span class="st">"Complex question..."</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Get all chain results</span></span>
-<span><span class="va">chains</span> <span class="op">&lt;-</span> <span class="va">mcc</span><span class="op">$</span><span class="fu">get_attempts</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="va">chains</span></span>
-<span><span class="co">#&gt; # A tibble: 3 x 3</span></span>
-<span><span class="co">#&gt;     run attempt prediction</span></span>
-<span><span class="co">#&gt;   &lt;int&gt;   &lt;int&gt; &lt;list&gt;</span></span>
-<span><span class="co">#&gt; 1     1       1 &lt;named list [2]&gt;</span></span>
-<span><span class="co">#&gt; 2     1       2 &lt;named list [2]&gt;</span></span>
-<span><span class="co">#&gt; 3     1       3 &lt;named list [2]&gt;</span></span>
-<span></span>
-<span><span class="co"># Each prediction has reasoning and answer</span></span>
-<span><span class="va">chains</span><span class="op">$</span><span class="va">prediction</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span></span>
-<span><span class="co">#&gt; $reasoning</span></span>
-<span><span class="co">#&gt; [1] "First, let me consider..."</span></span>
-<span><span class="co">#&gt; $answer</span></span>
-<span><span class="co">#&gt; [1] "The answer is..."</span></span></code></pre></div>
-</div>
-</div>
-<div class="section level2">
-<h2 id="programofthought">ProgramOfThought<a class="anchor" aria-label="anchor" href="#programofthought"></a>
-</h2>
-<p>ProgramOfThought addresses a fundamental LLM limitation: they’re
-unreliable at exact computation. Instead of asking the model to compute
-directly, it generates R code that R executes.</p>
-<div class="section level3">
-<h3 id="why-use-programofthought">Why Use ProgramOfThought?<a class="anchor" aria-label="anchor" href="#why-use-programofthought"></a>
-</h3>
-<p>LLMs frequently make arithmetic errors, especially with multi-step
-calculations. ProgramOfThought solves this by: - Having the LLM generate
-R code to solve the problem - Executing that code in an isolated
-subprocess - If execution fails, feeding the error back for code repair
-- Extracting the final answer from the execution result</p>
-</div>
-<div class="section level3">
-<h3 id="setting-up-code-execution">Setting Up Code Execution<a class="anchor" aria-label="anchor" href="#setting-up-code-execution"></a>
-</h3>
-<p>Code execution requires explicit opt-in via a runner or interpreter
-factory. Here is the caller-owned form:</p>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Create a runner - this enables code execution</span></span>
-<span><span class="va">runner</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/r_code_runner.html">r_code_runner</a></span><span class="op">(</span></span>
-<span>  timeout <span class="op">=</span> <span class="fl">30</span>,                    <span class="co"># Max execution time</span></span>
-<span>  allowed_packages <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"base"</span>, <span class="st">"stats"</span>, <span class="st">"utils"</span><span class="op">)</span>  <span class="co"># Allowed packages</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p><strong>Security note</strong>: <code><a href="../reference/r_code_runner.html">r_code_runner()</a></code> provides
-subprocess isolation but is not a security sandbox. For untrusted
-generated code, use a fresh managed <code><a href="../reference/mcp_repl_runner.html">mcp_repl_runner()</a></code> from
-an interpreter factory or another runner with verified OS-level
-sandboxing.</p>
-<p>ProgramOfThought, CodeAct, and RLM accept exactly one execution
-binding. Pass <code>runner</code> to retain a caller-owned runner object
-that dsprrr reuses and never shuts down. Whether execution state
-persists depends on the backend. Serialize a stateful runner, and reset
-it between unrelated jobs when that backend supports
-<code>reset()</code>. Alternatively, pass a zero-argument
-<code>interpreter_factory</code>; dsprrr calls it once per invocation,
-owns the fresh runner, and shuts it down exactly once when the
-invocation ends, including after an error:</p>
-<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">pot</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/program_of_thought.html">program_of_thought</a></span><span class="op">(</span></span>
-<span>  <span class="st">"question -&gt; answer"</span>,</span>
-<span>  interpreter_factory <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="fu"><a href="../reference/r_code_runner.html">r_code_runner</a></span><span class="op">(</span>timeout <span class="op">=</span> <span class="fl">30</span><span class="op">)</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p>The factory form prevents state from crossing invocation boundaries.
-A direct runner is caller-owned and sequential; never share a stateful
-runner across concurrent calls. Supplying both forms is an error.
-Factory-backed ProgramOfThought, CodeAct, and RLM support
-<code><a href="../reference/run_async.html">run_async()</a></code> and isolated mirai batch execution because
-every invocation owns a fresh runner. Caller-owned runners remain
-sequential. Specialized token streaming is still rejected before
-provider or factory work; <code><a href="../reference/run_stream.html">run_stream()</a></code> without a matching
-token listener preserves the ordinary synchronous <code>forward()</code>
-path.</p>
-</div>
-<div class="section level3">
-<h3 id="basic-usage-4">Basic Usage<a class="anchor" aria-label="anchor" href="#basic-usage-4"></a>
-</h3>
-<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Create a ProgramOfThought module</span></span>
-<span><span class="va">pot</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/program_of_thought.html">program_of_thought</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span>, runner <span class="op">=</span> <span class="va">runner</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Run it - the LLM generates code, R executes it</span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
-<span>  <span class="va">pot</span>,</span>
-<span>  question <span class="op">=</span> <span class="st">"What is the sum of all prime numbers under 100?"</span>,</span>
-<span>  .llm <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Result is the computed answer</span></span>
-<span><span class="va">result</span><span class="op">$</span><span class="va">answer</span></span>
-<span><span class="co">#&gt; "1060"</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="automatic-error-recovery">Automatic Error Recovery<a class="anchor" aria-label="anchor" href="#automatic-error-recovery"></a>
-</h3>
-<p>If the generated code fails, ProgramOfThought automatically feeds the
-error back to the LLM for repair:</p>
-<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">pot</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/program_of_thought.html">program_of_thought</a></span><span class="op">(</span></span>
-<span>  <span class="st">"question -&gt; answer"</span>,</span>
-<span>  runner <span class="op">=</span> <span class="va">runner</span>,</span>
-<span>  max_iters <span class="op">=</span> <span class="fl">3</span>  <span class="co"># Try up to 3 times to get working code</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Even if first attempt has a bug, it may self-correct</span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">pot</span>, question <span class="op">=</span> <span class="st">"Calculate factorial of 10"</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="accessing-execution-history">Accessing Execution History<a class="anchor" aria-label="anchor" href="#accessing-execution-history"></a>
-</h3>
-<p>Track the code generation and execution process:</p>
-<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># After running, inspect execution history</span></span>
-<span><span class="va">executions</span> <span class="op">&lt;-</span> <span class="va">pot</span><span class="op">$</span><span class="fu">get_executions</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="va">executions</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="va">iterations</span>  <span class="co"># List of code attempts</span></span>
-<span><span class="va">executions</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="va">success</span>     <span class="co"># Whether it succeeded</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="using-context-data">Using Context Data<a class="anchor" aria-label="anchor" href="#using-context-data"></a>
-</h3>
-<p>Pass data to your code via the <code>.context</code> list:</p>
-<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">pot</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/program_of_thought.html">program_of_thought</a></span><span class="op">(</span><span class="st">"data, question -&gt; answer"</span>, runner <span class="op">=</span> <span class="va">runner</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
-<span>  <span class="va">pot</span>,</span>
-<span>  data <span class="op">=</span> <span class="va">mtcars</span>,</span>
-<span>  question <span class="op">=</span> <span class="st">"What is the correlation between mpg and hp?"</span>,</span>
-<span>  .llm <span class="op">=</span> <span class="va">llm</span></span>
-<span><span class="op">)</span></span>
-<span><span class="co"># The LLM can generate: cor(.context$data$mpg, .context$data$hp)</span></span></code></pre></div>
-</div>
-</div>
-<div class="section level2">
-<h2 id="codeact">CodeAct<a class="anchor" aria-label="anchor" href="#codeact"></a>
-</h2>
-<p>CodeAct combines declared host tools with generated R execution. Use
-it when a task needs both an external action and computation inside one
-bounded agent loop.</p>
-<div class="section level3">
-<h3 id="why-use-codeact">Why Use CodeAct?<a class="anchor" aria-label="anchor" href="#why-use-codeact"></a>
-</h3>
-<p>Some tasks require multiple capabilities: - Search for information
-(tool calling) - Perform calculations on that information (code
-execution) - Iterate until the answer is found (agent loop)</p>
-<p>CodeAct provides all of these in a single module.</p>
-</div>
-<div class="section level3">
-<h3 id="basic-usage-5">Basic Usage<a class="anchor" aria-label="anchor" href="#basic-usage-5"></a>
-</h3>
-<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Create tools</span></span>
-<span><span class="va">search_tool</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/tool.html" class="external-link">tool</a></span><span class="op">(</span></span>
-<span>  <span class="kw">function</span><span class="op">(</span><span class="va">query</span><span class="op">)</span> <span class="fu">search_api</span><span class="op">(</span><span class="va">query</span><span class="op">)</span>,</span>
-<span>  description <span class="op">=</span> <span class="st">"Search for information"</span>,</span>
-<span>  arguments <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>query <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Create CodeAct agent with tools and code execution</span></span>
-<span><span class="va">runner</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/r_code_runner.html">r_code_runner</a></span><span class="op">(</span>timeout <span class="op">=</span> <span class="fl">30</span><span class="op">)</span></span>
-<span><span class="va">agent</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/code_act.html">code_act</a></span><span class="op">(</span></span>
-<span>  <span class="st">"question -&gt; answer"</span>,</span>
-<span>  tools <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>search <span class="op">=</span> <span class="va">search_tool</span><span class="op">)</span>,</span>
-<span>  runner <span class="op">=</span> <span class="va">runner</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># The agent can search AND compute</span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
-<span>  <span class="va">agent</span>,</span>
-<span>  question <span class="op">=</span> <span class="st">"What is 10% of France's current population?"</span>,</span>
-<span>  .llm <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span><span class="co"># Agent might: 1) Search for France's population, 2) Execute: 67000000 * 0.10</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="built-in-code-execution-tool">Built-in Code Execution Tool<a class="anchor" aria-label="anchor" href="#built-in-code-execution-tool"></a>
-</h3>
-<p>CodeAct automatically includes an <code>execute_r_code</code> tool
-that the LLM can call:</p>
-<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">agent</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/code_act.html">code_act</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span>, runner <span class="op">=</span> <span class="va">runner</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># The LLM sees this tool:</span></span>
-<span><span class="co"># execute_r_code(code): Execute R code in an isolated environment.</span></span>
-<span><span class="co">#   The input data is available in the `.context` list.</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="controlling-iterations">Controlling Iterations<a class="anchor" aria-label="anchor" href="#controlling-iterations"></a>
-</h3>
-<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">agent</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/code_act.html">code_act</a></span><span class="op">(</span></span>
-<span>  <span class="st">"question -&gt; answer"</span>,</span>
-<span>  runner <span class="op">=</span> <span class="va">runner</span>,</span>
-<span>  <span class="co"># Caps outer agent iterations and inner tool calls; excess tool calls error.</span></span>
-<span>  max_iterations <span class="op">=</span> <span class="fl">10</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="inspecting-agent-trajectory">Inspecting Agent Trajectory<a class="anchor" aria-label="anchor" href="#inspecting-agent-trajectory"></a>
-</h3>
-<p>Track the agent’s decision-making process:</p>
-<div class="sourceCode" id="cb29"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">agent</span>, question <span class="op">=</span> <span class="st">"Complex question..."</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Get the trajectory</span></span>
-<span><span class="va">trajectories</span> <span class="op">&lt;-</span> <span class="va">agent</span><span class="op">$</span><span class="fu">get_trajectories</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="va">trajectories</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="va">iterations</span>    <span class="co"># Number of iterations</span></span>
-<span><span class="va">trajectories</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="va">trajectory</span>    <span class="co"># List of steps taken</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="combining-with-custom-tools">Combining with Custom Tools<a class="anchor" aria-label="anchor" href="#combining-with-custom-tools"></a>
-</h3>
-<div class="sourceCode" id="cb30"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Create multiple tools</span></span>
-<span><span class="va">weather_tool</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/tool.html" class="external-link">tool</a></span><span class="op">(</span></span>
-<span>  <span class="kw">function</span><span class="op">(</span><span class="va">city</span><span class="op">)</span> <span class="fu">get_weather</span><span class="op">(</span><span class="va">city</span><span class="op">)</span>,</span>
-<span>  description <span class="op">=</span> <span class="st">"Get current weather"</span>,</span>
-<span>  arguments <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>city <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">database_tool</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/tool.html" class="external-link">tool</a></span><span class="op">(</span></span>
-<span>  <span class="kw">function</span><span class="op">(</span><span class="va">query</span><span class="op">)</span> <span class="fu">run_sql</span><span class="op">(</span><span class="va">query</span><span class="op">)</span>,</span>
-<span>  description <span class="op">=</span> <span class="st">"Query the database"</span>,</span>
-<span>  arguments <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>query <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># CodeAct with multiple tools + code execution</span></span>
-<span><span class="va">agent</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/code_act.html">code_act</a></span><span class="op">(</span></span>
-<span>  <span class="st">"question -&gt; answer"</span>,</span>
-<span>  tools <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>weather <span class="op">=</span> <span class="va">weather_tool</span>, database <span class="op">=</span> <span class="va">database_tool</span><span class="op">)</span>,</span>
-<span>  runner <span class="op">=</span> <span class="va">runner</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-</div>
-</div>
-<div class="section level2">
-<h2 id="recursive-language-model-experimental">Recursive Language Model (experimental)<a class="anchor" aria-label="anchor" href="#recursive-language-model-experimental"></a>
-</h2>
-<p>Use an RLM when the answer is inside an R object but the useful slice
-and calculation are not known in advance. The model proposes one R
-operation, observes bounded output, and chooses the next operation. The
-full object does not enter every model prompt.</p>
-<p>That is a different job from the other code-oriented modules:</p>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/dsprrr" class="external-link">dsprrr</a></span><span class="op">)</span></span></code></pre></div>
+<p>Every dsprrr module comes from a constructor and runs with
+<code><a href="../reference/run.html">run()</a></code>. The constructors differ in how they reach an answer:
+one prompt, several attempts, tools, or generated R code. This page
+helps you pick one. The table compares them, and the sections below run
+one small task through each pattern so you can see what changes in the
+code and in the number of model calls.</p>
 <table class="table">
 <colgroup>
-<col width="50%">
-<col width="50%">
+<col width="25%">
+<col width="25%">
+<col width="25%">
+<col width="25%">
 </colgroup>
 <thead><tr class="header">
-<th>Need</th>
-<th>Module</th>
+<th>Constructor</th>
+<th>What it does</th>
+<th>Use it when</th>
+<th>Model calls per input</th>
 </tr></thead>
 <tbody>
 <tr class="odd">
-<td>Execute a calculation whose steps are already known</td>
-<td><code><a href="../reference/program_of_thought.html">program_of_thought()</a></code></td>
+<td><code><a href="../reference/module.html">module()</a></code></td>
+<td>One structured prediction</td>
+<td>The task fits in one prompt</td>
+<td>1</td>
 </tr>
 <tr class="even">
-<td>Discover an exploration path for this invocation</td>
-<td><code><a href="../reference/rlm_module.html">rlm_module()</a></code></td>
-</tr>
-<tr class="odd">
-<td>Learn a reusable implementation from labeled examples</td>
-<td>
-<code><a href="../reference/flex.html">flex()</a></code> with GEPA</td>
-</tr>
-</tbody>
-</table>
-<div class="section level3">
-<h3 id="investigate-a-large-r-object">Investigate a large R object<a class="anchor" aria-label="anchor" href="#investigate-a-large-r-object"></a>
-</h3>
-<p>The release-regression tutorial uses 40,000 session rows and 200
-change records. A persistent callr runner stages those rich R objects
-once and keeps derived values between iterations:</p>
-<div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">incident</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/rlm_module.html">rlm_module</a></span><span class="op">(</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span></span>
-<span>    <span class="st">"sessions, changes, question -&gt;"</span>,</span>
-<span>    <span class="st">"release: string, cohort: string, before_rate: number,"</span>,</span>
-<span>    <span class="st">"after_rate: number, drop_pp: number, change_id: string, evidence: string"</span></span>
-<span>  <span class="op">)</span>,</span>
-<span>  interpreter_factory <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="op">{</span></span>
-<span>    <span class="fu"><a href="../reference/r_code_runner.html">r_code_runner</a></span><span class="op">(</span>timeout <span class="op">=</span> <span class="fl">30</span>, persistent <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
-<span>  <span class="op">}</span>,</span>
-<span>  max_iterations <span class="op">=</span> <span class="fl">8</span>,</span>
-<span>  max_llm_calls <span class="op">=</span> <span class="fl">0L</span>,</span>
-<span>  max_output_chars <span class="op">=</span> <span class="fl">10000</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
-<span>  <span class="va">incident</span>,</span>
-<span>  sessions <span class="op">=</span> <span class="va">sessions</span>,</span>
-<span>  changes <span class="op">=</span> <span class="va">changes</span>,</span>
-<span>  question <span class="op">=</span> <span class="st">"Which cohort regressed, and which change best explains it?"</span>,</span>
-<span>  .llm <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>  .return_format <span class="op">=</span> <span class="st">"structured"</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p>This configuration is appropriate only when the fixture and generated
-code are trusted. <code>persistent = TRUE</code> preserves one callr
-process, but that process has the host user’s file, network, and
-environment permissions.</p>
-<p>The default <code>max_output_chars = 10000</code> keeps a
-head-and-tail excerpt from each execution in the next prompt. It bounds
-model-visible evidence; it does not increase a runner’s transport
-limit.</p>
-</div>
-<div class="section level3">
-<h3 id="recursive-queries-return-values">Recursive queries return values<a class="anchor" aria-label="anchor" href="#recursive-queries-return-values"></a>
-</h3>
-<p><code>sub_lm = NULL</code> inherits the outer model passed to
-<code><a href="../reference/run.html">run()</a></code>. Generated code can therefore assign and use the
-result of a focused query:</p>
-<div class="sourceCode" id="cb32"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">candidate</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span><span class="va">.context</span><span class="op">$</span><span class="va">changes</span>, <span class="va">component</span> <span class="op">==</span> <span class="st">"checkout-auth"</span><span class="op">)</span></span>
-<span><span class="va">interpretation</span> <span class="op">&lt;-</span> <span class="fu">llm_query</span><span class="op">(</span></span>
-<span>  <span class="st">"Which change could reduce successful token refreshes?"</span>,</span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">candidate</span><span class="op">$</span><span class="va">note</span>, collapse <span class="op">=</span> <span class="st">"\n"</span><span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span><span class="fu">SUBMIT</span><span class="op">(</span>answer <span class="op">=</span> <span class="va">interpretation</span><span class="op">)</span></span></code></pre></div>
-<p>The guest emits a nonce-bound, schema-checked request, dsprrr calls
-the model in the host, then replays the same code evaluation with the
-returned value. One ordered ledger prevents query/tool replay from
-changing operation kind. It cannot roll back an external side effect
-performed directly by generated code before the query, so RLM code
-should keep pre-query work read-only.</p>
-<p><code>SUBMIT()</code> is checked against the signature. Missing
-required, extra, or incompatible fields become a repairable observation
-so the next iteration can correct the submission; optional fields may be
-omitted. If the iteration budget ends first, the extraction predictor
-attempts to produce the best typed answer supported by the trajectory;
-provider or type-validation failure remains terminal.</p>
-<p>The action and fallback extraction steps are graph-visible child
-predictors:</p>
-<div class="sourceCode" id="cb33"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">incident</span><span class="op">$</span><span class="fu">graph_children</span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] "generate_action" "extract"</span></span></code></pre></div>
-<p>Structured results report whether the answer came from
-<code>SUBMIT()</code> or fallback, and retain the bounded
-trajectory:</p>
-<div class="sourceCode" id="cb34"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">result</span><span class="op">$</span><span class="va">output</span></span>
-<span><span class="va">result</span><span class="op">$</span><span class="va">metadata</span><span class="op">$</span><span class="va">output_source</span></span>
-<span><span class="va">result</span><span class="op">$</span><span class="va">metadata</span><span class="op">$</span><span class="va">repl_history</span></span>
-<span><span class="va">result</span><span class="op">$</span><span class="va">metadata</span><span class="op">$</span><span class="va">runner_policy</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="choose-the-execution-boundary">Choose the execution boundary<a class="anchor" aria-label="anchor" href="#choose-the-execution-boundary"></a>
-</h3>
-<p>The one-call helper creates a fresh managed MCP sandbox by
-default:</p>
-<div class="sourceCode" id="cb35"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">answer</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/rlm.html">rlm</a></span><span class="op">(</span></span>
-<span>  <span class="st">"document, question -&gt; answer"</span>,</span>
-<span>  document <span class="op">=</span> <span class="st">"Owner: team-a\nCommitment: rotate signing keys quarterly"</span>,</span>
-<span>  question <span class="op">=</span> <span class="st">"Which commitments have no owner?"</span>,</span>
-<span>  .llm <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>  .max_iterations <span class="op">=</span> <span class="fl">4L</span>,</span>
-<span>  .max_llm_calls <span class="op">=</span> <span class="fl">0L</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p>Managed <code>mcp-repl</code> requires the suggested R package
-<code>mcptools</code> plus the external <code>mcp-repl</code>
-executable. It disables network access and applies an OS sandbox, but
-workspace writes remain allowed. Requests have a 7 KB wire bound and RLM
-control frames have a 3,000-byte encoded bound. When a raw request is
-too large, dsprrr first tries a gzip/base64 wrapper; the final JSON-RPC
-request must still fit the wire bound. Oversized output may be rejected
-by the runner before the module’s 10,000-character head-and-tail
-formatter. Host tools run outside that sandbox with host permissions.
-Use explicit persistent <code><a href="../reference/r_code_runner.html">r_code_runner()</a></code> for trusted large
-data frames and fitted models; it is not a sandbox.</p>
-<p>See <a href="tutorial-rlm-dsprrr.html">Investigate a Release
-Regression with an RLM</a> for the deterministic demo and <a href="how-rlm-works.html">How the RLM Works</a> for the complete
-execution contract.</p>
-</div>
-</div>
-<div class="section level2">
-<h2 id="flex-experimental">Flex (experimental)<a class="anchor" aria-label="anchor" href="#flex-experimental"></a>
-</h2>
-<p>Use <code><a href="../reference/flex.html">flex()</a></code> when the implementation strategy is the
-search problem. GEPA can change which predictors run, add deterministic
-R logic, or call a selected tool—not only rewrite instructions inside a
-fixed module.</p>
-<div class="sourceCode" id="cb36"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">program</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/flex.html">flex</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span><span class="op">)</span></span>
-<span><span class="va">program</span><span class="op">$</span><span class="va">module_src</span></span></code></pre></div>
-<p>Use a regular module when its shape is known, or an explicit pipeline
-when people should own the workflow. See <a href="flex-optimization.html">Flex: Optimize the Whole Program</a> for a
-deterministic GEPA replay that preserves router accuracy while removing
-unnecessary model calls.</p>
-</div>
-<div class="section level2">
-<h2 id="combining-modules">Combining Modules<a class="anchor" aria-label="anchor" href="#combining-modules"></a>
-</h2>
-<p>These modules can be composed when one execution pattern is not
-enough:</p>
-<div class="sourceCode" id="cb37"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># ChainOfThought inside BestOfN</span></span>
-<span><span class="va">cot</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/chain_of_thought.html">chain_of_thought</a></span><span class="op">(</span><span class="st">"math_problem -&gt; solution"</span><span class="op">)</span></span>
-<span><span class="va">reliable_cot</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/best_of_n.html">best_of_n</a></span><span class="op">(</span><span class="va">cot</span>, N <span class="op">=</span> <span class="fl">3</span>, reward_fn <span class="op">=</span> <span class="va">math_checker</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Refine with CoT</span></span>
-<span><span class="va">cot_with_feedback</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span></span>
-<span>  <span class="fu"><a href="../reference/with_reasoning.html">with_reasoning</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"question, feedback -&gt; answer"</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span><span class="va">refined_cot</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/refine.html">refine</a></span><span class="op">(</span><span class="va">cot_with_feedback</span>, N <span class="op">=</span> <span class="fl">3</span>, reward_fn <span class="op">=</span> <span class="va">quality_score</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># MCC already uses CoT internally by default</span></span></code></pre></div>
-</div>
-<div class="section level2">
-<h2 id="optimization-support">Optimization Support<a class="anchor" aria-label="anchor" href="#optimization-support"></a>
-</h2>
-<p>Wrapper modules retain their underlying optimizable predictors. RLM
-exposes separate <code>generate_action</code> and <code>extract</code>
-children, but optimizer support is deliberately explicit:</p>
-<table class="table">
-<colgroup>
-<col width="50%">
-<col width="50%">
-</colgroup>
-<thead><tr class="header">
-<th>Optimizer</th>
-<th>RLM support</th>
-</tr></thead>
-<tbody>
-<tr class="odd">
-<td><code><a href="../reference/GEPA.html">GEPA()</a></code></td>
-<td>Tunes both child predictors with end-to-end feedback;
-<code><a href="../reference/metric_with_trace.html">metric_with_trace()</a></code> can derive feedback from the bounded
-RLM trajectory</td>
-</tr>
-<tr class="even">
-<td>
-<code><a href="../reference/AutoResearch.html">AutoResearch()</a></code> / <code><a href="../reference/MetaHarness.html">MetaHarness()</a></code>
-</td>
-<td>Discovers and applies both graph children</td>
-</tr>
-<tr class="odd">
-<td><code><a href="../reference/MIPROv2.html">MIPROv2()</a></code></td>
-<td>Tunes child instructions only when
-<code>max_bootstrapped_demos = 0L</code>
-</td>
-</tr>
-<tr class="even">
-<td>
-<code><a href="../reference/BootstrapFewShot.html">BootstrapFewShot()</a></code> /
-<code><a href="../reference/BootstrapFewShotWithRandomSearch.html">BootstrapFewShotWithRandomSearch()</a></code>
-</td>
-<td>Programs containing Flex or an RLM are rejected; use GEPA, or
-instruction-only MIPROv2 for an RLM graph</td>
-</tr>
-<tr class="odd">
-<td><code><a href="../reference/LabeledFewShot.html">LabeledFewShot()</a></code></td>
-<td>Programs containing an RLM are rejected because root examples do not
-match child signatures</td>
-</tr>
-</tbody>
-</table>
-<p>Nested MIPRO demo bootstrapping fails with an actionable typed error
-until RLM collects predictor-local child evidence. This avoids attaching
-task-level demos to incompatible <code>state -&gt; ...</code>
-predictors.</p>
-<div class="sourceCode" id="cb38"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Grid search over wrapper parameters</span></span>
-<span><span class="va">wrapper</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/best_of_n.html">best_of_n</a></span><span class="op">(</span><span class="va">qa</span>, N <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/optimize_grid.html">optimize_grid</a></span><span class="op">(</span>  <span class="va">wrapper</span>,</span>
-<span>  data <span class="op">=</span> <span class="va">dev_data</span>,</span>
-<span>  metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>  parameters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    N <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">3</span>, <span class="fl">5</span>, <span class="fl">7</span><span class="op">)</span>,</span>
-<span>    threshold <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.8</span>, <span class="fl">0.9</span>, <span class="fl">1.0</span><span class="op">)</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Teleprompter compilation</span></span>
-<span><span class="va">tp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/LabeledFewShot.html">LabeledFewShot</a></span><span class="op">(</span>k <span class="op">=</span> <span class="fl">4</span><span class="op">)</span></span>
-<span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">wrapper</span>, <span class="va">tp</span>, <span class="va">trainset</span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level2">
-<h2 id="performance-considerations">Performance Considerations<a class="anchor" aria-label="anchor" href="#performance-considerations"></a>
-</h2>
-<div class="section level3">
-<h3 id="token-usage">Token Usage<a class="anchor" aria-label="anchor" href="#token-usage"></a>
-</h3>
-<p>Advanced modules trade additional calls for reasoning, retries,
-comparison, or exploration. The actual cost depends on early stopping,
-provider behavior, trajectory length, and recursive queries. Set
-explicit iteration and call budgets, then inspect returned metadata
-rather than relying on a fixed multiplier.</p>
-</div>
-<div class="section level3">
-<h3 id="cost-tracking">Cost Tracking<a class="anchor" aria-label="anchor" href="#cost-tracking"></a>
-</h3>
-<p>Structured results expose the usage and cost metadata available for
-the module:</p>
-<div class="sourceCode" id="cb39"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
-<span>  <span class="va">mcc</span>,</span>
-<span>  question <span class="op">=</span> <span class="st">"Test"</span>,</span>
-<span>  .llm <span class="op">=</span> <span class="va">llm</span>,</span>
-<span>  .return_format <span class="op">=</span> <span class="st">"structured"</span></span>
-<span><span class="op">)</span></span>
-<span><span class="va">result</span><span class="op">$</span><span class="va">metadata</span><span class="op">$</span><span class="va">cost</span></span>
-<span><span class="va">result</span><span class="op">$</span><span class="va">metadata</span><span class="op">$</span><span class="va">total_tokens</span></span></code></pre></div>
-</div>
-</div>
-<div class="section level2">
-<h2 id="summary">Summary<a class="anchor" aria-label="anchor" href="#summary"></a>
-</h2>
-<p>These modules cover distinct execution strategies:</p>
-<table class="table">
-<colgroup>
-<col width="27%">
-<col width="34%">
-<col width="37%">
-</colgroup>
-<thead><tr class="header">
-<th>Module</th>
-<th>Best For</th>
-<th>Trade-off</th>
-</tr></thead>
-<tbody>
-<tr class="odd">
 <td><code><a href="../reference/chain_of_thought.html">chain_of_thought()</a></code></td>
-<td>Complex reasoning, math, logic</td>
-<td>Longer model output</td>
-</tr>
-<tr class="even">
-<td><code><a href="../reference/best_of_n.html">best_of_n()</a></code></td>
-<td>High-variance tasks, critical outputs</td>
-<td>Additional candidate calls</td>
+<td>Adds a <code>reasoning</code> output before the answer</td>
+<td>Worked steps help the answer</td>
+<td>1</td>
 </tr>
 <tr class="odd">
+<td><code><a href="../reference/best_of_n.html">best_of_n()</a></code></td>
+<td>Reruns a module and keeps the attempt with the highest reward</td>
+<td>You can score an output in R</td>
+<td>1 to <code>N</code>
+</td>
+</tr>
+<tr class="even">
 <td><code><a href="../reference/refine.html">refine()</a></code></td>
-<td>Tasks with clear failure modes</td>
-<td>Iterative feedback calls</td>
+<td>Like <code><a href="../reference/best_of_n.html">best_of_n()</a></code>, and each retry gets feedback
+text</td>
+<td>A retry can be told what to fix</td>
+<td>1 to <code>N</code>
+</td>
+</tr>
+<tr class="odd">
+<td><code><a href="../reference/with_assertions.html">with_assertions()</a></code></td>
+<td>Checks outputs against rules and retries with the failed rules’
+messages</td>
+<td>Outputs must meet hard constraints</td>
+<td>1 to <code>max_retries</code> + 1</td>
 </tr>
 <tr class="even">
 <td><code><a href="../reference/multi_chain_comparison.html">multi_chain_comparison()</a></code></td>
-<td>Complex analysis, multiple valid approaches</td>
-<td>Candidate and comparison calls</td>
+<td>Runs <code>M</code> reasoning chains, then one call compares
+them</td>
+<td>Samples disagree and you want one reconciled answer</td>
+<td>
+<code>M</code> + 1</td>
+</tr>
+<tr class="odd">
+<td><code><a href="../reference/ensemble.html">ensemble()</a></code></td>
+<td>Runs several modules and combines their outputs</td>
+<td>You have variants to vote between</td>
+<td>Sum over members</td>
+</tr>
+<tr class="even">
+<td><code><a href="../reference/react.html">react()</a></code></td>
+<td>Lets the model call your R functions as tools</td>
+<td>The answer needs data or actions the model lacks</td>
+<td>2, plus 1 per tool round</td>
 </tr>
 <tr class="odd">
 <td><code><a href="../reference/program_of_thought.html">program_of_thought()</a></code></td>
-<td>Exact computation, data analysis</td>
-<td>Code execution overhead</td>
+<td>The model writes R code and R runs it</td>
+<td>The answer needs exact computation</td>
+<td>1, plus 1 per repair</td>
 </tr>
 <tr class="even">
 <td><code><a href="../reference/code_act.html">code_act()</a></code></td>
-<td>Tasks needing both tools AND computation</td>
-<td>Agent loop overhead</td>
+<td>An agent with your tools and an R execution tool</td>
+<td>A task needs both tools and computation</td>
+<td>1, plus 1 per tool round</td>
 </tr>
 <tr class="odd">
 <td><code><a href="../reference/rlm_module.html">rlm_module()</a></code></td>
-<td>Adaptive exploration of large or irregular R objects</td>
-<td>Experimental; iterative calls and an explicit execution
-boundary</td>
+<td>The model explores large R objects one step at a time
+(experimental)</td>
+<td>The input is too big or irregular for one prompt</td>
+<td>1 per step, plus recursive queries</td>
 </tr>
 <tr class="even">
 <td><code><a href="../reference/flex.html">flex()</a></code></td>
-<td>Optimizing the choice among predictors, R logic, and tools</td>
-<td>Experimental; executable source requires a sandbox</td>
+<td>A program whose structure an optimizer can rewrite
+(experimental)</td>
+<td>The best program shape is the open question</td>
+<td>Depends on the program</td>
+</tr>
+<tr class="odd">
+<td><code><a href="../reference/module_fn.html">module_fn()</a></code></td>
+<td>Wraps an R function as a module</td>
+<td>You need custom logic around model calls</td>
+<td>Whatever the function makes</td>
+</tr>
+<tr class="even">
+<td><code><a href="../reference/pipeline.html">pipeline()</a></code></td>
+<td>Runs modules in sequence</td>
+<td>A task splits into steps</td>
+<td>Sum over steps</td>
 </tr>
 </tbody>
 </table>
-<p><strong>Getting started:</strong> - Start with
-<strong>ChainOfThought</strong> for complex reasoning tasks - Add
-<strong>BestOfN</strong> when you need reliability - Use
-<strong>ProgramOfThought</strong> for exact computation (math,
-statistics) - Use <strong>CodeAct</strong> when you need tools AND code
-execution together - Use <strong>RLM</strong> when the exploration path
-is unknown for this input - Use <strong>Flex</strong> when the
-implementation strategy itself is the experiment</p>
+<p>With <code>.return_format = "structured"</code>, most modules report
+what a call actually used in <code>metadata$provider_calls</code>,
+<code>metadata$total_tokens</code> and <code>metadata$cost</code>. The
+examples below answer one question whose correct answer is 205:</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">llm</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-luna"</span><span class="op">)</span></span>
+<span><span class="va">question</span> <span class="op">&lt;-</span> <span class="st">"A train leaves at 9:40 and arrives at 13:05. How many minutes is the trip?"</span></span></code></pre></div>
+<div class="section level2">
+<h2 id="one-prompt-module-and-chain_of_thought">One prompt: module() and chain_of_thought()<a class="anchor" aria-label="anchor" href="#one-prompt-module-and-chain_of_thought"></a>
+</h2>
+<p><code><a href="../reference/module.html">module()</a></code> makes one structured call.
+<code><a href="../reference/chain_of_thought.html">chain_of_thought()</a></code> makes the same call with an extra
+<code>reasoning</code> output placed before the answer, so the model
+writes out its steps first:</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">basic</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">basic</span>, question <span class="op">=</span> <span class="va">question</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">cot</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/chain_of_thought.html">chain_of_thought</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span><span class="op">)</span></span>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">cot</span>, question <span class="op">=</span> <span class="va">question</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
+<span><span class="va">result</span><span class="op">$</span><span class="va">reasoning</span></span>
+<span><span class="va">result</span><span class="op">$</span><span class="va">answer</span></span></code></pre></div>
+<p>The reasoning costs output tokens and is not guaranteed to reflect
+how the model reached its answer, so judge the answer with a metric.
+Under the hood, <code><a href="../reference/chain_of_thought.html">chain_of_thought()</a></code> builds its signature
+with <code><a href="../reference/with_reasoning.html">with_reasoning()</a></code>, which describes the new field with
+<code>prefix</code> followed by “produce the” and the output names.
+Write the prefix as the start of a sentence that ends in “to”:</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/with_reasoning.html">with_reasoning</a></span><span class="op">(</span></span>
+<span>  <span class="st">"question -&gt; answer"</span>,</span>
+<span>  prefix <span class="op">=</span> <span class="st">"Convert both times to minutes after midnight in order to"</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">sig</span><span class="op">@</span><span class="va">output_type</span><span class="op">@</span><span class="va">properties</span><span class="op">$</span><span class="va">reasoning</span><span class="op">@</span><span class="va">description</span></span>
+<span><span class="co">#&gt; [1] "Reasoning: Convert both times to minutes after midnight in order to produce the answer."</span></span></code></pre></div>
+<p>Pass the same <code>prefix</code> to <code><a href="../reference/chain_of_thought.html">chain_of_thought()</a></code>.
+<code><a href="../reference/without_reasoning.html">without_reasoning()</a></code> removes the field again, which is handy
+for comparing both versions on the same data.</p>
 </div>
 <div class="section level2">
-<h2 id="further-reading">Further Reading<a class="anchor" aria-label="anchor" href="#further-reading"></a>
+<h2 id="retry-until-an-output-passes">Retry until an output passes<a class="anchor" aria-label="anchor" href="#retry-until-an-output-passes"></a>
 </h2>
-<p><strong>Tutorials:</strong> - <a href="tutorial-improve-with-demos.html">Improving with Examples</a> —
-Learn few-shot prompting - <a href="tutorial-optimize-your-module.html">Finding Best Configuration</a>
-— Grid search optimization - <a href="tutorial-rlm-dsprrr.html">Investigate a Release Regression with an
-RLM</a> — Explore a deterministic large object</p>
-<p><strong>How-to Guides:</strong> - <a href="compilation-optimization.html">Compile &amp; Optimize</a> — Full
-optimization workflow with advanced modules - <a href="rag-workflows.html">Build RAG Pipelines</a> — Use modules in
-retrieval workflows</p>
-<p><strong>Concepts:</strong> - <a href="concepts-signatures-modules.html">Understanding Signatures &amp;
-Modules</a> — S7 vs R6 design choices - <a href="concepts-optimization-theory.html">How Optimization Works</a> —
-Teleprompter theory - <a href="how-rlm-works.html">How the RLM Works</a>
-— Lifecycle, replay, typed submission, and runner boundaries</p>
-<p><strong>Reference:</strong> - <a href="cheatsheet.html">Quick
-Reference</a> — Syntax and patterns at a glance</p>
+<p>Suppose the answer must be a bare number such as <code>205</code>,
+not <code>205 minutes</code> or <code>3 h 25 min</code>. Three wrappers
+can enforce that, and they differ in what the next attempt learns from a
+failure:</p>
+<table class="table">
+<colgroup>
+<col width="25%">
+<col width="25%">
+<col width="25%">
+<col width="25%">
+</colgroup>
+<thead><tr class="header">
+<th></th>
+<th><code><a href="../reference/best_of_n.html">best_of_n()</a></code></th>
+<th><code><a href="../reference/refine.html">refine()</a></code></th>
+<th><code><a href="../reference/with_assertions.html">with_assertions()</a></code></th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td>Scores an attempt with</td>
+<td>a reward function (0 to 1)</td>
+<td>a reward function</td>
+<td>pass/fail rules</td>
+</tr>
+<tr class="even">
+<td>The next attempt sees</td>
+<td>nothing new</td>
+<td>your feedback template</td>
+<td>the messages of the failed rules</td>
+</tr>
+<tr class="odd">
+<td>When nothing passes</td>
+<td>returns the best attempt</td>
+<td>returns the best attempt</td>
+<td>errors, or warns with <code>on_failure = "warn"</code>
+</td>
+</tr>
+</tbody>
+</table>
+<p>A reward function takes the prediction and the inputs and returns a
+score:</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">digits_only</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">prediction</span>, <span class="va">inputs</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grepl</a></span><span class="op">(</span><span class="st">"^[0-9]+$"</span>, <span class="fu"><a href="https://rdrr.io/r/base/trimws.html" class="external-link">trimws</a></span><span class="op">(</span><span class="va">prediction</span><span class="op">$</span><span class="va">answer</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">}</span></span>
+<span></span>
+<span><span class="fu">digits_only</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>answer <span class="op">=</span> <span class="st">"205"</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] 1</span></span>
+<span><span class="fu">digits_only</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>answer <span class="op">=</span> <span class="st">"205 minutes"</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] 0</span></span></code></pre></div>
+<div class="section level3">
+<h3 id="best_of_n">best_of_n()<a class="anchor" aria-label="anchor" href="#best_of_n"></a>
+</h3>
+<p><code><a href="../reference/best_of_n.html">best_of_n()</a></code> runs the module up to <code>N</code> times
+and stops at the first attempt that scores at least
+<code>threshold</code> (default 1). Each attempt gets its own cache key,
+so retries are fresh samples, but they are independent: nothing from a
+failed attempt reaches the next one. If no attempt reaches the
+threshold, you get the highest-scoring one.</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">qa</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">best</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/best_of_n.html">best_of_n</a></span><span class="op">(</span><span class="va">qa</span>, N <span class="op">=</span> <span class="fl">3L</span>, reward_fn <span class="op">=</span> <span class="va">digits_only</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">best</span>, question <span class="op">=</span> <span class="va">question</span>, .llm <span class="op">=</span> <span class="va">llm</span>, .return_format <span class="op">=</span> <span class="st">"structured"</span><span class="op">)</span></span>
+<span><span class="va">result</span><span class="op">$</span><span class="va">output</span><span class="op">$</span><span class="va">answer</span></span>
+<span><span class="va">result</span><span class="op">$</span><span class="va">metadata</span><span class="op">$</span><span class="va">all_scores</span></span>
+<span><span class="va">best</span><span class="op">$</span><span class="fu">get_attempts</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<p>Always pass a <code>reward_fn</code>. The default gives every
+non-<code>NULL</code> prediction a score of 1, so the first answer ends
+the loop and <code><a href="../reference/best_of_n.html">best_of_n()</a></code> behaves like the module it
+wraps.</p>
+<p>When you have labeled data, <code><a href="../reference/as_reward_fn.html">as_reward_fn()</a></code> turns a
+metric into a reward. It compares one output field
+(<code>prediction_field</code>) with an input that holds the expected
+value (<code>expected_field</code>). It extracts both values itself, so
+pass the metric without <code>field</code>:</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">matches_label</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/as_reward_fn.html">as_reward_fn</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  expected_field <span class="op">=</span> <span class="st">"expected"</span>,</span>
+<span>  prediction_field <span class="op">=</span> <span class="st">"answer"</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu">matches_label</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>answer <span class="op">=</span> <span class="st">"205"</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>expected <span class="op">=</span> <span class="st">"205"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] 1</span></span>
+<span><span class="fu">matches_label</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>answer <span class="op">=</span> <span class="st">"205 minutes"</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>expected <span class="op">=</span> <span class="st">"205"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] 0</span></span></code></pre></div>
+<p>At run time the expected value travels as an extra input, and dsprrr
+warns that it is not declared in the signature. A module without a
+<code>template</code> adds every input to its prompt, so give it a
+template that leaves the label out:</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">labeled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/best_of_n.html">best_of_n</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span><span class="op">)</span>, template <span class="op">=</span> <span class="st">"{question}"</span><span class="op">)</span>,</span>
+<span>  N <span class="op">=</span> <span class="fl">3L</span>,</span>
+<span>  reward_fn <span class="op">=</span> <span class="va">matches_label</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">labeled</span>, question <span class="op">=</span> <span class="va">question</span>, expected <span class="op">=</span> <span class="st">"205"</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="refine">refine()<a class="anchor" aria-label="anchor" href="#refine"></a>
+</h3>
+<p><code><a href="../reference/refine.html">refine()</a></code> takes the same reward and threshold. When an
+attempt falls short, it fills <code>feedback_template</code>, a glue
+string that can use <code>{score}</code>, <a href="https://github.com/bbolker/prediction" class="external-link">prediction</a> and
+any input field, and passes the text to the next attempt. That rendered
+template is the whole feedback: the model is not asked to diagnose its
+mistake.</p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">refined</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/refine.html">refine</a></span><span class="op">(</span></span>
+<span>  <span class="va">qa</span>,</span>
+<span>  N <span class="op">=</span> <span class="fl">3L</span>,</span>
+<span>  reward_fn <span class="op">=</span> <span class="va">digits_only</span>,</span>
+<span>  feedback_template <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span></span>
+<span>    <span class="st">"Your previous attempt ({prediction}) was not a bare number."</span>,</span>
+<span>    <span class="st">"Reply with the number of minutes only."</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">refined</span>, question <span class="op">=</span> <span class="va">question</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
+<span><span class="va">refined</span><span class="op">$</span><span class="fu">get_feedback_history</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<p><a href="https://github.com/bbolker/prediction" class="external-link">prediction</a> renders as <code>field: value</code> pairs,
+for example <code>answer: 3 h 25 min</code>. Here the wrapped signature
+has no <code>feedback</code> input, so the feedback is added to later
+prompts as a <code>feedback:</code> line. A signature can declare the
+input instead (<code>"question, feedback -&gt; answer"</code>); the
+first attempt then receives “No feedback yet.”.</p>
+</div>
+<div class="section level3">
+<h3 id="with_assertions">with_assertions()<a class="anchor" aria-label="anchor" href="#with_assertions"></a>
+</h3>
+<p><code><a href="../reference/with_assertions.html">with_assertions()</a></code> checks each output against rules.
+<code><a href="../reference/assertions.html">assert_output()</a></code> rules must pass: when one fails, the module
+runs again with the failure messages added as an
+<code>assertion_feedback</code> input, up to <code>max_retries</code>
+more times. <code><a href="../reference/assertions.html">suggest_output()</a></code> rules only warn.</p>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">checked</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/with_assertions.html">with_assertions</a></span><span class="op">(</span></span>
+<span>  <span class="va">qa</span>,</span>
+<span>  assertions <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="../reference/assertions.html">assert_output</a></span><span class="op">(</span></span>
+<span>      <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grepl</a></span><span class="op">(</span><span class="st">"^[0-9]+$"</span>, <span class="va">.x</span><span class="op">$</span><span class="va">answer</span><span class="op">)</span>,</span>
+<span>      <span class="st">"Reply with the number of minutes only, as digits."</span></span>
+<span>    <span class="op">)</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  max_retries <span class="op">=</span> <span class="fl">2L</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">checked</span>, question <span class="op">=</span> <span class="va">question</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
+<span><span class="va">checked</span><span class="op">$</span><span class="fu">get_attempts</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+</div>
+</div>
+<div class="section level2">
+<h2 id="compare-several-answers">Compare several answers<a class="anchor" aria-label="anchor" href="#compare-several-answers"></a>
+</h2>
+<p><code><a href="../reference/multi_chain_comparison.html">multi_chain_comparison()</a></code> runs a chain-of-thought version
+of the signature <code>M</code> times at <code>temperature</code>
+(default 0.7), then makes one more call that reads all attempts and
+returns a reasoned final answer. gpt-6-luna accepts that temperature
+only with reasoning turned off, so the example gives it its own chat
+with <code>reasoning_effort = "none"</code>. The default comparison
+prompt lists the attempts but not the original inputs, so pass a
+<code>comparison_template</code> that includes them. It is a glue string
+with <code>{M}</code>, <code>{attempts_text}</code> and your input
+fields:</p>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">mcc</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/multi_chain_comparison.html">multi_chain_comparison</a></span><span class="op">(</span></span>
+<span>  <span class="st">"question -&gt; answer"</span>,</span>
+<span>  M <span class="op">=</span> <span class="fl">3L</span>,</span>
+<span>  comparison_template <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span></span>
+<span>    <span class="st">"Question: {question}\n\n{attempts_text}\n\n"</span>,</span>
+<span>    <span class="st">"Compare the {M} attempts above and give the best final answer."</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">mcc_llm</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span></span>
+<span>  model <span class="op">=</span> <span class="st">"gpt-6-luna"</span>,</span>
+<span>  params <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/params.html" class="external-link">params</a></span><span class="op">(</span>reasoning_effort <span class="op">=</span> <span class="st">"none"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">mcc</span>, question <span class="op">=</span> <span class="va">question</span>, .llm <span class="op">=</span> <span class="va">mcc_llm</span><span class="op">)</span></span>
+<span><span class="va">mcc</span><span class="op">$</span><span class="fu">get_attempts</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<p><code><a href="../reference/ensemble.html">ensemble()</a></code> runs each member once and combines their
+outputs with <code>reduce_fn</code>. Members must share input names.
+Unlike the comparison call above, a reducer only picks among the answers
+it got:</p>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">voters</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ensemble.html">ensemble</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>    <span class="fu"><a href="../reference/chain_of_thought.html">chain_of_thought</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span><span class="op">)</span>,</span>
+<span>    <span class="fu"><a href="../reference/chain_of_thought.html">chain_of_thought</a></span><span class="op">(</span></span>
+<span>      <span class="st">"question -&gt; answer"</span>,</span>
+<span>      prefix <span class="op">=</span> <span class="st">"Convert both times to minutes after midnight in order to"</span></span>
+<span>    <span class="op">)</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  reduce_fn <span class="op">=</span> <span class="fu"><a href="../reference/reduce_majority.html">reduce_majority</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"answer"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">voters</span>, question <span class="op">=</span> <span class="va">question</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span></code></pre></div>
+<p><code><a href="../reference/reduce_majority.html">reduce_majority()</a></code> votes on the first output field unless
+you name one, and for a chain-of-thought member the first field is
+<code>reasoning</code>, so pass <code>field</code>. Other reducers
+include <code><a href="../reference/reduce_weighted_vote.html">reduce_weighted_vote()</a></code>, which uses
+<code>weights</code> such as validation scores, and
+<code><a href="../reference/reduce_first.html">reduce_first()</a></code>. Ensembles are most useful over variants you
+already have, such as one program compiled with different demos.</p>
+</div>
+<div class="section level2">
+<h2 id="use-tools-react">Use tools: react()<a class="anchor" aria-label="anchor" href="#use-tools-react"></a>
+</h2>
+<p>When the answer depends on data the model does not have, give it
+tools. A tool is an ordinary R function described with
+<code><a href="https://ellmer.tidyverse.org/reference/tool.html" class="external-link">ellmer::tool()</a></code>, so you can test it before a model sees
+it:</p>
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">timetable</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  train <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"412"</span>, <span class="st">"415"</span><span class="op">)</span>,</span>
+<span>  departs <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"09:40"</span>, <span class="st">"11:15"</span><span class="op">)</span>,</span>
+<span>  arrives <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"13:05"</span>, <span class="st">"14:50"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">lookup_train</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/tool.html" class="external-link">tool</a></span><span class="op">(</span></span>
+<span>  <span class="kw">function</span><span class="op">(</span><span class="va">train</span><span class="op">)</span> <span class="op">{</span></span>
+<span>    <span class="va">row</span> <span class="op">&lt;-</span> <span class="va">timetable</span><span class="op">[</span><span class="va">timetable</span><span class="op">$</span><span class="va">train</span> <span class="op">==</span> <span class="va">train</span>, <span class="op">]</span></span>
+<span>    <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">row</span><span class="op">)</span> <span class="op">==</span> <span class="fl">0</span><span class="op">)</span> <span class="kw"><a href="https://rdrr.io/r/base/function.html" class="external-link">return</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="st">"No train numbered"</span>, <span class="va">train</span><span class="op">)</span><span class="op">)</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="st">"Train"</span>, <span class="va">train</span>, <span class="st">"departs at"</span>, <span class="va">row</span><span class="op">$</span><span class="va">departs</span>, <span class="st">"and arrives at"</span>, <span class="va">row</span><span class="op">$</span><span class="va">arrives</span><span class="op">)</span></span>
+<span>  <span class="op">}</span>,</span>
+<span>  description <span class="op">=</span> <span class="st">"Look up when a train departs and arrives."</span>,</span>
+<span>  arguments <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>train <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span><span class="st">"Train number, such as '412'"</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  name <span class="op">=</span> <span class="st">"lookup_train"</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu">lookup_train</span><span class="op">(</span>train <span class="op">=</span> <span class="st">"412"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] "Train 412 departs at 09:40 and arrives at 13:05"</span></span></code></pre></div>
+<p><code><a href="../reference/react.html">react()</a></code> lets the model call the tool as often as it
+needs, then makes one structured call for the signature’s outputs:</p>
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">agent</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/react.html">react</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span>, tools <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">lookup_train</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
+<span>  <span class="va">agent</span>,</span>
+<span>  question <span class="op">=</span> <span class="st">"How many minutes does train 412 take?"</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-luna"</span><span class="op">)</span>,</span>
+<span>  .return_format <span class="op">=</span> <span class="st">"structured"</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">result</span><span class="op">$</span><span class="va">output</span><span class="op">$</span><span class="va">answer</span></span>
+<span><span class="va">result</span><span class="op">$</span><span class="va">metadata</span><span class="op">$</span><span class="va">tools_used</span></span></code></pre></div>
+<p><code>max_iterations</code> (default 10) caps the tool rounds and
+errors when the model goes past it. The agent registers its tools on the
+chat it runs with, which is why this example gives it a chat of its own.
+Tools run in your R session with your permissions, so keep them
+narrow.</p>
+</div>
+<div class="section level2">
+<h2 id="compute-with-code">Compute with code<a class="anchor" aria-label="anchor" href="#compute-with-code"></a>
+</h2>
+<p><code><a href="../reference/program_of_thought.html">program_of_thought()</a></code> asks the model for R code, runs it
+in a separate R process, and uses the value as the answer. A single
+value becomes the answer directly; anything else goes back to the model
+to phrase. If the code fails, the error goes back to the model for a
+repair, up to <code>max_iters</code> (default 3) attempts. Inputs are
+available to the code as <code>.context$&lt;name&gt;</code>.</p>
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">pot</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/program_of_thought.html">program_of_thought</a></span><span class="op">(</span></span>
+<span>  <span class="st">"question -&gt; answer"</span>,</span>
+<span>  interpreter_factory <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="fu"><a href="../reference/r_code_runner.html">r_code_runner</a></span><span class="op">(</span>timeout <span class="op">=</span> <span class="fl">30</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">pot</span>, question <span class="op">=</span> <span class="va">question</span>, .llm <span class="op">=</span> <span class="va">llm</span>, .return_format <span class="op">=</span> <span class="st">"structured"</span><span class="op">)</span></span>
+<span><span class="va">result</span><span class="op">$</span><span class="va">output</span><span class="op">$</span><span class="va">answer</span></span>
+<span><span class="va">result</span><span class="op">$</span><span class="va">metadata</span><span class="op">$</span><span class="va">final_code</span></span></code></pre></div>
+<p>Code execution is opt-in. Pass exactly one of <code>runner</code> (a
+runner you create and reuse) or <code>interpreter_factory</code> (a
+function that returns a fresh runner for each <code><a href="../reference/run.html">run()</a></code>, shut
+down afterwards). <code><a href="../reference/r_code_runner.html">r_code_runner()</a></code> runs code in a separate R
+process with your user’s file and network access; it is not a sandbox.
+For code you do not trust, use a sandboxed runner such as
+<code><a href="../reference/mcp_repl_runner.html">mcp_repl_runner()</a></code>, which needs the mcptools package and
+Posit’s <code>mcp-repl</code> executable.</p>
+<p><code><a href="../reference/code_act.html">code_act()</a></code> combines tools with code: the model gets your
+tools plus an <code>execute_r_code</code> tool, so it can look up the
+times and do the arithmetic in R. Its answer is the model’s final
+message, returned as the signature’s one output field.</p>
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">agent</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/code_act.html">code_act</a></span><span class="op">(</span></span>
+<span>  <span class="st">"question -&gt; answer"</span>,</span>
+<span>  tools <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">lookup_train</span><span class="op">)</span>,</span>
+<span>  interpreter_factory <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="fu"><a href="../reference/r_code_runner.html">r_code_runner</a></span><span class="op">(</span>timeout <span class="op">=</span> <span class="fl">30</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">agent</span>, question <span class="op">=</span> <span class="st">"How many minutes does train 412 take?"</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="custom-logic-module_fn">Custom logic: module_fn()<a class="anchor" aria-label="anchor" href="#custom-logic-module_fn"></a>
+</h2>
+<p><code><a href="../reference/module_fn.html">module_fn()</a></code> turns an R function into a module with a
+signature, so it works with <code><a href="../reference/run.html">run()</a></code>,
+<code><a href="../reference/run_dataset.html">run_dataset()</a></code>, <code><a href="../reference/evaluate.html">evaluate()</a></code> and pipelines. This
+one needs no model at all:</p>
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">trip_minutes</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module_fn.html">module_fn</a></span><span class="op">(</span></span>
+<span>  <span class="st">"departs, arrives -&gt; minutes: int"</span>,</span>
+<span>  <span class="kw">function</span><span class="op">(</span><span class="va">departs</span>, <span class="va">arrives</span><span class="op">)</span> <span class="op">{</span></span>
+<span>    <span class="va">to_minutes</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">time</span><span class="op">)</span> <span class="op">{</span></span>
+<span>      <span class="va">parts</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">as.integer</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/strsplit.html" class="external-link">strsplit</a></span><span class="op">(</span><span class="va">time</span>, <span class="st">":"</span><span class="op">)</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span>
+<span>      <span class="va">parts</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span> <span class="op">*</span> <span class="fl">60L</span> <span class="op">+</span> <span class="va">parts</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span></span>
+<span>    <span class="op">}</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>minutes <span class="op">=</span> <span class="fu">to_minutes</span><span class="op">(</span><span class="va">arrives</span><span class="op">)</span> <span class="op">-</span> <span class="fu">to_minutes</span><span class="op">(</span><span class="va">departs</span><span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="op">}</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">trip_minutes</span>, departs <span class="op">=</span> <span class="st">"9:40"</span>, arrives <span class="op">=</span> <span class="st">"13:05"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; $minutes</span></span>
+<span><span class="co">#&gt; [1] 205</span></span></code></pre></div>
+<p>Put a model step in front of it and the model only has to read the
+times, while R does the arithmetic:</p>
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">extract_times</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"question -&gt; departs, arrives"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">trip</span> <span class="op">&lt;-</span> <span class="va">extract_times</span> <span class="op"><a href="../reference/pipeline.html">%&gt;&gt;%</a></span> <span class="va">trip_minutes</span></span>
+<span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">trip</span>, question <span class="op">=</span> <span class="va">question</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span></code></pre></div>
+<p>If the function has a <code>.llm</code> (or <code>...</code>)
+argument, it receives the active chat and can call other modules itself.
+<code><a href="../reference/compile.html">compile()</a></code> refuses <code><a href="../reference/module_fn.html">module_fn()</a></code> programs,
+because an optimizer cannot see inside the function; compile the modules
+it calls instead.</p>
+</div>
+<div class="section level2">
+<h2 id="explore-large-inputs-rlm_module-experimental">Explore large inputs: rlm_module() (experimental)<a class="anchor" aria-label="anchor" href="#explore-large-inputs-rlm_module-experimental"></a>
+</h2>
+<p><code><a href="../reference/rlm_module.html">rlm_module()</a></code> keeps its inputs in an R session and lets
+the model examine them one step at a time: it writes a little R, reads
+bounded output, decides what to look at next, and calls
+<code>SUBMIT()</code> when it has the answer. Use it when the evidence
+sits in an object too large or irregular to paste into a prompt and you
+cannot say in advance which slice matters. It needs a persistent runner.
+<a href="how-rlm-works.html">How RLM works</a> explains the execution
+model and runner choices, and <a href="tutorial-rlm-dsprrr.html">Investigate a regression with RLM</a>
+works through an example.</p>
+</div>
+<div class="section level2">
+<h2 id="search-the-program-shape-flex-experimental">Search the program shape: flex() (experimental)<a class="anchor" aria-label="anchor" href="#search-the-program-shape-flex-experimental"></a>
+</h2>
+<p><code><a href="../reference/flex.html">flex()</a></code> wraps a signature in a program whose source GEPA
+can rewrite: it can add or remove predictor steps and, with executable
+source, add R logic or tool calls. Use it when the right structure is
+what you want to find out. If you already know the structure, write a
+module or a pipeline. <a href="flex-optimization.html">Flex: optimize a
+whole program</a> shows a complete run.</p>
+</div>
+<div class="section level2">
+<h2 id="wrappers-and-optimization">Wrappers and optimization<a class="anchor" aria-label="anchor" href="#wrappers-and-optimization"></a>
+</h2>
+<p>Wrappers keep the module they wrap. <code><a href="../reference/optimize_grid.html">optimize_grid()</a></code> can
+tune their settings, for example
+<code>parameters = list(N = c(1L, 3L))</code>, and changes the wrapper
+in place. Demo-based compilation does not work on a wrapped program
+(<code><a href="../reference/LabeledFewShot.html">LabeledFewShot()</a></code> stops with “cannot label nested
+predictors”), so compile the inner module on a labeled
+<code>trainset</code> (columns <code>question</code> and
+<code>answer</code>) and wrap the compiled copy:</p>
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">compiled_qa</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">qa</span>, <span class="fu"><a href="../reference/LabeledFewShot.html">LabeledFewShot</a></span><span class="op">(</span>k <span class="op">=</span> <span class="fl">4L</span><span class="op">)</span>, <span class="va">trainset</span><span class="op">)</span></span>
+<span><span class="va">reliable</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/best_of_n.html">best_of_n</a></span><span class="op">(</span><span class="va">compiled_qa</span>, N <span class="op">=</span> <span class="fl">3L</span>, reward_fn <span class="op">=</span> <span class="va">digits_only</span><span class="op">)</span></span></code></pre></div>
+<p>For multi-step programs, <a href="chaining-modules.html">Chain
+modules into pipelines</a> shows how to connect modules and compile them
+together.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

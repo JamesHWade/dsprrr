@@ -1,8 +1,9 @@
-# Create a RAG Module
+# Create a retrieval-augmented generation module
 
-Factory function to create a Retrieval-Augmented Generation module. RAG
-modules automatically retrieve relevant context from a document store
-before generating responses.
+`rag_module()` builds a module that, on every call, retrieves documents
+related to the input, adds them to the prompt, and asks the model to
+answer from them. Retrieval comes from a ragnar store or from any R
+function you supply.
 
 ## Usage
 
@@ -22,61 +23,130 @@ rag_module(
 
 - signature:
 
-  A signature string or Signature object defining inputs/outputs.
+  A signature from
+  [`signature()`](https://jameshwade.github.io/dsprrr/reference/signature.md),
+  or a signature string, such as `"question -> answer"`.
 
 - store:
 
-  Optional ragnar store for document retrieval.
+  A ragnar store (see
+  [`ragnar_tool()`](https://jameshwade.github.io/dsprrr/reference/ragnar_tool.md)
+  for how to build one), searched with
+  `ragnar::ragnar_retrieve(store, query, top_k = k)`.
 
 - retriever:
 
-  Optional custom retriever function. Should accept `(query, k)` and
-  return a character vector of documents.
+  A function called as `retriever(query, k = k)` that returns a
+  character vector of documents. It takes precedence over `store` (with
+  a warning if both are given).
 
 - k:
 
-  Number of documents to retrieve (default 5).
+  Number of documents to retrieve.
 
 - context_format:
 
-  Field name for the context in the prompt (default "relevant_context").
-  This field is automatically added to inputs.
+  Name under which the retrieved text appears in the prompt.
 
 - config:
 
-  Optional configuration list.
+  A list of settings. `fail_on_retrieval_error = TRUE` turns retrieval
+  errors into errors; by default they give a warning and the model sees
+  "No relevant context found.".
 
 - chat:
 
-  Optional ellmer Chat object.
+  An ellmer Chat stored on the module.
 
 ## Value
 
-A RAGModule object.
+A module (an R6 object of class `RAGModule`).
+
+## Details
+
+The query is the first of the inputs `query`, `question`, `text`,
+`input` or `prompt`, or else the first non-empty string input. The
+retrieved documents are numbered (`[1] ...`) and added at the end of the
+prompt, under a `# Retrieved context` heading and the label
+`context_format`.
+
+The context is added whether or not the signature declares a
+`context_format` input, and callers never pass it to
+[`run()`](https://jameshwade.github.io/dsprrr/reference/run.md). If the
+signature does declare it, as in
+`"question, relevant_context -> answer"`, the retrieved text is
+currently written into the prompt twice.
+
+With `.return_format = "structured"`, the metadata records the `query`
+and the `retrieved_context`.
+
+## See also
+
+Other program constructors:
+[`chain_of_thought()`](https://jameshwade.github.io/dsprrr/reference/chain_of_thought.md),
+[`code_act()`](https://jameshwade.github.io/dsprrr/reference/code_act.md),
+[`flex()`](https://jameshwade.github.io/dsprrr/reference/flex.md),
+[`module()`](https://jameshwade.github.io/dsprrr/reference/module.md),
+[`module_fn()`](https://jameshwade.github.io/dsprrr/reference/module_fn.md),
+[`multi_chain_comparison()`](https://jameshwade.github.io/dsprrr/reference/multi_chain_comparison.md),
+[`program_of_thought()`](https://jameshwade.github.io/dsprrr/reference/program_of_thought.md),
+[`react()`](https://jameshwade.github.io/dsprrr/reference/react.md),
+[`rlm()`](https://jameshwade.github.io/dsprrr/reference/rlm.md),
+[`rlm_module()`](https://jameshwade.github.io/dsprrr/reference/rlm_module.md)
 
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-# With ragnar store
-store <- ragnar::ragnar_store_create(documents)
-mod <- rag_module(
-  "question, relevant_context -> answer",
-  store = store,
-  k = 3
+docs <- c(
+  "The Eiffel Tower is 330 metres tall.",
+  "The Louvre is the most visited museum in the world.",
+  "Paris has 20 arrondissements."
 )
-
-result <- run(mod, question = "What is the capital of France?")
-
-# With custom retriever
-my_retriever <- function(query, k) {
-  # Custom retrieval logic
-  c("Document 1 content", "Document 2 content")
+# A keyword retriever, so the example needs no embeddings
+keyword_retriever <- function(query, k) {
+  words <- tolower(strsplit(query, "\\W+")[[1]])
+  hits <- vapply(
+    docs,
+    function(doc) sum(words %in% tolower(strsplit(doc, "\\W+")[[1]])),
+    numeric(1)
+  )
+  unname(head(docs[order(-hits)], k))
 }
+keyword_retriever("How tall is the Eiffel Tower?", k = 2)
+#> [1] "The Eiffel Tower is 330 metres tall."               
+#> [2] "The Louvre is the most visited museum in the world."
 
-mod <- rag_module(
-  "query, relevant_context -> response",
-  retriever = my_retriever
+rag <- rag_module("question -> answer", retriever = keyword_retriever, k = 2L)
+rag
+#> 
+#> ── RAGModule ──
+#> 
+#> ── Signature 
+#> 
+#> ── Signature ──
+#> 
+#> ── Inputs 
+#> • question: "string" - Input: question
+#> 
+#> ── Output 
+#> Type: "object(answer: string)"
+#> 
+#> ── Instructions 
+#> Given the fields `question`, produce the fields `answer`.
+#> 
+#> ── Retrieval Configuration 
+#> k: 2 documents
+#> Context field: relevant_context
+#> Retriever: <custom function>
+
+if (FALSE) { # \dontrun{
+run(
+  rag,
+  question = "How tall is the Eiffel Tower?",
+  .llm = ellmer::chat_openai(model = "gpt-6-luna")
 )
+
+# With a ragnar store, built as shown in ?ragnar_tool
+rag_store <- rag_module("question -> answer", store = store, k = 3L)
 } # }
 ```

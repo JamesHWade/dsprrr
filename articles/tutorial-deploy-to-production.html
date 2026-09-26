@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Tutorial 6: Taking to Production • dsprrr</title>
+<title>Tutorial 6: Save and reuse a module • dsprrr</title>
 <!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="../favicon-96x96.png">
 <link rel="icon" type="”image/svg+xml”" href="../favicon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
@@ -17,7 +17,7 @@
 <link href="../deps/Fira_Code-0.4.10/font.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Tutorial 6: Taking to Production">
+<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Tutorial 6: Save and reuse a module">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -36,67 +36,67 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
-<li class="nav-item"><a class="nav-link" href="../articles/getting-started.html">Get Started</a></li>
+<li class="nav-item"><a class="nav-link" href="../articles/tutorial-hello-world.html">Get started</a></li>
 <li class="active nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-tutorials" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Tutorials</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-tutorials">
-<li><h6 class="dropdown-header" data-toc-skip>Learning Path</h6></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-hello-world.html">1. Your First LLM Call</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-build-classifier.html">2. Building a Classifier</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-structured-outputs.html">3. Structured Outputs</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-improve-with-demos.html">4. Improving with Examples</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-optimize-your-module.html">5. Optimization</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-deploy-to-production.html">6. Production</a></li>
+<li><a class="dropdown-item" href="../articles/tutorial-hello-world.html">1. Your first LLM call</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-build-classifier.html">2. Build a classifier</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-structured-outputs.html">3. Extract structured data</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-improve-with-demos.html">4. Improve with examples</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-optimize-your-module.html">5. Optimize a module</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-deploy-to-production.html">6. Save and reuse a module</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Advanced Tutorials</h6></li>
-    <li><a class="dropdown-item" href="../articles/text-adventure.html">Build an AI Game Master</a></li>
-    <li><a class="dropdown-item" href="../articles/llms-txt.html">Generate Package Docs</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-rlm-dsprrr.html">Investigate a Regression with RLM</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Projects</h6></li>
+    <li><a class="dropdown-item" href="../articles/llms-txt.html">Generate an llms.txt file</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-rlm-dsprrr.html">Investigate a regression with RLM</a></li>
+    <li><a class="dropdown-item" href="../articles/text-adventure.html">Build a text adventure</a></li>
   </ul>
 </li>
 <li class="nav-item dropdown">
-  <button class="nav-link dropdown-toggle" type="button" id="dropdown-how-to-guides" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">How-to Guides</button>
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-how-to-guides" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">How-to guides</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-how-to-guides">
-<li><a class="dropdown-item" href="../articles/troubleshooting.html">Troubleshooting</a></li>
-    <li><a class="dropdown-item" href="../articles/compilation-optimization.html">Compile &amp; Optimize</a></li>
-    <li><a class="dropdown-item" href="../articles/vitals-recipes.html">Evaluate with Vitals</a></li>
-    <li><a class="dropdown-item" href="../articles/rag-workflows.html">Build RAG Pipelines</a></li>
-    <li><a class="dropdown-item" href="../articles/chaining-modules.html">Chaining Modules</a></li>
-    <li><a class="dropdown-item" href="../articles/calibrated-decisions.html">Calibrated Decisions</a></li>
-    <li><a class="dropdown-item" href="../articles/orchestration.html">Deploy to Production</a></li>
+<li><h6 class="dropdown-header" data-toc-skip>Build</h6></li>
+    <li><a class="dropdown-item" href="../articles/advanced-modules.html">Choose a module type</a></li>
+    <li><a class="dropdown-item" href="../articles/chaining-modules.html">Chain modules into pipelines</a></li>
+    <li><a class="dropdown-item" href="../articles/rag-workflows.html">Retrieval-augmented generation</a></li>
+    <li><a class="dropdown-item" href="../articles/calibrated-decisions.html">Calibrated decisions</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Integrations</h6></li>
-    <li><a class="dropdown-item" href="../articles/vitals-integration.html">Vitals Package</a></li>
-    <li><a class="dropdown-item" href="../articles/tidymodels-integration.html">tidymodels</a></li>
-    <li><a class="dropdown-item" href="../articles/advanced-ellmer.html">Advanced ellmer</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Measure and improve</h6></li>
+    <li><a class="dropdown-item" href="../articles/compilation-optimization.html">Compile and optimize</a></li>
+    <li><a class="dropdown-item" href="../articles/advanced-optimization.html">Choose an optimizer</a></li>
+    <li><a class="dropdown-item" href="../articles/vitals-recipes.html">Evaluate with vitals</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Run</h6></li>
+    <li><a class="dropdown-item" href="../articles/models-and-providers.html">Models, providers and streaming</a></li>
+    <li><a class="dropdown-item" href="../articles/orchestration.html">Run dsprrr in pipelines</a></li>
+    <li><a class="dropdown-item" href="../articles/tidymodels-integration.html">Use dsprrr with tidymodels</a></li>
+    <li><a class="dropdown-item" href="../articles/troubleshooting.html">Troubleshooting</a></li>
   </ul>
 </li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-concepts" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Concepts</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-concepts">
-<li><a class="dropdown-item" href="../articles/concepts-dspy-philosophy.html">The DSPy Philosophy</a></li>
-    <li><a class="dropdown-item" href="../articles/dspy-comparison.html">dsprrr vs. DSPy</a></li>
-    <li><a class="dropdown-item" href="../articles/concepts-signatures-modules.html">Signatures &amp; Modules</a></li>
-    <li><a class="dropdown-item" href="../articles/concepts-optimization-theory.html">How Optimization Works</a></li>
-    <li><a class="dropdown-item" href="../articles/concepts-why-metrics-matter.html">Why Metrics Matter</a></li>
-    <li><a class="dropdown-item" href="../articles/how-rlm-works.html">How RLMs Work</a></li>
+<li><a class="dropdown-item" href="../articles/concepts-signatures-modules.html">How dsprrr works</a></li>
+    <li><a class="dropdown-item" href="../articles/concepts-why-metrics-matter.html">Metrics and evaluation</a></li>
+    <li><a class="dropdown-item" href="../articles/concepts-optimization-theory.html">How optimization works</a></li>
+    <li><a class="dropdown-item" href="../articles/dspy-comparison.html">dsprrr for DSPy users</a></li>
+    <li><a class="dropdown-item" href="../articles/how-rlm-works.html">How RLM works</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Deep Dives</h6></li>
-    <li><a class="dropdown-item" href="../articles/flex-optimization.html">Flex: Optimize the Whole Program</a></li>
-    <li><a class="dropdown-item" href="../articles/advanced-modules.html">Advanced Reasoning</a></li>
-    <li><a class="dropdown-item" href="../articles/advanced-optimization.html">Advanced Optimization</a></li>
-    <li><a class="dropdown-item" href="../articles/omni-meta-optimization.html">Composing Optimizers with Omni</a></li>
-    <li><a class="dropdown-item" href="../articles/agentic-optimization-harnesses.html">Agentic Optimization Harnesses</a></li>
-    <li><a class="dropdown-item" href="../articles/reasoning-models.html">Reasoning Models</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Experimental</h6></li>
+    <li><a class="dropdown-item" href="../articles/flex-optimization.html">Flex: optimize a whole program</a></li>
+    <li><a class="dropdown-item" href="../articles/omni-meta-optimization.html">Compose optimizers with Omni</a></li>
+    <li><a class="dropdown-item" href="../articles/agentic-optimization-harnesses.html">Agentic optimization harnesses</a></li>
   </ul>
 </li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-reference" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Reference</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-reference">
-<li><a class="dropdown-item" href="../articles/cheatsheet.html">Quick Reference</a></li>
-    <li><a class="dropdown-item" href="../reference/index.html">API Documentation</a></li>
+<li><a class="dropdown-item" href="../reference/index.html">Function reference</a></li>
+    <li><a class="dropdown-item" href="../articles/cheatsheet.html">Quick reference</a></li>
   </ul>
 </li>
+<li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul>
 <ul class="navbar-nav">
 <li class="nav-item"><form class="form-inline" role="search">
@@ -123,7 +123,7 @@
 
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
-      <img src="../logo.svg" class="logo" alt=""><h1>Tutorial 6: Taking to Production</h1>
+      <img src="../logo.svg" class="logo" alt=""><h1>Tutorial 6: Save and reuse a module</h1>
             
       
       <small class="dont-index">Source: <a href="https://github.com/JamesHWade/dsprrr/blob/main/vignettes/tutorial-deploy-to-production.Rmd" class="external-link"><code>vignettes/tutorial-deploy-to-production.Rmd</code></a></small>
@@ -132,349 +132,148 @@
 
     
     
-<p>You’ve built and optimized a module through Tutorials 1-5. Now what?
-You need to: - Save the optimized configuration - Load it in production
-- Track what happens in deployment - Monitor for issues</p>
-<p>This tutorial shows you how.</p>
-<p><strong>Time</strong>: 30-35 minutes</p>
-<div class="section level2">
-<h2 id="what-youll-build">What You’ll Build<a class="anchor" aria-label="anchor" href="#what-youll-build"></a>
-</h2>
-<p>A production-ready module with: - Persistent configuration (survives
-R restarts) - Execution traces for debugging - Validation before
-deployment</p>
-</div>
-<div class="section level2">
-<h2 id="prerequisites">Prerequisites<a class="anchor" aria-label="anchor" href="#prerequisites"></a>
-</h2>
-<ul>
-<li>Completed <a href="tutorial-optimize-your-module.html">Tutorial
-5</a>
-</li>
-<li>
-<code>OPENAI_API_KEY</code> set in your environment</li>
-</ul>
+<p>Compiling a module, as in Tutorials 4 and 5, produces demos and
+instructions that you do not want to recompute in every R session. By
+the end of this tutorial you can save a compiled module’s configuration
+to a <a href="https://pins.rstudio.com" class="external-link">pins</a> board, restore it as a
+working module, and export the traces the module records as it runs.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/dsprrr" class="external-link">dsprrr</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ellmer.tidyverse.org" class="external-link">ellmer</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://pins.rstudio.com/" class="external-link">pins</a></span><span class="op">)</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://tibble.tidyverse.org/" class="external-link">tibble</a></span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">chat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-</div>
+<span><span class="va">chat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-luna"</span><span class="op">)</span></span></code></pre></div>
+<p>The answers on this page were recorded with <code>gpt-4.1</code> and
+are replayed when the site is built, so <code>gpt-6-luna</code> may word
+them differently.</p>
 <div class="section level2">
-<h2 id="step-1-create-an-optimized-module">Step 1: Create an Optimized Module<a class="anchor" aria-label="anchor" href="#step-1-create-an-optimized-module"></a>
+<h2 id="compile-a-module">Compile a module<a class="anchor" aria-label="anchor" href="#compile-a-module"></a>
 </h2>
-<p>Let’s start with a trained classifier:</p>
+<p>This is the sentiment classifier from Tutorial 5, compiled with
+<code>LabeledFewShot</code> on nine short reviews:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
 <span>  <span class="st">"review -&gt; sentiment: enum('positive', 'negative', 'neutral')"</span>,</span>
 <span>  instructions <span class="op">=</span> <span class="st">"Classify the sentiment of this product review."</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">trainset</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
-<span>  review <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
-<span>    <span class="st">"Love it!"</span>, <span class="st">"Hate it!"</span>, <span class="st">"It's okay."</span>,</span>
-<span>    <span class="st">"Amazing!"</span>, <span class="st">"Terrible!"</span>, <span class="st">"Meh."</span>,</span>
-<span>    <span class="st">"Best ever!"</span>, <span class="st">"Worst purchase!"</span>, <span class="st">"Fine I guess."</span></span>
-<span>  <span class="op">)</span>,</span>
-<span>  sentiment <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
-<span>    <span class="st">"positive"</span>, <span class="st">"negative"</span>, <span class="st">"neutral"</span>,</span>
-<span>    <span class="st">"positive"</span>, <span class="st">"negative"</span>, <span class="st">"neutral"</span>,</span>
-<span>    <span class="st">"positive"</span>, <span class="st">"negative"</span>, <span class="st">"neutral"</span></span>
-<span>  <span class="op">)</span></span>
+<span><span class="va">trainset</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tribble.html" class="external-link">tribble</a></span><span class="op">(</span></span>
+<span>  <span class="op">~</span><span class="va">review</span>,            <span class="op">~</span><span class="va">sentiment</span>,</span>
+<span>  <span class="st">"Love it!"</span>,         <span class="st">"positive"</span>,</span>
+<span>  <span class="st">"Hate it!"</span>,         <span class="st">"negative"</span>,</span>
+<span>  <span class="st">"It's okay."</span>,       <span class="st">"neutral"</span>,</span>
+<span>  <span class="st">"Amazing!"</span>,         <span class="st">"positive"</span>,</span>
+<span>  <span class="st">"Terrible!"</span>,        <span class="st">"negative"</span>,</span>
+<span>  <span class="st">"Meh."</span>,             <span class="st">"neutral"</span>,</span>
+<span>  <span class="st">"Best ever!"</span>,       <span class="st">"positive"</span>,</span>
+<span>  <span class="st">"Worst purchase!"</span>,  <span class="st">"negative"</span>,</span>
+<span>  <span class="st">"Fine I guess."</span>,    <span class="st">"neutral"</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Optimize</span></span>
-<span><span class="va">classifier</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span></span>
-<span>  program <span class="op">=</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span><span class="op">)</span>,</span>
-<span>  teleprompter <span class="op">=</span> <span class="fu"><a href="../reference/LabeledFewShot.html">LabeledFewShot</a></span><span class="op">(</span>k <span class="op">=</span> <span class="fl">3L</span><span class="op">)</span>,</span>
-<span>  trainset <span class="op">=</span> <span class="va">trainset</span></span>
-<span><span class="op">)</span></span>
+<span><span class="va">classifier</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="fu"><a href="../reference/LabeledFewShot.html">LabeledFewShot</a></span><span class="op">(</span>k <span class="op">=</span> <span class="fl">3L</span><span class="op">)</span>, <span class="va">trainset</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Verify it works</span></span>
-<span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">classifier</span>, review <span class="op">=</span> <span class="st">"This product is fantastic!"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">classifier</span>, review <span class="op">=</span> <span class="st">"This product is fantastic!"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
+<span><span class="co">#&gt; $sentiment</span></span>
+<span><span class="co">#&gt; [1] "positive"</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="step-2-save-configuration-with-pins">Step 2: Save Configuration with Pins<a class="anchor" aria-label="anchor" href="#step-2-save-configuration-with-pins"></a>
+<h2 id="save-the-configuration">Save the configuration<a class="anchor" aria-label="anchor" href="#save-the-configuration"></a>
 </h2>
-<p>The <code>pins</code> package provides persistent storage. Save your
-module configuration:</p>
+<p><code><a href="../reference/pin_module_config.html">pin_module_config()</a></code> writes the module’s signature,
+demos, settings and optimization results to a pins board. The board here
+is a temporary folder, which R deletes when the session ends:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Create a local board (folder on disk)</span></span>
-<span><span class="va">board</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://pins.rstudio.com/reference/board_folder.html" class="external-link">board_folder</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">board</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://pins.rstudio.com/reference/board_folder.html" class="external-link">board_temp</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Save the module configuration</span></span>
-<span><span class="fu"><a href="../reference/pin_module_config.html">pin_module_config</a></span><span class="op">(</span><span class="va">board</span>, <span class="st">"sentiment-classifier"</span>, <span class="va">classifier</span><span class="op">)</span></span></code></pre></div>
-<p>Your optimized configuration—including demos, parameters, and
-instructions—is now saved.</p>
-</div>
-<div class="section level2">
-<h2 id="step-3-list-saved-modules">Step 3: List Saved Modules<a class="anchor" aria-label="anchor" href="#step-3-list-saved-modules"></a>
-</h2>
-<p>See what’s stored:</p>
+<span><span class="fu"><a href="../reference/pin_module_config.html">pin_module_config</a></span><span class="op">(</span><span class="va">board</span>, <span class="st">"sentiment-classifier"</span>, <span class="va">classifier</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Creating new version '20260926T220302Z-59990'</span></span>
+<span><span class="co">#&gt; Writing to pin 'sentiment-classifier'</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Pinned program artifact: <span style="color: #0000BB;">"sentiment-classifier"</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Root module: <span style="color: #0000BB;">&lt;PredictModule&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Graph nodes: <span style="color: #0000BB;">1</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Compiled: <span style="color: #0000BB;">TRUE</span></span></span></code></pre></div>
+<p>For real use, pick a board that outlives the session:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">board</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://pins.rstudio.com/reference/pin_list.html" class="external-link">pin_list</a></span><span class="op">(</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Get metadata</span></span>
-<span><span class="va">board</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://pins.rstudio.com/reference/pin_meta.html" class="external-link">pin_meta</a></span><span class="op">(</span><span class="st">"sentiment-classifier"</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="va">board</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://pins.rstudio.com/reference/board_folder.html" class="external-link">board_local</a></span><span class="op">(</span><span class="op">)</span> <span class="co"># a folder in your user data directory</span></span>
+<span><span class="va">board</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://pins.rstudio.com/reference/board_folder.html" class="external-link">board_folder</a></span><span class="op">(</span><span class="st">"pins"</span><span class="op">)</span> <span class="co"># or a folder in your project</span></span></code></pre></div>
+<p>Shared boards such as <code><a href="https://pins.rstudio.com/reference/board_connect.html" class="external-link">board_connect()</a></code>,
+<code><a href="https://pins.rstudio.com/reference/board_s3.html" class="external-link">board_s3()</a></code> and <code><a href="https://pins.rstudio.com/reference/board_gcs.html" class="external-link">board_gcs()</a></code> work the same way
+and let other people load your module. Each call to
+<code><a href="../reference/pin_module_config.html">pin_module_config()</a></code> with the same name saves a new version:
+<code>pin_versions(board, "sentiment-classifier")</code> lists them, and
+<code>pin_read(board, "sentiment-classifier", version = )</code> reads
+an older one.</p>
 </div>
 <div class="section level2">
-<h2 id="step-4-restore-in-a-new-session">Step 4: Restore in a New Session<a class="anchor" aria-label="anchor" href="#step-4-restore-in-a-new-session"></a>
+<h2 id="restore-it">Restore it<a class="anchor" aria-label="anchor" href="#restore-it"></a>
 </h2>
-<p>Imagine you restart R or deploy to a different machine:</p>
+<p>In a new session, connect to the same board, read the pin and rebuild
+the module:</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Later, in a new session...</span></span>
-<span><span class="va">config</span> <span class="op">&lt;-</span> <span class="fu">pins</span><span class="fu">::</span><span class="fu"><a href="https://pins.rstudio.com/reference/pin_read.html" class="external-link">pin_read</a></span><span class="op">(</span><span class="va">board</span>, <span class="st">"sentiment-classifier"</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">config</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://pins.rstudio.com/reference/pin_read.html" class="external-link">pin_read</a></span><span class="op">(</span><span class="va">board</span>, <span class="st">"sentiment-classifier"</span><span class="op">)</span></span>
 <span><span class="va">restored</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/restore_module_config.html">restore_module_config</a></span><span class="op">(</span><span class="va">config</span><span class="op">)</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Restored program artifact</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Root module: <span style="color: #0000BB;">&lt;PredictModule&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Artifact version: <span style="color: #0000BB;">6</span></span></span>
 <span></span>
-<span><span class="co"># It works immediately</span></span>
-<span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">restored</span>, review <span class="op">=</span> <span class="st">"Worst product ever!"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span></code></pre></div>
-<p>The restored module has all the optimization work preserved.</p>
-</div>
-<div class="section level2">
-<h2 id="step-5-version-your-modules">Step 5: Version Your Modules<a class="anchor" aria-label="anchor" href="#step-5-version-your-modules"></a>
-</h2>
-<p>Pins automatically version your saves:</p>
+<span><span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="va">restored</span><span class="op">$</span><span class="va">demos</span>, <span class="va">classifier</span><span class="op">$</span><span class="va">demos</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
+<p>The chat is not part of the saved configuration, so pass
+<code>.llm</code> when you run the restored module:</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Make some changes</span></span>
-<span><span class="va">improved</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span></span>
-<span>  program <span class="op">=</span> <span class="va">restored</span>,</span>
-<span>  teleprompter <span class="op">=</span> <span class="fu"><a href="../reference/LabeledFewShot.html">LabeledFewShot</a></span><span class="op">(</span>k <span class="op">=</span> <span class="fl">4L</span><span class="op">)</span>,  <span class="co"># Try more examples</span></span>
-<span>  trainset <span class="op">=</span> <span class="va">trainset</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Save again - creates new version</span></span>
-<span><span class="fu"><a href="../reference/pin_module_config.html">pin_module_config</a></span><span class="op">(</span><span class="va">board</span>, <span class="st">"sentiment-classifier"</span>, <span class="va">improved</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># List versions</span></span>
-<span><span class="va">board</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://pins.rstudio.com/reference/pin_versions.html" class="external-link">pin_versions</a></span><span class="op">(</span><span class="st">"sentiment-classifier"</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">restored</span>, review <span class="op">=</span> <span class="st">"Worst product ever!"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span></code></pre></div>
+<p><code><a href="../reference/restore_module_config.html">restore_module_config()</a></code> reads only the artifact format
+of the installed dsprrr (version 6 in the message above), so keep the
+code that compiled the module: if a dsprrr upgrade changes the format,
+compile and pin again. A module that holds R functions or tools also
+needs a <code>registry</code> when you save and restore it; see
+<code><a href="../reference/pin_module_config.html">pin_module_config()</a></code>. To use a saved module in a targets
+pipeline or a Quarto report, see <a href="orchestration.html">Run dsprrr
+in pipelines</a>.</p>
 </div>
 <div class="section level2">
-<h2 id="step-6-roll-back-to-previous-version">Step 6: Roll Back to Previous Version<a class="anchor" aria-label="anchor" href="#step-6-roll-back-to-previous-version"></a>
+<h2 id="save-and-inspect-traces">Save and inspect traces<a class="anchor" aria-label="anchor" href="#save-and-inspect-traces"></a>
 </h2>
-<p>If a new version performs worse:</p>
+<p>A module records a trace for each call it makes, with token counts,
+latency, cost and model. Run the module a few times, then pin its traces
+next to the configuration:</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Get specific version</span></span>
-<span><span class="va">versions</span> <span class="op">&lt;-</span> <span class="va">board</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://pins.rstudio.com/reference/pin_versions.html" class="external-link">pin_versions</a></span><span class="op">(</span><span class="st">"sentiment-classifier"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Restore the first version</span></span>
-<span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">versions</span><span class="op">)</span> <span class="op">&gt;</span> <span class="fl">1</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="va">config</span> <span class="op">&lt;-</span> <span class="fu">pins</span><span class="fu">::</span><span class="fu"><a href="https://pins.rstudio.com/reference/pin_read.html" class="external-link">pin_read</a></span><span class="op">(</span><span class="va">board</span>, <span class="st">"sentiment-classifier"</span>, version <span class="op">=</span> <span class="va">versions</span><span class="op">$</span><span class="va">version</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span><span class="op">)</span></span>
-<span>  <span class="va">original</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/restore_module_config.html">restore_module_config</a></span><span class="op">(</span><span class="va">config</span><span class="op">)</span></span>
-<span><span class="op">}</span></span></code></pre></div>
-</div>
-<div class="section level2">
-<h2 id="step-7-save-execution-traces">Step 7: Save Execution Traces<a class="anchor" aria-label="anchor" href="#step-7-save-execution-traces"></a>
-</h2>
-<p>Track what your module does in production:</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Run some predictions</span></span>
-<span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">classifier</span>, review <span class="op">=</span> <span class="st">"Great product!"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">classifier</span>, review <span class="op">=</span> <span class="st">"Great product!"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
+<span><span class="co">#&gt; $sentiment</span></span>
+<span><span class="co">#&gt; [1] "positive"</span></span>
 <span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">classifier</span>, review <span class="op">=</span> <span class="st">"Not worth the money."</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
+<span><span class="co">#&gt; $sentiment</span></span>
+<span><span class="co">#&gt; [1] "negative"</span></span>
 <span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">classifier</span>, review <span class="op">=</span> <span class="st">"Does the job."</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
+<span><span class="co">#&gt; $sentiment</span></span>
+<span><span class="co">#&gt; [1] "neutral"</span></span>
 <span></span>
-<span><span class="co"># Save traces for analysis</span></span>
-<span><span class="fu"><a href="../reference/pin_trace.html">pin_trace</a></span><span class="op">(</span><span class="va">board</span>, <span class="st">"sentiment-traces"</span>, <span class="va">classifier</span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level2">
-<h2 id="step-8-analyze-traces">Step 8: Analyze Traces<a class="anchor" aria-label="anchor" href="#step-8-analyze-traces"></a>
-</h2>
-<p>Load and examine traces:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Export as a tibble</span></span>
-<span><span class="va">traces</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/export_traces.html">export_traces</a></span><span class="op">(</span><span class="va">classifier</span><span class="op">)</span></span>
-<span><span class="va">traces</span></span>
-<span></span>
-<span><span class="co"># Summary statistics</span></span>
-<span><span class="va">classifier</span><span class="op">$</span><span class="fu">trace_summary</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-<p>Traces include: - Input/output for each call - Token usage - Latency
-- Errors (if any)</p>
-</div>
-<div class="section level2">
-<h2 id="step-9-validate-before-deployment">Step 9: Validate Before Deployment<a class="anchor" aria-label="anchor" href="#step-9-validate-before-deployment"></a>
-</h2>
-<p>Use <code><a href="../reference/validate_workflow.html">validate_workflow()</a></code> to check everything is
-ready:</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Check module is properly configured</span></span>
-<span><span class="va">validation</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/validate_workflow.html">validate_workflow</a></span><span class="op">(</span></span>
-<span>  module <span class="op">=</span> <span class="va">classifier</span>,</span>
-<span>  board <span class="op">=</span> <span class="va">board</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">validation</span></span></code></pre></div>
-<p>This checks: - Module is a valid DSPrrr module - Signature has inputs
-defined - Board is accessible (if provided)</p>
-</div>
-<div class="section level2">
-<h2 id="step-10-production-patterns">Step 10: Production Patterns<a class="anchor" aria-label="anchor" href="#step-10-production-patterns"></a>
-</h2>
-<p>Here’s a complete production workflow:</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># === DEVELOPMENT ===</span></span>
-<span><span class="co"># 1. Build and optimize</span></span>
-<span><span class="va">dev_module</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/optimize_grid.html">optimize_grid</a></span><span class="op">(</span>  <span class="va">dev_module</span>,</span>
-<span>  data <span class="op">=</span> <span class="va">trainset</span>,</span>
-<span>  metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"sentiment"</span><span class="op">)</span>,</span>
-<span>  parameters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">0.3</span>, <span class="fl">0.7</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># 2. Compile with best settings + demos</span></span>
-<span><span class="va">optimized</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span></span>
-<span>  program <span class="op">=</span> <span class="va">dev_module</span>,</span>
-<span>  teleprompter <span class="op">=</span> <span class="fu"><a href="../reference/LabeledFewShot.html">LabeledFewShot</a></span><span class="op">(</span>k <span class="op">=</span> <span class="fl">3L</span><span class="op">)</span>,</span>
-<span>  trainset <span class="op">=</span> <span class="va">trainset</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># 3. Evaluate on held-out test data (same columns as the trainset)</span></span>
-<span><span class="va">testset</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
-<span>  review <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Exceeded expectations!"</span>, <span class="st">"Broke after a week."</span>, <span class="st">"It's fine."</span><span class="op">)</span>,</span>
-<span>  sentiment <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"positive"</span>, <span class="st">"negative"</span>, <span class="st">"neutral"</span><span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span><span class="va">optimized</span>, <span class="va">testset</span>, metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"sentiment"</span><span class="op">)</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># 4. Save if good enough</span></span>
-<span><span class="va">prod_board</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://pins.rstudio.com/reference/board_s3.html" class="external-link">board_s3</a></span><span class="op">(</span><span class="st">"my-bucket"</span><span class="op">)</span>  <span class="co"># Or board_connect(), board_folder()</span></span>
-<span><span class="fu"><a href="../reference/pin_module_config.html">pin_module_config</a></span><span class="op">(</span><span class="va">prod_board</span>, <span class="st">"sentiment-v1"</span>, <span class="va">optimized</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># === PRODUCTION ===</span></span>
-<span><span class="co"># 1. Load the saved configuration</span></span>
-<span><span class="va">config</span> <span class="op">&lt;-</span> <span class="fu">pins</span><span class="fu">::</span><span class="fu"><a href="https://pins.rstudio.com/reference/pin_read.html" class="external-link">pin_read</a></span><span class="op">(</span><span class="va">prod_board</span>, <span class="st">"sentiment-v1"</span><span class="op">)</span></span>
-<span><span class="va">prod_module</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/restore_module_config.html">restore_module_config</a></span><span class="op">(</span><span class="va">config</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># 2. Use it</span></span>
-<span><span class="va">customer_review</span> <span class="op">&lt;-</span> <span class="st">"Arrived quickly and works perfectly."</span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">prod_module</span>, review <span class="op">=</span> <span class="va">customer_review</span>, .llm <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># 3. Periodically save traces for monitoring</span></span>
-<span><span class="fu"><a href="../reference/pin_trace.html">pin_trace</a></span><span class="op">(</span><span class="va">prod_board</span>, <span class="st">"sentiment-traces"</span>, <span class="va">prod_module</span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level2">
-<h2 id="step-11-different-storage-backends">Step 11: Different Storage Backends<a class="anchor" aria-label="anchor" href="#step-11-different-storage-backends"></a>
-</h2>
-<p>Pins supports multiple backends:</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Local folder</span></span>
-<span><span class="fu"><a href="https://pins.rstudio.com/reference/board_folder.html" class="external-link">board_folder</a></span><span class="op">(</span><span class="st">"path/to/folder"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Posit Connect</span></span>
-<span><span class="fu"><a href="https://pins.rstudio.com/reference/board_connect.html" class="external-link">board_connect</a></span><span class="op">(</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># AWS S3</span></span>
-<span><span class="fu"><a href="https://pins.rstudio.com/reference/board_s3.html" class="external-link">board_s3</a></span><span class="op">(</span><span class="st">"bucket-name"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Azure</span></span>
-<span><span class="fu"><a href="https://pins.rstudio.com/reference/board_azure.html" class="external-link">board_azure</a></span><span class="op">(</span><span class="st">"container-name"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Google Cloud</span></span>
-<span><span class="fu"><a href="https://pins.rstudio.com/reference/board_gcs.html" class="external-link">board_gcs</a></span><span class="op">(</span><span class="st">"bucket-name"</span><span class="op">)</span></span></code></pre></div>
-<p>Choose based on your deployment environment.</p>
-</div>
-<div class="section level2">
-<h2 id="step-12-monitoring-in-production">Step 12: Monitoring in Production<a class="anchor" aria-label="anchor" href="#step-12-monitoring-in-production"></a>
-</h2>
-<p>Set up regular checks:</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Daily: Check trace summary (tokens, cost, errors)</span></span>
-<span><span class="va">prod_module</span><span class="op">$</span><span class="fu">trace_summary</span><span class="op">(</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Weekly: Evaluate on a fresh sample of labeled production data</span></span>
-<span><span class="va">weekly_sample</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
-<span>  review <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Saved me hours!"</span>, <span class="st">"Refund please."</span>, <span class="st">"Average at best."</span><span class="op">)</span>,</span>
-<span>  sentiment <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"positive"</span>, <span class="st">"negative"</span>, <span class="st">"neutral"</span><span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span><span class="va">prod_module</span>, <span class="va">weekly_sample</span>, metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"sentiment"</span><span class="op">)</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Monthly: Compare to baseline</span></span>
-<span><span class="co"># If accuracy drops, investigate or retrain</span></span></code></pre></div>
-</div>
-<div class="section level2">
-<h2 id="what-you-learned">What You Learned<a class="anchor" aria-label="anchor" href="#what-you-learned"></a>
-</h2>
-<p>In this tutorial, you:</p>
-<ol style="list-style-type: decimal">
-<li>Saved module configurations with
-<code><a href="../reference/pin_module_config.html">pin_module_config()</a></code>
-</li>
-<li>Restored modules with <code><a href="../reference/restore_module_config.html">restore_module_config()</a></code>
-</li>
-<li>Used versioning for safe updates</li>
-<li>Rolled back to previous versions</li>
-<li>Saved and analyzed execution traces</li>
-<li>Validated modules before deployment</li>
-<li>Learned production workflow patterns</li>
-</ol>
-</div>
-<div class="section level2">
-<h2 id="the-production-checklist">The Production Checklist<a class="anchor" aria-label="anchor" href="#the-production-checklist"></a>
-</h2>
-<p>Before deploying:</p>
-<ul class="task-list">
-<li><label><input type="checkbox">Module is optimized on
-representative data</label></li>
-<li><label><input type="checkbox">Evaluated on held-out test
-data</label></li>
-<li><label><input type="checkbox">Configuration saved to persistent
-storage</label></li>
-<li><label><input type="checkbox">Versioning enabled for
-rollback</label></li>
-<li><label><input type="checkbox">Trace logging
-configured</label></li>
-<li><label><input type="checkbox">Monitoring plan in
-place</label></li>
-</ul>
-</div>
-<div class="section level2">
-<h2 id="where-to-go-from-here">Where to Go From Here<a class="anchor" aria-label="anchor" href="#where-to-go-from-here"></a>
-</h2>
-<p>Congratulations! You’ve completed the core tutorial sequence. You now
-know how to: - Make structured LLM calls - Build reusable modules -
-Extract complex data - Improve with examples - Optimize parameters -
-Deploy to production</p>
-<div class="section level3">
-<h3 id="advanced-tutorials">Advanced Tutorials<a class="anchor" aria-label="anchor" href="#advanced-tutorials"></a>
-</h3>
-<p>Build complete applications:</p>
-<ul>
-<li>
-<strong><a href="text-adventure.html">Text Adventure
-Game</a></strong> — Interactive AI with state management</li>
-<li>
-<strong><a href="llms-txt.html">Generate llms.txt</a></strong> —
-Multi-stage documentation pipeline</li>
-</ul>
-</div>
-<div class="section level3">
-<h3 id="how-to-guides">How-To Guides<a class="anchor" aria-label="anchor" href="#how-to-guides"></a>
-</h3>
-<p>Solve specific problems:</p>
-<ul>
-<li>
-<strong><a href="rag-workflows.html">Build RAG
-Pipelines</a></strong> — Retrieval-augmented generation</li>
-<li>
-<strong><a href="vitals-integration.html">Evaluate with
-Vitals</a></strong> — Rigorous evaluation</li>
-<li>
-<strong><a href="orchestration.html">Production
-Orchestration</a></strong> — targets and Quarto integration</li>
-</ul>
-</div>
-<div class="section level3">
-<h3 id="concepts">Concepts<a class="anchor" aria-label="anchor" href="#concepts"></a>
-</h3>
-<p>Understand the “why”:</p>
-<ul>
-<li>
-<strong><a href="concepts-dspy-philosophy.html">The DSPy
-Philosophy</a></strong> — Programs, not prompts</li>
-<li>
-<strong><a href="concepts-optimization-theory.html">How Optimization
-Works</a></strong> — Teleprompter theory</li>
-</ul>
-</div>
+<span><span class="fu"><a href="../reference/pin_trace.html">pin_trace</a></span><span class="op">(</span><span class="va">board</span>, <span class="st">"sentiment-traces"</span>, <span class="va">classifier</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Creating new version '20260926T220304Z-5a2d5'</span></span>
+<span><span class="co">#&gt; Writing to pin 'sentiment-traces'</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Pinned 4 traces: <span style="color: #0000BB;">"sentiment-traces"</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Total tokens: 941</span></span></code></pre></div>
+<p><code><a href="../reference/export_traces.html">export_traces()</a></code> returns the same data as a tibble with
+one row per call, including the call made right after compiling:</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/export_traces.html">export_traces</a></span><span class="op">(</span><span class="va">classifier</span><span class="op">)</span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 4 × 11</span></span></span>
+<span><span class="co">#&gt;     timestamp latency_ms input_tokens cached_input_tokens output_tokens</span></span>
+<span><span class="co">#&gt;         <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>        <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>               <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>         <span style="color: #949494; font-style: italic;">&lt;int&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> <span style="text-decoration: underline;">1</span>790<span style="text-decoration: underline;">460</span>183.       860.          101                   0             7</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> <span style="text-decoration: underline;">1</span>790<span style="text-decoration: underline;">460</span>184.       423.          200                   0             7</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> <span style="text-decoration: underline;">1</span>790<span style="text-decoration: underline;">460</span>184.       376.          271                   0             7</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span> <span style="text-decoration: underline;">1</span>790<span style="text-decoration: underline;">460</span>185.       411.          341                   0             7</span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># ℹ 6 more variables: total_tokens &lt;int&gt;, cost &lt;dbl&gt;, model &lt;chr&gt;,</span></span></span>
+<span><span class="co">#&gt; <span style="color: #949494;">#   prompt_length &lt;int&gt;, program_artifact_id &lt;chr&gt;, trace_context &lt;list&gt;</span></span></span></code></pre></div>
+<p>The tibble leaves out prompts and responses, so you can share it
+without exposing the text your module handled. Add them with
+<code>include_prompts = TRUE</code> and
+<code>include_outputs = TRUE</code>; <code><a href="../reference/pin_trace.html">pin_trace()</a></code> takes the
+same two arguments. <code>summarize_traces(classifier)</code> totals the
+tokens, cost and latency.</p>
+<p>That completes the tutorials; <a href="compilation-optimization.html">Compile and optimize</a> and <a href="advanced-optimization.html">Choose an optimizer</a> take
+optimization further.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

@@ -1,7 +1,10 @@
-# Create a Semantic Search Tool from Documents
+# Build a search tool from a set of documents
 
-Convenience function that creates a ragnar store from documents and
-wraps it in a search tool in one step.
+`create_search_tool()` builds a ragnar store from documents (one chunked
+document per element, embedded with `embedding_fn`), indexes it and
+wraps it with
+[`ragnar_tool()`](https://jameshwade.github.io/dsprrr/reference/ragnar_tool.md),
+in one step. Embedding the documents calls the embedding provider.
 
 ## Usage
 
@@ -20,32 +23,58 @@ create_search_tool(
 
 - documents:
 
-  Character vector of documents, or a data frame with a 'text' or
-  'content' column.
+  A character vector of documents, or a data frame with a `text` or
+  `content` column.
 
 - embedding_fn:
 
-  Embedding function from ragnar (e.g., `ragnar::embed_openai()`).
+  An embedding function, passed to `ragnar::ragnar_store_create()` as
+  `embed`, for example
+  `\(x) ragnar::embed_openai(x, model = "text-embedding-3-small")`.
 
 - k:
 
-  Number of documents to retrieve per search (default 5).
+  Number of chunks to return per search.
 
 - name:
 
-  Tool name (default "search_documents").
+  Tool name shown to the model.
 
 - description:
 
-  Optional tool description.
+  Tool description shown to the model; see
+  [`ragnar_tool()`](https://jameshwade.github.io/dsprrr/reference/ragnar_tool.md).
 
 - ...:
 
-  Additional arguments passed to `ragnar::ragnar_store_create()`.
+  Passed to `ragnar::ragnar_store_create()`, for example `location` to
+  keep the store in a file instead of in memory.
 
 ## Value
 
-A search tool function.
+An ellmer tool definition, as returned by
+[`ragnar_tool()`](https://jameshwade.github.io/dsprrr/reference/ragnar_tool.md).
+
+## See also
+
+Other integrations:
+[`as_dsprrr_metric()`](https://jameshwade.github.io/dsprrr/reference/as_dsprrr_metric.md),
+[`as_dsprrr_traces()`](https://jameshwade.github.io/dsprrr/reference/as_dsprrr_traces.md),
+[`as_ellmer_tool()`](https://jameshwade.github.io/dsprrr/reference/as_ellmer_tool.md),
+[`as_vitals_cost()`](https://jameshwade.github.io/dsprrr/reference/as_vitals_cost.md),
+[`as_vitals_samples()`](https://jameshwade.github.io/dsprrr/reference/as_vitals_samples.md),
+[`as_vitals_solver()`](https://jameshwade.github.io/dsprrr/reference/as_vitals_solver.md),
+[`as_vitals_task()`](https://jameshwade.github.io/dsprrr/reference/as_vitals_task.md),
+[`llm_predict()`](https://jameshwade.github.io/dsprrr/reference/llm_predict.md),
+[`ragnar_tool()`](https://jameshwade.github.io/dsprrr/reference/ragnar_tool.md),
+[`reasoning_effort()`](https://jameshwade.github.io/dsprrr/reference/reasoning_effort.md),
+[`register_dsprrr_engine()`](https://jameshwade.github.io/dsprrr/reference/register_dsprrr_engine.md),
+[`summarize_traces_df()`](https://jameshwade.github.io/dsprrr/reference/summarize_traces_df.md),
+[`temperature()`](https://jameshwade.github.io/dsprrr/reference/temperature.md),
+[`top_p()`](https://jameshwade.github.io/dsprrr/reference/top_p.md),
+[`use_dsprrr_template()`](https://jameshwade.github.io/dsprrr/reference/use_dsprrr_template.md),
+[`validate_workflow()`](https://jameshwade.github.io/dsprrr/reference/validate_workflow.md),
+[`vitals_metrics`](https://jameshwade.github.io/dsprrr/reference/vitals_metrics.md)
 
 ## Examples
 
@@ -60,7 +89,7 @@ docs <- c(
 
 search_tool <- create_search_tool(
   documents = docs,
-  embedding_fn = ragnar::embed_openai(),
+  embedding_fn = \(x) ragnar::embed_openai(x, model = "text-embedding-3-small"),
   k = 2
 )
 

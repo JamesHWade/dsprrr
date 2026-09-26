@@ -1,114 +1,262 @@
 # Package index
 
-## Primary journey
+## Signatures
 
-Define, run, evaluate, and improve a program
+Declare a task’s inputs, typed outputs and instructions.
 
 - [`signature()`](https://jameshwade.github.io/dsprrr/reference/signature.md)
-  : Create a Typed Module Signature
+  : Define a module's inputs and outputs
 - [`input()`](https://jameshwade.github.io/dsprrr/reference/input.md) :
-  Create an input specification for a Signature
+  Describe one signature input
+- [`with_instructions()`](https://jameshwade.github.io/dsprrr/reference/with_instructions.md)
+  [`append_instructions()`](https://jameshwade.github.io/dsprrr/reference/with_instructions.md)
+  : Replace or extend signature instructions
+- [`with_reasoning()`](https://jameshwade.github.io/dsprrr/reference/with_reasoning.md)
+  : Add a reasoning field to a signature
+- [`without_reasoning()`](https://jameshwade.github.io/dsprrr/reference/without_reasoning.md)
+  : Remove the reasoning field from a signature
+- [`has_reasoning()`](https://jameshwade.github.io/dsprrr/reference/has_reasoning.md)
+  : Test whether a signature has a reasoning field
+
+## Build a program
+
+Turn a signature into a module.
+[`module()`](https://jameshwade.github.io/dsprrr/reference/module.md)
+makes one model call; the other constructors answer the same signature
+in a different way.
+
 - [`module()`](https://jameshwade.github.io/dsprrr/reference/module.md)
   : Create a prediction module
-- [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md) :
-  Execute an LLM Module
-- [`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md)
-  : Execute Module on Data
-- [`evaluate()`](https://jameshwade.github.io/dsprrr/reference/evaluate.md)
-  : Evaluate a DSPrrr module
-- [`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md)
-  : Compile a program
-- [`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md)
-  : Grid Search Optimisation
-
-## Advanced program constructors
-
-Choose these when execution semantics differ from standard prediction
-
-- [`react()`](https://jameshwade.github.io/dsprrr/reference/react.md) :
-  Create a ReAct module
-- [`module-react`](https://jameshwade.github.io/dsprrr/reference/module-react.md)
-  : ReAct Module
 - [`chain_of_thought()`](https://jameshwade.github.io/dsprrr/reference/chain_of_thought.md)
-  : Create a Chain-of-Thought Module
+  : Create a chain-of-thought module
 - [`multi_chain_comparison()`](https://jameshwade.github.io/dsprrr/reference/multi_chain_comparison.md)
-  : Create a MultiChainComparison Module
-- [`module-multichain`](https://jameshwade.github.io/dsprrr/reference/module-multichain.md)
-  : MultiChainComparison Module
-- [`program_of_thought()`](https://jameshwade.github.io/dsprrr/reference/program_of_thought.md)
-  : Create a Program of Thought Module
-- [`module-program-of-thought`](https://jameshwade.github.io/dsprrr/reference/module-program-of-thought.md)
-  : Program of Thought Module
-- [`code_act()`](https://jameshwade.github.io/dsprrr/reference/code_act.md)
-  : Create a CodeAct Module
-- [`module-codeact`](https://jameshwade.github.io/dsprrr/reference/module-codeact.md)
-  : CodeAct Module
-- [`rlm_module()`](https://jameshwade.github.io/dsprrr/reference/rlm_module.md)
-  : Create a Recursive Language Model (RLM) Module
-- [`rlm()`](https://jameshwade.github.io/dsprrr/reference/rlm.md) : Run
-  a Recursive Language Model in one call
-- [`module-rlm`](https://jameshwade.github.io/dsprrr/reference/module-rlm.md)
-  : Recursive Language Model (RLM) Module
-- [`flex()`](https://jameshwade.github.io/dsprrr/reference/flex.md) :
-  Optimize a Module's Implementation with Flex
+  : Compare several reasoning chains and synthesize an answer
+- [`react()`](https://jameshwade.github.io/dsprrr/reference/react.md) :
+  Create a tool-using ReAct module
 - [`rag_module()`](https://jameshwade.github.io/dsprrr/reference/rag_module.md)
-  : Create a RAG Module
-- [`module-wrapper`](https://jameshwade.github.io/dsprrr/reference/module-wrapper.md)
-  : Wrapper Modules for Advanced Reasoning Patterns
-- [`best_of_n()`](https://jameshwade.github.io/dsprrr/reference/best_of_n.md)
-  : Create a BestOfN Wrapper Module
-- [`refine()`](https://jameshwade.github.io/dsprrr/reference/refine.md)
-  : Create a Refine Wrapper Module
-- [`as_reward_fn()`](https://jameshwade.github.io/dsprrr/reference/as_reward_fn.md)
-  : Convert a Metric to a Reward Function
-- [`module-ensemble`](https://jameshwade.github.io/dsprrr/reference/module-ensemble.md)
-  : Ensemble Module for Combining Multiple Modules
-- [`ensemble()`](https://jameshwade.github.io/dsprrr/reference/ensemble_module.md)
-  : Create an Ensemble Module
-- [`reduce_majority()`](https://jameshwade.github.io/dsprrr/reference/reduce_majority.md)
-  : Majority Vote Reducer
-- [`reduce_weighted_vote()`](https://jameshwade.github.io/dsprrr/reference/reduce_weighted_vote.md)
-  : Weighted Vote Reducer
-- [`reduce_first()`](https://jameshwade.github.io/dsprrr/reference/reduce_first.md)
-  : First Successful Output Reducer
-- [`reduce_best_by_metric()`](https://jameshwade.github.io/dsprrr/reference/reduce_best_by_metric.md)
-  : Best by Metric Reducer
-
-## Extension and interoperability seams
-
-Integrate custom modules and R ecosystem generics
-
+  : Create a retrieval-augmented generation module
 - [`module_fn()`](https://jameshwade.github.io/dsprrr/reference/module_fn.md)
-  : Callable Module
-- [`as_ellmer_tool()`](https://jameshwade.github.io/dsprrr/reference/as_ellmer_tool.md)
-  : Convert a DSPrrr Module to an ellmer Tool
-- [`predict(`*`<Module>`*`)`](https://jameshwade.github.io/dsprrr/reference/predict.Module.md)
-  : Predict Method for Modules (tidymodels-style)
+  : Wrap an R function as a module
+- [`flex()`](https://jameshwade.github.io/dsprrr/reference/flex.md)
+  **\[experimental\]** : Flex: a module whose implementation can be
+  optimized
+
+## Compose programs
+
+Chain modules, retry them with a reward, or combine several answers.
+
+- [`` `%>>%` ``](https://jameshwade.github.io/dsprrr/reference/pipeline.md)
+  [`pipeline()`](https://jameshwade.github.io/dsprrr/reference/pipeline.md)
+  : Chain modules into a pipeline
+- [`step()`](https://jameshwade.github.io/dsprrr/reference/step.md) :
+  Configure one pipeline step
+- [`best_of_n()`](https://jameshwade.github.io/dsprrr/reference/best_of_n.md)
+  : Run a module up to N times and keep the best result
+- [`refine()`](https://jameshwade.github.io/dsprrr/reference/refine.md)
+  : Retry a module with feedback until it scores well
+- [`as_reward_fn()`](https://jameshwade.github.io/dsprrr/reference/as_reward_fn.md)
+  : Turn a metric into a reward function
+- [`ensemble()`](https://jameshwade.github.io/dsprrr/reference/ensemble.md)
+  : Combine several modules into one
+- [`reduce_majority()`](https://jameshwade.github.io/dsprrr/reference/reduce_majority.md)
+  : Pick the most common ensemble output
+- [`reduce_weighted_vote()`](https://jameshwade.github.io/dsprrr/reference/reduce_weighted_vote.md)
+  : Pick the ensemble output with the most total weight
+- [`reduce_first()`](https://jameshwade.github.io/dsprrr/reference/reduce_first.md)
+  : Pick the first successful ensemble output
+- [`reduce_best_by_metric()`](https://jameshwade.github.io/dsprrr/reference/reduce_best_by_metric.md)
+  : Pick the ensemble output that scores best against a known answer
+
+## Programs that run code
+
+Let a model write and run R code, and choose where that code runs.
+
+- [`program_of_thought()`](https://jameshwade.github.io/dsprrr/reference/program_of_thought.md)
+  : Create a Program of Thought module that answers by running R code
+- [`code_act()`](https://jameshwade.github.io/dsprrr/reference/code_act.md)
+  : Create a CodeAct agent that calls tools and runs R code
+- [`rlm_module()`](https://jameshwade.github.io/dsprrr/reference/rlm_module.md)
+  **\[experimental\]** : Create an RLM module that explores its inputs
+  with R code
+- [`rlm()`](https://jameshwade.github.io/dsprrr/reference/rlm.md) : Run
+  a recursive language model (RLM) in one call
 - [`r_code_runner()`](https://jameshwade.github.io/dsprrr/reference/r_code_runner.md)
-  : Create an R Code Runner
-- [`r-code-runner`](https://jameshwade.github.io/dsprrr/reference/r-code-runner.md)
-  : R Code Execution Backend
+  : Run R code in a separate process
 - [`mcp_repl_runner()`](https://jameshwade.github.io/dsprrr/reference/mcp_repl_runner.md)
-  : Posit mcp-repl Code Runner
+  : Run R code in an operating-system sandbox with mcp-repl
+- [`run_demo()`](https://jameshwade.github.io/dsprrr/reference/run_demo.md)
+  : Run the interactive RLM demo
 
-## Signature transforms
+## Run programs
 
-Derive a new signature without changing execution semantics
+Run a module on named inputs or on a data frame, in parallel,
+asynchronously or as a stream, and read what came back.
 
-- [`with_instructions()`](https://jameshwade.github.io/dsprrr/reference/signature-transforms.md)
-  [`append_instructions()`](https://jameshwade.github.io/dsprrr/reference/signature-transforms.md)
-  : Signature Transforms for Advanced Reasoning Modules
-- [`with_reasoning()`](https://jameshwade.github.io/dsprrr/reference/with_reasoning.md)
-  : Add Chain-of-Thought Reasoning to a Signature
-- [`without_reasoning()`](https://jameshwade.github.io/dsprrr/reference/without_reasoning.md)
-  : Remove Chain-of-Thought from a Signature
-- [`has_reasoning()`](https://jameshwade.github.io/dsprrr/reference/has_reasoning.md)
-  : Check if a Signature has Chain-of-Thought
+- [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md) : Run
+  a module on named inputs
+- [`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md)
+  : Run a module on each row of a data frame
+- [`predict(`*`<Module>`*`)`](https://jameshwade.github.io/dsprrr/reference/predict.Module.md)
+  : Predict with a module on new data
+- [`concurrency_control()`](https://jameshwade.github.io/dsprrr/reference/concurrency_control.md)
+  : Control how batches run in parallel
+- [`run_async()`](https://jameshwade.github.io/dsprrr/reference/run_async.md)
+  : Run a module asynchronously
+- [`run_stream()`](https://jameshwade.github.io/dsprrr/reference/run_stream.md)
+  : Run a module with streaming callbacks
+- [`stream_listener()`](https://jameshwade.github.io/dsprrr/reference/stream_listener.md)
+  : Listen to one output field while streaming
+- [`stream_async()`](https://jameshwade.github.io/dsprrr/reference/stream_async.md)
+  : Stream a module's text output asynchronously
+- [`get_output()`](https://jameshwade.github.io/dsprrr/reference/accessors.md)
+  [`get_metadata()`](https://jameshwade.github.io/dsprrr/reference/accessors.md)
+  [`get_tokens()`](https://jameshwade.github.io/dsprrr/reference/accessors.md)
+  [`get_cost()`](https://jameshwade.github.io/dsprrr/reference/accessors.md)
+  : Extract outputs, metadata and costs from results
+
+## Validate outputs
+
+Check outputs and retry with feedback when a check fails.
+
+- [`with_assertions()`](https://jameshwade.github.io/dsprrr/reference/with_assertions.md)
+  : Validate a module's outputs and retry on failure
+- [`assert_output()`](https://jameshwade.github.io/dsprrr/reference/assertions.md)
+  [`suggest_output()`](https://jameshwade.github.io/dsprrr/reference/assertions.md)
+  [`assertion_set()`](https://jameshwade.github.io/dsprrr/reference/assertions.md)
+  : Define output assertions
+- [`assert_length()`](https://jameshwade.github.io/dsprrr/reference/assert_length.md)
+  : Assert the length of an output
+- [`assert_contains()`](https://jameshwade.github.io/dsprrr/reference/assert_contains.md)
+  : Assert that an output contains a string
+- [`assert_not_contains()`](https://jameshwade.github.io/dsprrr/reference/assert_not_contains.md)
+  : Assert that an output does not contain a string
+- [`assert_matches()`](https://jameshwade.github.io/dsprrr/reference/assert_matches.md)
+  : Assert that an output matches a regular expression
+- [`assert_not_matches()`](https://jameshwade.github.io/dsprrr/reference/assert_not_matches.md)
+  : Assert that an output does not match a regular expression
+- [`assert_one_of()`](https://jameshwade.github.io/dsprrr/reference/assert_one_of.md)
+  : Assert that an output is one of a set of values
+- [`assert_range()`](https://jameshwade.github.io/dsprrr/reference/assert_range.md)
+  : Assert that a numeric output is within a range
+- [`assert_not_empty()`](https://jameshwade.github.io/dsprrr/reference/assert_not_empty.md)
+  : Assert that an output is not empty
+- [`assert_custom()`](https://jameshwade.github.io/dsprrr/reference/assert_custom.md)
+  : Assert a custom condition
+
+## Evaluate
+
+Score a program on labeled data with a metric.
+
+- [`evaluate()`](https://jameshwade.github.io/dsprrr/reference/evaluate.md)
+  : Score a module on a dataset
+- [`metric_exact_match()`](https://jameshwade.github.io/dsprrr/reference/metric_exact_match.md)
+  : Exact-match metric
+- [`metric_f1()`](https://jameshwade.github.io/dsprrr/reference/metric_f1.md)
+  : Token-overlap F1 metric
+- [`metric_contains()`](https://jameshwade.github.io/dsprrr/reference/metric_contains.md)
+  : Metric that checks for a pattern in the output
+- [`metric_field_match()`](https://jameshwade.github.io/dsprrr/reference/metric_field_match.md)
+  : Metric that compares several output fields
+- [`metric_custom()`](https://jameshwade.github.io/dsprrr/reference/metric_custom.md)
+  : Wrap a custom metric function
+- [`metric_threshold()`](https://jameshwade.github.io/dsprrr/reference/metric_threshold.md)
+  : Turn a numeric metric into pass/fail
+- [`metric_with_feedback()`](https://jameshwade.github.io/dsprrr/reference/metric_with_feedback.md)
+  : Metric that returns a score and feedback
+- [`metric_with_trace()`](https://jameshwade.github.io/dsprrr/reference/metric_with_trace.md)
+  : Metric that also sees the execution trace
+- [`metric_model_graded_qa()`](https://jameshwade.github.io/dsprrr/reference/vitals_metrics.md)
+  [`metric_model_graded_fact()`](https://jameshwade.github.io/dsprrr/reference/vitals_metrics.md)
+  [`metric_detect_match()`](https://jameshwade.github.io/dsprrr/reference/vitals_metrics.md)
+  [`metric_detect_includes()`](https://jameshwade.github.io/dsprrr/reference/vitals_metrics.md)
+  [`metric_detect_pattern()`](https://jameshwade.github.io/dsprrr/reference/vitals_metrics.md)
+  : Metrics built on vitals scorers
+
+## Optimize with compile()
+
+Optimizers, which dsprrr calls teleprompters, tune a program’s
+demonstrations, instructions or decision rules against a metric. The
+“Choose an optimizer” article compares them.
+
+- [`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md)
+  : Optimize a program with a teleprompter
+- [`LabeledFewShot()`](https://jameshwade.github.io/dsprrr/reference/LabeledFewShot.md)
+  : Labeled few-shot: add training rows as demonstrations
+- [`BootstrapFewShot()`](https://jameshwade.github.io/dsprrr/reference/BootstrapFewShot.md)
+  : BootstrapFewShot: keep the program's own successful outputs as demos
+- [`BootstrapFewShotWithRandomSearch()`](https://jameshwade.github.io/dsprrr/reference/BootstrapFewShotWithRandomSearch.md)
+  : BootstrapFewShot with random search over candidate programs
+- [`KNNFewShot()`](https://jameshwade.github.io/dsprrr/reference/KNNFewShot.md)
+  : KNN few-shot: choose demonstrations by similarity at run time
+- [`COPRO()`](https://jameshwade.github.io/dsprrr/reference/COPRO.md) :
+  COPRO: refine instructions by coordinate ascent
+- [`MIPROv2()`](https://jameshwade.github.io/dsprrr/reference/MIPROv2.md)
+  : MIPROv2: search instructions and demonstrations together
+- [`GEPA()`](https://jameshwade.github.io/dsprrr/reference/GEPA.md) :
+  GEPA: reflective prompt evolution
+- [`SIMBA()`](https://jameshwade.github.io/dsprrr/reference/SIMBA.md) :
+  SIMBA: stochastic introspective mini-batch ascent
+- [`GridSearchTeleprompter()`](https://jameshwade.github.io/dsprrr/reference/GridSearchTeleprompter.md)
+  : Grid search over instructions and demos
+- [`BetterTogether()`](https://jameshwade.github.io/dsprrr/reference/BetterTogether.md)
+  : BetterTogether: run several optimizers in sequence
+- [`ReAnchor()`](https://jameshwade.github.io/dsprrr/reference/ReAnchor.md)
+  **\[experimental\]** : ReAnchor: calibrate decision outputs against a
+  metric
+- [`Teleprompter()`](https://jameshwade.github.io/dsprrr/reference/Teleprompter.md)
+  : Arguments shared by all optimizers
+
+## Experimental optimizers
+
+Compose optimizers, or let an agent run optimization experiments.
+
+- [`Omni()`](https://jameshwade.github.io/dsprrr/reference/Omni.md) :
+  Omni: explore with several optimizers, then continue from the best
+- [`AutoResearch()`](https://jameshwade.github.io/dsprrr/reference/AutoResearch.md)
+  : AutoResearch: let an agent run optimization experiments
+- [`MetaHarness()`](https://jameshwade.github.io/dsprrr/reference/MetaHarness.md)
+  : Meta-Harness: fresh proposer sessions over a candidate frontier
+
+## Inspect optimization results
+
+See what an optimizer changed and reuse the result.
+
+- [`optimization_result()`](https://jameshwade.github.io/dsprrr/reference/optimization_result.md)
+  [`print(`*`<dsprrr_optimization_result>`*`)`](https://jameshwade.github.io/dsprrr/reference/optimization_result.md)
+  : Inspect what an optimizer did
+- [`optimization_summary()`](https://jameshwade.github.io/dsprrr/reference/optimization_summary.md)
+  [`print(`*`<dsprrr_optimization_summary>`*`)`](https://jameshwade.github.io/dsprrr/reference/optimization_summary.md)
+  : Summarize an optimization result
+- [`best_params()`](https://jameshwade.github.io/dsprrr/reference/best_params.md)
+  : Best parameters found by an optimizer
+- [`best_demos()`](https://jameshwade.github.io/dsprrr/reference/best_demos.md)
+  : Demonstrations attached to a module
+- [`top_trials()`](https://jameshwade.github.io/dsprrr/reference/top_trials.md)
+  : Highest-scoring optimization trials
+- [`config_diff()`](https://jameshwade.github.io/dsprrr/reference/config_diff.md)
+  : Compare a module's settings with baseline values
+- [`apply_best_config()`](https://jameshwade.github.io/dsprrr/reference/apply_best_config.md)
+  : Copy optimized settings to another module
+- [`export_module_code()`](https://jameshwade.github.io/dsprrr/reference/export_module_code.md)
+  : Export a program as standalone R code
+
+## Grid search
+
+Try combinations of request settings, instructions and templates.
+
+- [`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md)
+  : Grid search over module settings
+- [`module_trials()`](https://jameshwade.github.io/dsprrr/reference/module_trials.md)
+  : Summarize grid search trials
+- [`module_metrics()`](https://jameshwade.github.io/dsprrr/reference/module_metrics.md)
+  : Per-trial rows from a grid search
+- [`module_parameters()`](https://jameshwade.github.io/dsprrr/reference/module_parameters.md)
+  : Build a tidymodels parameter set for a module
 
 ## Calibrated decisions
 
-Experimental probability-evidence outputs (DSPy 3.4 decision types),
-decoded locally with tunable thresholds, cuts, and weights
+Experimental. Yes/no and label outputs decoded locally from probability
+evidence, with thresholds you can tune.
 
 - [`decision_bool()`](https://jameshwade.github.io/dsprrr/reference/decision_types.md)
   [`decision_score()`](https://jameshwade.github.io/dsprrr/reference/decision_types.md)
@@ -120,16 +268,76 @@ decoded locally with tunable thresholds, cuts, and weights
   **\[experimental\]** : Decision settings of a module
 - [`decision_evidence()`](https://jameshwade.github.io/dsprrr/reference/decision_evidence.md)
   **\[experimental\]** : Probability evidence behind decision outputs
-- [`ReAnchor()`](https://jameshwade.github.io/dsprrr/reference/ReAnchor.md)
-  **\[experimental\]** : ReAnchor: calibrate decision outputs against a
-  metric
 
-## Execution and inspection
+## Models and caching
 
-Batch policy, graphs, and module metadata
+Choose the chat a call uses and control the response cache.
 
-- [`concurrency_control()`](https://jameshwade.github.io/dsprrr/reference/concurrency_control.md)
-  : Control Batch Concurrency
+- [`dsp_configure()`](https://jameshwade.github.io/dsprrr/reference/dsp_configure.md)
+  : Configure the default chat from a provider name
+- [`get_default_chat()`](https://jameshwade.github.io/dsprrr/reference/get_default_chat.md)
+  [`set_default_chat()`](https://jameshwade.github.io/dsprrr/reference/get_default_chat.md)
+  [`clear_default_chat()`](https://jameshwade.github.io/dsprrr/reference/get_default_chat.md)
+  : Get, set or clear the default chat
+- [`with_lm()`](https://jameshwade.github.io/dsprrr/reference/with_lm.md)
+  [`local_lm()`](https://jameshwade.github.io/dsprrr/reference/with_lm.md)
+  : Use a chat for a block of code
+- [`is_reasoning_model()`](https://jameshwade.github.io/dsprrr/reference/is_reasoning_model.md)
+  : Test whether a model name is a reasoning model
+- [`configure_cache()`](https://jameshwade.github.io/dsprrr/reference/configure_cache.md)
+  : Configure the response cache
+- [`cache_stats()`](https://jameshwade.github.io/dsprrr/reference/cache_stats.md)
+  : Report response-cache statistics
+- [`clear_cache()`](https://jameshwade.github.io/dsprrr/reference/clear_cache.md)
+  : Clear the response cache
+- [`dsprrr_sitrep()`](https://jameshwade.github.io/dsprrr/reference/dsprrr_sitrep.md)
+  : Report dsprrr's configuration
+
+## Prompts, traces and costs
+
+Inspect what was sent to the model, what came back and what it cost.
+
+- [`get_last_prompt()`](https://jameshwade.github.io/dsprrr/reference/get_last_prompt.md)
+  : Show the most recent prompt and response
+- [`inspect_history()`](https://jameshwade.github.io/dsprrr/reference/inspect_history.md)
+  : List recent model calls
+- [`clear_prompt_history()`](https://jameshwade.github.io/dsprrr/reference/clear_prompt_history.md)
+  : Clear the prompt history
+- [`export_traces()`](https://jameshwade.github.io/dsprrr/reference/export_traces.md)
+  : Export a module's traces as a tibble
+- [`summarize_traces()`](https://jameshwade.github.io/dsprrr/reference/summarize_traces.md)
+  : Summarize a module's traces
+- [`clear_traces()`](https://jameshwade.github.io/dsprrr/reference/clear_traces.md)
+  : Clear a module's traces
+- [`session_cost()`](https://jameshwade.github.io/dsprrr/reference/session_cost.md)
+  : Summarize this session's token use and cost
+
+## Save and deploy
+
+Save programs, pin them to a board, and start a workflow project.
+
+- [`program_artifact()`](https://jameshwade.github.io/dsprrr/reference/program-artifact.md)
+  [`program_artifact_id()`](https://jameshwade.github.io/dsprrr/reference/program-artifact.md)
+  [`save_program()`](https://jameshwade.github.io/dsprrr/reference/program-artifact.md)
+  [`load_program()`](https://jameshwade.github.io/dsprrr/reference/program-artifact.md)
+  : Save and load complete programs
+- [`pin_module_config()`](https://jameshwade.github.io/dsprrr/reference/pin_module_config.md)
+  : Pin a program to a pins board
+- [`restore_module_config()`](https://jameshwade.github.io/dsprrr/reference/restore_module_config.md)
+  : Rebuild a program from a saved artifact
+- [`pin_trace()`](https://jameshwade.github.io/dsprrr/reference/pin_trace.md)
+  : Pin a module's traces to a pins board
+- [`pin_vitals_log()`](https://jameshwade.github.io/dsprrr/reference/pin_vitals_log.md)
+  : Pin evaluation results to a pins board
+- [`use_dsprrr_template()`](https://jameshwade.github.io/dsprrr/reference/use_dsprrr_template.md)
+  : Copy a workflow template into a project
+- [`validate_workflow()`](https://jameshwade.github.io/dsprrr/reference/validate_workflow.md)
+  : Check a module and its data before a run
+
+## Program graphs
+
+Inspect, freeze and transform the modules inside a program.
+
 - [`module_graph()`](https://jameshwade.github.io/dsprrr/reference/module-graph.md)
   [`named_modules()`](https://jameshwade.github.io/dsprrr/reference/module-graph.md)
   [`named_parameters()`](https://jameshwade.github.io/dsprrr/reference/module-graph.md)
@@ -139,347 +347,74 @@ Batch policy, graphs, and module metadata
   [`is_module_frozen()`](https://jameshwade.github.io/dsprrr/reference/module-graph.md)
   [`set_module_lm()`](https://jameshwade.github.io/dsprrr/reference/module-graph.md)
   [`module_children()`](https://jameshwade.github.io/dsprrr/reference/module-graph.md)
-  : Traverse and Transform Module Graphs
+  : Inspect and transform nested programs
 
-## Pipelines
+## vitals
 
-Chain modules into multi-step workflows
-
-- [`pipeline()`](https://jameshwade.github.io/dsprrr/reference/pipeline.md)
-  : Pipeline Module for Sequential Module Composition
-- [`` `%>>%` ``](https://jameshwade.github.io/dsprrr/reference/grapes-greater-than-greater-than-grapes.md)
-  : Pipe Operator for Module Composition
-- [`step()`](https://jameshwade.github.io/dsprrr/reference/step.md) :
-  Create a Pipeline Step with Mappings
-
-## Assertions
-
-Validate outputs and retry with automatic backtracking
-
-- [`assert_output()`](https://jameshwade.github.io/dsprrr/reference/assertions.md)
-  [`suggest_output()`](https://jameshwade.github.io/dsprrr/reference/assertions.md)
-  [`assertion_set()`](https://jameshwade.github.io/dsprrr/reference/assertions.md)
-  : Assertions for Output Validation
-- [`with_assertions()`](https://jameshwade.github.io/dsprrr/reference/with_assertions.md)
-  : Wrap a Module with Assertions
-- [`assertion-helpers`](https://jameshwade.github.io/dsprrr/reference/assertion-helpers.md)
-  : Assertion Helper Functions
-- [`assert_length()`](https://jameshwade.github.io/dsprrr/reference/assert_length.md)
-  : Assert Output Length
-- [`assert_contains()`](https://jameshwade.github.io/dsprrr/reference/assert_contains.md)
-  : Assert Output Contains Substring
-- [`assert_not_contains()`](https://jameshwade.github.io/dsprrr/reference/assert_not_contains.md)
-  : Assert Output Does Not Contain Substring
-- [`assert_matches()`](https://jameshwade.github.io/dsprrr/reference/assert_matches.md)
-  : Assert Output Matches Pattern
-- [`assert_not_matches()`](https://jameshwade.github.io/dsprrr/reference/assert_not_matches.md)
-  : Assert Output Does Not Match Pattern
-- [`assert_one_of()`](https://jameshwade.github.io/dsprrr/reference/assert_one_of.md)
-  : Assert Output is One Of
-- [`assert_custom()`](https://jameshwade.github.io/dsprrr/reference/assert_custom.md)
-  : Assert Custom Condition
-- [`assert_not_empty()`](https://jameshwade.github.io/dsprrr/reference/assert_not_empty.md)
-  : Assert Output is Not Empty
-- [`assert_range()`](https://jameshwade.github.io/dsprrr/reference/assert_range.md)
-  : Assert Numeric Value in Range
-
-## Metrics
-
-Score program outputs with explicit objectives
-
-- [`metric_contains()`](https://jameshwade.github.io/dsprrr/reference/metric_contains.md)
-  : Create a Contains Metric
-- [`metric_custom()`](https://jameshwade.github.io/dsprrr/reference/metric_custom.md)
-  : Create a Custom Metric
-- [`metric_exact_match()`](https://jameshwade.github.io/dsprrr/reference/metric_exact_match.md)
-  : Create an Exact Match Metric
-- [`metric_f1()`](https://jameshwade.github.io/dsprrr/reference/metric_f1.md)
-  : Create an F1 Score Metric
-- [`metric_field_match()`](https://jameshwade.github.io/dsprrr/reference/metric_field_match.md)
-  : Create a Field Equality Metric
-- [`metric_threshold()`](https://jameshwade.github.io/dsprrr/reference/metric_threshold.md)
-  : Create a Threshold Metric
-- [`metric_with_feedback()`](https://jameshwade.github.io/dsprrr/reference/metric_with_feedback.md)
-  : Create a Metric with Textual Feedback
-- [`metric_with_trace()`](https://jameshwade.github.io/dsprrr/reference/metric_with_trace.md)
-  : Create a Trace-Aware Metric
-- [`metric_model_graded_qa()`](https://jameshwade.github.io/dsprrr/reference/vitals_metrics.md)
-  [`metric_model_graded_fact()`](https://jameshwade.github.io/dsprrr/reference/vitals_metrics.md)
-  [`metric_detect_match()`](https://jameshwade.github.io/dsprrr/reference/vitals_metrics.md)
-  [`metric_detect_includes()`](https://jameshwade.github.io/dsprrr/reference/vitals_metrics.md)
-  [`metric_detect_pattern()`](https://jameshwade.github.io/dsprrr/reference/vitals_metrics.md)
-  : Pre-built Vitals-backed Metrics
-
-## Teleprompters
-
-Automated prompt optimization strategies
-
-- [`Teleprompter()`](https://jameshwade.github.io/dsprrr/reference/Teleprompter.md)
-  : Teleprompter Base Class
-- [`LabeledFewShot()`](https://jameshwade.github.io/dsprrr/reference/LabeledFewShot.md)
-  : LabeledFewShot Teleprompter
-- [`GridSearchTeleprompter`](https://jameshwade.github.io/dsprrr/reference/GridSearchTeleprompter.md)
-  : GridSearchTeleprompter
-- [`BootstrapFewShot()`](https://jameshwade.github.io/dsprrr/reference/BootstrapFewShot.md)
-  : BootstrapFewShot Teleprompter
-- [`BootstrapFewShotWithRandomSearch()`](https://jameshwade.github.io/dsprrr/reference/BootstrapFewShotWithRandomSearch.md)
-  : BootstrapFewShotWithRandomSearch Teleprompter
-- [`KNNFewShot()`](https://jameshwade.github.io/dsprrr/reference/KNNFewShot.md)
-  : KNNFewShot Teleprompter
-- [`BetterTogether()`](https://jameshwade.github.io/dsprrr/reference/BetterTogether.md)
-  : BetterTogether Teleprompter
-- [`Omni()`](https://jameshwade.github.io/dsprrr/reference/Omni.md) :
-  Omni Teleprompter
-- [`AutoResearch()`](https://jameshwade.github.io/dsprrr/reference/AutoResearch.md)
-  : AutoResearch Teleprompter
-- [`MetaHarness()`](https://jameshwade.github.io/dsprrr/reference/MetaHarness.md)
-  : Meta-Harness Teleprompter
-- [`SIMBA()`](https://jameshwade.github.io/dsprrr/reference/SIMBA.md) :
-  SIMBA Teleprompter
-- [`GEPA()`](https://jameshwade.github.io/dsprrr/reference/GEPA.md) :
-  GEPA Teleprompter
-- [`MIPROv2()`](https://jameshwade.github.io/dsprrr/reference/MIPROv2.md)
-  : MIPROv2 Teleprompter
-- [`COPRO()`](https://jameshwade.github.io/dsprrr/reference/COPRO.md) :
-  COPRO Teleprompter
-
-## Optimization inspection
-
-Inspect parameters, trials, and metrics attached to programs
-
-- [`module_parameters()`](https://jameshwade.github.io/dsprrr/reference/module_parameters.md)
-  : Suggest tidymodels parameters for a module
-- [`module_trials()`](https://jameshwade.github.io/dsprrr/reference/module_trials.md)
-  : Summarise optimisation trials for a module
-- [`module_metrics()`](https://jameshwade.github.io/dsprrr/reference/module_metrics.md)
-  : Summarise optimisation metrics per trial
-
-## Optimization Results
-
-Inspect trials, extract best configurations, and export
-
-- [`optimization_result()`](https://jameshwade.github.io/dsprrr/reference/optimization_result.md)
-  [`print(`*`<dsprrr_optimization_result>`*`)`](https://jameshwade.github.io/dsprrr/reference/optimization_result.md)
-  : Inspect an Optimization Result
-- [`optimizer-accessors`](https://jameshwade.github.io/dsprrr/reference/optimizer-accessors.md)
-  : Optimizer Convenience Functions
-- [`best_params()`](https://jameshwade.github.io/dsprrr/reference/best_params.md)
-  : Extract Best Parameters from a Module
-- [`best_demos()`](https://jameshwade.github.io/dsprrr/reference/best_demos.md)
-  : Extract Best Demos from a Compiled Module
-- [`apply_best_config()`](https://jameshwade.github.io/dsprrr/reference/apply_best_config.md)
-  : Apply Best Configuration from One Module to Another
-- [`top_trials()`](https://jameshwade.github.io/dsprrr/reference/top_trials.md)
-  : Get Top Performing Trials
-- [`config_diff()`](https://jameshwade.github.io/dsprrr/reference/config_diff.md)
-  : Compare Module Configuration Before and After Optimization
-- [`export_module_code()`](https://jameshwade.github.io/dsprrr/reference/export_module_code.md)
-  : Export Module Configuration as R Code
-- [`optimization_summary()`](https://jameshwade.github.io/dsprrr/reference/optimization_summary.md)
-  : Get Optimization Summary
-- [`print(`*`<dsprrr_optimization_summary>`*`)`](https://jameshwade.github.io/dsprrr/reference/print.dsprrr_optimization_summary.md)
-  : Print method for optimization summary
-
-## Optimizer Infrastructure
-
-Low-level building blocks for custom optimizers
-
-- [`optimizer_control()`](https://jameshwade.github.io/dsprrr/reference/optimizer_control.md)
-  : Create Optimizer Control
-- [`eval_program()`](https://jameshwade.github.io/dsprrr/reference/eval_program.md)
-  : Evaluate a Program on a Dataset
-- [`sample_dataset()`](https://jameshwade.github.io/dsprrr/reference/sample_dataset.md)
-  : Sample from a Dataset Deterministically
-- [`split_dataset()`](https://jameshwade.github.io/dsprrr/reference/split_dataset.md)
-  : Split Dataset into Train and Validation Sets
-- [`TrialLog`](https://jameshwade.github.io/dsprrr/reference/TrialLog.md)
-  : Trial Log
-- [`create_trial()`](https://jameshwade.github.io/dsprrr/reference/create_trial.md)
-  : Create a Trial Record
-- [`complete_trial()`](https://jameshwade.github.io/dsprrr/reference/complete_trial.md)
-  : Complete a Trial
-- [`write_trials_jsonl()`](https://jameshwade.github.io/dsprrr/reference/write_trials_jsonl.md)
-  : Write Trials to JSONL File
-- [`read_trials_jsonl()`](https://jameshwade.github.io/dsprrr/reference/read_trials_jsonl.md)
-  : Read Trials from JSONL File
-- [`load_trial_log()`](https://jameshwade.github.io/dsprrr/reference/load_trial_log.md)
-  : Load Trial Log from Directory
-
-## Configuration
-
-Set up LLM providers, caching, and global options
-
-- [`dsp_configure()`](https://jameshwade.github.io/dsprrr/reference/dsp_configure.md)
-  : Configure dsprrr Default Settings
-- [`dsprrr_sitrep()`](https://jameshwade.github.io/dsprrr/reference/dsprrr_sitrep.md)
-  : dsprrr Situation Report
-- [`default-chat`](https://jameshwade.github.io/dsprrr/reference/default-chat.md)
-  : Default Chat Configuration
-- [`get_default_chat()`](https://jameshwade.github.io/dsprrr/reference/get_default_chat.md)
-  : Get the Default Chat
-- [`set_default_chat()`](https://jameshwade.github.io/dsprrr/reference/set_default_chat.md)
-  : Set the Default Chat
-- [`clear_default_chat()`](https://jameshwade.github.io/dsprrr/reference/clear_default_chat.md)
-  : Clear Cached Default Chat
-- [`with_lm()`](https://jameshwade.github.io/dsprrr/reference/with_lm.md)
-  : Execute Code with a Scoped LM Override
-- [`local_lm()`](https://jameshwade.github.io/dsprrr/reference/local_lm.md)
-  : Set Local LM Override
-- [`configure_cache()`](https://jameshwade.github.io/dsprrr/reference/configure_cache.md)
-  : Configure dsprrr Cache
-- [`clear_cache()`](https://jameshwade.github.io/dsprrr/reference/clear_cache.md)
-  : Clear dsprrr Cache
-- [`cache_stats()`](https://jameshwade.github.io/dsprrr/reference/cache_stats.md)
-  : Get Cache Statistics
-
-## Async & Streaming
-
-Non-blocking execution and streaming responses
-
-- [`async`](https://jameshwade.github.io/dsprrr/reference/async.md) :
-  Asynchronous Module Operations
-- [`run_async()`](https://jameshwade.github.io/dsprrr/reference/run_async.md)
-  : Run a module asynchronously
-- [`stream_async()`](https://jameshwade.github.io/dsprrr/reference/stream_async.md)
-  : Stream module output asynchronously
-- [`run_stream()`](https://jameshwade.github.io/dsprrr/reference/run_stream.md)
-  : Run a Module with Streaming Listeners and Status Events
-- [`stream_listener()`](https://jameshwade.github.io/dsprrr/reference/stream_listener.md)
-  : Create a Stream Listener for a Module Output Field
-
-## Debugging & Traces
-
-Inspect prompts, execution history, and traces
-
-- [`prompt-visibility`](https://jameshwade.github.io/dsprrr/reference/prompt-visibility.md)
-  : Prompt Visibility and Inspection
-- [`get_last_prompt()`](https://jameshwade.github.io/dsprrr/reference/get_last_prompt.md)
-  : Get the Last Prompt
-- [`inspect_history()`](https://jameshwade.github.io/dsprrr/reference/inspect_history.md)
-  : Inspect LLM Call History
-- [`clear_prompt_history()`](https://jameshwade.github.io/dsprrr/reference/clear_prompt_history.md)
-  : Clear Prompt History
-- [`export_traces()`](https://jameshwade.github.io/dsprrr/reference/export_traces.md)
-  : Export Module Traces
-- [`summarize_traces()`](https://jameshwade.github.io/dsprrr/reference/summarize_traces.md)
-  : Summarize Module Traces
-- [`clear_traces()`](https://jameshwade.github.io/dsprrr/reference/clear_traces.md)
-  : Clear Module Traces
-
-## Results & Printing
-
-Extract outputs, costs, and display formatted results
-
-- [`accessors`](https://jameshwade.github.io/dsprrr/reference/accessors.md)
-  : Accessor Functions for DSPrrr Results
-- [`get_output()`](https://jameshwade.github.io/dsprrr/reference/get_output.md)
-  : Get output from a result
-- [`get_metadata()`](https://jameshwade.github.io/dsprrr/reference/get_metadata.md)
-  : Get metadata from a result
-- [`get_tokens()`](https://jameshwade.github.io/dsprrr/reference/get_tokens.md)
-  : Get token counts from a result
-- [`get_cost()`](https://jameshwade.github.io/dsprrr/reference/get_cost.md)
-  : Get cost from a result
-- [`session_cost()`](https://jameshwade.github.io/dsprrr/reference/session_cost.md)
-  : Session Cost Summary
-- [`print(`*`<dsprrr_evaluation>`*`)`](https://jameshwade.github.io/dsprrr/reference/print.dsprrr_evaluation.md)
-  : Print method for dsprrr_evaluation
-- [`print(`*`<dsprrr_batch_result>`*`)`](https://jameshwade.github.io/dsprrr/reference/print.dsprrr_batch_result.md)
-  : Print method for dsprrr_batch_result
-- [`print(`*`<dsprrr_cost_summary>`*`)`](https://jameshwade.github.io/dsprrr/reference/print.dsprrr_cost_summary.md)
-  : Print method for dsprrr_cost_summary
-
-## Production & Deployment
-
-Pin configurations, validate workflows, and deploy to production
-
-- [`program_artifact()`](https://jameshwade.github.io/dsprrr/reference/program-artifact.md)
-  [`program_artifact_id()`](https://jameshwade.github.io/dsprrr/reference/program-artifact.md)
-  [`save_program()`](https://jameshwade.github.io/dsprrr/reference/program-artifact.md)
-  [`load_program()`](https://jameshwade.github.io/dsprrr/reference/program-artifact.md)
-  : Persist Complete dsprrr Programs
-- [`orchestration`](https://jameshwade.github.io/dsprrr/reference/orchestration.md)
-  : Orchestration Helpers for Production Workflows
-- [`pin_module_config()`](https://jameshwade.github.io/dsprrr/reference/pin_module_config.md)
-  : Pin a Module Configuration
-- [`restore_module_config()`](https://jameshwade.github.io/dsprrr/reference/restore_module_config.md)
-  : Restore a Module from Pinned Configuration
-- [`pin_trace()`](https://jameshwade.github.io/dsprrr/reference/pin_trace.md)
-  : Pin Module Traces
-- [`pin_vitals_log()`](https://jameshwade.github.io/dsprrr/reference/pin_vitals_log.md)
-  : Pin Vitals Evaluation Log
-- [`use_dsprrr_template()`](https://jameshwade.github.io/dsprrr/reference/use_dsprrr_template.md)
-  : Use dsprrr Workflow Templates
-- [`validate_workflow()`](https://jameshwade.github.io/dsprrr/reference/validate_workflow.md)
-  : Validate Workflow Configuration
-
-## Vitals Integration
-
-Bridge to the vitals evaluation framework
+Evaluate modules with the vitals package.
 
 - [`as_vitals_solver()`](https://jameshwade.github.io/dsprrr/reference/as_vitals_solver.md)
-  : Convert a dsprrr module into a vitals solver
+  : Use a dsprrr module as a vitals solver
 - [`as_vitals_task()`](https://jameshwade.github.io/dsprrr/reference/as_vitals_task.md)
-  : Create a vitals Task from a dsprrr module
-- [`as_vitals_cost()`](https://jameshwade.github.io/dsprrr/reference/as_vitals_cost.md)
-  : Convert dsprrr cost data to vitals format
+  : Build a vitals Task from a module and a data set
 - [`as_vitals_samples()`](https://jameshwade.github.io/dsprrr/reference/as_vitals_samples.md)
-  : Convert dsprrr traces to vitals samples format
+  : Convert dsprrr traces to vitals samples
+- [`as_vitals_cost()`](https://jameshwade.github.io/dsprrr/reference/as_vitals_cost.md)
+  : Report dsprrr costs in the vitals format
 - [`as_dsprrr_traces()`](https://jameshwade.github.io/dsprrr/reference/as_dsprrr_traces.md)
-  : Convert vitals samples to dsprrr traces format
+  : Convert vitals samples to dsprrr traces
 - [`summarize_traces_df()`](https://jameshwade.github.io/dsprrr/reference/summarize_traces_df.md)
   : Summarize a traces data frame
 - [`as_dsprrr_metric()`](https://jameshwade.github.io/dsprrr/reference/as_dsprrr_metric.md)
-  : Adapt a vitals scorer for use as a dsprrr metric
-- [`metric_model_graded_qa()`](https://jameshwade.github.io/dsprrr/reference/vitals_metrics.md)
-  [`metric_model_graded_fact()`](https://jameshwade.github.io/dsprrr/reference/vitals_metrics.md)
-  [`metric_detect_match()`](https://jameshwade.github.io/dsprrr/reference/vitals_metrics.md)
-  [`metric_detect_includes()`](https://jameshwade.github.io/dsprrr/reference/vitals_metrics.md)
-  [`metric_detect_pattern()`](https://jameshwade.github.io/dsprrr/reference/vitals_metrics.md)
-  : Pre-built Vitals-backed Metrics
+  : Use a vitals scorer as a dsprrr metric
 
-## ellmer & RAG
+## Tools and retrieval
 
-Retrieval helpers built on ragnar and ellmer tools
+Expose modules as ellmer tools and search document stores.
 
+- [`as_ellmer_tool()`](https://jameshwade.github.io/dsprrr/reference/as_ellmer_tool.md)
+  : Turn a module into an ellmer tool
 - [`ragnar_tool()`](https://jameshwade.github.io/dsprrr/reference/ragnar_tool.md)
-  : Create a ragnar Search Tool for ReAct Modules
+  : Search a ragnar store from a tool-using module
 - [`create_search_tool()`](https://jameshwade.github.io/dsprrr/reference/create_search_tool.md)
-  : Create a Semantic Search Tool from Documents
-- [`print(`*`<ragnar_tool>`*`)`](https://jameshwade.github.io/dsprrr/reference/print.ragnar_tool.md)
-  : Print method for ragnar_tool
+  : Build a search tool from a set of documents
 
-## tidymodels Integration
+## tidymodels
 
-Use LLM modules as parsnip model engines with dials parameters
+A parsnip model specification and dials parameters.
 
 - [`llm_predict()`](https://jameshwade.github.io/dsprrr/reference/llm_predict.md)
-  : LLM Prediction Model Specification
-- [`fit_llm_predict()`](https://jameshwade.github.io/dsprrr/reference/fit_llm_predict.md)
-  : Fit LLM Predict Model
-- [`predict_llm_class()`](https://jameshwade.github.io/dsprrr/reference/predict_llm_class.md)
-  : Predict Class Labels with LLM
-- [`predict_llm_numeric()`](https://jameshwade.github.io/dsprrr/reference/predict_llm_numeric.md)
-  : Predict Numeric Values with LLM
+  : LLM model specification for parsnip
 - [`register_dsprrr_engine()`](https://jameshwade.github.io/dsprrr/reference/register_dsprrr_engine.md)
-  : Register dsprrr Engine with parsnip
+  : Register the dsprrr engine with parsnip
 - [`temperature()`](https://jameshwade.github.io/dsprrr/reference/temperature.md)
-  : Temperature Parameter for dials
+  : Temperature parameter for dials
 - [`top_p()`](https://jameshwade.github.io/dsprrr/reference/top_p.md) :
-  Top-p Parameter for dials
+  Top-p parameter for dials
 - [`reasoning_effort()`](https://jameshwade.github.io/dsprrr/reference/reasoning_effort.md)
-  : Reasoning Effort Parameter for dials
+  : Reasoning effort parameter for dials
 
-## Demo & Interactive Tools
+## Build your own optimizer
 
-Interactive demonstrations and exploration tools
+Lower-level pieces the built-in optimizers are made from.
 
-- [`run_demo()`](https://jameshwade.github.io/dsprrr/reference/run_demo.md)
-  : Run the Interactive RLM Demo
-
-## Utilities
-
-Model detection helpers
-
-- [`is_reasoning_model()`](https://jameshwade.github.io/dsprrr/reference/is_reasoning_model.md)
-  : Check if a model is a reasoning model
+- [`optimizer_control()`](https://jameshwade.github.io/dsprrr/reference/optimizer_control.md)
+  : Budgets and settings for an optimizer run
+- [`eval_program()`](https://jameshwade.github.io/dsprrr/reference/eval_program.md)
+  : Evaluate a program with per-example detail
+- [`sample_dataset()`](https://jameshwade.github.io/dsprrr/reference/sample_dataset.md)
+  : Sample rows reproducibly
+- [`split_dataset()`](https://jameshwade.github.io/dsprrr/reference/split_dataset.md)
+  : Split data into training and validation sets
+- [`TrialLog`](https://jameshwade.github.io/dsprrr/reference/TrialLog.md)
+  : Record optimization trials in memory or on disk
+- [`create_trial()`](https://jameshwade.github.io/dsprrr/reference/create_trial.md)
+  : Create an optimization trial record
+- [`complete_trial()`](https://jameshwade.github.io/dsprrr/reference/complete_trial.md)
+  : Record evaluation results on a trial
+- [`write_trials_jsonl()`](https://jameshwade.github.io/dsprrr/reference/write_trials_jsonl.md)
+  : Write trial records to a JSON Lines file
+- [`read_trials_jsonl()`](https://jameshwade.github.io/dsprrr/reference/read_trials_jsonl.md)
+  : Read trial records from a JSON Lines file
+- [`load_trial_log()`](https://jameshwade.github.io/dsprrr/reference/load_trial_log.md)
+  : Load a saved trial log

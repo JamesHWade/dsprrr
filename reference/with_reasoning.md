@@ -1,8 +1,10 @@
-# Add Chain-of-Thought Reasoning to a Signature
+# Add a reasoning field to a signature
 
-Transforms a signature to include a reasoning field before the original
-output. This implements the Chain-of-Thought prompting pattern where the
-model is asked to "show its work" before providing the final answer.
+`with_reasoning()` adds a string output field, `reasoning` by default,
+before the existing output fields, so the model writes out its reasoning
+before it answers (chain-of-thought prompting).
+[`chain_of_thought()`](https://jameshwade.github.io/dsprrr/reference/chain_of_thought.md)
+builds a module from the result.
 
 ## Usage
 
@@ -20,58 +22,68 @@ with_reasoning(
 
 - x:
 
-  A signature object created by
+  A signature from
   [`signature()`](https://jameshwade.github.io/dsprrr/reference/signature.md),
-  or string notation such as `"question -> answer"`.
+  or a signature string such as `"question -> answer"`.
 
 - prefix:
 
-  Character. The prefix for the reasoning field description. Default
-  uses DSPy-style "Let's think step by step" prompt.
+  Start of the reasoning field's description. The description reads
+  "Reasoning: `prefix` produce the `fields`.", where `fields` names the
+  original output fields.
 
 - reasoning_field:
 
-  Character. Name of the reasoning field to add. Default is "reasoning".
+  Name of the added field.
 
 - instructions:
 
-  Character. Optional new instructions for the signature. If NULL
-  (default), original instructions are preserved with reasoning context.
+  New instructions. With `NULL` (the default), existing instructions get
+  " Think through your reasoning step by step before providing the
+  answer." appended, and empty instructions are replaced by "Given
+  `inputs`, think step by step and produce `outputs`."
 
 - ...:
 
-  Additional arguments (unused)
+  Ignored.
 
 ## Value
 
-A new signature object with a reasoning field added to its output type.
+A new signature whose output is an object with the reasoning field
+first, followed by the original output fields. A bare output type
+becomes a field named `answer`.
 
-## Details
+## See also
 
-The transform works by:
-
-1.  Extracting existing output fields from the signature's output_type
-
-2.  Creating a new output_type with reasoning as the first field
-
-3.  Adding appropriate description to guide the model
-
-The reasoning field is always placed first to encourage the model to
-reason before answering (per Chain-of-Thought research).
+Other signatures:
+[`has_reasoning()`](https://jameshwade.github.io/dsprrr/reference/has_reasoning.md),
+[`input()`](https://jameshwade.github.io/dsprrr/reference/input.md),
+[`signature()`](https://jameshwade.github.io/dsprrr/reference/signature.md),
+[`with_instructions()`](https://jameshwade.github.io/dsprrr/reference/with_instructions.md),
+[`without_reasoning()`](https://jameshwade.github.io/dsprrr/reference/without_reasoning.md)
 
 ## Examples
 
 ``` r
-# Basic usage with string notation
-sig <- with_reasoning("question -> answer")
+with_reasoning("question -> answer")
+#> 
+#> ── Signature ──
+#> 
+#> ── Inputs 
+#> • question: "string" - Input: question
+#> 
+#> ── Output 
+#> Type: "object(reasoning: string, answer: string)"
+#> 
+#> ── Instructions 
+#> Given the fields `question`, produce the fields `answer`. Think through your
+#> reasoning step by step before providing the answer.
 
-# Custom prefix
+# The prefix goes into the description of the reasoning field
 sig <- with_reasoning(
-  "math_problem -> solution",
-  prefix = "Let me solve this step by step:"
+  "math_problem -> solution: float",
+  prefix = "Let me solve this step by step, then"
 )
-
-# With explicit signature
-sig <- signature("context, question -> answer")
-cot_sig <- with_reasoning(sig)
+sig@output_type@properties$reasoning@description
+#> [1] "Reasoning: Let me solve this step by step, then produce the solution."
 ```

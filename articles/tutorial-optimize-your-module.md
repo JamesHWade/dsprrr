@@ -1,43 +1,30 @@
-# Tutorial 5: Finding the Best Configuration
+# Tutorial 5: Optimize a module
 
-In [Tutorial
-4](https://jameshwade.github.io/dsprrr/articles/tutorial-improve-with-demos.md),
-you improved your module with examples. But there are many other knobs
-to tune: temperature, instructions, prompt templates. How do you find
-the best combination?
-
-The answer: **let dsprrr search for you**.
-
-We return to a sentiment classifier—this time for product reviews—so you
-can see how much headroom parameter tuning adds on top of few-shot
-demos. This is also the module you’ll take to production in [Tutorial
-6](https://jameshwade.github.io/dsprrr/articles/tutorial-deploy-to-production.md).
-
-**Time**: 30-35 minutes
-
-## What You’ll Build
-
-An optimized module that automatically finds the best configuration
-through grid search.
-
-## Prerequisites
-
-- Completed [Tutorial
-  4](https://jameshwade.github.io/dsprrr/articles/tutorial-improve-with-demos.md)
-- `OPENAI_API_KEY` set in your environment
+[Tutorial
+4](https://jameshwade.github.io/dsprrr/articles/tutorial-improve-with-demos.md)
+compared versions of a module by hand. dsprrr can run that comparison
+for you: give it candidate configurations, labeled data and a metric,
+and it scores every candidate and keeps the best. By the end of this
+tutorial you can search instruction variants with
+[`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md),
+search instructions and demos together with `GridSearchTeleprompter`,
+and check the result on reviews the search never saw.
 
 ``` r
 
 library(dsprrr)
 library(ellmer)
-library(tibble)
 
-chat <- chat_openai(model = "gpt-5-mini")
+chat <- chat_openai(model = "gpt-6-luna")
 ```
 
-## Step 1: Set Up the Problem
+The answers on this page were recorded with `gpt-5-mini` and are
+replayed when the site is built, so `gpt-6-luna` may word them
+differently.
 
-Let’s build a sentiment analyzer and optimize it:
+## A classifier and two datasets
+
+The task is product-review sentiment:
 
 ``` r
 
@@ -45,206 +32,41 @@ sig <- signature(
   "review -> sentiment: enum('positive', 'negative', 'neutral')",
   instructions = "Classify the sentiment of this product review."
 )
-
-classifier <- module(sig)
 ```
 
-Create training and test data:
+The search scores candidates on `trainset`. `testset` stays out of the
+search, so the final check measures how the chosen configuration handles
+new reviews rather than how well it fits the training ones:
 
 ``` r
 
-# Training data for optimization
-trainset <- tibble::tibble(
-  review = c(
-    "Absolutely love this product! Best purchase ever.",
-    "Complete waste of money. Broke after one day.",
-    "It's okay. Does what it says.",
-    "Exceeded all my expectations!",
-    "Terrible quality. Very disappointed.",
-    "Nothing special, but it works.",
-    "Amazing! Would buy again.",
-    "Don't bother. Total junk.",
-    "Decent for the price.",
-    "Fantastic quality and fast shipping!"
-  ),
-  sentiment = c(
-    "positive", "negative", "neutral",
-    "positive", "negative", "neutral",
-    "positive", "negative", "neutral",
-    "positive"
-  )
+trainset <- tibble::tribble(
+  ~review,                                              ~sentiment,
+  "Absolutely love this product! Best purchase ever.",  "positive",
+  "Complete waste of money. Broke after one day.",      "negative",
+  "It's okay. Does what it says.",                      "neutral",
+  "Exceeded all my expectations!",                      "positive",
+  "Terrible quality. Very disappointed.",               "negative",
+  "Nothing special, but it works.",                     "neutral",
+  "Amazing! Would buy again.",                          "positive",
+  "Don't bother. Total junk.",                          "negative",
+  "Decent for the price.",                              "neutral",
+  "Fantastic quality and fast shipping!",               "positive"
 )
 
-# Held-out test data (never used for optimization)
-testset <- tibble::tibble(
-  review = c(
-    "Great value for money!",
-    "Stopped working after a week.",
-    "Average product, average price.",
-    "Couldn't be happier with this purchase!"
-  ),
-  sentiment = c("positive", "negative", "neutral", "positive")
+testset <- tibble::tribble(
+  ~review,                                     ~sentiment,
+  "Great value for money!",                    "positive",
+  "Stopped working after a week.",             "negative",
+  "Average product, average price.",           "neutral",
+  "Couldn't be happier with this purchase!",   "positive"
 )
 ```
 
-## Step 2: Grid Search Over Temperature
+## Measure the baseline
 
-Temperature controls randomness. Lower = more deterministic, higher =
-more creative. Let’s find the best value:
-
-``` r
-
-optimize_grid(  classifier,
-  data = trainset,
-  metric = metric_exact_match(field = "sentiment"),
-  parameters = list(
-    temperature = c(0.0, 0.3, 0.7, 1.0)
-  ),
-  .llm = chat
-)
-```
-
-## Step 3: View Optimization Results
-
-See what happened:
-
-``` r
-
-# All trials
-module_trials(classifier)
-```
-
-Get the summary:
-
-``` r
-
-# Metrics summary
-module_metrics(classifier)
-```
-
-Check the best configuration:
-
-``` r
-
-# Best score achieved
-optimization_result(classifier)$best_score
-
-# Best parameters
-optimization_result(classifier)$best_params
-```
-
-## Step 4: The Module Remembers
-
-After optimization, the module automatically uses the best
-configuration:
-
-``` r
-
-# This uses the best temperature found
-run(classifier, review = "This product changed my life!", .llm = chat)
-```
-
-## Step 5: Grid Search Over Instructions
-
-Instructions matter a lot. Let’s test different phrasings:
-
-``` r
-
-# Reset to try different parameters
-classifier2 <- module(sig)
-
-optimize_grid(  classifier2,
-  data = trainset,
-  metric = metric_exact_match(field = "sentiment"),
-  parameters = list(
-    instructions_suffix = c(
-      "",
-      " Be brief.",
-      " Consider the overall tone.",
-      " Focus on the customer's satisfaction level."
-    )
-  ),
-  .llm = chat
-)
-
-module_trials(classifier2)
-```
-
-The `instructions_suffix` is appended to your base instructions.
-
-## Step 6: Multi-Parameter Grid Search
-
-Search over multiple parameters at once:
-
-``` r
-
-classifier3 <- module(sig)
-
-optimize_grid(  classifier3,
-  data = trainset,
-  metric = metric_exact_match(field = "sentiment"),
-  parameters = list(
-    temperature = c(0.0, 0.5),
-    instructions_suffix = c("", " Be decisive.")
-  ),
-  .llm = chat
-)
-
-module_trials(classifier3)
-```
-
-This tests all combinations: 2 temperatures × 2 instruction variants = 4
-total configurations.
-
-## Step 7: Using GridSearchTeleprompter
-
-For more control, use `GridSearchTeleprompter` with explicit variants:
-
-``` r
-
-variants <- tibble(
-  id = c("concise", "analytical", "empathetic"),
-  instructions_suffix = c(
-    " Respond with just the sentiment.",
-    " Analyze the language carefully before deciding.",
-    " Consider how the customer is feeling."
-  )
-)
-
-teleprompter <- GridSearchTeleprompter(
-  variants = variants,
-  metric = metric_exact_match(field = "sentiment"),
-  k = 2L  # Number of few-shot examples to include
-)
-
-optimized <- compile(
-  program = module(sig),
-  teleprompter = teleprompter,
-  trainset = trainset,
-  .llm = chat
-)
-```
-
-This combines instruction optimization with few-shot example selection.
-
-## Step 8: Evaluate on Held-Out Test Data
-
-Always test on data the optimizer never saw:
-
-``` r
-
-# Evaluate the optimized module on test data
-test_results <- evaluate(
-  optimized,
-  testset,
-  metric = metric_exact_match(field = "sentiment"),
-  .llm = chat
-)
-
-test_results
-```
-
-Compare to baseline:
+Score the module as it is before searching, so you have a number to
+beat:
 
 ``` r
 
@@ -257,95 +79,135 @@ baseline_results <- evaluate(
   .llm = chat
 )
 
-cat("Baseline test accuracy:", scales::percent(baseline_results$mean_score), "\n")
-cat("Optimized test accuracy:", scales::percent(test_results$mean_score), "\n")
+baseline_results$mean_score
+#> [1] 1
+baseline_results$scores
+#> [1] 1 1 1 1
 ```
 
-## Step 9: Different Metrics for Different Tasks
+In the recorded run, gpt-5-mini labels all four test reviews correctly,
+so here a search can at best match the baseline. Four reviews are too
+few to rank configurations anyway: each is worth 25 percentage points,
+and one changed answer can reverse a comparison. The datasets in this
+tutorial are small to keep it cheap; when the choice matters, test on
+dozens to hundreds of labeled rows.
 
-Not all tasks use exact match. dsprrr provides several metrics:
+## Search instruction variants
+
+[`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md)
+runs every candidate on `data`, scores it with `metric`, and leaves the
+module set to the best candidate. `parameters` lists the values to try.
+Each `instructions_suffix` is appended to the signature’s instructions,
+so this grid compares the original instructions with two longer
+versions:
 
 ``` r
 
-# For text generation - token overlap
-metric_f1()
+classifier <- module(sig)
 
-# Check if output contains a string
-metric_contains("error", ignore_case = TRUE)
+optimize_grid(
+  classifier,
+  data = trainset,
+  metric = metric_exact_match(field = "sentiment"),
+  parameters = list(
+    instructions_suffix = c(
+      "",
+      "Consider the overall tone.",
+      "Focus on how satisfied the customer is."
+    )
+  ),
+  .llm = chat
+)
 
-# Custom logic
-metric_custom(function(prediction, expected) {
-  # Return TRUE/FALSE or 0-1 score
-  nchar(prediction) < 100
-}, name = "concise")
-
-# Threshold wrapper
-metric_threshold(metric_f1(), threshold = 0.8)
+module_trials(classifier)
 ```
 
-## Step 10: Tracking Costs
+Each candidate runs on all ten training reviews, 30 calls in total.
+[`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md)
+changes `classifier` in place.
+[`module_trials()`](https://jameshwade.github.io/dsprrr/reference/module_trials.md)
+returns a one-row summary with the best score, the best parameters and a
+`trials` list-column; `optimization_result(classifier)$trials` has one
+row per candidate, with its score and cost.
 
-Optimization uses LLM calls. Track the cost:
+When `parameters` names several settings,
+[`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md)
+tries every combination, so the number of calls is the product of the
+numbers of values, times the number of rows. Settings you can search for
+a Predict module include:
 
-``` r
-
-# After optimization
-classifier$trace_summary()
-
-# Total session cost
-session_cost()
-```
-
-## What You Learned
-
-In this tutorial, you:
-
-1.  Used
-    [`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md)
-    to search over parameters
-2.  Viewed results with
-    [`module_trials()`](https://jameshwade.github.io/dsprrr/reference/module_trials.md)
-    and
-    [`module_metrics()`](https://jameshwade.github.io/dsprrr/reference/module_metrics.md)
-3.  Searched over temperature and instructions
-4.  Combined parameters in multi-dimensional grids
-5.  Used `GridSearchTeleprompter` for instruction + demo optimization
-6.  Evaluated on held-out test data
-7.  Explored different metrics
-8.  Tracked optimization costs
-
-## The Optimization Mindset
-
-Key principles:
-
-1.  **Measure first**: Know your baseline before optimizing
-2.  **Use held-out data**: Never test on training data
-3.  **Start simple**: Try temperature before complex instruction
-    variants
-4.  **Watch costs**: Grid search multiplies LLM calls
-5.  **Diminishing returns**: Often 80% of improvement comes from first
-    optimization
-
-## When to Use Each Approach
-
-| Approach | Best For |
+| Setting | What it changes |
 |----|----|
-| [`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md) | Quick parameter sweeps |
-| `LabeledFewShot` | Adding examples from data |
-| `GridSearchTeleprompter` | Instruction + example optimization |
-| Manual tuning | Initial exploration |
+| `instructions` | Replaces the signature’s instructions. |
+| `instructions_suffix` | Appends text to the signature’s instructions. |
+| `template` | The glue string that lays out the inputs, such as `"Review: {review}"`. |
+| `reasoning_effort` | How much a reasoning model such as gpt-6-luna thinks before answering (`"none"` to `"max"`). |
+| `temperature`, `top_p` | Sampling settings sent to the model. gpt-6-luna accepts them only with `reasoning_effort = "none"`. |
 
-## Next Steps
+## Search instructions and demos together
 
-Your module is optimized. Now how do you save it and deploy it? Continue
-to:
+`GridSearchTeleprompter` combines an instruction search with the demos
+of Tutorial 4: it attaches `k` demos sampled from the training data,
+scores each instruction variant with those demos in place, and keeps the
+best variant. Like other teleprompters it works through
+[`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md),
+which returns a new module and leaves the one you pass in unchanged:
 
-- **[Tutorial 6: Taking to
-  Production](https://jameshwade.github.io/dsprrr/articles/tutorial-deploy-to-production.md)**
-  — Save and deploy modules
-- **[Quick
-  Reference](https://jameshwade.github.io/dsprrr/articles/cheatsheet.md)**
-  — All teleprompters and parameters
-- **[How Optimization
-  Works](https://jameshwade.github.io/dsprrr/articles/concepts-optimization-theory.md)**
-  — Theory behind the search
+``` r
+
+variants <- tibble::tibble(
+  id = c("concise", "analytical", "empathetic"),
+  instructions_suffix = c(
+    "Respond with just the sentiment.",
+    "Analyze the language carefully before deciding.",
+    "Consider how the customer is feeling."
+  )
+)
+
+tp <- GridSearchTeleprompter(
+  variants = variants,
+  metric = metric_exact_match(field = "sentiment"),
+  k = 2L
+)
+
+set.seed(2026)
+optimized <- compile(module(sig), tp, trainset, .llm = chat)
+
+optimization_result(optimized)$best_params$id
+```
+
+Unless you pass `valset` to
+[`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md),
+`GridSearchTeleprompter` scores the variants on a random 20% of
+`trainset` (two reviews here) and draws the demos from the rest.
+[`set.seed()`](https://rdrr.io/r/base/Random.html) makes that split
+repeatable. Two reviews cannot tell three variants apart, so give it a
+larger `valset` when you have the data.
+
+## Check the result on the test set
+
+``` r
+
+test_results <- evaluate(
+  optimized,
+  testset,
+  metric = metric_exact_match(field = "sentiment"),
+  .llm = chat
+)
+
+test_results$mean_score
+```
+
+Compare `test_results$mean_score` with `baseline_results$mean_score`. A
+configuration that wins on the training reviews but not on the test set
+has fitted those particular reviews rather than the task.
+
+Each candidate costs a full pass over its data: the instruction grid
+above makes 30 calls and the teleprompter 6. The `total_cost` column of
+`optimization_result(classifier)$trials` records what each candidate
+cost.
+
+Next, [Tutorial
+6](https://jameshwade.github.io/dsprrr/articles/tutorial-deploy-to-production.md)
+saves a compiled module so that a later session can use it without
+repeating the search.

@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Advanced Optimizer Guide • dsprrr</title>
+<title>Choose an optimizer • dsprrr</title>
 <!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="../favicon-96x96.png">
 <link rel="icon" type="”image/svg+xml”" href="../favicon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
@@ -17,7 +17,7 @@
 <link href="../deps/Fira_Code-0.4.10/font.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Advanced Optimizer Guide">
+<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Choose an optimizer">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -36,67 +36,67 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
-<li class="nav-item"><a class="nav-link" href="../articles/getting-started.html">Get Started</a></li>
+<li class="nav-item"><a class="nav-link" href="../articles/tutorial-hello-world.html">Get started</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-tutorials" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Tutorials</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-tutorials">
-<li><h6 class="dropdown-header" data-toc-skip>Learning Path</h6></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-hello-world.html">1. Your First LLM Call</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-build-classifier.html">2. Building a Classifier</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-structured-outputs.html">3. Structured Outputs</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-improve-with-demos.html">4. Improving with Examples</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-optimize-your-module.html">5. Optimization</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-deploy-to-production.html">6. Production</a></li>
+<li><a class="dropdown-item" href="../articles/tutorial-hello-world.html">1. Your first LLM call</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-build-classifier.html">2. Build a classifier</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-structured-outputs.html">3. Extract structured data</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-improve-with-demos.html">4. Improve with examples</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-optimize-your-module.html">5. Optimize a module</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-deploy-to-production.html">6. Save and reuse a module</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Advanced Tutorials</h6></li>
-    <li><a class="dropdown-item" href="../articles/text-adventure.html">Build an AI Game Master</a></li>
-    <li><a class="dropdown-item" href="../articles/llms-txt.html">Generate Package Docs</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-rlm-dsprrr.html">Investigate a Regression with RLM</a></li>
-  </ul>
-</li>
-<li class="nav-item dropdown">
-  <button class="nav-link dropdown-toggle" type="button" id="dropdown-how-to-guides" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">How-to Guides</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-how-to-guides">
-<li><a class="dropdown-item" href="../articles/troubleshooting.html">Troubleshooting</a></li>
-    <li><a class="dropdown-item" href="../articles/compilation-optimization.html">Compile &amp; Optimize</a></li>
-    <li><a class="dropdown-item" href="../articles/vitals-recipes.html">Evaluate with Vitals</a></li>
-    <li><a class="dropdown-item" href="../articles/rag-workflows.html">Build RAG Pipelines</a></li>
-    <li><a class="dropdown-item" href="../articles/chaining-modules.html">Chaining Modules</a></li>
-    <li><a class="dropdown-item" href="../articles/calibrated-decisions.html">Calibrated Decisions</a></li>
-    <li><a class="dropdown-item" href="../articles/orchestration.html">Deploy to Production</a></li>
-    <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Integrations</h6></li>
-    <li><a class="dropdown-item" href="../articles/vitals-integration.html">Vitals Package</a></li>
-    <li><a class="dropdown-item" href="../articles/tidymodels-integration.html">tidymodels</a></li>
-    <li><a class="dropdown-item" href="../articles/advanced-ellmer.html">Advanced ellmer</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Projects</h6></li>
+    <li><a class="dropdown-item" href="../articles/llms-txt.html">Generate an llms.txt file</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-rlm-dsprrr.html">Investigate a regression with RLM</a></li>
+    <li><a class="dropdown-item" href="../articles/text-adventure.html">Build a text adventure</a></li>
   </ul>
 </li>
 <li class="active nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-how-to-guides" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">How-to guides</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-how-to-guides">
+<li><h6 class="dropdown-header" data-toc-skip>Build</h6></li>
+    <li><a class="dropdown-item" href="../articles/advanced-modules.html">Choose a module type</a></li>
+    <li><a class="dropdown-item" href="../articles/chaining-modules.html">Chain modules into pipelines</a></li>
+    <li><a class="dropdown-item" href="../articles/rag-workflows.html">Retrieval-augmented generation</a></li>
+    <li><a class="dropdown-item" href="../articles/calibrated-decisions.html">Calibrated decisions</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Measure and improve</h6></li>
+    <li><a class="dropdown-item" href="../articles/compilation-optimization.html">Compile and optimize</a></li>
+    <li><a class="dropdown-item" href="../articles/advanced-optimization.html">Choose an optimizer</a></li>
+    <li><a class="dropdown-item" href="../articles/vitals-recipes.html">Evaluate with vitals</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Run</h6></li>
+    <li><a class="dropdown-item" href="../articles/models-and-providers.html">Models, providers and streaming</a></li>
+    <li><a class="dropdown-item" href="../articles/orchestration.html">Run dsprrr in pipelines</a></li>
+    <li><a class="dropdown-item" href="../articles/tidymodels-integration.html">Use dsprrr with tidymodels</a></li>
+    <li><a class="dropdown-item" href="../articles/troubleshooting.html">Troubleshooting</a></li>
+  </ul>
+</li>
+<li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-concepts" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Concepts</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-concepts">
-<li><a class="dropdown-item" href="../articles/concepts-dspy-philosophy.html">The DSPy Philosophy</a></li>
-    <li><a class="dropdown-item" href="../articles/dspy-comparison.html">dsprrr vs. DSPy</a></li>
-    <li><a class="dropdown-item" href="../articles/concepts-signatures-modules.html">Signatures &amp; Modules</a></li>
-    <li><a class="dropdown-item" href="../articles/concepts-optimization-theory.html">How Optimization Works</a></li>
-    <li><a class="dropdown-item" href="../articles/concepts-why-metrics-matter.html">Why Metrics Matter</a></li>
-    <li><a class="dropdown-item" href="../articles/how-rlm-works.html">How RLMs Work</a></li>
+<li><a class="dropdown-item" href="../articles/concepts-signatures-modules.html">How dsprrr works</a></li>
+    <li><a class="dropdown-item" href="../articles/concepts-why-metrics-matter.html">Metrics and evaluation</a></li>
+    <li><a class="dropdown-item" href="../articles/concepts-optimization-theory.html">How optimization works</a></li>
+    <li><a class="dropdown-item" href="../articles/dspy-comparison.html">dsprrr for DSPy users</a></li>
+    <li><a class="dropdown-item" href="../articles/how-rlm-works.html">How RLM works</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Deep Dives</h6></li>
-    <li><a class="dropdown-item" href="../articles/flex-optimization.html">Flex: Optimize the Whole Program</a></li>
-    <li><a class="dropdown-item" href="../articles/advanced-modules.html">Advanced Reasoning</a></li>
-    <li><a class="dropdown-item" href="../articles/advanced-optimization.html">Advanced Optimization</a></li>
-    <li><a class="dropdown-item" href="../articles/omni-meta-optimization.html">Composing Optimizers with Omni</a></li>
-    <li><a class="dropdown-item" href="../articles/agentic-optimization-harnesses.html">Agentic Optimization Harnesses</a></li>
-    <li><a class="dropdown-item" href="../articles/reasoning-models.html">Reasoning Models</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Experimental</h6></li>
+    <li><a class="dropdown-item" href="../articles/flex-optimization.html">Flex: optimize a whole program</a></li>
+    <li><a class="dropdown-item" href="../articles/omni-meta-optimization.html">Compose optimizers with Omni</a></li>
+    <li><a class="dropdown-item" href="../articles/agentic-optimization-harnesses.html">Agentic optimization harnesses</a></li>
   </ul>
 </li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-reference" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Reference</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-reference">
-<li><a class="dropdown-item" href="../articles/cheatsheet.html">Quick Reference</a></li>
-    <li><a class="dropdown-item" href="../reference/index.html">API Documentation</a></li>
+<li><a class="dropdown-item" href="../reference/index.html">Function reference</a></li>
+    <li><a class="dropdown-item" href="../articles/cheatsheet.html">Quick reference</a></li>
   </ul>
 </li>
+<li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul>
 <ul class="navbar-nav">
 <li class="nav-item"><form class="form-inline" role="search">
@@ -123,7 +123,7 @@
 
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
-      <img src="../logo.svg" class="logo" alt=""><h1>Advanced Optimizer Guide</h1>
+      <img src="../logo.svg" class="logo" alt=""><h1>Choose an optimizer</h1>
             
       
       <small class="dont-index">Source: <a href="https://github.com/JamesHWade/dsprrr/blob/main/vignettes/advanced-optimization.Rmd" class="external-link"><code>vignettes/advanced-optimization.Rmd</code></a></small>
@@ -132,1156 +132,638 @@
 
     
     
+<p>dsprrr has eleven optimizers, called teleprompters. They differ in
+what they change in a module, how much labeled data they need, and how
+many model calls they spend. This page compares them and shows a short
+call for each. The workflow around them (baseline, held-out scores,
+saving) is covered in <a href="compilation-optimization.html">Compile
+and optimize</a>, and the ideas behind them in <a href="concepts-optimization-theory.html">How optimization works</a>.</p>
 <div class="section level2">
-<h2 id="introduction">Introduction<a class="anchor" aria-label="anchor" href="#introduction"></a>
+<h2 id="comparison">Comparison<a class="anchor" aria-label="anchor" href="#comparison"></a>
 </h2>
-<p>dsprrr provides a comprehensive suite of DSPy-inspired optimizers
-(teleprompters) for automatically improving your LLM programs. This
-guide covers the advanced optimizers beyond basic few-shot learning.</p>
-<p>For basic optimization concepts, see
-<code><a href="../articles/compilation-optimization.html">vignette("compilation-optimization")</a></code>.</p>
-</div>
-<div class="section level2">
-<h2 id="quick-reference-choosing-an-optimizer">Quick Reference: Choosing an Optimizer<a class="anchor" aria-label="anchor" href="#quick-reference-choosing-an-optimizer"></a>
-</h2>
+<p>In the cost column, T is the number of training rows and V the number
+of validation rows.</p>
 <table class="table">
 <colgroup>
-<col width="34%">
-<col width="40%">
-<col width="25%">
+<col width="20%">
+<col width="20%">
+<col width="20%">
+<col width="20%">
+<col width="20%">
 </colgroup>
 <thead><tr class="header">
-<th>If you want…</th>
-<th>Use this optimizer</th>
-<th>Complexity</th>
+<th>Optimizer</th>
+<th>What it changes</th>
+<th>Data it needs</th>
+<th>Model calls to compile</th>
+<th>Use it when</th>
 </tr></thead>
 <tbody>
 <tr class="odd">
-<td>Add labeled examples as demos</td>
 <td><code>LabeledFewShot</code></td>
-<td>Low</td>
+<td>Demos, copied from training rows</td>
+<td>
+<code>k</code> labeled rows</td>
+<td>None</td>
+<td>You want a quick first improvement</td>
 </tr>
 <tr class="even">
-<td>Bootstrap demos from LLM outputs</td>
 <td><code>BootstrapFewShot</code></td>
-<td>Medium</td>
+<td>Demos, from the module’s own passing outputs</td>
+<td>More rows than <code>max_labeled_demos</code>
+</td>
+<td>Up to T minus <code>max_labeled_demos</code> per round</td>
+<td>Demos should show complete outputs, or the program is a
+pipeline</td>
 </tr>
 <tr class="odd">
-<td>Bootstrap + search multiple configs</td>
 <td><code>BootstrapFewShotWithRandomSearch</code></td>
-<td>Medium</td>
+<td>Demos, the best of several sets</td>
+<td>
+<code>trainset</code> and <code>valset</code>
+</td>
+<td>Several bootstrap runs, plus <code>num_candidate_programs</code> ×
+V</td>
+<td>You can pay to compare demo sets</td>
 </tr>
 <tr class="even">
-<td>Dynamic per-query demo selection</td>
 <td><code>KNNFewShot</code></td>
-<td>Medium</td>
+<td>Demos, picked for each input by similarity</td>
+<td>A varied labeled pool</td>
+<td>None; one embedding call per run</td>
+<td>Inputs vary widely and similar examples help most</td>
 </tr>
 <tr class="odd">
-<td>Optimize instructions (not demos)</td>
+<td><code>GridSearchTeleprompter</code></td>
+<td>Instructions or templates that you write, plus demos</td>
+<td>
+<code>valset</code>, or a fifth of <code>trainset</code>
+</td>
+<td>Variants × V</td>
+<td>You have a few specific wordings to compare</td>
+</tr>
+<tr class="even">
 <td><code>COPRO</code></td>
-<td>Medium</td>
+<td>Instructions, rewritten by a model</td>
+<td>
+<code>trainset</code> and <code>valset</code>
+</td>
+<td>About <code>breadth</code> × <code>depth</code> × V, plus passes
+over T</td>
+<td>The instructions are the weak point</td>
 </tr>
-<tr class="even">
-<td>Joint instruction + demo optimization</td>
+<tr class="odd">
 <td><code>MIPROv2</code></td>
-<td>High</td>
+<td>Demos and instructions together</td>
+<td>
+<code>trainset</code> and <code>valset</code>
+</td>
+<td>Bootstrap runs, then 20, 50 or 100 trials (see below)</td>
+<td>You want both searched on a fixed trial budget</td>
 </tr>
-<tr class="odd">
-<td>Focus on hard examples</td>
+<tr class="even">
 <td><code>SIMBA</code></td>
-<td>Medium</td>
+<td>Demos and rules from hard examples</td>
+<td>
+<code>trainset</code> and <code>valset</code>
+</td>
+<td>Per step, <code>num_candidates</code> × <code>bsize</code> + V</td>
+<td>A few kinds of input keep failing</td>
 </tr>
-<tr class="even">
-<td>Multi-objective optimization</td>
+<tr class="odd">
 <td><code>GEPA</code></td>
-<td>High</td>
-</tr>
-<tr class="odd">
-<td>Explore several optimizers, then continue the winner</td>
-<td><code>Omni</code></td>
-<td>High</td>
-</tr>
-<tr class="even">
-<td>Let one research agent own an experiment loop</td>
-<td><code>AutoResearch</code></td>
-<td>High</td>
-</tr>
-<tr class="odd">
-<td>Generate batches from a scored frontier</td>
-<td><code>MetaHarness</code></td>
-<td>High</td>
+<td>Instructions, or a whole <code><a href="../reference/flex.html">flex()</a></code> program</td>
+<td>
+<code>trainset</code> and <code>valset</code>
+</td>
+<td>
+<code>generations</code> × <code>population_size</code> × (V + T),
+plus rewrites</td>
+<td>Your metric can say why an output is wrong</td>
 </tr>
 <tr class="even">
-<td>Combine multiple compiled programs</td>
-<td><code><a href="../reference/ensemble_module.html">ensemble()</a></code></td>
-<td>Low</td>
+<td><code>BetterTogether</code></td>
+<td>Whatever its steps change</td>
+<td>
+<code>valset</code>, or 10% of <code>trainset</code>
+</td>
+<td>Its steps, plus V per step</td>
+<td>You want to chain optimizers and keep the best stage</td>
+</tr>
+<tr class="odd">
+<td><code>ReAnchor</code></td>
+<td>Decision thresholds, cuts and weights; never the prompt</td>
+<td>Two or more rows</td>
+<td>2 × T, plus 2 × V with a <code>valset</code>
+</td>
+<td>Yes/no or label decisions are miscalibrated</td>
 </tr>
 </tbody>
 </table>
-<div class="section level3">
-<h3 id="decision-tree">Decision Tree<a class="anchor" aria-label="anchor" href="#decision-tree"></a>
-</h3>
-<pre class="mermaid"><code>flowchart TB
-  Start["Do you have labeled training data?"]
-  Start --&gt;|No| Zero["Use zero-shot or manually write demos"]
-  Start --&gt;|Yes| Data["How much data?"]
-  Data --&gt;|Fewer than 30 examples| Labeled["LabeledFewShot (simple few-shot)"]
-  Data --&gt;|30+ examples| Optimize["What do you want to optimize?"]
-  Optimize --&gt;|Just add demos| Bootstrap["BootstrapFewShot"]
-  Optimize --&gt;|Demos + search configs| Random["BootstrapFewShotWithRandomSearch"]
-  Optimize --&gt;|Different demos per query| KNN["KNNFewShot"]
-  Optimize --&gt;|Improve instructions| COPRO["COPRO"]
-  Optimize --&gt;|Both instructions + demos| MIPRO["MIPROv2"]
-  Optimize --&gt;|Handle hard cases better| SIMBA["SIMBA"]
-  Optimize --&gt;|Balance quality vs cost| GEPA["GEPA"]
-  Optimize --&gt;|Unsure which optimizer will win| Omni["Omni"]
-  Optimize --&gt;|Run an agentic research loop| Agentic["AutoResearch or MetaHarness"]
-  Optimize --&gt;|Combine multiple optimized modules| Ensemble["ensemble()"]</code></pre>
-</div>
+<p>Every optimizer except <code>LabeledFewShot</code> and
+<code>KNNFewShot</code> requires <code>metric</code>.
+<code>COPRO</code>, <code>MIPROv2</code>, <code>SIMBA</code> and
+<code>GEPA</code> score candidates on <code>trainset</code> when you
+leave out <code>valset</code>, which favors candidates that fit the
+training rows rather than new ones.</p>
+<p>A reasonable order: start with <code>LabeledFewShot</code>. If demos
+help but not enough, try <code>BootstrapFewShot</code> or
+<code>BootstrapFewShotWithRandomSearch</code>. If the wording is the
+problem, try <code>COPRO</code> or <code>GEPA</code>, and
+<code>MIPROv2</code> searches both. Whatever you try, compare it with
+the uncompiled module on held-out rows.</p>
 </div>
 <div class="section level2">
-<h2 id="dataset-sizing-guidance">Dataset Sizing Guidance<a class="anchor" aria-label="anchor" href="#dataset-sizing-guidance"></a>
+<h2 id="setup-for-the-examples">Setup for the examples<a class="anchor" aria-label="anchor" href="#setup-for-the-examples"></a>
 </h2>
-<table class="table">
-<colgroup>
-<col width="32%">
-<col width="51%">
-<col width="16%">
-</colgroup>
-<thead><tr class="header">
-<th>Dataset Size</th>
-<th>Recommended Optimizers</th>
-<th>Notes</th>
-</tr></thead>
-<tbody>
-<tr class="odd">
-<td>10-30 examples</td>
-<td><code>LabeledFewShot</code></td>
-<td>Minimal optimization</td>
-</tr>
-<tr class="even">
-<td>30-100 examples</td>
-<td>
-<code>BootstrapFewShot</code>, <code>COPRO</code>
-</td>
-<td>Good starting point</td>
-</tr>
-<tr class="odd">
-<td>100-300 examples</td>
-<td>
-<code>BootstrapFewShotWithRandomSearch</code>,
-<code>MIPROv2</code>
-</td>
-<td>Meaningful search</td>
-</tr>
-<tr class="even">
-<td>300+ examples</td>
-<td>All optimizers</td>
-<td>Full optimization potential</td>
-</tr>
-</tbody>
-</table>
-<p><strong>Key principles:</strong></p>
-<ul>
-<li>
-<strong>Train/validation split</strong>: Use 70-80% for training,
-20-30% for validation</li>
-<li>
-<strong>Diverse examples</strong>: Ensure coverage of edge cases and
-all output categories</li>
-<li>
-<strong>Quality over quantity</strong>: 50 high-quality examples
-beat 500 noisy ones</li>
-</ul>
+<p>The examples below route support tickets to a team:</p>
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/dsprrr" class="external-link">dsprrr</a></span><span class="op">)</span></span></code></pre></div>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/dsprrr" class="external-link">dsprrr</a></span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">llm</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-luna"</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Split your dataset properly</span></span>
-<span><span class="va">full_data</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
+<span><span class="va">triage</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
+<span>  inputs <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"ticket"</span>, description <span class="op">=</span> <span class="st">"Customer support ticket"</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  output_type <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_object</a></span><span class="op">(</span></span>
+<span>    team <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_enum</a></span><span class="op">(</span></span>
+<span>      <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"billing"</span>, <span class="st">"shipping"</span>, <span class="st">"technical"</span><span class="op">)</span>,</span>
+<span>      <span class="st">"Which team should handle the ticket?"</span></span>
+<span>    <span class="op">)</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  instructions <span class="op">=</span> <span class="st">"Route each support ticket to one team."</span></span>
+<span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
-<span>  question <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">...</span><span class="op">)</span>,  <span class="co"># Your examples</span></span>
-<span>  answer <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">...</span><span class="op">)</span></span>
+<span><span class="va">metric</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"team"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Three rows show the shape; a real run needs dozens or more</span></span>
+<span><span class="va">tickets</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
+<span>  ticket <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>    <span class="st">"I was charged twice for my subscription this month."</span>,</span>
+<span>    <span class="st">"The parcel says delivered, but nothing arrived."</span>,</span>
+<span>    <span class="st">"The app crashes when I open the settings page."</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  team <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"billing"</span>, <span class="st">"shipping"</span>, <span class="st">"technical"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">42</span><span class="op">)</span></span>
-<span><span class="va">n</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">full_data</span><span class="op">)</span></span>
-<span><span class="va">train_idx</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sample.html" class="external-link">sample</a></span><span class="op">(</span><span class="va">n</span>, size <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">floor</a></span><span class="op">(</span><span class="fl">0.7</span> <span class="op">*</span> <span class="va">n</span><span class="op">)</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">trainset</span> <span class="op">&lt;-</span> <span class="va">full_data</span><span class="op">[</span><span class="va">train_idx</span>, <span class="op">]</span></span>
-<span><span class="va">valset</span> <span class="op">&lt;-</span> <span class="va">full_data</span><span class="op">[</span><span class="op">-</span><span class="va">train_idx</span>, <span class="op">]</span></span>
-<span></span>
-<span><span class="co"># Or use the built-in helper</span></span>
-<span><span class="va">splits</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/split_dataset.html">split_dataset</a></span><span class="op">(</span><span class="va">full_data</span>, prop <span class="op">=</span> <span class="fl">0.7</span>, seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span></span>
+<span><span class="va">splits</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/split_dataset.html">split_dataset</a></span><span class="op">(</span><span class="va">tickets</span>, prop <span class="op">=</span> <span class="fl">0.7</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
 <span><span class="va">trainset</span> <span class="op">&lt;-</span> <span class="va">splits</span><span class="op">$</span><span class="va">train</span></span>
 <span><span class="va">valset</span> <span class="op">&lt;-</span> <span class="va">splits</span><span class="op">$</span><span class="va">val</span></span></code></pre></div>
+<p>Counts and sizes are integer properties, so write them as integer
+literals:</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/try.html" class="external-link">try</a></span><span class="op">(</span><span class="fu"><a href="../reference/LabeledFewShot.html">LabeledFewShot</a></span><span class="op">(</span>k <span class="op">=</span> <span class="fl">3</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Error : &lt;dsprrr::LabeledFewShot&gt; object properties are invalid:</span></span>
+<span><span class="co">#&gt; - @k must be &lt;integer&gt;, not &lt;double&gt;</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="setup">Setup<a class="anchor" aria-label="anchor" href="#setup"></a>
+<h2 id="labeledfewshot">LabeledFewShot<a class="anchor" aria-label="anchor" href="#labeledfewshot"></a>
 </h2>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/dsprrr" class="external-link">dsprrr</a></span><span class="op">)</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ellmer.tidyverse.org" class="external-link">ellmer</a></span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Configure your LLM</span></span>
-<span><span class="va">llm</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-4o-mini"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Example training data for demonstrations</span></span>
-<span><span class="va">trainset</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
-<span>  question <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
-<span>    <span class="st">"What is the capital of France?"</span>,</span>
-<span>    <span class="st">"Who wrote Romeo and Juliet?"</span>,</span>
-<span>    <span class="st">"What is the chemical symbol for gold?"</span>,</span>
-<span>    <span class="st">"When did World War II end?"</span>,</span>
-<span>    <span class="st">"What is the largest planet in our solar system?"</span></span>
-<span>  <span class="op">)</span>,</span>
-<span>  answer <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
-<span>    <span class="st">"Paris"</span>,</span>
-<span>    <span class="st">"William Shakespeare"</span>,</span>
-<span>    <span class="st">"Au"</span>,</span>
-<span>    <span class="st">"1945"</span>,</span>
-<span>    <span class="st">"Jupiter"</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Base module to optimize</span></span>
-<span><span class="va">qa_module</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span></span>
-<span>  <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p><code>LabeledFewShot</code> samples <code>k</code> training rows
+(using <code>seed</code>, 123 by default) and attaches them as demos. It
+makes no model calls and does not score anything, so the demos are only
+as good as the rows you give it. <code>sample = FALSE</code> takes the
+first <code>k</code> rows instead.</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">labeled</span> <span class="op">&lt;-</span> <span class="va">triage</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="fu"><a href="../reference/LabeledFewShot.html">LabeledFewShot</a></span><span class="op">(</span>k <span class="op">=</span> <span class="fl">4L</span><span class="op">)</span>, <span class="va">trainset</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="bootstrapfewshot">BootstrapFewShot<a class="anchor" aria-label="anchor" href="#bootstrapfewshot"></a>
 </h2>
-<p>Bootstraps demonstrations by running the module on training examples
-and keeping successful outputs as demos.</p>
-<p><strong>Best for:</strong> When you want the LLM to generate its own
-demonstration format.</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">tp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/BootstrapFewShot.html">BootstrapFewShot</a></span><span class="op">(</span></span>
-<span>  metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"answer"</span><span class="op">)</span>,</span>
-<span>  max_bootstrapped_demos <span class="op">=</span> <span class="fl">4L</span>,</span>
-<span>  max_labeled_demos <span class="op">=</span> <span class="fl">2L</span>,</span>
-<span>  max_rounds <span class="op">=</span> <span class="fl">3L</span>,</span>
-<span>  max_errors <span class="op">=</span> <span class="fl">5L</span>,</span>
-<span>  seed <span class="op">=</span> <span class="fl">42L</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">qa_module</span>, <span class="va">tp</span>, <span class="va">trainset</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Check what demos were bootstrapped</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">compiled</span><span class="op">$</span><span class="va">demos</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Run the optimized module</span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">compiled</span>, question <span class="op">=</span> <span class="st">"What is the speed of light?"</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span></code></pre></div>
-<p><strong>Parameters:</strong></p>
-<ul>
-<li>
-<code>max_bootstrapped_demos</code>: Maximum LLM-generated demos to
-include</li>
-<li>
-<code>max_labeled_demos</code>: Maximum labeled examples from
-trainset</li>
-<li>
-<code>max_rounds</code>: Bootstrapping iterations</li>
-<li>
-<code>metric</code>: Evaluation metric (defaults to exact
-match)</li>
-</ul>
+<p><code>BootstrapFewShot</code> runs the module on training rows and
+keeps the outputs that pass the metric as demos. Those demos are the
+model’s own complete outputs, including fields your data does not label,
+such as the reasoning of a <code><a href="../reference/chain_of_thought.html">chain_of_thought()</a></code> module.</p>
+<p>The first <code>max_labeled_demos</code> rows (16 by default) become
+labeled demos as they are, and only the rows after them go to the model.
+A training set of 16 rows or fewer therefore makes no model calls with
+the default settings: every row becomes a labeled demo. Lower
+<code>max_labeled_demos</code> to bootstrap on a small set:</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">bootstrapped</span> <span class="op">&lt;-</span> <span class="va">triage</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="../reference/BootstrapFewShot.html">BootstrapFewShot</a></span><span class="op">(</span></span>
+<span>      metric <span class="op">=</span> <span class="va">metric</span>,</span>
+<span>      max_bootstrapped_demos <span class="op">=</span> <span class="fl">4L</span>,</span>
+<span>      max_labeled_demos <span class="op">=</span> <span class="fl">2L</span></span>
+<span>    <span class="op">)</span>,</span>
+<span>    <span class="va">trainset</span>,</span>
+<span>    .llm <span class="op">=</span> <span class="va">llm</span></span>
+<span>  <span class="op">)</span></span></code></pre></div>
+<p>Rows are tried in order until <code>max_bootstrapped_demos</code>
+outputs have passed. An output passes when its score reaches
+<code>metric_threshold</code>, or, with no threshold, when it is above
+zero. <code>max_rounds</code> repeats the pass with the demos found so
+far. For a pipeline, <code>BootstrapFewShot</code> runs the whole
+program on each row, scores the final output, and takes demos for every
+step from the runs that pass (see <a href="chaining-modules.html">Chain
+modules into pipelines</a>).</p>
 </div>
 <div class="section level2">
 <h2 id="bootstrapfewshotwithrandomsearch">BootstrapFewShotWithRandomSearch<a class="anchor" aria-label="anchor" href="#bootstrapfewshotwithrandomsearch"></a>
 </h2>
-<p>Combines bootstrapping with random search over configurations.
-Produces multiple candidate programs and selects the best.</p>
-<p><strong>Best for:</strong> When you want to explore different demo
-combinations and find the optimal configuration.</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">tp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/BootstrapFewShotWithRandomSearch.html">BootstrapFewShotWithRandomSearch</a></span><span class="op">(</span></span>
-<span>  metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"answer"</span><span class="op">)</span>,</span>
-<span>  max_bootstrapped_demos <span class="op">=</span> <span class="fl">4L</span>,</span>
-<span>  max_labeled_demos <span class="op">=</span> <span class="fl">2L</span>,</span>
-<span>  num_candidate_programs <span class="op">=</span> <span class="fl">8L</span>,</span>
-<span>  num_threads <span class="op">=</span> <span class="fl">4L</span>,</span>
-<span>  seed <span class="op">=</span> <span class="fl">42L</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">qa_module</span>, <span class="va">tp</span>, <span class="va">trainset</span>, valset <span class="op">=</span> <span class="va">valset</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Access the best score</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">compiled</span><span class="op">)</span><span class="op">$</span><span class="va">best_score</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Access candidate programs (list of program metadata)</span></span>
-<span><span class="va">candidates</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">compiled</span><span class="op">)</span><span class="op">$</span><span class="va">extensions</span><span class="op">$</span><span class="va">bootstrap_few_shot_with_random_search</span><span class="op">$</span><span class="va">candidate_programs</span></span></code></pre></div>
-<p><strong>Parameters:</strong></p>
-<ul>
-<li>
-<code>num_candidate_programs</code>: Number of configurations to
-try</li>
-<li>
-<code>num_threads</code>: Parallel evaluation threads</li>
-<li>All <code>BootstrapFewShot</code> parameters are inherited</li>
-</ul>
-<p><strong>Tip:</strong> Use <code><a href="../reference/ensemble_module.html">ensemble()</a></code> to combine the best
-optimized module with other strategies:</p>
+<p>This optimizer builds <code>num_candidate_programs</code> candidates
+(16 by default): the uncompiled program, a program with labeled demos
+only, and several <code>BootstrapFewShot</code> runs. It scores each on
+<code>valset</code>, which is required, and returns the best.</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Compile with different strategies and ensemble them</span></span>
-<span><span class="va">mod1</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">qa_module</span>, <span class="fu"><a href="../reference/BootstrapFewShotWithRandomSearch.html">BootstrapFewShotWithRandomSearch</a></span><span class="op">(</span><span class="op">)</span>, <span class="va">trainset</span>, valset <span class="op">=</span> <span class="va">valset</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
-<span><span class="va">mod2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">qa_module</span>, <span class="fu"><a href="../reference/COPRO.html">COPRO</a></span><span class="op">(</span><span class="op">)</span>, <span class="va">trainset</span>, valset <span class="op">=</span> <span class="va">valset</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
-<span><span class="va">mod3</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">qa_module</span>, <span class="fu"><a href="../reference/LabeledFewShot.html">LabeledFewShot</a></span><span class="op">(</span>k <span class="op">=</span> <span class="fl">3L</span><span class="op">)</span>, <span class="va">trainset</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">searched</span> <span class="op">&lt;-</span> <span class="va">triage</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="../reference/BootstrapFewShotWithRandomSearch.html">BootstrapFewShotWithRandomSearch</a></span><span class="op">(</span></span>
+<span>      metric <span class="op">=</span> <span class="va">metric</span>,</span>
+<span>      num_candidate_programs <span class="op">=</span> <span class="fl">8L</span>,</span>
+<span>      max_labeled_demos <span class="op">=</span> <span class="fl">4L</span>,</span>
+<span>      stop_at_score <span class="op">=</span> <span class="fl">0.95</span></span>
+<span>    <span class="op">)</span>,</span>
+<span>    <span class="va">trainset</span>,</span>
+<span>    valset <span class="op">=</span> <span class="va">valset</span>,</span>
+<span>    .llm <span class="op">=</span> <span class="va">llm</span></span>
+<span>  <span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Ensemble with weights from validation scores</span></span>
-<span><span class="va">ens</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ensemble_module.html">ensemble</a></span><span class="op">(</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">mod1</span>, <span class="va">mod2</span>, <span class="va">mod3</span><span class="op">)</span>,</span>
-<span>  reduce_fn <span class="op">=</span> <span class="fu"><a href="../reference/reduce_weighted_vote.html">reduce_weighted_vote</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>  weights <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.90</span>, <span class="fl">0.85</span>, <span class="fl">0.80</span><span class="op">)</span>  <span class="co"># Validation scores</span></span>
-<span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">searched</span><span class="op">)</span><span class="op">$</span><span class="va">trials</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"name"</span>, <span class="st">"score"</span><span class="op">)</span><span class="op">]</span></span></code></pre></div>
+<p><code>stop_at_score</code> ends the search once a candidate reaches
+that score. <code>num_threads</code> sets how many validation rows are
+scored at the same time for each candidate; the candidates are still
+scored one after another.</p>
 </div>
 <div class="section level2">
 <h2 id="knnfewshot">KNNFewShot<a class="anchor" aria-label="anchor" href="#knnfewshot"></a>
 </h2>
-<p>Selects demonstrations dynamically based on similarity to the input
-query. Uses embeddings to find the most relevant examples.</p>
-<p><strong>Best for:</strong> Tasks where example relevance varies
-significantly by query.</p>
+<p><code>KNNFewShot</code> does not fix the demos at compile time. It
+embeds every training row once, then at run time embeds each input and
+uses the <code>k</code> most similar training rows (by cosine
+similarity) as that call’s demos.</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">tp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/KNNFewShot.html">KNNFewShot</a></span><span class="op">(</span></span>
-<span>  k <span class="op">=</span> <span class="fl">3L</span>,</span>
-<span>  vectorizer <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">texts</span><span class="op">)</span> <span class="op">{</span></span>
-<span>    <span class="co"># Use any embedding function</span></span>
-<span>    <span class="fu">ragnar</span><span class="fu">::</span><span class="fu">embed_openai</span><span class="op">(</span><span class="va">texts</span><span class="op">)</span></span>
-<span>  <span class="op">}</span>,</span>
-<span>  cache_embeddings <span class="op">=</span> <span class="cn">TRUE</span>  <span class="co"># Cache embeddings for efficiency</span></span>
-<span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">knn</span> <span class="op">&lt;-</span> <span class="va">triage</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="../reference/KNNFewShot.html">KNNFewShot</a></span><span class="op">(</span></span>
+<span>      k <span class="op">=</span> <span class="fl">3L</span>,</span>
+<span>      vectorizer <span class="op">=</span> <span class="fu">ragnar</span><span class="fu">::</span><span class="fu">embed_openai</span><span class="op">(</span>model <span class="op">=</span> <span class="st">"text-embedding-3-small"</span><span class="op">)</span></span>
+<span>    <span class="op">)</span>,</span>
+<span>    <span class="va">trainset</span></span>
+<span>  <span class="op">)</span></span>
 <span></span>
-<span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">qa_module</span>, <span class="va">tp</span>, <span class="va">trainset</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Each query now gets personalized demos based on similarity</span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">compiled</span>, question <span class="op">=</span> <span class="st">"What is DNA made of?"</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span></code></pre></div>
-<p><strong>Parameters:</strong></p>
-<ul>
-<li>
-<code>k</code>: Number of nearest neighbors to use as demos</li>
-<li>
-<code>vectorizer</code>: Function that converts text to
-embeddings</li>
-<li>
-<code>cache_embeddings</code>: Boolean to enable embedding
-caching</li>
-<li>
-<code>input_text</code>: Which input field to use for similarity
-(default: first input)</li>
-</ul>
+<span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">knn</span>, ticket <span class="op">=</span> <span class="st">"My card was charged twice this month."</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span></code></pre></div>
+<p><code>vectorizer</code> is any function that turns a character vector
+into a numeric matrix with one row per string. <code>input_text</code>
+is an optional function that turns a row into the text to embed; by
+default it pastes the signature’s input columns together. Compiling
+makes no model calls, but every <code><a href="../reference/run.html">run()</a></code> makes one embedding
+call before the model call.</p>
 </div>
 <div class="section level2">
-<h2 id="copro-coordinate-prompt-optimization">COPRO (Coordinate Prompt Optimization)<a class="anchor" aria-label="anchor" href="#copro-coordinate-prompt-optimization"></a>
+<h2 id="gridsearchteleprompter">GridSearchTeleprompter<a class="anchor" aria-label="anchor" href="#gridsearchteleprompter"></a>
 </h2>
-<p>Optimizes instructions through coordinate ascent. Generates and tests
-instruction variants to find the best wording.</p>
-<p><strong>Best for:</strong> When your task benefits from better
-instructions rather than more demos.</p>
+<p><code>GridSearchTeleprompter</code> scores each row of
+<code>variants</code> and keeps the best. <code>id</code> is required.
+An <code>instructions</code> column replaces the module’s instructions,
+<code>instructions_suffix</code> is appended to them, and
+<code>template</code> replaces the prompt template. It also attaches
+<code>k</code> demos (2 by default) sampled from
+<code>trainset</code>.</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Optionally use a different model for instruction generation</span></span>
-<span><span class="va">prompt_llm</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-4o"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">tp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/COPRO.html">COPRO</a></span><span class="op">(</span></span>
-<span>  metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"answer"</span><span class="op">)</span>,</span>
-<span>  prompt_model <span class="op">=</span> <span class="va">prompt_llm</span>,  <span class="co"># Model to generate instruction candidates</span></span>
-<span>  breadth <span class="op">=</span> <span class="fl">5L</span>,               <span class="co"># Candidates per iteration</span></span>
-<span>  depth <span class="op">=</span> <span class="fl">3L</span>,                 <span class="co"># Number of iterations</span></span>
-<span>  init_temperature <span class="op">=</span> <span class="fl">1.4</span>,</span>
-<span>  seed <span class="op">=</span> <span class="fl">42L</span></span>
+<code class="sourceCode R"><span><span class="va">variants</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  id <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"terse"</span>, <span class="st">"rules"</span><span class="op">)</span>,</span>
+<span>  instructions <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>    <span class="st">"Route each support ticket to one team. Answer with the team only."</span>,</span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span></span>
+<span>      <span class="st">"Route each support ticket to one team."</span>,</span>
+<span>      <span class="st">"Charges and refunds go to billing, lost or damaged parcels to"</span>,</span>
+<span>      <span class="st">"shipping, and errors or crashes to technical."</span></span>
+<span>    <span class="op">)</span></span>
+<span>  <span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">qa_module</span>, <span class="va">tp</span>, <span class="va">trainset</span>, valset <span class="op">=</span> <span class="va">valset</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
+<span><span class="va">gridded</span> <span class="op">&lt;-</span> <span class="va">triage</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="../reference/GridSearchTeleprompter.html">GridSearchTeleprompter</a></span><span class="op">(</span>variants <span class="op">=</span> <span class="va">variants</span>, metric <span class="op">=</span> <span class="va">metric</span>, k <span class="op">=</span> <span class="fl">2L</span><span class="op">)</span>,</span>
+<span>    <span class="va">trainset</span>,</span>
+<span>    valset <span class="op">=</span> <span class="va">valset</span>,</span>
+<span>    .llm <span class="op">=</span> <span class="va">llm</span></span>
+<span>  <span class="op">)</span></span></code></pre></div>
+<p>Demos and, without a <code>valset</code>, the scoring rows are drawn
+with R’s global random number generator, hence the
+<code><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed()</a></code>. Without a <code>valset</code>, the variants are
+scored on a random fifth of <code>trainset</code> (rounded up, at most
+<code>eval_sample_size</code> rows) and the demos come from the
+rest.</p>
+</div>
+<div class="section level2">
+<h2 id="copro">COPRO<a class="anchor" aria-label="anchor" href="#copro"></a>
+</h2>
+<p><code>COPRO</code> rewrites the instructions. It first runs the
+module on every training row to find failures. Each of
+<code>depth</code> rounds then asks <code>prompt_model</code> (by
+default the task chat) for <code>breadth</code> new versions of the
+current best instructions, showing it up to three failed rows. Each
+version is scored on <code>valset</code>, and the best one replaces the
+current instructions if it scores higher. After each round that improves
+the score, the training rows are checked again for failures.</p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">rewritten</span> <span class="op">&lt;-</span> <span class="va">triage</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="../reference/COPRO.html">COPRO</a></span><span class="op">(</span></span>
+<span>      metric <span class="op">=</span> <span class="va">metric</span>,</span>
+<span>      prompt_model <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-luna"</span><span class="op">)</span>,</span>
+<span>      breadth <span class="op">=</span> <span class="fl">5L</span>,</span>
+<span>      depth <span class="op">=</span> <span class="fl">2L</span></span>
+<span>    <span class="op">)</span>,</span>
+<span>    <span class="va">trainset</span>,</span>
+<span>    valset <span class="op">=</span> <span class="va">valset</span>,</span>
+<span>    .llm <span class="op">=</span> <span class="va">llm</span></span>
+<span>  <span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Check the optimized instructions</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">compiled</span><span class="op">$</span><span class="va">signature</span><span class="op">@</span><span class="va">instructions</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># View optimization history</span></span>
-<span><span class="va">history</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">compiled</span><span class="op">)</span><span class="op">$</span><span class="va">extensions</span><span class="op">$</span><span class="va">copro</span><span class="op">$</span><span class="va">history</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">history</span><span class="op">)</span></span></code></pre></div>
-<p><strong>Parameters:</strong></p>
-<ul>
-<li>
-<code>breadth</code>: Number of instruction candidates per
-iteration</li>
-<li>
-<code>depth</code>: Number of coordinate ascent iterations</li>
-<li>
-<code>prompt_model</code>: Optional ellmer Chat for generating
-instructions; <code>NULL</code> uses the task Chat supplied through
-<code>.llm</code>
-</li>
-<li>
-<code>init_temperature</code>: Temperature for instruction
-generation</li>
-</ul>
-<p><strong>How it works:</strong></p>
-<ol style="list-style-type: decimal">
-<li>Starts with current instructions as baseline</li>
-<li>Generates <code>breadth</code> instruction variants</li>
-<li>Evaluates each on validation set</li>
-<li>Keeps the best, uses failed examples to improve</li>
-<li>Repeats for <code>depth</code> iterations</li>
-</ol>
+<span><span class="va">rewritten</span><span class="op">$</span><span class="va">signature</span><span class="op">@</span><span class="va">instructions</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="miprov2">MIPROv2<a class="anchor" aria-label="anchor" href="#miprov2"></a>
 </h2>
-<p>Multi-prompt Instruction Proposal Optimizer. Jointly optimizes
-instructions and demonstrations using Bayesian optimization.</p>
-<p><strong>Best for:</strong> Maximum optimization when you have
-sufficient data and compute budget.</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">tp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/MIPROv2.html">MIPROv2</a></span><span class="op">(</span></span>
-<span>  metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"answer"</span><span class="op">)</span>,</span>
-<span>  auto <span class="op">=</span> <span class="st">"medium"</span>,           <span class="co"># Preset: "light", "medium", or "heavy"</span></span>
-<span>  num_candidates <span class="op">=</span> <span class="fl">10L</span>,      <span class="co"># Optional: override instruction candidates</span></span>
-<span>  seed <span class="op">=</span> <span class="fl">42L</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">qa_module</span>, <span class="va">tp</span>, <span class="va">trainset</span>, valset <span class="op">=</span> <span class="va">valset</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># MIPROv2 optimizes both instructions and demos</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">compiled</span><span class="op">$</span><span class="va">signature</span><span class="op">@</span><span class="va">instructions</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">compiled</span><span class="op">$</span><span class="va">demos</span><span class="op">)</span></span></code></pre></div>
-<p><strong>Parameters:</strong></p>
-<ul>
-<li>
-<code>auto</code>: Preset level - <code>"light"</code>,
-<code>"medium"</code>, or <code>"heavy"</code>
-</li>
-<li>
-<code>num_candidates</code>: Override instruction candidates to
-generate</li>
-<li>
-<code>task_model</code>: Optional ellmer Chat for task evaluation;
-defaults to <code>.llm</code>
-</li>
-<li>
-<code>max_bootstrapped_demos</code>, <code>max_labeled_demos</code>:
-Demo limits</li>
-<li>Supports <code>log_dir</code> for detailed trial logging</li>
-</ul>
-<p><strong>Presets:</strong></p>
+<p><code>MIPROv2</code> searches over combinations of a demo set and an
+instruction variant. The demo sets are one labeled set plus several
+bootstrapped sets. The instruction variants are the original
+instructions plus versions that append a short summary of the input and
+output fields and one of five fixed tips, such as “Be concise and
+accurate.” No model writes new instructions.</p>
+<p>Each trial scores one combination. A UCB1 bandit picks it: untried
+combinations first, then those with a high mean score or few trials.
+Most trials score a small random batch of training rows; every few
+trials, a full pass over <code>valset</code> checks the current pick,
+and the best fully scored combination wins.</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Light preset (faster, less thorough)</span></span>
-<span><span class="va">tp_light</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/MIPROv2.html">MIPROv2</a></span><span class="op">(</span></span>
-<span>  metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>  auto <span class="op">=</span> <span class="st">"light"</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Heavy preset (slower, more thorough)</span></span>
-<span><span class="va">tp_heavy</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/MIPROv2.html">MIPROv2</a></span><span class="op">(</span></span>
-<span>  metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>  auto <span class="op">=</span> <span class="st">"heavy"</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level2">
-<h2 id="simba-self-improving-model-based-augmentation">SIMBA (Self-Improving Model-Based Augmentation)<a class="anchor" aria-label="anchor" href="#simba-self-improving-model-based-augmentation"></a>
-</h2>
-<p>Focuses optimization on hard examples that the model struggles
-with.</p>
-<p><strong>Best for:</strong> When your model performs well on average
-but fails on edge cases.</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">tp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/SIMBA.html">SIMBA</a></span><span class="op">(</span></span>
-<span>  metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"answer"</span><span class="op">)</span>,</span>
-<span>  bsize <span class="op">=</span> <span class="fl">32L</span>,            <span class="co"># Mini-batch size for evaluation</span></span>
-<span>  num_candidates <span class="op">=</span> <span class="fl">6L</span>,    <span class="co"># Candidate demos per step</span></span>
-<span>  max_steps <span class="op">=</span> <span class="fl">8L</span>,         <span class="co"># Optimization iterations</span></span>
-<span>  max_demos <span class="op">=</span> <span class="fl">4L</span>,         <span class="co"># Maximum demos to include</span></span>
-<span>  seed <span class="op">=</span> <span class="fl">42L</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">qa_module</span>, <span class="va">tp</span>, <span class="va">trainset</span>, valset <span class="op">=</span> <span class="va">valset</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># SIMBA iteratively improves on hard examples</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">compiled</span><span class="op">$</span><span class="va">demos</span><span class="op">)</span></span></code></pre></div>
-<p><strong>Parameters:</strong></p>
-<ul>
-<li>
-<code>bsize</code>: Mini-batch size for evaluation</li>
-<li>
-<code>num_candidates</code>: Number of demo candidates per step</li>
-<li>
-<code>max_steps</code>: Number of optimization iterations</li>
-<li>
-<code>max_demos</code>: Maximum demonstrations to include</li>
-<li>
-<code>prompt_model</code>: Optional ellmer Chat for reflection;
-<code>NULL</code> uses SIMBA’s deterministic example-based rule
-fallback</li>
-</ul>
-<p><strong>How it works:</strong></p>
-<ol style="list-style-type: decimal">
-<li>Identifies examples where the model fails</li>
-<li>Generates targeted demos for those cases</li>
-<li>Re-evaluates and repeats</li>
-<li>Builds a demo set that covers edge cases</li>
-</ol>
-</div>
-<div class="section level2">
-<h2 id="when-the-implementation-is-part-of-the-search">When the implementation is part of the search<a class="anchor" aria-label="anchor" href="#when-the-implementation-is-part-of-the-search"></a>
-</h2>
-<p>Most teleprompters keep module structure fixed. GEPA can also
-optimize a <code><a href="../reference/flex.html">flex()</a></code> module’s complete
-<code>module_src</code>: the choice and order of predictors, or in
-executable mode, deterministic R branches and selected tool calls.
-Invalid candidates are rejected before selection.</p>
-<p>Use this only when implementation strategy is genuinely unresolved.
-See <a href="flex-optimization.html">Flex: Optimize the Whole
-Program</a> for a complete before-and-after example and the runtime
-boundary.</p>
-</div>
-<div class="section level2">
-<h2 id="gepa-reflective-prompt-evolution">GEPA (Reflective Prompt Evolution)<a class="anchor" aria-label="anchor" href="#gepa-reflective-prompt-evolution"></a>
-</h2>
-<p>Reflective instruction and Flex-source optimization with failure
-feedback, validation-example winner frontiers, and Pareto selection for
-multiple objectives. dsprrr’s adapted GEPA uses a fixed
-population/generations loop; it does not expose arbitrary package state
-or unrestricted code execution.</p>
-<p><strong>Best for:</strong> Production systems where you need to
-balance accuracy against token usage or latency.</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Single-objective GEPA</span></span>
-<span><span class="va">tp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/GEPA.html">GEPA</a></span><span class="op">(</span></span>
-<span>  metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"answer"</span><span class="op">)</span>,</span>
-<span>  population_size <span class="op">=</span> <span class="fl">20L</span>,</span>
-<span>  generations <span class="op">=</span> <span class="fl">10L</span>,</span>
-<span>  mutation_rate <span class="op">=</span> <span class="fl">0.1</span>,</span>
-<span>  crossover_rate <span class="op">=</span> <span class="fl">0.7</span>,</span>
-<span>  seed <span class="op">=</span> <span class="fl">42L</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Multi-objective GEPA with named metrics</span></span>
-<span><span class="va">tp_multi</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/GEPA.html">GEPA</a></span><span class="op">(</span></span>
-<span>  metrics <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    quality <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"answer"</span><span class="op">)</span>,</span>
-<span>    brevity <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">pred</span>, <span class="va">expected</span><span class="op">)</span> <span class="fl">1</span> <span class="op">/</span> <span class="op">(</span><span class="fl">1</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/base/nchar.html" class="external-link">nchar</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">as.character</a></span><span class="op">(</span><span class="va">pred</span><span class="op">$</span><span class="va">answer</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
-<span>  <span class="op">)</span>,</span>
-<span>  population_size <span class="op">=</span> <span class="fl">20L</span>,</span>
-<span>  generations <span class="op">=</span> <span class="fl">10L</span>,</span>
-<span>  selection <span class="op">=</span> <span class="st">"pareto"</span>,  <span class="co"># Use Pareto selection for multi-objective</span></span>
-<span>  seed <span class="op">=</span> <span class="fl">42L</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">qa_module</span>, <span class="va">tp_multi</span>, <span class="va">trainset</span>, valset <span class="op">=</span> <span class="va">valset</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># GEPA returns Pareto-optimal solutions for multi-objective</span></span>
-<span><span class="va">pareto</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">compiled</span><span class="op">)</span><span class="op">$</span><span class="va">extensions</span><span class="op">$</span><span class="va">gepa</span><span class="op">$</span><span class="va">objective_pareto_front</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">pareto</span><span class="op">)</span></span></code></pre></div>
-<p>When <code>valset</code> is supplied, GEPA keeps the two roles
-separate: <code>trainset</code> provides discovery failures and
-reflection feedback, while <code>valset</code> supplies aggregate
-selection scores, validation-example winners, and retained best outputs.
-Pareto parent selection preserves both validation-example winners and
-multi-objective Pareto candidates.</p>
-<p><strong>Parameters:</strong></p>
-<ul>
-<li>
-<code>metric</code>: Single metric function (for
-single-objective)</li>
-<li>
-<code>metrics</code>: Named list of metric functions (for
-multi-objective)</li>
-<li>
-<code>population_size</code>: Number of candidates per
-generation</li>
-<li>
-<code>generations</code>: Evolution iterations</li>
-<li>
-<code>selection</code>: Selection strategy
-(<code>"current_best"</code> or <code>"pareto"</code>)</li>
-<li>
-<code>mutation_rate</code>: Probability of reflection-guided
-component mutation</li>
-<li>
-<code>crossover_rate</code>: Probability of recombining complete
-parent component values</li>
-<li>
-<code>component_selector</code>: <code>"round_robin"</code>,
-budget-atomic <code>"all"</code>, or a custom component-ID selector</li>
-<li>
-<code>max_merge_invocations</code>: Cap on attempted lineage
-merges</li>
-</ul>
-<p>When a program contains Flex leaves, GEPA candidates include complete
-<code>module_src</code> values as well as ordinary instructions. Invalid
-source proposals remain auditable but non-selectable. Pareto selection
-is whole-program, not an implementation of DSPy’s per-component
-frontier. The <a href="flex-optimization.html">Flex guide</a> shows how
-to evaluate those candidates on both answer quality and predictor
-calls.</p>
-</div>
-<div class="section level2">
-<h2 id="omni">Omni<a class="anchor" aria-label="anchor" href="#omni"></a>
-</h2>
-<p>Explores several teleprompters independently, compares their outputs
-with one validation metric, and runs a fresh continuation optimizer from
-the winner. The seed remains eligible throughout, so a regressing branch
-cannot make the result worse on the comparison set.</p>
-<p><strong>Best for:</strong> Tasks where several optimizer families are
-plausible and you can give each one a comparable budget. This design is
-inspired by the <a href="https://gepa-ai.github.io/gepa/blog/2026/07/22/optimize-anything-omni/" class="external-link">Omni
-meta-optimizer</a> from the <a href="https://github.com/gepa-ai/gepa" class="external-link">GEPA project</a>. GEPA’s
-published Frontier-CS gains do not establish the same gain for dsprrr
-modules; benchmark your own task and budget.</p>
-<p>Omni’s common comparison pass re-evaluates the seed, every explorer
-result, and the continuation result on <code>valset</code>. Those calls
-are additional to each teleprompter’s native budget and should be
-included in your experiment budget.</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">metric</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"answer"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">tp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/Omni.html">Omni</a></span><span class="op">(</span></span>
-<span>  metric <span class="op">=</span> <span class="va">metric</span>,</span>
-<span>  explorers <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    bootstrap <span class="op">=</span> <span class="fu"><a href="../reference/BootstrapFewShotWithRandomSearch.html">BootstrapFewShotWithRandomSearch</a></span><span class="op">(</span></span>
-<span>      metric <span class="op">=</span> <span class="va">metric</span>,</span>
-<span>      num_candidate_programs <span class="op">=</span> <span class="fl">8L</span></span>
-<span>    <span class="op">)</span>,</span>
-<span>    copro <span class="op">=</span> <span class="fu"><a href="../reference/COPRO.html">COPRO</a></span><span class="op">(</span>metric <span class="op">=</span> <span class="va">metric</span>, breadth <span class="op">=</span> <span class="fl">8L</span>, depth <span class="op">=</span> <span class="fl">2L</span><span class="op">)</span>,</span>
-<span>    gepa <span class="op">=</span> <span class="fu"><a href="../reference/GEPA.html">GEPA</a></span><span class="op">(</span></span>
-<span>      metric <span class="op">=</span> <span class="va">metric</span>,</span>
-<span>      population_size <span class="op">=</span> <span class="fl">8L</span>,</span>
-<span>      generations <span class="op">=</span> <span class="fl">3L</span></span>
-<span>    <span class="op">)</span></span>
-<span>  <span class="op">)</span>,</span>
-<span>  continuation <span class="op">=</span> <span class="fu"><a href="../reference/GEPA.html">GEPA</a></span><span class="op">(</span></span>
-<span>    metric <span class="op">=</span> <span class="va">metric</span>,</span>
-<span>    population_size <span class="op">=</span> <span class="fl">8L</span>,</span>
-<span>    generations <span class="op">=</span> <span class="fl">3L</span></span>
-<span>  <span class="op">)</span>,</span>
-<span>  seed <span class="op">=</span> <span class="fl">42</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">qa_module</span>, <span class="va">tp</span>, <span class="va">trainset</span>, valset <span class="op">=</span> <span class="va">valset</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Every branch was re-scored with `metric` on the same validation rows.</span></span>
-<span><span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">compiled</span><span class="op">)</span><span class="op">$</span><span class="va">extensions</span><span class="op">$</span><span class="va">omni</span><span class="op">$</span><span class="va">candidate_programs</span></span></code></pre></div>
-<p>Set <code>parallel = TRUE</code> to run the exploration branches with
-mirai. Parallel exploration requires <code>.llm = NULL</code>, because
-live ellmer chat objects are not safe to serialize across worker
-processes. Each worker creates its own chat from
-<code>OPENAI_API_KEY</code>, <code>ANTHROPIC_API_KEY</code>, or
-<code>GOOGLE_API_KEY</code>; a session-only chat configured with
-<code><a href="../reference/set_default_chat.html">set_default_chat()</a></code> is not visible to the workers.</p>
-<p>See <a href="omni-meta-optimization.html">Composing Optimizers with
-Omni</a> for the full composition contract, matched-budget guidance,
-candidate provenance, failure behavior, and differences from the GEPA
-implementation that inspired it.</p>
-</div>
-<div class="section level2">
-<h2 id="autoresearch-and-meta-harness">AutoResearch and Meta-Harness<a class="anchor" aria-label="anchor" href="#autoresearch-and-meta-harness"></a>
-</h2>
-<p>These agentic teleprompters jointly edit instructions and templates
-across optimizable module-graph leaves. <code><a href="../reference/AutoResearch.html">AutoResearch()</a></code>
-keeps one research session alive and lets it choose sandbox, evaluate,
-or finish actions. <code><a href="../reference/MetaHarness.html">MetaHarness()</a></code> starts a fresh proposer
-for each iteration and keeps candidate selection in a trusted R outer
-loop.</p>
-<p>Both require an OS-sandboxed runner by default:</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">runner</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mcp_repl_runner.html">mcp_repl_runner</a></span><span class="op">(</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">tp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/MetaHarness.html">MetaHarness</a></span><span class="op">(</span></span>
-<span>  metric <span class="op">=</span> <span class="va">metric</span>,</span>
-<span>  max_iterations <span class="op">=</span> <span class="fl">6L</span>,</span>
-<span>  max_candidates_per_iteration <span class="op">=</span> <span class="fl">3L</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span></span>
-<span>  <span class="va">qa_module</span>,</span>
-<span>  <span class="va">tp</span>,</span>
-<span>  <span class="va">trainset</span>,</span>
-<span>  valset <span class="op">=</span> <span class="va">valset</span>,</span>
-<span>  .llm <span class="op">=</span> <span class="va">task_chat</span>,</span>
-<span>  .agent_llm <span class="op">=</span> <span class="va">proposer_chat</span>,</span>
-<span>  runner <span class="op">=</span> <span class="va">runner</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p>They use the shared optimizer ledger, preserve candidate lineage and
-per-example feedback, return the best partial program under budget
-exhaustion, and support deterministic checkpoint resume. See <a href="agentic-optimization-harnesses.html">Agentic Optimization with
-AutoResearch and Meta-Harness</a> for the sandbox, budget, provenance,
-and composition contracts.</p>
-</div>
-<div class="section level2">
-<h2 id="ensemble">Ensemble<a class="anchor" aria-label="anchor" href="#ensemble"></a>
-</h2>
-<p>Combines multiple compiled modules using voting or aggregation
-strategies.</p>
-<p><strong>Best for:</strong> Maximum robustness by combining diverse
-optimization strategies.</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># First, compile modules with different strategies</span></span>
-<span><span class="va">mod_bootstrap</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">qa_module</span>, <span class="fu"><a href="../reference/BootstrapFewShot.html">BootstrapFewShot</a></span><span class="op">(</span><span class="op">)</span>, <span class="va">trainset</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
-<span><span class="va">mod_copro</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">qa_module</span>, <span class="fu"><a href="../reference/COPRO.html">COPRO</a></span><span class="op">(</span><span class="op">)</span>, <span class="va">trainset</span>, valset <span class="op">=</span> <span class="va">valset</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
-<span><span class="va">mod_knn</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">qa_module</span>, <span class="fu"><a href="../reference/KNNFewShot.html">KNNFewShot</a></span><span class="op">(</span>k <span class="op">=</span> <span class="fl">3L</span><span class="op">)</span>, <span class="va">trainset</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Combine with ensemble</span></span>
-<span><span class="va">ens</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ensemble_module.html">ensemble</a></span><span class="op">(</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">mod_bootstrap</span>, <span class="va">mod_copro</span>, <span class="va">mod_knn</span><span class="op">)</span>,</span>
-<span>  reduce_fn <span class="op">=</span> <span class="fu"><a href="../reference/reduce_majority.html">reduce_majority</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Or use validation scores as weights</span></span>
-<span><span class="va">ens_weighted</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ensemble_module.html">ensemble</a></span><span class="op">(</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">mod_bootstrap</span>, <span class="va">mod_copro</span>, <span class="va">mod_knn</span><span class="op">)</span>,</span>
-<span>  reduce_fn <span class="op">=</span> <span class="fu"><a href="../reference/reduce_weighted_vote.html">reduce_weighted_vote</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>  weights <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.85</span>, <span class="fl">0.90</span>, <span class="fl">0.82</span><span class="op">)</span>  <span class="co"># Validation scores</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Run the ensemble</span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">ens</span>, question <span class="op">=</span> <span class="st">"What is photosynthesis?"</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span></code></pre></div>
-<div class="section level3">
-<h3 id="reduce-functions">Reduce Functions<a class="anchor" aria-label="anchor" href="#reduce-functions"></a>
-</h3>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Majority voting (default)</span></span>
-<span><span class="fu"><a href="../reference/reduce_majority.html">reduce_majority</a></span><span class="op">(</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Weighted voting using module weights</span></span>
-<span><span class="fu"><a href="../reference/reduce_weighted_vote.html">reduce_weighted_vote</a></span><span class="op">(</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Just take the first successful output</span></span>
-<span><span class="fu"><a href="../reference/reduce_first.html">reduce_first</a></span><span class="op">(</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Score outputs with a metric</span></span>
-<span><span class="fu"><a href="../reference/reduce_best_by_metric.html">reduce_best_by_metric</a></span><span class="op">(</span></span>
-<span>  metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_f1.html">metric_f1</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"answer"</span><span class="op">)</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-</div>
-</div>
-<div class="section level2">
-<h2 id="tracking-and-logging">Tracking and Logging<a class="anchor" aria-label="anchor" href="#tracking-and-logging"></a>
-</h2>
-<p>All optimizers support logging for debugging and reproducibility.</p>
-<div class="section level3">
-<h3 id="trial-logging">Trial Logging<a class="anchor" aria-label="anchor" href="#trial-logging"></a>
-</h3>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Enable logging to a directory</span></span>
-<span><span class="va">tp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/BootstrapFewShotWithRandomSearch.html">BootstrapFewShotWithRandomSearch</a></span><span class="op">(</span></span>
-<span>  metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>  log_dir <span class="op">=</span> <span class="st">"optimization_logs/experiment_001"</span>,</span>
-<span>  seed <span class="op">=</span> <span class="fl">42L</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">qa_module</span>, <span class="va">tp</span>, <span class="va">trainset</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Log directory contains:</span></span>
-<span><span class="co"># - trials.jsonl: Authoritative append-only trial journal</span></span>
-<span><span class="co"># - metadata.json: Best-effort derived run summary</span></span>
-<span><span class="co"># - README.md: Best-effort human-readable summary</span></span>
-<span><span class="co"># - best_program.rds: Best-effort safe program artifact</span></span></code></pre></div>
-<p><code>TrialLog</code> treats <code>trials.jsonl</code> as the source
-of truth. It publishes each journal update atomically under an
-interprocess lock, then refreshes <code>metadata.json</code>,
-<code>README.md</code>, and <code>best_program.rds</code> independently.
-A crash or warning during those derived refreshes does not roll back a
-durable journal record, so derived files can temporarily lag. Delete a
-stale derived file and call <code><a href="https://rdrr.io/r/base/save.html" class="external-link">save()</a></code> on the loaded log to
-rebuild it from the journal.</p>
-<p>Persistent log directories are sensitive storage. On Unix, dsprrr
-binds a log to its canonical, effective-user-owned directory identity,
-restricts the directory and files to owner access, rejects writable
-non-sticky ancestors and symbolic-link targets, and verifies
-device/inode identity around reads and atomic publications. Use a local,
-account-private path rather than a shared or network directory. On
-Windows, account filesystem ACLs apply, but base R cannot verify that
-they are owner-only; dsprrr fails closed if the platform cannot provide
-stable device and file identifiers.</p>
-</div>
-<div class="section level3">
-<h3 id="analyzing-trials">Analyzing Trials<a class="anchor" aria-label="anchor" href="#analyzing-trials"></a>
-</h3>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Read trial logs</span></span>
-<span><span class="va">trials</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/read_trials_jsonl.html">read_trials_jsonl</a></span><span class="op">(</span><span class="st">"optimization_logs/experiment_001/trials.jsonl"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Examine trial results</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">trials</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Plot optimization progress</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ggplot2.tidyverse.org" class="external-link">ggplot2</a></span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">trials</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">trial_id</span>, y <span class="op">=</span> <span class="va">score</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">geom_line</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_point.html" class="external-link">geom_point</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Optimization Progress"</span>, x <span class="op">=</span> <span class="st">"Trial"</span>, y <span class="op">=</span> <span class="st">"Score"</span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="accessing-optimizer-state">Accessing Optimizer State<a class="anchor" aria-label="anchor" href="#accessing-optimizer-state"></a>
-</h3>
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># After compilation, inspect the common result</span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">compiled</span><span class="op">)</span></span>
-<span><span class="va">result</span><span class="op">$</span><span class="va">optimizer</span></span>
-<span><span class="va">result</span><span class="op">$</span><span class="va">status</span></span>
-<span><span class="va">result</span><span class="op">$</span><span class="va">best_score</span></span>
-<span><span class="va">result</span><span class="op">$</span><span class="va">trials</span></span>
-<span></span>
-<span><span class="co"># For BootstrapFewShotWithRandomSearch</span></span>
-<span><span class="va">result</span><span class="op">$</span><span class="va">extensions</span><span class="op">$</span><span class="va">bootstrap_few_shot_with_random_search</span><span class="op">$</span><span class="va">candidate_programs</span></span>
-<span></span>
-<span><span class="co"># For COPRO</span></span>
-<span><span class="va">result</span><span class="op">$</span><span class="va">extensions</span><span class="op">$</span><span class="va">copro</span><span class="op">$</span><span class="va">history</span></span>
-<span></span>
-<span><span class="co"># For GEPA (multi-objective)</span></span>
-<span><span class="va">result</span><span class="op">$</span><span class="va">extensions</span><span class="op">$</span><span class="va">gepa</span><span class="op">$</span><span class="va">objective_pareto_front</span></span></code></pre></div>
-</div>
-</div>
-<div class="section level2">
-<h2 id="resource-budgets-and-checkpoints">Resource Budgets and Checkpoints<a class="anchor" aria-label="anchor" href="#resource-budgets-and-checkpoints"></a>
-</h2>
-<p>Use <code><a href="../reference/optimizer_control.html">optimizer_control()</a></code> when an optimization must stay
-inside a hard call, token, cost, or active-time envelope. Pass the
-control object to <code><a href="../reference/compile.html">compile()</a></code>:</p>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">checkpoint</span> <span class="op">&lt;-</span> <span class="st">"optimization_logs/bootstrap-checkpoint.rds"</span></span>
-<span><span class="va">control</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/optimizer_control.html">optimizer_control</a></span><span class="op">(</span></span>
-<span>  max_trials <span class="op">=</span> <span class="fl">50L</span>,</span>
-<span>  max_metric_calls <span class="op">=</span> <span class="fl">500L</span>,</span>
-<span>  max_provider_calls <span class="op">=</span> <span class="fl">500L</span>,</span>
-<span>  max_total_tokens <span class="op">=</span> <span class="fl">250000L</span>,</span>
-<span>  max_cost <span class="op">=</span> <span class="fl">25</span>,</span>
-<span>  max_elapsed_seconds <span class="op">=</span> <span class="fl">3600</span>,</span>
-<span>  checkpoint_path <span class="op">=</span> <span class="va">checkpoint</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">partial</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span></span>
-<span>  <span class="va">qa_module</span>,</span>
-<span>  <span class="fu"><a href="../reference/BootstrapFewShot.html">BootstrapFewShot</a></span><span class="op">(</span>metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"answer"</span><span class="op">)</span><span class="op">)</span>,</span>
-<span>  <span class="va">trainset</span>,</span>
-<span>  .llm <span class="op">=</span> <span class="va">llm</span>,</span>
-<span>  control <span class="op">=</span> <span class="va">control</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">partial</span><span class="op">)</span><span class="op">$</span><span class="va">budget</span></span>
-<span><span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">partial</span><span class="op">)</span><span class="op">$</span><span class="va">stop_reason</span></span></code></pre></div>
-<p>Counters are checked before each bounded work unit. Evaluation is
-subdivided into rows when a metric, provider, token, cost, or time cap
-is active, so the maximum post-call overshoot is the usage of one
-already-started evaluation row. Optimizer-side reflection or instruction
-generation has a bound of one already-started provider request. The
-typed stop reason records the resource, observed value, limit, work-unit
-type, and overshoot.</p>
-<p>Unknown usage is not treated as zero. If provider calls, tokens, or
-cost cannot be verified and the matching finite cap is active, the
-optimizer stops after that work unit and returns its best partial
-program. <code>budget_summary</code> reports known totals and unknown
-counts separately. Elapsed-time budgets use a monotonic active-run
-clock; time spent stopped between checkpointed runs is not charged.</p>
-<div class="section level3">
-<h3 id="resume-support">Resume Support<a class="anchor" aria-label="anchor" href="#resume-support"></a>
-</h3>
-<table class="table">
+<code class="sourceCode R"><span><span class="va">mipro</span> <span class="op">&lt;-</span> <span class="va">triage</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="../reference/MIPROv2.html">MIPROv2</a></span><span class="op">(</span>metric <span class="op">=</span> <span class="va">metric</span>, auto <span class="op">=</span> <span class="st">"light"</span><span class="op">)</span>,</span>
+<span>    <span class="va">trainset</span>,</span>
+<span>    valset <span class="op">=</span> <span class="va">valset</span>,</span>
+<span>    .llm <span class="op">=</span> <span class="va">llm</span></span>
+<span>  <span class="op">)</span></span></code></pre></div>
+<p><code>auto</code> sets the size of the search:</p>
+<table style="width:100%;" class="table">
 <colgroup>
-<col width="27%">
-<col width="36%">
-<col width="36%">
+<col width="16%">
+<col width="16%">
+<col width="16%">
+<col width="16%">
+<col width="16%">
+<col width="16%">
 </colgroup>
 <thead><tr class="header">
-<th>Optimizer</th>
-<th align="right">Budget ledger and best partial</th>
-<th align="right">Deterministic checkpoint resume</th>
+<th><code>auto</code></th>
+<th>Trials</th>
+<th>Rows per batch</th>
+<th>Full pass every</th>
+<th>Demo sets, up to</th>
+<th>Instruction variants</th>
 </tr></thead>
 <tbody>
 <tr class="odd">
 <td>
-<code>BootstrapFewShot</code> (module and pipeline)</td>
-<td align="right">Yes</td>
-<td align="right">Yes, by training row</td>
+<code>"light"</code> (default)</td>
+<td>20</td>
+<td>5</td>
+<td>5 trials</td>
+<td>3</td>
+<td>5</td>
 </tr>
 <tr class="even">
-<td><code>MIPROv2</code></td>
-<td align="right">Yes</td>
-<td align="right">Yes, through demo generation and BO evaluation
-rows</td>
+<td><code>"medium"</code></td>
+<td>50</td>
+<td>10</td>
+<td>10 trials</td>
+<td>5</td>
+<td>6</td>
 </tr>
 <tr class="odd">
-<td><code>AutoResearch</code></td>
-<td align="right">Yes</td>
-<td align="right">Yes, by experiment</td>
-</tr>
-<tr class="even">
-<td><code>MetaHarness</code></td>
-<td align="right">Yes</td>
-<td align="right">Yes, by candidate and iteration</td>
-</tr>
-<tr class="odd">
-<td><code>GEPA</code></td>
-<td align="right">Yes</td>
-<td align="right">Not yet</td>
-</tr>
-<tr class="even">
-<td><code>SIMBA</code></td>
-<td align="right">Yes</td>
-<td align="right">Not yet</td>
-</tr>
-<tr class="odd">
-<td><code>COPRO</code></td>
-<td align="right">Yes</td>
-<td align="right">Not yet</td>
+<td><code>"heavy"</code></td>
+<td>100</td>
+<td>20</td>
+<td>20 trials</td>
+<td>7</td>
+<td>6</td>
 </tr>
 </tbody>
 </table>
-<p>GEPA, SIMBA, and COPRO reject <code>resume = TRUE</code> with a typed
-error rather than silently restarting. Their fine-grained resume work is
-tracked separately.</p>
-<p>Resume Bootstrap or MIPRO by raising or removing a resource limit
-while keeping the original program, data, metric, and search
-settings:</p>
-<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">resumed</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span></span>
-<span>  <span class="va">qa_module</span>,</span>
-<span>  <span class="fu"><a href="../reference/BootstrapFewShot.html">BootstrapFewShot</a></span><span class="op">(</span>metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"answer"</span><span class="op">)</span><span class="op">)</span>,</span>
-<span>  <span class="va">trainset</span>,</span>
-<span>  .llm <span class="op">=</span> <span class="va">llm</span>,</span>
-<span>  control <span class="op">=</span> <span class="fu"><a href="../reference/optimizer_control.html">optimizer_control</a></span><span class="op">(</span></span>
-<span>    max_cost <span class="op">=</span> <span class="fl">50</span>,</span>
-<span>    checkpoint_path <span class="op">=</span> <span class="va">checkpoint</span>,</span>
-<span>    resume <span class="op">=</span> <span class="cn">TRUE</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p>Checkpoints are atomically replaced safe program artifacts, not
-arbitrary serialized runtime environments. They store versioned search
-state, counters, RNG state, lineage, the best partial program, and
-deterministic hashes for the program, data, and metric. A changed
-identity is rejected with a field-level compatibility diff. Register
-custom metrics, model adapters, and other runtime objects with stable
-IDs in <code>checkpoint_registry</code>; opaque or stateful identities
-and credential-like fields are rejected.</p>
-</div>
+<p><code>MIPROv2</code> needs more training rows than
+<code>max_labeled_demos</code> (4 by default); with fewer, it returns
+the module unchanged, with status <code>"partial"</code>.
+<code>num_candidates</code> applies only with <code>auto = NULL</code>,
+where it sets both the number of trials and the number of instruction
+variants (at most six). <code>task_model</code> runs the module during
+the search in place of <code>.llm</code>. For a program with nested
+predictors, such as an RLM, <code>MIPROv2</code> tunes each predictor’s
+instructions and requires <code>max_bootstrapped_demos = 0L</code>.</p>
 </div>
 <div class="section level2">
-<h2 id="reproducibility">Reproducibility<a class="anchor" aria-label="anchor" href="#reproducibility"></a>
+<h2 id="simba">SIMBA<a class="anchor" aria-label="anchor" href="#simba"></a>
 </h2>
-<p>All optimizers support deterministic seeds:</p>
-<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Set seed for reproducibility</span></span>
-<span><span class="va">tp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/BootstrapFewShot.html">BootstrapFewShot</a></span><span class="op">(</span></span>
-<span>  metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>  seed <span class="op">=</span> <span class="fl">42L</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Same seed = same results</span></span>
-<span><span class="va">compiled1</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">qa_module</span>, <span class="va">tp</span>, <span class="va">trainset</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
-<span><span class="va">compiled2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">qa_module</span>, <span class="va">tp</span>, <span class="va">trainset</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Demos will be identical</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="va">compiled1</span><span class="op">$</span><span class="va">demos</span>, <span class="va">compiled2</span><span class="op">$</span><span class="va">demos</span><span class="op">)</span>  <span class="co"># TRUE</span></span></code></pre></div>
+<p><code>SIMBA</code> works from hard examples. Each step samples
+<code>bsize</code> training rows, runs the current module
+<code>num_candidates</code> times on them, and ranks the rows by
+difficulty: a low mean score, or answers that differ between runs. The
+hardest rows, up to <code>max_demos</code>, become labeled demos, and
+<code>prompt_model</code> writes a short rule from them that is appended
+to the instructions. Without <code>prompt_model</code>, the appended
+rule just quotes the hardest row. A step is kept only if it raises the
+score on <code>valset</code>, and the first step that does not ends the
+search.</p>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">hardened</span> <span class="op">&lt;-</span> <span class="va">triage</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="../reference/SIMBA.html">SIMBA</a></span><span class="op">(</span></span>
+<span>      metric <span class="op">=</span> <span class="va">metric</span>,</span>
+<span>      bsize <span class="op">=</span> <span class="fl">16L</span>,</span>
+<span>      num_candidates <span class="op">=</span> <span class="fl">4L</span>,</span>
+<span>      max_steps <span class="op">=</span> <span class="fl">4L</span>,</span>
+<span>      max_demos <span class="op">=</span> <span class="fl">4L</span>,</span>
+<span>      prompt_model <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-luna"</span><span class="op">)</span></span>
+<span>    <span class="op">)</span>,</span>
+<span>    <span class="va">trainset</span>,</span>
+<span>    valset <span class="op">=</span> <span class="va">valset</span>,</span>
+<span>    .llm <span class="op">=</span> <span class="va">llm</span></span>
+<span>  <span class="op">)</span></span></code></pre></div>
+<p>dsprrr’s <code>SIMBA</code> is a simplified adaptation of the DSPy
+optimizer of the same name.</p>
 </div>
 <div class="section level2">
-<h2 id="error-handling">Error Handling<a class="anchor" aria-label="anchor" href="#error-handling"></a>
+<h2 id="gepa">GEPA<a class="anchor" aria-label="anchor" href="#gepa"></a>
 </h2>
-<p>Optimizers gracefully handle LLM errors:</p>
-<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">tp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/BootstrapFewShot.html">BootstrapFewShot</a></span><span class="op">(</span></span>
-<span>  metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>  max_errors <span class="op">=</span> <span class="fl">10L</span>  <span class="co"># Allow up to 10 errors before failing</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Compilation continues despite some failed examples</span></span>
-<span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">qa_module</span>, <span class="va">tp</span>, <span class="va">trainset</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Check how many errors occurred</span></span>
-<span><span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">compiled</span><span class="op">)</span><span class="op">$</span><span class="va">budget</span><span class="op">$</span><span class="va">total_errors</span></span></code></pre></div>
-</div>
-<div class="section level2">
-<h2 id="performance-tips">Performance Tips<a class="anchor" aria-label="anchor" href="#performance-tips"></a>
-</h2>
-<div class="section level3">
-<h3 id="start-simple-then-advance">1. Start Simple, Then Advance<a class="anchor" aria-label="anchor" href="#start-simple-then-advance"></a>
-</h3>
-<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Step 1: Try LabeledFewShot first</span></span>
-<span><span class="va">simple</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">qa_module</span>, <span class="fu"><a href="../reference/LabeledFewShot.html">LabeledFewShot</a></span><span class="op">(</span>k <span class="op">=</span> <span class="fl">3L</span><span class="op">)</span>, <span class="va">trainset</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
-<span><span class="va">simple_score</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span><span class="va">simple</span>, <span class="va">valset</span>, <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span><span class="op">$</span><span class="va">mean_score</span></span>
-<span></span>
-<span><span class="va">best_module</span> <span class="op">&lt;-</span> <span class="va">simple</span></span>
-<span><span class="va">best_score</span> <span class="op">&lt;-</span> <span class="va">simple_score</span></span>
-<span></span>
-<span><span class="co"># Step 2: If not good enough, try bootstrapping</span></span>
-<span><span class="kw">if</span> <span class="op">(</span><span class="va">best_score</span> <span class="op">&lt;</span> <span class="fl">0.8</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="va">bootstrap</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span></span>
-<span>    <span class="va">qa_module</span>,</span>
-<span>    <span class="fu"><a href="../reference/BootstrapFewShot.html">BootstrapFewShot</a></span><span class="op">(</span>metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span>, <span class="va">trainset</span>, .llm <span class="op">=</span> <span class="va">llm</span></span>
-<span>  <span class="op">)</span></span>
-<span>  <span class="va">bootstrap_score</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span><span class="va">bootstrap</span>, <span class="va">valset</span>, <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span><span class="op">$</span><span class="va">mean_score</span></span>
-<span>  <span class="kw">if</span> <span class="op">(</span><span class="va">bootstrap_score</span> <span class="op">&gt;</span> <span class="va">best_score</span><span class="op">)</span> <span class="op">{</span></span>
-<span>    <span class="va">best_module</span> <span class="op">&lt;-</span> <span class="va">bootstrap</span></span>
-<span>    <span class="va">best_score</span> <span class="op">&lt;-</span> <span class="va">bootstrap_score</span></span>
-<span>  <span class="op">}</span></span>
-<span><span class="op">}</span></span>
-<span></span>
-<span><span class="co"># Step 3: If still not good enough, try COPRO</span></span>
-<span><span class="kw">if</span> <span class="op">(</span><span class="va">best_score</span> <span class="op">&lt;</span> <span class="fl">0.85</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="va">copro</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span></span>
-<span>    <span class="va">qa_module</span>,</span>
-<span>    <span class="fu"><a href="../reference/COPRO.html">COPRO</a></span><span class="op">(</span>metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span>, <span class="va">trainset</span>, valset <span class="op">=</span> <span class="va">valset</span>, .llm <span class="op">=</span> <span class="va">llm</span></span>
-<span>  <span class="op">)</span></span>
-<span>  <span class="va">copro_score</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span><span class="va">copro</span>, <span class="va">valset</span>, <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span><span class="op">$</span><span class="va">mean_score</span></span>
-<span>  <span class="kw">if</span> <span class="op">(</span><span class="va">copro_score</span> <span class="op">&gt;</span> <span class="va">best_score</span><span class="op">)</span> <span class="op">{</span></span>
-<span>    <span class="va">best_module</span> <span class="op">&lt;-</span> <span class="va">copro</span></span>
-<span>    <span class="va">best_score</span> <span class="op">&lt;-</span> <span class="va">copro_score</span></span>
-<span>  <span class="op">}</span></span>
-<span><span class="op">}</span></span>
-<span></span>
-<span><span class="co"># Use the best performing module</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="st">"Best score:"</span>, <span class="va">best_score</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="use-parallel-evaluation">2. Use Parallel Evaluation<a class="anchor" aria-label="anchor" href="#use-parallel-evaluation"></a>
-</h3>
-<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># BootstrapFewShotWithRandomSearch supports parallel evaluation</span></span>
-<span><span class="va">tp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/BootstrapFewShotWithRandomSearch.html">BootstrapFewShotWithRandomSearch</a></span><span class="op">(</span></span>
-<span>  num_candidate_programs <span class="op">=</span> <span class="fl">16L</span>,</span>
-<span>  num_threads <span class="op">=</span> <span class="fl">8L</span>  <span class="co"># Evaluate 8 candidates in parallel</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="cache-embeddings-for-knnfewshot">3. Cache Embeddings for KNNFewShot<a class="anchor" aria-label="anchor" href="#cache-embeddings-for-knnfewshot"></a>
-</h3>
-<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Enable embedding caching in KNNFewShot</span></span>
-<span><span class="va">tp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/KNNFewShot.html">KNNFewShot</a></span><span class="op">(</span></span>
-<span>  k <span class="op">=</span> <span class="fl">3L</span>,</span>
-<span>  vectorizer <span class="op">=</span> <span class="fu">ragnar</span><span class="fu">::</span><span class="va">embed_openai</span>,</span>
-<span>  cache_embeddings <span class="op">=</span> <span class="cn">TRUE</span>  <span class="co"># Cache computed embeddings</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Or create a caching vectorizer manually</span></span>
-<span><span class="va">cached_embed</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/eval.html" class="external-link">local</a></span><span class="op">(</span><span class="op">{</span></span>
-<span>  <span class="va">cache</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/environment.html" class="external-link">new.env</a></span><span class="op">(</span>parent <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/environment.html" class="external-link">emptyenv</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
-<span>  <span class="kw">function</span><span class="op">(</span><span class="va">texts</span><span class="op">)</span> <span class="op">{</span></span>
-<span>    <span class="va">key</span> <span class="op">&lt;-</span> <span class="fu">digest</span><span class="fu">::</span><span class="fu"><a href="https://eddelbuettel.github.io/digest/man/digest.html" class="external-link">digest</a></span><span class="op">(</span><span class="va">texts</span><span class="op">)</span></span>
-<span>    <span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/exists.html" class="external-link">exists</a></span><span class="op">(</span><span class="va">key</span>, envir <span class="op">=</span> <span class="va">cache</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>      <span class="va">cache</span><span class="op">[[</span><span class="va">key</span><span class="op">]</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="fu">ragnar</span><span class="fu">::</span><span class="fu">embed_openai</span><span class="op">(</span><span class="va">texts</span><span class="op">)</span></span>
+<p><code>GEPA</code> evolves instructions. It starts from the original
+instructions and <code>population_size - 1</code> rewrites of them. In
+each of <code>generations</code> rounds it scores every candidate on
+<code>valset</code> and runs it on <code>trainset</code> to collect the
+rows it gets wrong. Candidates that score best on at least one
+validation row become parents. A child takes each part of the program
+whole from one parent or the other, so crossover never splices text, and
+with probability <code>mutation_rate</code> the task chat
+(<code>.llm</code>) rewrites the child’s instructions after reading its
+parent’s failed rows.</p>
+<p>GEPA reads textual feedback when the metric returns it, which makes
+the rewrites more specific. <code><a href="../reference/metric_with_feedback.html">metric_with_feedback()</a></code> marks
+such a metric:</p>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">team_feedback</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metric_with_feedback.html">metric_with_feedback</a></span><span class="op">(</span></span>
+<span>  <span class="kw">function</span><span class="op">(</span><span class="va">prediction</span>, <span class="va">expected</span><span class="op">)</span> <span class="op">{</span></span>
+<span>    <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="va">prediction</span><span class="op">$</span><span class="va">team</span>, <span class="va">expected</span><span class="op">$</span><span class="va">team</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
+<span>      <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>score <span class="op">=</span> <span class="fl">1</span>, feedback <span class="op">=</span> <span class="st">"Correct team."</span><span class="op">)</span></span>
+<span>    <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span></span>
+<span>      <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>        score <span class="op">=</span> <span class="fl">0</span>,</span>
+<span>        feedback <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span></span>
+<span>          <span class="st">"Sent to "</span>, <span class="va">prediction</span><span class="op">$</span><span class="va">team</span>, <span class="st">", but "</span>, <span class="va">expected</span><span class="op">$</span><span class="va">team</span>,</span>
+<span>          <span class="st">" handles tickets like this."</span></span>
+<span>        <span class="op">)</span></span>
+<span>      <span class="op">)</span></span>
 <span>    <span class="op">}</span></span>
-<span>    <span class="va">cache</span><span class="op">[[</span><span class="va">key</span><span class="op">]</span><span class="op">]</span></span>
-<span>  <span class="op">}</span></span>
-<span><span class="op">}</span><span class="op">)</span></span>
+<span>  <span class="op">}</span>,</span>
+<span>  field <span class="op">=</span> <span class="st">"team"</span></span>
+<span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">tp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/KNNFewShot.html">KNNFewShot</a></span><span class="op">(</span>k <span class="op">=</span> <span class="fl">3L</span>, vectorizer <span class="op">=</span> <span class="va">cached_embed</span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="monitor-costs">4. Monitor Costs<a class="anchor" aria-label="anchor" href="#monitor-costs"></a>
-</h3>
-<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Track costs during optimization</span></span>
-<span><span class="fu"><a href="../reference/session_cost.html">session_cost</a></span><span class="op">(</span><span class="op">)</span>  <span class="co"># Total cost so far</span></span>
-<span></span>
-<span><span class="co"># Costs are tracked in traces and trial logs</span></span>
-<span><span class="co"># Use session_cost() for aggregate view</span></span></code></pre></div>
-</div>
+<span><span class="va">evolved</span> <span class="op">&lt;-</span> <span class="va">triage</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="../reference/GEPA.html">GEPA</a></span><span class="op">(</span></span>
+<span>      metric <span class="op">=</span> <span class="va">team_feedback</span>,</span>
+<span>      population_size <span class="op">=</span> <span class="fl">6L</span>,</span>
+<span>      generations <span class="op">=</span> <span class="fl">4L</span>,</span>
+<span>      mutation_rate <span class="op">=</span> <span class="fl">0.5</span>,</span>
+<span>      seed <span class="op">=</span> <span class="fl">42L</span></span>
+<span>    <span class="op">)</span>,</span>
+<span>    <span class="va">trainset</span>,</span>
+<span>    valset <span class="op">=</span> <span class="va">valset</span>,</span>
+<span>    .llm <span class="op">=</span> <span class="va">llm</span></span>
+<span>  <span class="op">)</span></span></code></pre></div>
+<p>In a single-predictor module the instructions are the only part, so
+crossover can only copy a parent’s wording, and new wording comes from
+rewrites alone. That is why this example raises
+<code>mutation_rate</code> from its default of 0.1. A named list in
+<code>metrics</code> optimizes several objectives at once, and parents
+then also come from the Pareto front. For <code><a href="../reference/flex.html">flex()</a></code> programs,
+GEPA can rewrite the program’s source itself; see <a href="flex-optimization.html">Flex: optimize a whole program</a>.</p>
 </div>
 <div class="section level2">
-<h2 id="summary">Summary<a class="anchor" aria-label="anchor" href="#summary"></a>
+<h2 id="bettertogether">BetterTogether<a class="anchor" aria-label="anchor" href="#bettertogether"></a>
 </h2>
-<table class="table">
-<colgroup>
-<col width="22%">
-<col width="22%">
-<col width="25%">
-<col width="29%">
-</colgroup>
-<thead><tr class="header">
-<th>Optimizer</th>
-<th>Optimizes</th>
-<th>Data Needs</th>
-<th>Compute Cost</th>
-</tr></thead>
-<tbody>
-<tr class="odd">
-<td><code>LabeledFewShot</code></td>
-<td>Demos</td>
-<td>Low (10+)</td>
-<td>Very Low</td>
-</tr>
-<tr class="even">
-<td><code>BootstrapFewShot</code></td>
-<td>Demos</td>
-<td>Medium (30+)</td>
-<td>Low</td>
-</tr>
-<tr class="odd">
-<td><code>BootstrapFewShotWithRandomSearch</code></td>
-<td>Demos + Config</td>
-<td>Medium (50+)</td>
-<td>Medium</td>
-</tr>
-<tr class="even">
-<td><code>KNNFewShot</code></td>
-<td>Dynamic Demos</td>
-<td>Medium (50+)</td>
-<td>Low</td>
-</tr>
-<tr class="odd">
-<td><code>COPRO</code></td>
-<td>Instructions</td>
-<td>Medium (30+)</td>
-<td>Medium</td>
-</tr>
-<tr class="even">
-<td><code>MIPROv2</code></td>
-<td>Instructions + Demos</td>
-<td>High (100+)</td>
-<td>High</td>
-</tr>
-<tr class="odd">
-<td><code>SIMBA</code></td>
-<td>Hard Example Demos</td>
-<td>Medium (50+)</td>
-<td>Medium</td>
-</tr>
-<tr class="even">
-<td><code>GEPA</code></td>
-<td>Multi-objective</td>
-<td>High (100+)</td>
-<td>High</td>
-</tr>
-<tr class="odd">
-<td><code>Omni</code></td>
-<td>Optimizer composition</td>
-<td>High (100+)</td>
-<td>High</td>
-</tr>
-<tr class="even">
-<td><code>AutoResearch</code></td>
-<td>Agent-owned program search</td>
-<td>Medium (30+)</td>
-<td>High</td>
-</tr>
-<tr class="odd">
-<td><code>MetaHarness</code></td>
-<td>Frontier-driven program search</td>
-<td>Medium (30+)</td>
-<td>High</td>
-</tr>
-<tr class="even">
-<td><code><a href="../reference/ensemble_module.html">ensemble()</a></code></td>
-<td>Combines modules</td>
-<td>N/A</td>
-<td>Varies</td>
-</tr>
-</tbody>
-</table>
+<p><code>BetterTogether</code> runs other teleprompters in sequence,
+each starting from the previous result, and returns the stage that
+scores best on <code>valset</code>, the uncompiled module included. Name
+the optimizers and give their order as a strategy:</p>
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">combined</span> <span class="op">&lt;-</span> <span class="va">triage</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="../reference/BetterTogether.html">BetterTogether</a></span><span class="op">(</span></span>
+<span>      metric <span class="op">=</span> <span class="va">metric</span>,</span>
+<span>      optimizers <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>        demos <span class="op">=</span> <span class="fu"><a href="../reference/BootstrapFewShot.html">BootstrapFewShot</a></span><span class="op">(</span>metric <span class="op">=</span> <span class="va">metric</span>, max_labeled_demos <span class="op">=</span> <span class="fl">2L</span><span class="op">)</span>,</span>
+<span>        wording <span class="op">=</span> <span class="fu"><a href="../reference/COPRO.html">COPRO</a></span><span class="op">(</span>metric <span class="op">=</span> <span class="va">metric</span>, breadth <span class="op">=</span> <span class="fl">4L</span>, depth <span class="op">=</span> <span class="fl">1L</span><span class="op">)</span></span>
+<span>      <span class="op">)</span>,</span>
+<span>      default_strategy <span class="op">=</span> <span class="st">"demos -&gt; wording"</span></span>
+<span>    <span class="op">)</span>,</span>
+<span>    <span class="va">trainset</span>,</span>
+<span>    valset <span class="op">=</span> <span class="va">valset</span>,</span>
+<span>    .llm <span class="op">=</span> <span class="va">llm</span></span>
+<span>  <span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">combined</span><span class="op">)</span><span class="op">$</span><span class="va">extensions</span><span class="op">$</span><span class="va">better_together</span><span class="op">$</span><span class="va">candidate_programs</span></span></code></pre></div>
+<p>Without a <code>valset</code>, it holds out <code>valset_ratio</code>
+(10%) of <code>trainset</code>.
+<code>compile(..., strategy = "wording -&gt; demos")</code> changes the
+order for one run. Later steps start from a compiled module, so
+<code><a href="../reference/compile.html">compile()</a></code> warns that the program is already compiled; here
+that is expected.</p>
 </div>
 <div class="section level2">
-<h2 id="further-reading">Further Reading<a class="anchor" aria-label="anchor" href="#further-reading"></a>
+<h2 id="reanchor">ReAnchor<a class="anchor" aria-label="anchor" href="#reanchor"></a>
 </h2>
-<p><strong>Tutorials:</strong> - <a href="tutorial-optimize-your-module.html">Finding Best Configuration</a>
-— Hands-on grid search - <a href="tutorial-deploy-to-production.html">Taking to Production</a> —
-Deploy optimized modules</p>
-<p><strong>How-to Guides:</strong> - <a href="compilation-optimization.html">Compile &amp; Optimize</a> — Basic
-optimization concepts - <a href="vitals-recipes.html">Evaluate with
-Vitals</a> — Integration with vitals package</p>
-<p><strong>Concepts:</strong> - <a href="concepts-optimization-theory.html">How Optimization Works</a> —
-Theory behind teleprompters - <a href="concepts-why-metrics-matter.html">Why Metrics Matter</a> —
-Choosing the right metric</p>
-<p><strong>Reference:</strong> - <a href="cheatsheet.html">Quick
-Reference</a> — Metrics and teleprompter syntax</p>
+<p><code>ReAnchor</code> is experimental. It calibrates boolean and enum
+outputs and leaves the prompt alone. It runs the module on
+<code>trainset</code>, then runs it again asking for the probability
+behind each decision, and fits each decision’s threshold, cut points or
+option weights to those recorded probabilities without further model
+calls. A fitted setting is kept only if it also wins a held-out check
+across folds of <code>trainset</code>.</p>
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">calibrated</span> <span class="op">&lt;-</span> <span class="va">triage</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="fu"><a href="../reference/ReAnchor.html">ReAnchor</a></span><span class="op">(</span>metric <span class="op">=</span> <span class="va">metric</span><span class="op">)</span>, <span class="va">trainset</span>, valset <span class="op">=</span> <span class="va">valset</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="../reference/decision_settings.html">decision_settings</a></span><span class="op">(</span><span class="va">calibrated</span><span class="op">)</span></span></code></pre></div>
+<p>The outputs to calibrate need a description, like <code>team</code>
+above, or a setting from <code><a href="../reference/with_decisions.html">with_decisions()</a></code>.
+<code>valset</code> is scored before and after calibration for the
+report and never used for fitting. <code>ReAnchor</code> calibrates a
+single <code><a href="../reference/module.html">module()</a></code> only. <a href="calibrated-decisions.html">Calibrated decisions</a> explains
+decision outputs.</p>
+</div>
+<div class="section level2">
+<h2 id="omni-and-the-agentic-harnesses">Omni and the agentic harnesses<a class="anchor" aria-label="anchor" href="#omni-and-the-agentic-harnesses"></a>
+</h2>
+<p>Three experimental teleprompters build on the ones above.
+<code><a href="../reference/Omni.html">Omni()</a></code> runs several teleprompters from the same start,
+compares them on one validation set and continues from the winner; see
+<a href="omni-meta-optimization.html">Compose optimizers with Omni</a>.
+<code><a href="../reference/AutoResearch.html">AutoResearch()</a></code> and <code><a href="../reference/MetaHarness.html">MetaHarness()</a></code> let a model
+propose program edits in a sandbox while dsprrr scores them; see <a href="agentic-optimization-harnesses.html">Agentic optimization
+harnesses</a>.</p>
+</div>
+<div class="section level2">
+<h2 id="combining-compiled-modules">Combining compiled modules<a class="anchor" aria-label="anchor" href="#combining-compiled-modules"></a>
+</h2>
+<p>To combine several compiled modules at run time, build an ensemble
+module with <code><a href="../reference/ensemble.html">ensemble()</a></code>. It is a module, not an optimizer,
+so it needs no training data:</p>
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">voted</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ensemble.html">ensemble</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">labeled</span>, <span class="va">bootstrapped</span>, <span class="va">rewritten</span><span class="op">)</span>,</span>
+<span>  reduce_fn <span class="op">=</span> <span class="fu"><a href="../reference/reduce_majority.html">reduce_majority</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"team"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">voted</span>, ticket <span class="op">=</span> <span class="st">"I was billed after cancelling."</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span></code></pre></div>
+<p><a href="advanced-modules.html">Choose a module type</a> covers
+ensembles and the other reducers.</p>
+</div>
+<div class="section level2">
+<h2 id="budgets-logs-and-seeds">Budgets, logs and seeds<a class="anchor" aria-label="anchor" href="#budgets-logs-and-seeds"></a>
+</h2>
+<p><code>BootstrapFewShot</code>,
+<code>BootstrapFewShotWithRandomSearch</code>, <code>COPRO</code>,
+<code>MIPROv2</code>, <code>SIMBA</code> and <code>GEPA</code> accept
+<code>control = optimizer_control(...)</code> in <code><a href="../reference/compile.html">compile()</a></code>.
+It caps calls, tokens, cost or time. When a cap is reached, the
+optimizer stops and returns the best module found so far, with status
+<code>"partial"</code>:</p>
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">capped</span> <span class="op">&lt;-</span> <span class="va">triage</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="../reference/COPRO.html">COPRO</a></span><span class="op">(</span>metric <span class="op">=</span> <span class="va">metric</span>, breadth <span class="op">=</span> <span class="fl">5L</span>, depth <span class="op">=</span> <span class="fl">3L</span><span class="op">)</span>,</span>
+<span>    <span class="va">trainset</span>,</span>
+<span>    valset <span class="op">=</span> <span class="va">valset</span>,</span>
+<span>    .llm <span class="op">=</span> <span class="va">llm</span>,</span>
+<span>    control <span class="op">=</span> <span class="fu"><a href="../reference/optimizer_control.html">optimizer_control</a></span><span class="op">(</span>max_provider_calls <span class="op">=</span> <span class="fl">300L</span>, max_cost <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
+<span>  <span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">capped</span><span class="op">)</span><span class="op">$</span><span class="va">status</span></span>
+<span><span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">capped</span><span class="op">)</span><span class="op">$</span><span class="va">stop_reason</span></span></code></pre></div>
+<p>A cost or token cap also stops the run when usage cannot be measured.
+<code>BootstrapFewShot</code> and <code>MIPROv2</code> can resume an
+interrupted run: give <code><a href="../reference/optimizer_control.html">optimizer_control()</a></code> a
+<code>checkpoint_path</code>, then compile again with
+<code>resume = TRUE</code> and the same module, data, metric and
+settings. <code>BootstrapFewShotWithRandomSearch</code>,
+<code>COPRO</code>, <code>SIMBA</code> and <code>GEPA</code> refuse
+<code>resume = TRUE</code>.</p>
+<p>The same six teleprompters take <code>log_dir</code> and append one
+record per trial to <code>trials.jsonl</code> in that directory.
+<code>load_trial_log(log_dir)$as_tibble()</code> reads the log back as a
+tibble. When you also pass <code>control</code>, set
+<code>log_dir</code> in <code><a href="../reference/optimizer_control.html">optimizer_control()</a></code> as well,
+because a <code>control</code> object replaces the teleprompter’s own
+<code>log_dir</code> in every optimizer except
+<code>BootstrapFewShot</code>.</p>
+<p><code>LabeledFewShot</code>,
+<code>BootstrapFewShotWithRandomSearch</code>, <code>COPRO</code>,
+<code>MIPROv2</code>, <code>SIMBA</code>, <code>GEPA</code> and
+<code>BetterTogether</code> take a <code>seed</code> for their own
+sampling. <code>GridSearchTeleprompter</code> uses R’s global generator,
+and <code>BootstrapFewShot</code> tries rows in order. No seed makes the
+model’s answers repeatable.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

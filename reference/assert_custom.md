@@ -1,9 +1,10 @@
-# Assert Custom Condition
+# Assert a custom condition
 
-Create a custom assertion with a user-defined condition function. This
-is a convenience wrapper around
+`assert_custom()` builds an assertion from your own condition. It is
 [`assert_output()`](https://jameshwade.github.io/dsprrr/reference/assertions.md)
-with clearer semantics.
+or
+[`suggest_output()`](https://jameshwade.github.io/dsprrr/reference/assertions.md),
+chosen by `type`.
 
 ## Usage
 
@@ -15,38 +16,68 @@ assert_custom(condition, message, field = NULL, type = c("assert", "suggest"))
 
 - condition:
 
-  A function or formula that takes the output and returns TRUE/FALSE.
+  A function, or a formula using `.x`, that takes the output (or the
+  `field`) and returns `TRUE` or `FALSE`.
 
 - message:
 
-  Error message when assertion fails.
+  The message shown when the check fails, which
+  [`with_assertions()`](https://jameshwade.github.io/dsprrr/reference/with_assertions.md)
+  also sends back to the model on a retry.
 
 - field:
 
-  Optional. The specific output field to validate.
+  The output field passed to `condition`. With `NULL` (the default), the
+  whole output (a named list) is passed.
 
 - type:
 
-  "assert" for hard assertion (default), "suggest" for soft suggestion.
+  `"assert"` (the default) for a hard assertion, which makes
+  [`with_assertions()`](https://jameshwade.github.io/dsprrr/reference/with_assertions.md)
+  retry when it fails, or `"suggest"` for a soft one, which only gives a
+  warning.
 
 ## Value
 
-An Assertion object
+An assertion for
+[`assertion_set()`](https://jameshwade.github.io/dsprrr/reference/assertions.md)
+or
+[`with_assertions()`](https://jameshwade.github.io/dsprrr/reference/with_assertions.md).
+
+## See also
+
+Other assertions:
+[`assert_contains()`](https://jameshwade.github.io/dsprrr/reference/assert_contains.md),
+[`assert_length()`](https://jameshwade.github.io/dsprrr/reference/assert_length.md),
+[`assert_matches()`](https://jameshwade.github.io/dsprrr/reference/assert_matches.md),
+[`assert_not_contains()`](https://jameshwade.github.io/dsprrr/reference/assert_not_contains.md),
+[`assert_not_empty()`](https://jameshwade.github.io/dsprrr/reference/assert_not_empty.md),
+[`assert_not_matches()`](https://jameshwade.github.io/dsprrr/reference/assert_not_matches.md),
+[`assert_one_of()`](https://jameshwade.github.io/dsprrr/reference/assert_one_of.md),
+[`assert_range()`](https://jameshwade.github.io/dsprrr/reference/assert_range.md),
+[`assertions`](https://jameshwade.github.io/dsprrr/reference/assertions.md),
+[`with_assertions()`](https://jameshwade.github.io/dsprrr/reference/with_assertions.md)
 
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-# Custom validation: answer must have exactly 3 sentences
+# Exactly three sentences
 assert_custom(
-  ~ length(gregexpr("\\.", .x$answer)[[1]]) == 3,
-  "Answer must have exactly 3 sentences"
+  ~ lengths(regmatches(.x$answer, gregexpr("[.!?]", .x$answer))) == 3,
+  "Answer in exactly three sentences"
 )
+#> 
+#> ── Hard Assertion 
+#> • Field: any field
+#> • Message: "Answer in exactly three sentences"
 
-# Custom validation: summary must be shorter than original text
+# Compare two output fields
 assert_custom(
-  function(x) nchar(x$summary) < nchar(x$original),
-  "Summary must be shorter than original"
+  function(x) nchar(x$summary) < nchar(x$details),
+  "The summary must be shorter than the details"
 )
-} # }
+#> 
+#> ── Hard Assertion 
+#> • Field: any field
+#> • Message: "The summary must be shorter than the details"
 ```

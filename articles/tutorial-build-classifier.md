@@ -1,146 +1,137 @@
-# Tutorial 2: Building a Reusable Classifier
+# Tutorial 2: Build a classifier
 
-In [Tutorial
-1](https://jameshwade.github.io/dsprrr/articles/tutorial-hello-world.md),
-you built and ran a typed module. Now you will use that same contract
-across hundreds of texts.
-
-In this tutorial, you’ll build a **reusable module**—a classifier you
-can use over and over.
-
-**Time**: 20-25 minutes
-
-## What You’ll Build
-
-A sentiment classifier that: - Processes single texts or batches -
-Remembers its configuration - Can be saved and reused
-
-## Prerequisites
-
-- Completed [Tutorial
-  1](https://jameshwade.github.io/dsprrr/articles/tutorial-hello-world.md)
-- `OPENAI_API_KEY` set in your environment
+You will build a sentiment classifier and run it three ways: on one
+text, on a vector of texts, and on a data frame with
+[`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md).
+It uses the signature syntax from [Tutorial
+1](https://jameshwade.github.io/dsprrr/articles/tutorial-hello-world.md).
 
 ``` r
 
 library(dsprrr)
 library(ellmer)
+
+chat <- chat_openai(model = "gpt-6-luna")
 ```
 
-## Step 1: Declare the Classifier
+The answers on this page were recorded with `gpt-4.1` and are replayed
+when the site is built, so `gpt-6-luna` may word them differently.
 
-Declare the task once as a signature:
+## Define the classifier
+
+Start from the sentiment signature in Tutorial 1 and print the module:
 
 ``` r
 
-sentiment_sig <- signature(
-  "text -> sentiment: enum('positive', 'negative', 'neutral')"
+classifier <- module(
+  signature("text -> sentiment: enum('positive', 'negative', 'neutral')")
 )
-```
-
-The signature is the reusable typed contract for every call.
-
-## Step 2: Create a Reusable Module
-
-Wrap the signature in a reusable module:
-
-``` r
-
-chat <- chat_openai()
-classifier <- module(sentiment_sig)
 
 classifier
+#> 
+#> ── PredictModule ──
+#> 
+#> ── Signature
+#> 
+#> ── Signature ──
+#> 
+#> ── Inputs
+#> • text: "string" - Input: text
+#> 
+#> ── Output
+#> Type: "object(sentiment: enum(positive, negative, neutral))"
+#> 
+#> ── Instructions
+#> Given the fields `text`, produce the fields `sentiment`.
 ```
 
-Now `classifier` is an object you can use repeatedly.
+The printout shows the inputs, the output type and the instructions that
+start every prompt. This signature has no instructions of its own, so
+dsprrr wrote a default from the field names.
 
-## Step 3: Classify Single Texts
-
-Use [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md) to
-classify:
+## Classify one text
 
 ``` r
 
 run(classifier, text = "I absolutely loved this movie!", .llm = chat)
+#> $sentiment
+#> [1] "positive"
 ```
-
-Try a few more:
 
 ``` r
 
 run(classifier, text = "This was a complete waste of time.", .llm = chat)
+#> $sentiment
+#> [1] "negative"
 
 run(classifier, text = "It was okay, I guess.", .llm = chat)
+#> $sentiment
+#> [1] "neutral"
 
 run(
   classifier,
   text = "The service was terrible but the food was amazing.",
   .llm = chat
 )
+#> $sentiment
+#> [1] "neutral"
 ```
 
-## Step 4: Batch Processing
+The mixed review came back `neutral`. Whether that is right depends on
+what you need the labels for; instructions, below, let you decide.
 
-Here’s where modules shine. Process multiple texts with
-[`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md):
+## Classify a vector of texts
+
+Pass a vector and
+[`run()`](https://jameshwade.github.io/dsprrr/reference/run.md) returns
+a list with one result per element, in the same order. Each result is
+the named list you saw above, so
+[`purrr::map_chr()`](https://purrr.tidyverse.org/reference/map.html) can
+pull out the labels:
 
 ``` r
 
-reviews <- tibble::tibble(
-  text = c(
-    "Best purchase I've ever made!",
-    "Broke after one day. Total garbage.",
-    "Does what it says. Nothing special.",
-    "Exceeded all my expectations!",
-    "Would not recommend to anyone."
-  )
+reviews <- c(
+  "Best purchase I've ever made!",
+  "Broke after one day. Total garbage.",
+  "Does what it says. Nothing special.",
+  "Exceeded all my expectations!",
+  "Would not recommend to anyone."
 )
 
-run_dataset(classifier, reviews, .llm = chat)
+sentiments <- run(classifier, text = reviews, .llm = chat)
+purrr::map_chr(sentiments, "sentiment")
+#> [1] "positive" "negative" "neutral"  "positive" "negative"
 ```
 
-All five classifications came back from one dataset operation, while
-dsprrr retained one observable provider attempt per review.
+Each element is still its own request to the model, and by default they
+are sent one after another.
+[`concurrency_control()`](https://jameshwade.github.io/dsprrr/reference/concurrency_control.md)
+lets several run at once.
 
-## Step 5: Add Instructions
+## Add instructions
 
-Add task-specific guidance to the signature:
+Instructions replace the default line. Use them to settle cases the
+labels leave open, such as mixed reviews:
 
 ``` r
 
-# Define the signature separately
 sig <- signature(
   "text -> sentiment: enum('positive', 'negative', 'neutral')",
   instructions = "Classify the overall sentiment. If mixed, choose the dominant emotion."
 )
 
-sig
-```
-
-Now create a module from the signature:
-
-``` r
-
 classifier2 <- module(sig)
-
-classifier2
 ```
 
-## Step 6: Running with `run()`
-
-With the full control approach, use
-[`run()`](https://jameshwade.github.io/dsprrr/reference/run.md) to
-execute:
+The new module takes the same inputs, one at a time or as a vector:
 
 ``` r
 
 run(classifier2, text = "This is fantastic!", .llm = chat)
+#> $sentiment
+#> [1] "positive"
 ```
-
-Notice you pass the chat object via `.llm`. This gives you
-flexibility—you can use different LLMs for different calls.
-
-Batch processing works the same way:
 
 ``` r
 
@@ -149,18 +140,34 @@ run(
   text = c("Love it!", "Hate it!", "It's fine"),
   .llm = chat
 )
+#> [[1]]
+#> [[1]]$sentiment
+#> [1] "positive"
+#> 
+#> 
+#> [[2]]
+#> [[2]]$sentiment
+#> [1] "negative"
+#> 
+#> 
+#> [[3]]
+#> [[3]]$sentiment
+#> [1] "neutral"
 ```
 
-## Step 7: Working with Data Frames
+This is the full return value of a vectorized call: a list of named
+lists.
 
-Real data often comes in data frames. Use
-[`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md):
+## Classify a data frame
+
+[`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md)
+takes a data frame with a column for each input. It returns the data
+frame with a `result` list-column added, and other columns, like `id`,
+come through unchanged:
 
 ``` r
 
-library(tibble)
-
-reviews_df <- tibble(
+reviews_df <- tibble::tibble(
   id = 1:4,
   text = c(
     "Absolutely wonderful experience!",
@@ -171,14 +178,29 @@ reviews_df <- tibble(
 )
 
 results <- run_dataset(classifier2, reviews_df, .llm = chat)
+results$sentiment <- purrr::map_chr(results$result, "sentiment")
 results
+#> # A tibble: 4 × 4
+#>      id text                             result           sentiment
+#>   <int> <chr>                            <list>           <chr>    
+#> 1     1 Absolutely wonderful experience! <named list [1]> positive 
+#> 2     2 Never buying from them again.    <named list [1]> negative 
+#> 3     3 Solid product, fair price.       <named list [1]> positive 
+#> 4     4 Changed my life for the better.  <named list [1]> positive
 ```
 
-The results include your original columns plus the classification.
+Like [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md),
+[`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md)
+sends one request per row. The module records every call, and
+`summarize_traces(classifier2)` reports how many requests it made and
+the tokens they used.
 
-## Step 8: Adding Descriptions
+## Describe the inputs
 
-Make your inputs more informative with descriptions:
+A signature can also be built from
+[`input()`](https://jameshwade.github.io/dsprrr/reference/input.md)
+objects and an ellmer type. An input’s description becomes its heading
+in the prompt, in place of the input’s name:
 
 ``` r
 
@@ -197,59 +219,15 @@ run(
   review_text = "Five stars! Would buy again!",
   .llm = chat
 )
+#> [1] "positive"
 ```
 
-Descriptions help the LLM understand what it’s working with.
+The output type here is a bare
+[`type_enum()`](https://ellmer.tidyverse.org/reference/type_boolean.html)
+rather than a named field, so
+[`run()`](https://jameshwade.github.io/dsprrr/reference/run.md) returns
+the label itself instead of a list.
 
-## Step 9: Checking Your Work
-
-Modules track their calls. See what happened:
-
-``` r
-
-classifier2$trace_summary()
-```
-
-This shows you how many calls were made and the token costs.
-
-## What You Learned
-
-In this tutorial, you:
-
-1.  Declared a reusable signature and module
-2.  Used [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md)
-    for individual inputs
-3.  Used
-    [`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md)
-    for batch processing
-4.  Processed data frames with
-    [`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md)
-5.  Added input descriptions for clarity
-6.  Checked your work with `trace_summary()`
-
-## The Module Advantage
-
-The same module contract scales from exploration to optimization:
-
-1.  **Reusability**: Define once, use everywhere
-2.  **Efficiency**: Batch processing reduces API calls
-3.  **Configuration**: Change settings in one place
-4.  **Optimization**: Modules can be improved with training data
-    (covered in [Tutorial
-    4](https://jameshwade.github.io/dsprrr/articles/tutorial-improve-with-demos.md))
-5.  **Tracing**: Track what happened for debugging
-
-## Next Steps
-
-Your classifier works, but can it handle more complex outputs? Continue
-to:
-
-- **[Tutorial 3: Extracting Structured
-  Data](https://jameshwade.github.io/dsprrr/articles/tutorial-structured-outputs.md)**
-  — Get multiple fields and nested structures
-- **[Quick
-  Reference](https://jameshwade.github.io/dsprrr/articles/cheatsheet.md)**
-  — Module types and methods
-- **[Understanding Signatures &
-  Modules](https://jameshwade.github.io/dsprrr/articles/concepts-signatures-modules.md)**
-  — Why S7 for signatures, R6 for modules
+Next, [Tutorial
+3](https://jameshwade.github.io/dsprrr/articles/tutorial-structured-outputs.md)
+returns several fields at once, including lists and nested records.

@@ -29,4 +29,33 @@ numeric vectors).
 
 ## See also
 
+Other decisions:
+[`ReAnchor()`](https://jameshwade.github.io/dsprrr/reference/ReAnchor.md),
+[`decision_evidence()`](https://jameshwade.github.io/dsprrr/reference/decision_evidence.md),
+[`decision_types`](https://jameshwade.github.io/dsprrr/reference/decision_types.md),
 [`with_decisions()`](https://jameshwade.github.io/dsprrr/reference/with_decisions.md)
+
+## Examples
+
+``` r
+sig <- signature(
+  inputs = list(input("ticket", description = "Customer report")),
+  output_type = ellmer::type_object(
+    urgent = ellmer::type_boolean("Is the service blocked?")
+  )
+)
+triage <- module(sig) |> with_decisions(urgent = decision_bool())
+decision_settings(triage)
+#> # A tibble: 1 × 5
+#>   field  kind  threshold cuts   weights
+#>   <chr>  <chr>     <dbl> <list> <list> 
+#> 1 urgent bool        0.5 <NULL> <NULL> 
+
+# A stricter threshold for the same question
+stricter <- triage |> with_decisions(urgent = decision_bool(threshold = 0.8))
+decision_settings(stricter)
+#> # A tibble: 1 × 5
+#>   field  kind  threshold cuts   weights
+#>   <chr>  <chr>     <dbl> <list> <list> 
+#> 1 urgent bool        0.8 <NULL> <NULL> 
+```

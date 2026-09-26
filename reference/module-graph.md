@@ -1,40 +1,26 @@
-# Traverse and Transform Module Graphs
+# Inspect and transform nested programs
 
-Module graphs provide one cycle-safe protocol for inspecting and
-transforming nested dsprrr programs. Built-in adapters understand
-pipelines, wrappers, ensembles, and multi-chain modules. Custom `Module`
-subclasses can opt in by implementing two public methods:
+These functions list, inspect and rewrite the modules inside a composed
+program, such as a pipeline, ensemble or wrapper:
 
-- `graph_children()` returns a list whose leaves are child `Module`
-  objects. Lists can be nested and can be named or unnamed.
+- `module_graph()` returns one row per module occurrence.
 
-- `set_graph_children(children)` replaces that complete child structure
-  and returns the program invisibly. This method is required only for
-  replacement and mapping operations; read-only traversal needs only
-  `graph_children()`.
+- `named_modules()` returns the modules by path.
 
-A custom module can additionally implement `graph_is_parameter()` and
-return `TRUE` or `FALSE` to control whether `named_parameters()`
-includes it.
+- `named_parameters()` returns the tunable leaf modules by path: modules
+  without children that optimizers can change, such as Predict modules.
 
-Paths use a JSON-pointer-like form. `"$"` is the root, named list
-elements use their names, and unnamed or ambiguously named lists use
-one-based numeric positions. `/` and `~` in names are escaped as `~1`
-and `~0`.
+- `map_modules()` applies a function to every module and swaps in the
+  results.
 
-With `boundaries = "respect"`, compiled and frozen modules are included
-as boundary nodes but neither they nor their descendants are mutated. A
-shared module reachable through any protected path is protected at every
-alias. Mapping visits each R6 identity once in post-order and rewires
-all aliases to the same replacement. `replace_module()` defaults to
-replacing one path and can opt into identity-wide replacement with
-`shared = "all"`. Mapping can safely traverse cycles, but replacing a
-module that participates in a cycle is rejected; use path-specific
-`replace_module()` to break a cycle edge.
+- `replace_module()` replaces the module at one path.
 
-This is primarily useful when implementing or testing a custom module
-graph adapter. Custom modules should normally implement
-`graph_children()` rather than call this function from that method.
+- `freeze_modules()` and `is_module_frozen()` mark modules that rewrites
+  should leave alone, and check the mark.
+
+- `set_module_lm()` stores a chat on every module.
+
+- `module_children()` returns the direct children of one module.
 
 ## Usage
 
@@ -151,7 +137,7 @@ module_children(module)
 
 - module:
 
-  A dsprrr `Module` object.
+  A `Module` object.
 
 - chat:
 
@@ -159,12 +145,12 @@ module_children(module)
 
 - clone:
 
-  Whether to give each module an independent deep clone of `chat`. The
-  default avoids sharing mutable conversation history.
+  Whether to give each module its own deep clone of `chat` (default
+  `TRUE`), so that modules do not share conversation history.
 
 ## Value
 
-- `module_graph()` returns a tibble with one row per graph occurrence.
+- `module_graph()` returns a tibble with one row per module occurrence.
 
 - `named_modules()` and `named_parameters()` return named lists.
 
@@ -177,6 +163,60 @@ module_children(module)
 
 - `module_children()` returns a list whose leaves are child modules.
 
+## Details
+
+### Paths
+
+Paths look like JSON pointers. `"$"` is the root, named list elements
+use their names, and unnamed or ambiguously named elements use one-based
+positions, as in `"$/steps/first"`. `/` and `~` in names are escaped as
+`~1` and `~0`.
+
+### Boundaries
+
+With `boundaries = "respect"`, compiled and frozen modules are listed as
+boundary nodes, but neither they nor their descendants are changed. A
+shared module reachable through any protected path is protected
+everywhere. `map_modules()` visits each module object once, children
+before parents, and rewires every reference to the same replacement.
+`replace_module()` replaces one path by default; `shared = "all"`
+replaces every reference to the same object. Mapping can traverse
+cycles, but replacing a module that is part of a cycle is rejected; use
+`replace_module()` on one path to break the cycle first.
+
+### Custom modules
+
+Built-in adapters understand pipelines, wrappers, ensembles and
+multi-chain modules. A custom `Module` subclass can join the graph by
+implementing two public methods:
+
+- `graph_children()` returns a list, possibly nested and named or
+  unnamed, whose leaves are the child `Module` objects.
+
+- `set_graph_children(children)` replaces the whole child structure and
+  returns the module invisibly. Only replacement and mapping need it.
+
+It can also implement `graph_is_parameter()`, returning `TRUE` or
+`FALSE`, to control whether `named_parameters()` includes it.
+`module_children()` reports what these methods declare, which helps when
+writing or testing an adapter; call it from outside `graph_children()`,
+not inside it.
+
+## See also
+
+Other composition:
+[`as_reward_fn()`](https://jameshwade.github.io/dsprrr/reference/as_reward_fn.md),
+[`best_of_n()`](https://jameshwade.github.io/dsprrr/reference/best_of_n.md),
+[`ensemble()`](https://jameshwade.github.io/dsprrr/reference/ensemble.md),
+[`pipeline()`](https://jameshwade.github.io/dsprrr/reference/pipeline.md),
+[`reduce_best_by_metric()`](https://jameshwade.github.io/dsprrr/reference/reduce_best_by_metric.md),
+[`reduce_first()`](https://jameshwade.github.io/dsprrr/reference/reduce_first.md),
+[`reduce_majority()`](https://jameshwade.github.io/dsprrr/reference/reduce_majority.md),
+[`reduce_weighted_vote()`](https://jameshwade.github.io/dsprrr/reference/reduce_weighted_vote.md),
+[`refine()`](https://jameshwade.github.io/dsprrr/reference/refine.md),
+[`step()`](https://jameshwade.github.io/dsprrr/reference/step.md),
+[`with_assertions()`](https://jameshwade.github.io/dsprrr/reference/with_assertions.md)
+
 ## Examples
 
 ``` r
@@ -184,6 +224,15 @@ first <- module(signature("text -> answer"))
 second <- module(signature("answer -> summary"))
 program <- pipeline(first = first, second = second)
 
+module_graph(program)
+#> # A tibble: 3 × 13
+#>   path          parent_path depth class id    canonical_path shared cycle frozen
+#>   <chr>         <chr>       <int> <chr> <chr> <chr>          <lgl>  <lgl> <lgl> 
+#> 1 $             NA              0 Pipe… 0x55… $              FALSE  FALSE FALSE 
+#> 2 $/steps/first $               1 Pred… 0x55… $/steps/first  FALSE  FALSE FALSE 
+#> 3 $/steps/seco… $               1 Pred… 0x55… $/steps/second FALSE  FALSE FALSE 
+#> # ℹ 4 more variables: compiled <lgl>, protected <lgl>, boundary <chr>,
+#> #   module <list>
 names(named_modules(program))
 #> [1] "$"              "$/steps/first"  "$/steps/second"
 names(named_parameters(program))

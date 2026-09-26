@@ -1,7 +1,9 @@
-# Session Cost Summary
+# Summarize this session's token use and cost
 
-Get cost and token usage summary for the current dsprrr session. This
-aggregates data from all LLM calls tracked in the prompt history.
+`session_cost()` adds up the tokens and estimated cost of the model
+calls in the prompt history (see
+[`inspect_history()`](https://jameshwade.github.io/dsprrr/reference/inspect_history.md)),
+overall and per model.
 
 ## Usage
 
@@ -11,41 +13,39 @@ session_cost()
 
 ## Value
 
-A list with:
+A list of class `dsprrr_session_cost` with `n_calls`, `tokens_in`,
+`tokens_out`, `total_tokens`, `cost` (in US dollars; `NA` if any call's
+cost is unknown) and `by_model`, a tibble with the same totals per
+model.
 
-- `n_calls`: Integer, number of LLM calls
+## Details
 
-- `tokens_in`: Integer, total input tokens
+The prompt history keeps the most recent 100 calls by default
+(`options(dsprrr.prompt_history_max = )`), so older calls drop out of
+the totals, and
+[`clear_prompt_history()`](https://jameshwade.github.io/dsprrr/reference/clear_prompt_history.md)
+resets them. Only calls recorded in the history count: see
+[`inspect_history()`](https://jameshwade.github.io/dsprrr/reference/inspect_history.md)
+for which ones are. Costs are ellmer's estimates.
 
-- `tokens_out`: Integer, total output tokens
+## See also
 
-- `total_tokens`: Integer, sum of input and output tokens
-
-- `cost`: Numeric, total estimated cost in USD
-
-- `by_model`: A tibble with per-model breakdown (if available)
+Other inspection:
+[`accessors`](https://jameshwade.github.io/dsprrr/reference/accessors.md),
+[`clear_prompt_history()`](https://jameshwade.github.io/dsprrr/reference/clear_prompt_history.md),
+[`clear_traces()`](https://jameshwade.github.io/dsprrr/reference/clear_traces.md),
+[`export_traces()`](https://jameshwade.github.io/dsprrr/reference/export_traces.md),
+[`get_last_prompt()`](https://jameshwade.github.io/dsprrr/reference/get_last_prompt.md),
+[`inspect_history()`](https://jameshwade.github.io/dsprrr/reference/inspect_history.md),
+[`summarize_traces()`](https://jameshwade.github.io/dsprrr/reference/summarize_traces.md)
 
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-# After running a module a few times
-mod <- module(signature("question -> answer"))
-run(mod, question = "What is 2+2?")
-run(mod, question = "What is the capital of France?")
-
-# Get session summary
 session_cost()
-#> $n_calls
-#> [1] 2
-#> $tokens_in
-#> [1] 45
-#> $tokens_out
-#> [1] 12
-#> $cost
-#> [1] 0.0001
-
-# Access total cost directly
-session_cost()$cost
-} # }
+#> 
+#> ── dsprrr Session Cost 
+#> No LLM calls recorded in this session
+session_cost()$total_tokens
+#> [1] 0
 ```

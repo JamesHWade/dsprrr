@@ -1,7 +1,8 @@
-# Get Top Performing Trials
+# Highest-scoring optimization trials
 
-Extract the top k trials from a module's optimization history or a
-TrialLog, ranked by score.
+`top_trials()` returns the `k` best trials of an optimized module, taken
+from `optimization_result(x)$trials`, or of a
+[TrialLog](https://jameshwade.github.io/dsprrr/reference/TrialLog.md).
 
 ## Usage
 
@@ -13,24 +14,31 @@ top_trials(x, k = 5L, objective = c("maximize", "minimize"))
 
 - x:
 
-  A DSPrrr module with optimization trials, or a TrialLog object.
+  A module returned by
+  [`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md)
+  or modified by
+  [`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md),
+  or a
+  [TrialLog](https://jameshwade.github.io/dsprrr/reference/TrialLog.md).
 
 - k:
 
-  Integer; number of top trials to return. Default is 5.
+  Integer number of trials to return (default `5L`).
 
 - objective:
 
-  Optimization direction: "maximize" (default) or "minimize".
+  `"maximize"` (the default) sorts the highest scores first;
+  `"minimize"` sorts the lowest first.
 
 ## Value
 
-A tibble with the top k trials, including trial_id, score, parameters,
-and other trial metadata.
+A tibble with the top `k` trials. Modules are sorted by `score` (or
+`mean_score`), trial logs by `mean_score`. When there are no trials, a
+warning and an empty tibble.
 
 ## See also
 
-Other optimizer accessors:
+Other optimization results:
 [`apply_best_config()`](https://jameshwade.github.io/dsprrr/reference/apply_best_config.md),
 [`best_demos()`](https://jameshwade.github.io/dsprrr/reference/best_demos.md),
 [`best_params()`](https://jameshwade.github.io/dsprrr/reference/best_params.md),
@@ -42,12 +50,18 @@ Other optimizer accessors:
 ## Examples
 
 ``` r
-if (FALSE) {
-# Get top 3 trials from module
-top_trials(mod, k = 3)
+if (FALSE) { # \dontrun{
+classifier <- module(signature("text -> sentiment"))
+optimize_grid(
+  classifier,
+  data = devset,
+  metric = metric_exact_match(field = "sentiment"),
+  grid = data.frame(reasoning_effort = c("none", "low", "medium")),
+  .llm = ellmer::chat_openai(model = "gpt-6-luna")
+)
+top_trials(classifier, k = 2L)
 
-# Get top trials from a TrialLog
-log <- load_trial_log("path/to/logs")
-top_trials(log, k = 10, objective = "minimize")
-}
+# Trials saved by an optimizer's `log_dir`
+top_trials(load_trial_log("logs/my-run"), k = 10L)
+} # }
 ```

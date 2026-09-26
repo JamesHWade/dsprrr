@@ -1,8 +1,10 @@
-# Get the Last Prompt
+# Show the most recent prompt and response
 
-Returns detailed information about the most recent LLM call, including
-the prompt sent, response received, and metadata like tokens and cost.
-Works with module-based calls.
+`get_last_prompt()` returns the most recent model call in the prompt
+history: the prompt that was sent, the response, and the model, tokens,
+cost and duration. Printing it shows a "Prompt Inspection" block with
+Prompt, Response and Metadata sections (long prompts and responses are
+cut at 500 characters). Use it to see exactly what a module sent.
 
 ## Usage
 
@@ -12,50 +14,31 @@ get_last_prompt()
 
 ## Value
 
-A `dsprrr_prompt_inspection` object containing:
+A list of class `dsprrr_prompt_inspection` with `prompt` (the full
+prompt, including the instructions), `response`, `model`, `tokens_in`,
+`tokens_out`, `cost` (in US dollars, when known), `duration_s`,
+`timestamp`, `source` (the module class that made the call),
+`program_artifact_id` and `trace_context`. If no call has been recorded,
+`NULL`, invisibly, with a message.
 
-- `prompt`: The full prompt sent to the LLM
+## See also
 
-- `response`: The LLM's response
-
-- `model`: The model used
-
-- `tokens_in`: Input tokens used
-
-- `tokens_out`: Output tokens generated
-
-- `cost`: Cost in USD (if available)
-
-- `timestamp`: When the call was made
-
-- `source`: The module class that originated the call
-
-- `program_artifact_id`: Exact executable program identity, when
-  available
-
-- `trace_context`: Caller-supplied correlation context
-
-Returns `NULL` if no LLM calls have been made.
+Other inspection:
+[`accessors`](https://jameshwade.github.io/dsprrr/reference/accessors.md),
+[`clear_prompt_history()`](https://jameshwade.github.io/dsprrr/reference/clear_prompt_history.md),
+[`clear_traces()`](https://jameshwade.github.io/dsprrr/reference/clear_traces.md),
+[`export_traces()`](https://jameshwade.github.io/dsprrr/reference/export_traces.md),
+[`inspect_history()`](https://jameshwade.github.io/dsprrr/reference/inspect_history.md),
+[`session_cost()`](https://jameshwade.github.io/dsprrr/reference/session_cost.md),
+[`summarize_traces()`](https://jameshwade.github.io/dsprrr/reference/summarize_traces.md)
 
 ## Examples
 
 ``` r
 if (FALSE) { # \dontrun{
-# Make an LLM call
-mod <- module(signature("question -> answer"))
-run(mod, question = "What is 2+2?", .llm = ellmer::chat_openai())
-
-# Inspect what happened
+qa <- module(signature("question -> answer"))
+run(qa, question = "What is 2 + 2?", .llm = ellmer::chat_openai(model = "gpt-6-luna"))
 get_last_prompt()
-#> --- Last Prompt -----------------------------------
-#> System: Given the fields `question`, produce the fields `answer`.
-#>
-#> User: question: What is 2+2?
-#>
-#> --- Response --------------------------------------
-#> Assistant: {"answer": "4"}
-#>
-#> --- Metadata --------------------------------------
-#> Model: gpt-4o-mini | Tokens: 45 in, 12 out | Cost: $0.0001
+get_last_prompt()$prompt
 } # }
 ```

@@ -7,21 +7,18 @@ bare answer, then decode that evidence locally. They mirror the
 experimental decision types introduced in DSPy 3.4 (`Noul`, `Score`, and
 `Choice`):
 
-- `decision_bool()` for a
-  [`type_boolean()`](https://ellmer.tidyverse.org/reference/type_boolean.html)
-  output. The model reports P(TRUE), and the output is `TRUE` when that
-  probability reaches `threshold`.
+- `decision_bool()` for a `type_boolean()` output. The model reports
+  P(TRUE), and the output is `TRUE` when that probability reaches
+  `threshold`.
 
-- `decision_score()` for an ordered
-  [`type_enum()`](https://ellmer.tidyverse.org/reference/type_boolean.html)
-  output (a rubric). The model reports a probability for every level.
-  Their probability-weighted mean level index is a continuous score, and
+- `decision_score()` for an ordered `type_enum()` output (a rubric). The
+  model reports a probability for every level. Their
+  probability-weighted mean level index is a continuous score, and
   `cuts` map that score to a returned level.
 
-- `decision_choice()` for an unordered
-  [`type_enum()`](https://ellmer.tidyverse.org/reference/type_boolean.html)
-  output. The model reports a probability for every option, and the
-  option with the largest `probability * weight` is returned.
+- `decision_choice()` for an unordered `type_enum()` output. The model
+  reports a probability for every option, and the option with the
+  largest `probability * weight` is returned.
 
 Attach these specifications to a module with
 [`with_decisions()`](https://jameshwade.github.io/dsprrr/reference/with_decisions.md).
@@ -87,43 +84,21 @@ A `dsprrr_decision_spec` object for use with
 
 ## See also
 
-[`with_decisions()`](https://jameshwade.github.io/dsprrr/reference/with_decisions.md),
+Other decisions:
+[`ReAnchor()`](https://jameshwade.github.io/dsprrr/reference/ReAnchor.md),
 [`decision_evidence()`](https://jameshwade.github.io/dsprrr/reference/decision_evidence.md),
-[`ReAnchor()`](https://jameshwade.github.io/dsprrr/reference/ReAnchor.md)
+[`decision_settings()`](https://jameshwade.github.io/dsprrr/reference/decision_settings.md),
+[`with_decisions()`](https://jameshwade.github.io/dsprrr/reference/with_decisions.md)
 
 ## Examples
 
 ``` r
 decision_bool(threshold = 0.7, criteria = c(true = "Service blocked"))
-#> $kind
-#> [1] "bool"
-#> 
-#> $threshold
-#> [1] 0.7
-#> 
-#> $criteria
-#>              true 
-#> "Service blocked" 
-#> 
-#> attr(,"class")
-#> [1] "dsprrr_decision_spec"
+#> <dsprrr_decision_spec> bool decision
+#> threshold: 0.7
 decision_score(criteria = c("Cosmetic", "Degraded", "Outage"))
-#> $kind
-#> [1] "score"
-#> 
-#> $criteria
-#> [1] "Cosmetic" "Degraded" "Outage"  
-#> 
-#> attr(,"class")
-#> [1] "dsprrr_decision_spec"
+#> <dsprrr_decision_spec> score decision
 decision_choice(weights = c(other = 0.5))
-#> $kind
-#> [1] "choice"
-#> 
-#> $weights
-#> other 
-#>   0.5 
-#> 
-#> attr(,"class")
-#> [1] "dsprrr_decision_spec"
+#> <dsprrr_decision_spec> choice decision
+#> weights: other = 0.5
 ```

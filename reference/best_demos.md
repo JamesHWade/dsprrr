@@ -1,8 +1,10 @@
-# Extract Best Demos from a Compiled Module
+# Demonstrations attached to a module
 
-Get the few-shot demonstration examples from a compiled module. Returns
-the demos that were selected during optimization (e.g., by
-LabeledFewShot or BootstrapFewShot teleprompters).
+`best_demos()` returns the few-shot demonstrations a module currently
+carries, such as those chosen by
+[`LabeledFewShot()`](https://jameshwade.github.io/dsprrr/reference/LabeledFewShot.md)
+or
+[`BootstrapFewShot()`](https://jameshwade.github.io/dsprrr/reference/BootstrapFewShot.md).
 
 ## Usage
 
@@ -14,21 +16,21 @@ best_demos(module, as_tibble = FALSE)
 
 - module:
 
-  A DSPrrr module that has been compiled with demos.
+  A module.
 
 - as_tibble:
 
-  Logical; if TRUE, return demos as a tibble. If FALSE (default), return
-  as a list.
+  If `TRUE`, return a tibble with one row per demonstration and one
+  column per input and output field. If `FALSE` (the default), return
+  the list of demonstrations as stored.
 
 ## Value
 
-A list or tibble of demonstration examples, or NULL if the module has no
-demos.
+A list or tibble of demonstrations, or `NULL` when the module has none.
 
 ## See also
 
-Other optimizer accessors:
+Other optimization results:
 [`apply_best_config()`](https://jameshwade.github.io/dsprrr/reference/apply_best_config.md),
 [`best_params()`](https://jameshwade.github.io/dsprrr/reference/best_params.md),
 [`config_diff()`](https://jameshwade.github.io/dsprrr/reference/config_diff.md),
@@ -40,9 +42,20 @@ Other optimizer accessors:
 ## Examples
 
 ``` r
-if (FALSE) {
-tp <- LabeledFewShot(k = 4L)
-compiled <- compile(mod, tp, trainset)
-demos <- best_demos(compiled)
-}
+classifier <- module(signature("text -> sentiment"))
+trainset <- data.frame(
+  text = c("I love it!", "Terrible experience", "It's okay"),
+  sentiment = c("positive", "negative", "neutral")
+)
+compiled <- compile(classifier, LabeledFewShot(k = 2L), trainset)
+best_demos(compiled, as_tibble = TRUE)
+#> # A tibble: 2 × 2
+#>   text       output  
+#>   <chr>      <chr>   
+#> 1 It's okay  neutral 
+#> 2 I love it! positive
+
+# An uncompiled module has none
+best_demos(classifier)
+#> NULL
 ```

@@ -1,8 +1,12 @@
-# Vitals Integration Recipes
+# Evaluate with vitals
 
-This vignette provides practical recipes for integrating dsprrr modules
-with vitals evaluation. Each recipe is self-contained and demonstrates a
-specific pattern.
+[vitals](https://vitals.tidyverse.org) is Posit’s package for evaluating
+LLM applications: a `Task` runs a solver over a dataset, grades each
+answer with a scorer, and writes a log you can browse. This page shows
+how to evaluate a dsprrr module as a vitals solver, choose a scorer,
+read the results, and use vitals scorers as dsprrr metrics. The code
+uses `gpt-6-luna`; the outputs below are recorded responses from
+`gpt-4o-mini`, replayed when the site is built.
 
 ``` r
 
@@ -12,17 +16,18 @@ library(ellmer)
 library(tibble)
 ```
 
-## Recipe 1: Quick Start
+## Evaluate a module
 
-The fastest way to evaluate a dsprrr module with vitals:
+[`as_vitals_task()`](https://jameshwade.github.io/dsprrr/reference/as_vitals_task.md)
+turns a module and a data frame into a vitals `Task`. The data needs one
+column per signature input plus a `target` column with the expected
+answer:
 
 ``` r
 
-# 1. Create a simple module
 classifier <- signature("input -> label: enum('positive', 'negative')") |>
   module()
 
-# 2. Prepare test data (vitals expects 'input' and 'target' columns)
 test_data <- tibble(
   input = c(
     "I love this product!",
@@ -31,35 +36,47 @@ test_data <- tibble(
   target = c("positive", "negative")
 )
 
-# 3. Create a vitals Task with dsprrr's helper
 task <- as_vitals_task(
   module = classifier,
   dataset = test_data,
   scorer = detect_match(),
   name = "sentiment",
   dir = tempdir(),
-  .llm = chat_openai(model = "gpt-4o-mini")
+  .llm = chat_openai(model = "gpt-6-luna")
 )
 
-# 4. Run evaluation
 task$eval()
-
-# 5. View results
+#> ℹ Solving
+#> ✔ Solving [1.7s]
+#> 
+#> ℹ Scoring
+#> ✔ Scoring [80ms]
+#> 
 task$get_samples()
+#> # A tibble: 2 × 9
+#>   input            target      id result   solver_chat score scorer_metadata 
+#>   <list>           <chr>    <int> <chr>    <list>      <ord> <list>          
+#> 1 <tibble [1 × 1]> positive     1 positive <Chat>      C     <named list [2]>
+#> 2 <tibble [1 × 1]> negative     2 negative <Chat>      C     <named list [2]>
+#> # ℹ 2 more variables: scorer_explanation <chr>, scorer <chr>
 ```
 
-That’s it! The
-[`as_vitals_task()`](https://jameshwade.github.io/dsprrr/reference/as_vitals_task.md)
-helper handles the integration details.
+`$eval()` runs the module on every row, scores the answers and writes a
+log to `dir`; `vitals_view(dir)` opens the log viewer. In
+`$get_samples()`, `result` holds the module’s output. When the signature
+has one string or enum output, that is the plain value; otherwise it is
+all output fields as JSON. `score` is `C` (correct) or `I` (incorrect).
+Leave out `scorer` and you get
+[`model_graded_qa()`](https://vitals.tidyverse.org/reference/scorer_model.html).
 
-## Recipe 2: Train-Test Split Workflow
+## Evaluate on held-out data
 
-A common pattern: optimize on training data, evaluate on held-out test
-data.
+To check a compiled module, compile on training rows and evaluate on
+rows it has not seen. `LabeledFewShot(k = 2L)` adds two randomly sampled
+training rows to the prompt as examples:
 
 ``` r
 
-# Full dataset with ground truth
 qa_data <- tibble(
   question = c(
     "What is the capital of France?",
@@ -79,70 +96,71 @@ qa_data <- tibble(
   )
 )
 
-# Split into train/test
 set.seed(42)
 train_idx <- sample(nrow(qa_data), 4)
 trainset <- qa_data[train_idx, ]
 testset <- qa_data[-train_idx, ]
 
-# Create and optimize module
 qa_module <- signature("question -> answer") |>
   module()
 
-# Optimize with few-shot examples from training set
 optimized <- compile(
   qa_module,
   LabeledFewShot(k = 2L),
   trainset = trainset
 )
 
-# Evaluate on held-out test set
-eval_task <- as_vitals_task(
+test_task <- as_vitals_task(
   module = optimized,
   dataset = testset,
   scorer = detect_match(),
   name = "qa-test",
   dir = tempdir(),
-  .llm = chat_openai(model = "gpt-4o-mini")
+  .llm = chat_openai(model = "gpt-6-luna")
 )
 
-eval_task$eval()
+test_task$eval()
+#> ℹ Solving
+#> ✔ Solving [767ms]
+#> 
+#> ℹ Scoring
+#> ✔ Scoring [60ms]
+#> 
 
-# Compare performance
-cat("Test accuracy:", mean(eval_task$get_samples()$score == "C"), "\n")
+test_task$get_samples()[c("target", "result", "score")]
+#> # A tibble: 2 × 3
+#>   target      result              score
+#>   <chr>       <chr>               <ord>
+#> 1 Shakespeare William Shakespeare C    
+#> 2 4           4                   C
 ```
 
-## Recipe 3: Using Different Vitals Scorers
+The model answered “William Shakespeare” and still passed.
+[`detect_match()`](https://vitals.tidyverse.org/reference/scorer_detect.html)
+looks for the target at the end of the answer by default
+(`location = "end"`), ignoring case, so “Shakespeare wrote it” would
+have failed. Use `location = "exact"`, `"begin"` or `"any"` when that
+matters.
 
-Vitals provides several scorers for different use cases:
+## Choose a scorer
 
-### Exact Match (detect_match)
+| Scorer | Marks an answer correct when | Good for |
+|----|----|----|
+| [`detect_match()`](https://vitals.tidyverse.org/reference/scorer_detect.html) | the target appears at the end of the answer (see `location`) | short factual answers and labels |
+| [`detect_includes()`](https://vitals.tidyverse.org/reference/scorer_detect.html) | the target appears anywhere in the answer | a word or phrase that must be present |
+| [`detect_pattern()`](https://vitals.tidyverse.org/reference/scorer_detect.html) | text captured by a regular expression matches the target | pulling a number or code out of longer text |
+| [`model_graded_qa()`](https://vitals.tidyverse.org/reference/scorer_model.html) | a grader model judges that the answer meets the target | open-ended answers |
 
-Best for factual questions with precise answers:
-
-``` r
-
-factual <- signature("question -> answer") |> module()
-
-task <- as_vitals_task(
-  module = factual,
-  dataset = tibble(
-    question = c("What is 5 * 7?", "What year did WWII end?"),
-    target = c("35", "1945")
-  ),
-  scorer = detect_match(),
-  name = "factual-qa",
-  dir = tempdir(),
-  .llm = chat_openai(model = "gpt-4o-mini")
-)
-
-task$eval()
-task$get_samples()
-```
-
-### Model-Graded QA (model_graded_qa)
-
-Best for open-ended questions where multiple phrasings are correct:
+The examples above use
+[`detect_match()`](https://vitals.tidyverse.org/reference/scorer_detect.html).
+For explanations,
+[`model_graded_qa()`](https://vitals.tidyverse.org/reference/scorer_model.html)
+asks a model whether the answer meets the target, treated as a
+criterion. Without a `scorer_chat` it grades with a fresh copy of the
+solver’s Chat, so the model grades its own answers.
+[`chain_of_thought()`](https://jameshwade.github.io/dsprrr/reference/chain_of_thought.md)
+adds a `reasoning` output, so `result` is JSON with both fields and the
+grader sees the reasoning too:
 
 ``` r
 
@@ -161,16 +179,30 @@ task <- as_vitals_task(
   scorer = model_graded_qa(),
   name = "explanations",
   dir = tempdir(),
-  .llm = chat_openai(model = "gpt-4o-mini")
+  .llm = chat_openai(model = "gpt-6-luna")
 )
 
 task$eval()
+#> ℹ Solving
+#> ✔ Solving [732ms]
+#> 
+#> ℹ Scoring
+#> ✔ Scoring [275ms]
+#> 
 task$get_samples()
+#> # A tibble: 2 × 10
+#>   input    target        id result solver_chat solver_metadata score scorer_chat
+#>   <list>   <chr>      <int> <chr>  <list>      <list>          <ord> <list>     
+#> 1 <tibble> Light sca…     1 "{\"r… <Chat>      <named list>    C     <Chat>     
+#> 2 <tibble> Photosynt…     2 "{\"r… <Chat>      <named list>    C     <Chat>     
+#> # ℹ 2 more variables: scorer_metadata <list>, scorer <chr>
 ```
 
-### Substring Match (detect_includes)
-
-Best for checking if specific text appears anywhere in output:
+[`detect_includes()`](https://vitals.tidyverse.org/reference/scorer_detect.html)
+checks that the target text appears anywhere. It is literal: the prompt
+below never says which language to use, the model wrote Python
+(`def add_numbers`), and the first row fails because “function” is
+missing:
 
 ``` r
 
@@ -188,20 +220,33 @@ task <- as_vitals_task(
   scorer = detect_includes(),
   name = "code-gen",
   dir = tempdir(),
-  .llm = chat_openai(model = "gpt-4o-mini")
+  .llm = chat_openai(model = "gpt-6-luna")
 )
 
 task$eval()
+#> ℹ Solving
+#> ✔ Solving [732ms]
+#> 
+#> ℹ Scoring
+#> ✔ Scoring [65ms]
+#> 
 task$get_samples()
+#> # A tibble: 2 × 9
+#>   input            target      id result       solver_chat score scorer_metadata
+#>   <list>           <chr>    <int> <chr>        <list>      <ord> <list>         
+#> 1 <tibble [1 × 1]> function     1 "def add_nu… <Chat>      I     <named list>   
+#> 2 <tibble [1 × 1]> for          2 "for i in r… <Chat>      C     <named list>   
+#> # ℹ 2 more variables: scorer_explanation <chr>, scorer <chr>
 ```
 
-## Recipe 4: Analyzing Evaluation Results
+## Read the results
 
-After running evaluation, dig into the results:
+`$get_samples()` returns one row per sample. `input` is a list column
+holding each row’s signature inputs, so pull fields out of it to build a
+readable table:
 
 ``` r
 
-# Run an evaluation
 sentiment <- signature(
   "text -> sentiment: enum('positive', 'negative', 'neutral')"
 ) |>
@@ -224,51 +269,52 @@ task <- as_vitals_task(
   scorer = detect_match(),
   name = "sentiment-analysis",
   dir = tempdir(),
-  .llm = chat_openai(model = "gpt-4o-mini")
+  .llm = chat_openai(model = "gpt-6-luna")
 )
 
 task$eval()
+#> ℹ Solving
+#> ✔ Solving [1.8s]
+#> 
+#> ℹ Scoring
+#> ✔ Scoring [106ms]
+#> 
 
-# Get detailed scores
-scores <- task$get_samples()
+samples <- task$get_samples()
+tibble(
+  text = vapply(samples$input, \(x) x$text, character(1)),
+  target = samples$target,
+  result = samples$result,
+  score = samples$score
+)
+#> # A tibble: 5 × 4
+#>   text                target   result   score
+#>   <chr>               <chr>    <chr>    <ord>
+#> 1 Best purchase ever! positive positive C    
+#> 2 Complete garbage    negative negative C    
+#> 3 It's okay I guess   neutral  neutral  C    
+#> 4 Amazing quality!    positive positive C    
+#> 5 Never buying again  negative negative C
 
-# Find failures
-failures <- scores[scores$score == "I", ]
-cat("Failed on", nrow(failures), "of", nrow(scores), "examples\n")
-
-# Examine what went wrong
-if (nrow(failures) > 0) {
-  cat("\nFailure analysis:\n")
-  for (i in seq_len(nrow(failures))) {
-    # Input is now a nested tibble with the signature's input columns
-    input_text <- failures$input[[i]]$text
-    cat("Input:", input_text, "\n")
-    cat("Expected:", failures$target[i], "\n")
-    cat("Got:", failures$result[i], "\n\n")
-  }
-}
-
-# Calculate accuracy
-accuracy <- mean(scores$score == "C")
-cat("Overall accuracy:", scales::percent(accuracy), "\n")
+mean(samples$score == "C")
+#> [1] 1
 ```
 
-## Recipe 5: Comparing Module Variants
+Filter on `score == "I"` to list the failures.
 
-Test different module configurations side-by-side:
+## Compare two modules
+
+Run the same data through each variant and compare the share of correct
+answers. Here a plain module and a chain-of-thought module answer two
+word problems, graded by
+[`model_graded_qa()`](https://vitals.tidyverse.org/reference/scorer_model.html):
 
 ``` r
 
-# Same signature, different approaches
 sig <- signature("question -> answer")
-
-# Variant 1: Basic prediction
 basic <- module(sig)
-
-# Variant 2: Chain-of-thought reasoning
 cot <- chain_of_thought(sig)
 
-# Test dataset
 test_data <- tibble(
   question = c(
     "If a train travels 60 mph for 2 hours, how far does it go?",
@@ -277,9 +323,8 @@ test_data <- tibble(
   target = c("120 miles", "12")
 )
 
-llm <- chat_openai(model = "gpt-4o-mini")
+llm <- chat_openai(model = "gpt-6-luna")
 
-# Evaluate both
 results <- list()
 for (name in c("basic", "cot")) {
   mod <- if (name == "basic") basic else cot
@@ -296,15 +341,38 @@ for (name in c("basic", "cot")) {
 
   results[[name]] <- mean(task$get_samples()$score == "C")
 }
+#> ℹ Solving
+#> ✔ Solving [729ms]
+#> 
+#> ℹ Scoring
+#> ✔ Scoring [218ms]
+#> 
+#> ℹ Solving
+#> ✔ Solving [742ms]
+#> 
+#> ℹ Scoring
+#> ✔ Scoring [255ms]
+#> 
 
-# Compare
-cat("Basic accuracy:", scales::percent(results$basic), "\n")
-cat("CoT accuracy:", scales::percent(results$cot), "\n")
+tibble(variant = names(results), accuracy = unlist(results))
+#> # A tibble: 2 × 2
+#>   variant accuracy
+#>   <chr>      <dbl>
+#> 1 basic          1
+#> 2 cot            1
 ```
 
-## Recipe 6: Multiple Epochs for Confidence
+Both variants get both problems right, so two questions can’t separate
+them. Use enough rows that a difference would show.
 
-Run multiple evaluation passes for more reliable metrics:
+## Repeat samples with epochs
+
+A model can answer the same prompt differently from run to run. `epochs`
+repeats every row so you can see how stable the scores are. Pass
+`.cache = FALSE` (forwarded to
+[`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md))
+so each repeat makes a new request; with dsprrr’s response cache on, the
+repeats would replay the first answer:
 
 ``` r
 
@@ -313,7 +381,6 @@ classifier <- signature(
 ) |>
   module()
 
-# Small dataset - need multiple epochs for confidence
 test_data <- tibble(
   text = c(
     "New iPhone released today",
@@ -323,7 +390,6 @@ test_data <- tibble(
   target = c("tech", "sports", "politics")
 )
 
-# Run 3 epochs (each example evaluated 3 times)
 task <- as_vitals_task(
   module = classifier,
   dataset = test_data,
@@ -331,82 +397,114 @@ task <- as_vitals_task(
   name = "news-classification",
   epochs = 3L,
   dir = tempdir(),
-  .llm = chat_openai(model = "gpt-4o-mini"),
-  .cache = FALSE  # Disable cache so each epoch gets fresh responses
+  .llm = chat_openai(model = "gpt-6-luna"),
+  .cache = FALSE
 )
 
 task$eval()
+#> ℹ Solving
+#> ✔ Solving [2.9s]
+#> 
+#> ℹ Scoring
+#> ✔ Scoring [167ms]
+#> 
 
-# Aggregate scores across epochs
 scores <- task$get_samples()
-cat(
-  "Total evaluations:",
-  nrow(scores),
-  "(3 epochs x",
-  nrow(test_data),
-  "examples)\n"
-)
-cat("Overall accuracy:", scales::percent(mean(scores$score == "C")), "\n")
+nrow(scores)
+#> [1] 9
+table(scores$target, scores$score)
+#>           
+#>            I C
+#>   politics 0 3
+#>   sports   0 3
+#>   tech     0 3
 ```
 
-## Recipe 7: Custom Evaluation Pipeline
+Three rows times three epochs gives nine samples, and each headline got
+the same label every time.
 
-For complex evaluation logic, build a custom pipeline:
+For larger datasets, add
+`.concurrency = concurrency_control(backend = "ellmer", max_active = 4L)`
+to
+[`as_vitals_task()`](https://jameshwade.github.io/dsprrr/reference/as_vitals_task.md)
+to run rows in parallel. Concurrent rows skip dsprrr’s response cache.
+
+## Build the Task yourself
+
+[`as_vitals_solver()`](https://jameshwade.github.io/dsprrr/reference/as_vitals_solver.md)
+wraps a module as a vitals solver, for when you want to call
+`Task$new()` directly. A module whose only input is named `input` reads
+vitals’ `input` column as is; for other or multiple inputs, use
+[`as_vitals_task()`](https://jameshwade.github.io/dsprrr/reference/as_vitals_task.md),
+which packs them into that column for you.
 
 ``` r
 
-# Custom evaluation function
-evaluate_module <- function(module, dataset, llm, scorer = detect_match()) {
-  # Run predictions
-  predictions <- run(
-    module,
-    !!!as.list(dataset[, -which(names(dataset) == "target")]),
-    .llm = llm
-  )
-
-  # Combine with targets
-  results <- tibble(
-    input = dataset$input,
-    target = dataset$target,
-    prediction = predictions[[1]] # First output column
-  )
-
-  # Score
-  results$correct <- results$prediction == results$target
-
-  # Summary
-  list(
-    accuracy = mean(results$correct),
-    n = nrow(results),
-    failures = results[!results$correct, ],
-    all = results
-  )
-}
-
-# Use it
-results <- evaluate_module(
-  module = sentiment_module,
-  dataset = test_data,
-  llm = chat_openai()
+triage <- module(
+  signature("input -> priority: enum('low', 'medium', 'high')")
+)
+tickets <- tibble(
+  input = c("Checkout fails for every customer", "Typo on the About page"),
+  target = c("high", "low")
 )
 
-cat("Accuracy:", scales::percent(results$accuracy), "\n")
-cat("Failures:", nrow(results$failures), "\n")
+task <- Task$new(
+  dataset = tickets,
+  solver = as_vitals_solver(triage, .llm = chat_openai(model = "gpt-6-luna")),
+  scorer = detect_match(location = "exact"),
+  dir = tempdir()
+)
+task$eval()
 ```
 
-## Summary
+## Use vitals scorers as dsprrr metrics
 
-These recipes cover the most common integration patterns:
+[`metric_detect_match()`](https://jameshwade.github.io/dsprrr/reference/vitals_metrics.md),
+[`metric_detect_includes()`](https://jameshwade.github.io/dsprrr/reference/vitals_metrics.md)
+and
+[`metric_detect_pattern()`](https://jameshwade.github.io/dsprrr/reference/vitals_metrics.md)
+wrap the matching vitals scorers as dsprrr metrics, so
+[`evaluate()`](https://jameshwade.github.io/dsprrr/reference/evaluate.md),
+[`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md)
+and
+[`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md)
+can use them. They take the expected answer from the data’s `target`
+column, return 1 or 0, and work with modules that have a single output
+field:
 
-| Recipe             | Use When                           |
-|--------------------|------------------------------------|
-| Quick Start        | Getting started, simple evaluation |
-| Train-Test Split   | Validating optimization results    |
-| Different Scorers  | Matching scorer to task type       |
-| Analyzing Results  | Understanding failures             |
-| Comparing Variants | A/B testing modules                |
-| Multiple Epochs    | Small datasets, need confidence    |
-| Custom Pipeline    | Complex evaluation logic           |
+``` r
 
-For more details on the underlying APIs, see
-[`vignette("vitals-integration")`](https://jameshwade.github.io/dsprrr/articles/vitals-integration.md).
+ends_with_target <- metric_detect_match()
+exact_target <- metric_detect_match(location = "exact")
+row <- tibble(question = "Who wrote Hamlet?", target = "Shakespeare")
+
+ends_with_target(list(answer = "William Shakespeare"), row)
+#> [1] 1
+exact_target(list(answer = "William Shakespeare"), row)
+#> [1] 0
+```
+
+In an evaluation, pass the metric like any other:
+
+``` r
+
+evaluate(
+  qa_module,
+  testset,
+  metric = metric_detect_match(),
+  .llm = chat_openai(model = "gpt-6-luna")
+)
+```
+
+[`as_dsprrr_metric()`](https://jameshwade.github.io/dsprrr/reference/as_dsprrr_metric.md)
+adapts other vitals-style scorers the same way.
+[`metric_model_graded_qa()`](https://jameshwade.github.io/dsprrr/reference/vitals_metrics.md)
+and
+[`metric_model_graded_fact()`](https://jameshwade.github.io/dsprrr/reference/vitals_metrics.md)
+exist too, but they currently show the grader the prediction as R list
+syntax and no question unless the data has an `input` column; for model
+grading, use
+[`model_graded_qa()`](https://vitals.tidyverse.org/reference/scorer_model.html)
+in a vitals Task as shown above. For how metrics drive optimization, see
+[Metrics and
+evaluation](https://jameshwade.github.io/dsprrr/articles/concepts-why-metrics-matter.md).

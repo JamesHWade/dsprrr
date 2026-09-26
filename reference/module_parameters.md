@@ -1,16 +1,10 @@
-# Suggest tidymodels parameters for a module
+# Build a tidymodels parameter set for a module
 
-Construct a
+`module_parameters()` returns a
 [`dials::parameters()`](https://dials.tidymodels.org/reference/parameters.html)
-set from the information available on a module. Numeric parameters
-(e.g., `temperature`, `top_p`) derive their ranges from observed
-optimisation trials (if present) or fall back to sensible defaults.
-Qualitative parameters (e.g., `prompt_style`) are converted to value
-sets.
-
-For reasoning models (OpenAI o1/o3/o4-mini, GPT-5 series), `temperature`
-and `top_p` are automatically excluded since these models don't support
-them. Instead, `reasoning_effort` is included as a tunable parameter.
+set describing values of a module that can be tuned. Pass it to
+[`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md)
+as `parameters` to search a regular or random grid over those values.
 
 ## Usage
 
@@ -27,47 +21,90 @@ module_parameters(
 
 - module:
 
-  A DSPrrr module (created with
-  [`module()`](https://jameshwade.github.io/dsprrr/reference/module.md)).
+  A module, such as one created with
+  [`module()`](https://jameshwade.github.io/dsprrr/reference/module.md).
 
 - model:
 
-  Optional model name string. When provided, parameters are filtered
-  based on model capabilities (e.g., reasoning models exclude
-  `temperature`/`top_p` and include `reasoning_effort`).
+  Optional model name, such as `"gpt-6-luna"`. For a reasoning model,
+  `temperature` and `top_p` are replaced by `reasoning_effort`.
 
 - include:
 
-  Optional character vector restricting which parameters are returned.
-  Defaults to all parameters discovered in the module configuration and
-  optimisation trials.
+  Optional character vector of parameter names to keep.
 
 - exclude:
 
-  Character vector of parameter names to ignore. Defaults to internal
-  bookkeeping fields such as `id` and `instructions`.
+  Character vector of parameter names to drop when `include` is `NULL`.
+  The default drops `id`, `instructions` and `instructions_suffix`.
 
 ## Value
 
 A
-[`dials::parameters`](https://dials.tidymodels.org/reference/parameters.html)
-object describing the candidate tunables. Returns an empty parameter set
-when no tunables are discovered.
+[`dials::parameters()`](https://dials.tidymodels.org/reference/parameters.html)
+object, empty when nothing tunable is found.
+
+## Details
+
+Candidate parameters come from:
+
+- single values in `module$config` and `module$config$params`;
+
+- the parameters of trials recorded by
+  [`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md);
+
+- enum inputs of the signature, as `input_<name>` with the enum levels;
+
+- runtime settings with default ranges: `temperature` and `top_p` in
+  `[0, 1]`, `frequency_penalty` and `presence_penalty` in `[-2, 2]`, and
+  `max_output_tokens` in `[32, 4096]`.
+
+Numeric values become quantitative parameters spanning the observed
+range (plus or minus 0.1 around a single value); character and logical
+values become qualitative parameters. For a reasoning model (see
+[`is_reasoning_model()`](https://jameshwade.github.io/dsprrr/reference/is_reasoning_model.md)),
+`temperature` and `top_p` are dropped and `reasoning_effort` (`"low"`,
+`"medium"`, `"high"`) is added.
+
+Only runtime settings, `instructions`, `instructions_suffix` and
+`template` change what
+[`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md)
+sends to the model. Other parameters, such as `input_<name>` or internal
+config fields like `.module_kind`, are stored in the module's config
+without effect, so use `include` to keep the ones you mean to tune.
+
+## See also
+
+Other grid search:
+[`GridSearchTeleprompter()`](https://jameshwade.github.io/dsprrr/reference/GridSearchTeleprompter.md),
+[`module_metrics()`](https://jameshwade.github.io/dsprrr/reference/module_metrics.md),
+[`module_trials()`](https://jameshwade.github.io/dsprrr/reference/module_trials.md),
+[`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md)
 
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-sig <- signature("text -> sentiment")
-mod <- module(sig, config = list(temperature = 0.2))
-optimize_grid(
-  mod,
-  data = tibble::tibble(text = "sample", target = "positive"),
-  parameters = list(temperature = c(0.1, 0.5))
+mod <- module(
+  signature("text -> sentiment"),
+  config = list(temperature = 0.2)
 )
-module_parameters(mod)
+module_parameters(mod, include = c("temperature", "top_p"))
+#> Collection of 2 parameters for tuning
+#> 
+#>   identifier        type    object
+#>  temperature temperature nparam[+]
+#>        top_p       top_p dparam[+]
+#> 
 
-# For reasoning models, temperature is excluded
-module_parameters(mod, model = "o3")
-} # }
+# Reasoning models tune reasoning_effort instead of temperature
+module_parameters(
+  mod,
+  model = "gpt-6-luna",
+  include = c("temperature", "reasoning_effort")
+)
+#> Collection of 1 parameters for tuning
+#> 
+#>        identifier             type    object
+#>  reasoning_effort reasoning_effort dparam[+]
+#> 
 ```

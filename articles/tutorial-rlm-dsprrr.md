@@ -1,14 +1,13 @@
-# Investigate a Release Regression with an RLM
+# Investigate a regression with RLM
 
-An RLM is useful when the answer is buried in a large object and you do
-not know the right exploration path in advance. It keeps the object in
-an R environment, lets the model inspect it with R code, and returns
-only selected results to the model between steps.
+You will build a 40,000-row session table and a 200-row change log, ask
+an RLM why checkout conversion fell after a release, and check its
+answer against a calculation that does not involve the model. RLM suits
+this kind of question: the answer is buried in a large object, and you
+do not know in advance which slice of it to look at. The model inspects
+the data with R code and only sees the results it prints.
 
-This worked example asks an RLM to investigate a checkout regression.
-The deterministic fixture contains 40,000 sessions (about 3.6 MB as
-row-oriented JSON) and 200 change records. The expected finding is fixed
-and independently checkable:
+The data are built without random numbers, so the right answer is fixed:
 
 ``` text
 release:      2.4.0
@@ -20,32 +19,33 @@ change_id:    CHG-1842
 evidence:     Mobile Pro token refresh: retry budget changed from 3 to 0 and timeout from 8 s to 800 ms.
 ```
 
-The model must discover which low-cardinality categorical fields define
-the affected cohort, calculate the change, and find the most relevant
-release note. It does not receive the complete session table in its
-prompt.
+The model has to discover which categorical columns define the affected
+cohort, calculate the drop, and find the change record that best
+explains it. Of the session table (about 3.6 MB as row-oriented JSON),
+only a short [`str()`](https://rdrr.io/r/utils/str.html) preview goes
+into the prompt. [Check the answer
+independently](#check-the-answer-independently) computes the same answer
+without a model.
 
-## Why use an RLM here?
+## Where RLM fits
 
-The task combines three properties:
+The task needs exact aggregation over a table too large to paste into a
+prompt, a grouping the question does not name, and a judgment about one
+short piece of text.
+[`module()`](https://jameshwade.github.io/dsprrr/reference/module.md) or
+[`chain_of_thought()`](https://jameshwade.github.io/dsprrr/reference/chain_of_thought.md)
+would have to receive the data in the prompt.
+[`program_of_thought()`](https://jameshwade.github.io/dsprrr/reference/program_of_thought.md)
+fits when you already know which calculation to run. Once an
+investigation like this becomes routine, a plain R function is the
+better tool. RLM covers the exploratory middle: the model decides what
+to inspect, R does the arithmetic, and the model revises its plan from
+the results.
 
-- the source object is expensive and distracting to serialize into a
-  prompt;
-- the useful grouping is not supplied in the question; and
-- the answer needs both exact aggregation and interpretation of a small
-  piece of text.
+## Build the incident data
 
-A regular `Predict` or `ChainOfThought` module would put the supplied
-context in token space. `ProgramOfThought` is a better fit when the
-required computation is already known. A deterministic R pipeline is
-best once the investigation pattern is stable. RLM occupies the
-exploratory middle: the model decides what to inspect, uses R for exact
-work, and revises its plan from the results.
-
-## Build the deterministic incident
-
-The fixture uses no random numbers. Every cohort contains exactly 5,000
-sessions per release.
+Every cohort has exactly 5,000 sessions per release. Only mobile Pro
+users on release 2.4.0 convert less often:
 
 ``` r
 
@@ -77,8 +77,8 @@ sessions$converted <-
   sessions$within_group <= n * conversion_rate
 ```
 
-Most change records are irrelevant. One describes a
-checkout-authentication change for the affected release and cohort.
+Most change records are routine. One describes a checkout-authentication
+change for the affected release and cohort:
 
 ``` r
 
@@ -112,13 +112,12 @@ question <- paste(
 
 ## Define the investigation
 
-The output signature makes the evidence checkable. `SUBMIT()` must
-provide all of these fields with compatible types.
+The output signature makes the answer checkable. `SUBMIT()` must provide
+every field with a compatible type.
 
 ``` r
 
 library(dsprrr)
-library(ellmer)
 
 incident_signature <- signature(
   paste(
@@ -150,20 +149,24 @@ investigator <- rlm_module(
 )
 ```
 
-This example deliberately uses persistent
-[`r_code_runner()`](https://jameshwade.github.io/dsprrr/reference/r_code_runner.md)
-because the input is a large, rich R object and the fixture and
-generated trajectory are assumed trusted. A callr subprocess provides
-process isolation, not an operating-system security sandbox. Do not use
-this configuration for adversarial context or untrusted generated code.
+This example uses `r_code_runner(persistent = TRUE)` because the input
+is a large R data frame and both the data and the generated code are
+treated as trusted. The callr process is a separate R session, not a
+security sandbox: it has your file, network and environment access. Do
+not use this configuration for input you do not control. The factory
+creates one runner per call, keeps its state between steps, and shuts it
+down when the call ends.
 
-The factory creates one runner for the invocation. State remains
-available between RLM iterations, and dsprrr shuts down the runner when
-the invocation ends.
+`max_llm_calls = 0L` turns off recursive queries, because R aggregation
+and one change record are enough here. When generated code must read
+text that R cannot classify, such as vague change notes, `llm_query()`
+asks a model about that slice; [How RLM
+works](https://jameshwade.github.io/dsprrr/articles/how-rlm-works.html#recursive-queries)
+explains how those calls run.
 
-## Run and retain the evidence
+## Run the investigation
 
-Request structured output so the answer and its trajectory travel
+Request the structured result so the answer and its trajectory stay
 together:
 
 ``` r
@@ -173,26 +176,24 @@ result <- run(
   sessions = sessions,
   changes = changes,
   question = question,
-  .llm = chat_openai(),
+  .llm = ellmer::chat_openai(model = "gpt-6-luna"),
   .return_format = "structured"
 )
 
 result$output
 ```
 
-This article does not claim a recorded model run. Model-generated code
-and the number of iterations can vary. The fixed output at the top is
-the result that a successful run must recover from the deterministic
-fixture.
+This page does not show a recorded model run. The generated code and the
+number of steps vary from run to run; the fixed answer at the top is
+what a successful run must recover.
 
 ## What a successful trajectory looks like
 
-The exact R code may differ, but the useful work should be recognizable
-in four steps.
+The exact code will differ, but the useful work falls into four steps.
 
-### 1. Orient to the objects
+### 1. Look at the shape of the data
 
-The first step should inspect shape and schema, not print the full data:
+The first step inspects the schema instead of printing the rows:
 
 ``` r
 
@@ -206,7 +207,7 @@ list(
 
 ### 2. Calculate cohort-level changes
 
-R performs the aggregation exactly:
+R does the aggregation exactly:
 
 ``` r
 
@@ -226,36 +227,38 @@ deltas <- merge(
 )
 deltas$drop_pp <-
   100 * (deltas$converted_before - deltas$converted_after)
+winner <- deltas[which.max(deltas$drop_pp), ]
 deltas[order(-deltas$drop_pp), ]
 ```
 
-The small printed table, rather than all 40,000 rows, enters the next
-model turn.
+Only this four-row table, not the 40,000 sessions, goes into the next
+prompt.
 
-### 3. Inspect candidate changes
+### 3. Find the matching change records
 
-Once the cohort is known, the model can narrow the change log:
+The model cannot search for words it has not seen yet, so it starts from
+what step 2 found: 2.4.0 records that mention the affected platform and
+plan.
 
 ``` r
 
-candidate <- subset(
-  .context$changes,
-  release == "2.4.0" &
-    grepl(
-      "token|retry",
-      paste(component, note),
-      ignore.case = TRUE
-    )
-)
+mentions <- function(value) {
+  grepl(paste0("\\b", value, "\\b"), .context$changes$note, ignore.case = TRUE)
+}
+candidate <- .context$changes[
+  .context$changes$release == "2.4.0" &
+    mentions(winner$platform) &
+    mentions(winner$plan),
+]
+candidate
 ```
 
 ### 4. Submit typed evidence
 
-The closing step returns the calculated values and the relevant record:
+The last step returns the calculated values and the matching record:
 
 ``` r
 
-winner <- deltas[which.max(deltas$drop_pp), ]
 SUBMIT(
   release = after$release[[1L]],
   cohort = paste0(
@@ -270,14 +273,14 @@ SUBMIT(
 )
 ```
 
-If a submitted value is missing or has the wrong type, the RLM receives
-that validation error and can correct the submission on a later
-iteration.
+If a value is missing or has the wrong type, the RLM receives the
+validation error and can correct the submission on a later step. Run in
+order in a real runner, these four blocks produce exactly the answer at
+the top of the page.
 
-## Inspect and validate the result
+## Check the answer independently
 
-The structured result carries the trajectory produced during this
-invocation:
+The structured result carries the trajectory of this call:
 
 ``` r
 
@@ -287,8 +290,8 @@ vapply(trajectory, function(step) step$code, character(1))
 vapply(trajectory, function(step) step$success, logical(1))
 ```
 
-Validate the model output against an independent calculation rather than
-trusting its prose:
+Do not trust the model’s prose. Compute the expected answer from the
+data without it:
 
 ``` r
 
@@ -297,7 +300,6 @@ rates <- aggregate(
   data = sessions,
   FUN = mean
 )
-
 before <- subset(rates, release == "2.3.9")
 after <- subset(rates, release == "2.4.0")
 comparison <- merge(
@@ -309,74 +311,66 @@ comparison <- merge(
 comparison$drop_pp <-
   100 * (comparison$converted_before - comparison$converted_after)
 oracle <- comparison[which.max(comparison$drop_pp), ]
-candidate <- subset(
-  changes,
-  release == "2.4.0" &
-    grepl("token|retry", paste(component, note),
-      ignore.case = TRUE
-    )
-)
-
-stopifnot(
-  nrow(sessions) == 40000L,
-  nrow(candidate) == 1L,
-  identical(candidate$change_id, "CHG-1842"),
-  identical(result$output$release, "2.4.0"),
-  identical(result$output$cohort, "platform=mobile / plan=pro"),
-  isTRUE(all.equal(result$output$before_rate, oracle$converted_before)),
-  isTRUE(all.equal(result$output$after_rate, oracle$converted_after)),
-  isTRUE(all.equal(result$output$drop_pp, oracle$drop_pp)),
-  identical(result$output$change_id, "CHG-1842"),
-  identical(result$output$evidence, candidate$note[[1L]])
-)
+oracle
+#>   platform plan release_before converted_before release_after converted_after
+#> 4   mobile  pro          2.3.9             0.92         2.4.0            0.61
+#>   drop_pp
+#> 4      31
 ```
 
-## Recursive queries are optional
-
-`sub_lm = NULL` inherits the outer model supplied to
-[`run()`](https://jameshwade.github.io/dsprrr/reference/run.md). If
-generated code calls `llm_query()` or `llm_query_batched()`, dsprrr
-performs those calls in the host process and replays their results into
-the same code evaluation. A separate, cheaper model can handle those
-focused reads:
+The change lookup starts from the computed cohort, not from words in the
+expected note:
 
 ``` r
 
-investigator <- rlm_module(
-  incident_signature,
-  interpreter_factory = function() {
-    r_code_runner(timeout = 30, persistent = TRUE)
-  },
-  sub_lm = chat_openai(),
-  max_llm_calls = 4
+mentions <- function(value) {
+  grepl(paste0("\\b", value, "\\b"), changes$note, ignore.case = TRUE)
+}
+expected_change <- changes[
+  changes$release == "2.4.0" &
+    mentions(oracle$platform) &
+    mentions(oracle$plan),
+]
+expected_change[, c("change_id", "component")]
+#>     change_id     component
+#> 142  CHG-1842 checkout-auth
+```
+
+This lookup relies on a property of the fixture: exactly one 2.4.0
+record names the affected platform and plan. In a real change log,
+linking a cohort to a change is a judgment call, which is why the
+signature asks for the note as evidence rather than proof.
+
+Then compare the model’s answer with both:
+
+``` r
+
+stopifnot(
+  identical(result$output$release, "2.4.0"),
+  identical(
+    result$output$cohort,
+    paste0("platform=", oracle$platform, " / plan=", oracle$plan)
+  ),
+  isTRUE(all.equal(result$output$before_rate, oracle$converted_before)),
+  isTRUE(all.equal(result$output$after_rate, oracle$converted_after)),
+  isTRUE(all.equal(result$output$drop_pp, oracle$drop_pp)),
+  identical(result$output$change_id, expected_change$change_id),
+  identical(result$output$evidence, expected_change$note)
 )
 ```
 
-This incident does not require a sub-query: R aggregation plus one
-targeted change record is enough. Do not add recursive calls merely
-because the module supports them.
+## Choose the runner
 
-## Choose the runner deliberately
-
-| Configuration | Use it for | Boundary |
-|----|----|----|
-| [`rlm()`](https://jameshwade.github.io/dsprrr/reference/rlm.md) with no runner arguments | Compact, JSON-compatible context | Fresh managed OS sandbox; network disabled, workspace writes allowed, bounded transport |
-| `interpreter_factory = function() mcp_repl_runner()` | Explicit managed-sandbox configuration | OS sandbox, fresh runner per invocation, bounded transport |
-| `r_code_runner(persistent = TRUE)` | Trusted tasks with rich or large R objects | Persistent callr process with the host user’s permissions |
-
-The managed MCP path is the default for the one-call
-[`rlm()`](https://jameshwade.github.io/dsprrr/reference/rlm.md) helper.
-It requires the suggested R package `mcptools` and the external
-`mcp-repl` executable. It disables network access but still permits
-writes inside the allowed workspace. The final JSON-RPC request must fit
-the 7 KB wire bound; dsprrr tries a gzip/base64 wrapper when the raw
-request is too large. Each encoded RLM control frame must fit 3,000
-bytes. Large data frames and model objects need a runner or resource
-adapter that preserves those values without forcing them through the
-compact MCP request. Declared host tools execute outside the guest
-sandbox with the host process’s permissions.
-
-For a compact document, the managed one-call form is enough:
+The one-call
+[`rlm()`](https://jameshwade.github.io/dsprrr/reference/rlm.md) helper
+runs in a fresh
+[`mcp_repl_runner()`](https://jameshwade.github.io/dsprrr/reference/mcp_repl_runner.md)
+sandbox by default. That sandbox suits compact inputs you do not
+control, but every input is sent with every step, so this 40,000-row
+table is far too large for it. See [How RLM
+works](https://jameshwade.github.io/dsprrr/articles/how-rlm-works.html#limits)
+for the sandbox’s size limits and safety model. For a compact document,
+the one-call form is enough:
 
 ``` r
 
@@ -384,22 +378,18 @@ answer <- rlm(
   "document, question -> answer",
   document = "Owner: team-a\nCommitment: publish the audit by Friday",
   question = "Which commitments have no owner?",
-  .llm = chat_openai(),
+  .llm = ellmer::chat_openai(model = "gpt-6-luna"),
   .max_iterations = 4L,
   .max_llm_calls = 0L
 )
 ```
 
-See [How the RLM
-Works](https://jameshwade.github.io/dsprrr/articles/how-rlm-works.md)
-for runner lifecycle, recursive calls, budgets, and failure behavior.
-
 ## Turn discovery into a program
 
 RLM is a poor default for a known report. If several investigations
-repeatedly aggregate the same columns and join the same records, encode
-that path in R or a dsprrr pipeline. If the best implementation is
-itself the search problem, evaluate it over labeled cases and consider
-Flex.
-
-Use RLM to discover the path. Use deterministic code once you know it.
+aggregate the same columns and join the same records, write that path in
+R or as a dsprrr pipeline. If the best implementation is itself the
+thing to search for, evaluate candidates over labeled cases with
+[Flex](https://jameshwade.github.io/dsprrr/articles/flex-optimization.md).
+Use RLM to discover the path, then replace it with code once you know
+it.

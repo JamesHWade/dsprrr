@@ -1,20 +1,12 @@
-# Evaluate a Program on a Dataset
+# Evaluate a program with per-example detail
 
-Standard evaluation function for optimizers. Executes a module on a
-dataset, applies a metric to each example, and returns detailed
-per-example results plus aggregated statistics.
-
-This is the core evaluation function used by all optimizers. It wraps
+`eval_program()` runs a program on a dataset, scores every row with a
+metric, and returns an `EvalResult` with per-example scores, errors,
+predictions and feedback, plus totals for tokens, cost and time. It is
+the evaluation the optimizers use internally. Use it when you build your
+own optimizer or need the same detail; for everyday evaluation,
 [`evaluate()`](https://jameshwade.github.io/dsprrr/reference/evaluate.md)
-with enhanced output including:
-
-- Per-example timing and error information
-
-- Aggregated cost tracking
-
-- Standard error computation
-
-- Multi-epoch evaluation for statistical significance (when epochs \> 1)
+is simpler.
 
 ## Usage
 
@@ -35,96 +27,104 @@ eval_program(
 
 - program:
 
-  A DSPrrr module to evaluate.
+  A module or composed program.
 
 - dataset:
 
-  A data frame containing test examples.
+  A data frame with the signature's input columns and the columns the
+  metric compares.
 
 - metric:
 
-  A metric function for scoring predictions.
+  A metric function called as `metric(prediction, expected)`, such as
+  `metric_exact_match(field = "answer")`.
 
 - .llm:
 
-  Optional ellmer Chat object for LLM calls.
+  Optional ellmer Chat.
 
 - control:
 
-  An object created by
-  [`optimizer_control()`](https://jameshwade.github.io/dsprrr/reference/optimizer_control.md),
-  or `NULL` for defaults.
+  An
+  [`optimizer_control()`](https://jameshwade.github.io/dsprrr/reference/optimizer_control.md)
+  object, or `NULL` for the defaults. Its `num_threads` sets how many
+  rows run at the same time and `progress` whether to show a progress
+  bar.
 
 - epochs:
 
-  Integer; number of times to repeat evaluation for statistical
-  significance. Defaults to 1L. When \> 1, computes std and confidence
-  intervals.
+  Integer number of times each row is evaluated (default `1L`).
 
 - ...:
 
-  Additional arguments passed to
+  Further arguments passed to
   [`evaluate()`](https://jameshwade.github.io/dsprrr/reference/evaluate.md).
 
 - .trace_context:
 
-  A named JSON-compatible correlation context copied to the returned
-  `EvalResult` and all program execution traces.
+  A named, JSON-compatible list of correlation fields (such as an
+  experiment ID) copied to the result and to every execution trace.
 
 ## Value
 
-An EvalResult object containing:
+An `EvalResult` S7 object. Read its properties with `@`:
 
-- `examples`: tibble with per-example row_id, score, error, predicted,
-  feedback (textual feedback from feedback-aware metrics, see
+- `examples`: a tibble with one row per example and columns `row_id`,
+  `score`, `error`, `predicted`, `feedback` (from metrics made with
   [`metric_with_feedback()`](https://jameshwade.github.io/dsprrr/reference/metric_with_feedback.md)),
-  and input columns (prefixed with input\_\*)
+  `program_trace`, and one `input_<name>` column per input.
 
-- `mean_score`: mean score across successful evaluations
+- `mean_score`, `std_error`: mean score of the successful rows and its
+  standard error.
 
-- `std_error`: standard error of per-example scores (SD / sqrt(n))
+- `n_evaluated`, `n_errors`: counts of successful and failed rows.
 
-- `n_evaluated`: number of successful evaluations
+- `input_tokens`, `output_tokens`, `total_tokens`, `total_cost`,
+  `provider_calls`, `metric_calls`: usage totals (`NA` when unknown).
 
-- `n_errors`: number of failed evaluations
+- `total_latency_ms`, `start_time`, `end_time`: timing.
 
-- `total_tokens`: total tokens used
+- `epochs`, `epoch_scores`, `score_std`, `ci_lower`, `ci_upper`: with
+  `epochs` above 1, the per-epoch scores, their standard deviation and a
+  95% confidence interval.
 
-- `total_cost`: total cost in USD
+- `trace_context`: the correlation fields.
 
-- `total_latency_ms`: total time in milliseconds
+## Details
 
-- `trace_context`: the validated correlation context for this evaluation
+The program is copied before it runs, so its traces are not changed.
+With `epochs` above 1, every row is evaluated that many times, and the
+result also reports the spread of the per-epoch mean scores.
 
-When `epochs > 1`, additional fields:
+## See also
 
-- `epochs`: number of epochs run
-
-- `epoch_scores`: list of score vectors, one per epoch
-
-- `score_std`: standard deviation of mean scores across epochs
-
-- `ci_lower`, `ci_upper`: 95% confidence interval bounds
+Other optimizer building blocks:
+[`TrialLog`](https://jameshwade.github.io/dsprrr/reference/TrialLog.md),
+[`complete_trial()`](https://jameshwade.github.io/dsprrr/reference/complete_trial.md),
+[`create_trial()`](https://jameshwade.github.io/dsprrr/reference/create_trial.md),
+[`load_trial_log()`](https://jameshwade.github.io/dsprrr/reference/load_trial_log.md),
+[`optimizer_control()`](https://jameshwade.github.io/dsprrr/reference/optimizer_control.md),
+[`read_trials_jsonl()`](https://jameshwade.github.io/dsprrr/reference/read_trials_jsonl.md),
+[`sample_dataset()`](https://jameshwade.github.io/dsprrr/reference/sample_dataset.md),
+[`split_dataset()`](https://jameshwade.github.io/dsprrr/reference/split_dataset.md),
+[`write_trials_jsonl()`](https://jameshwade.github.io/dsprrr/reference/write_trials_jsonl.md)
 
 ## Examples
 
 ``` r
 if (FALSE) { # \dontrun{
-sig <- signature("question -> answer")
-mod <- module(sig)
-
-dataset <- tibble::tibble(
+qa <- module(signature("question -> answer"))
+dataset <- data.frame(
   question = c("What is 2+2?", "What is 3+3?"),
   answer = c("4", "6")
 )
 
 result <- eval_program(
-  mod,
+  qa,
   dataset,
   metric = metric_exact_match(field = "answer"),
-  .llm = ellmer::chat_openai()
+  .llm = ellmer::chat_openai(model = "gpt-6-luna")
 )
-
 result@mean_score
 result@examples
 } # }

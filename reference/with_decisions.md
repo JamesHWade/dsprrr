@@ -4,13 +4,9 @@
 
 Returns a copy of a Predict module in which the named output fields are
 decoded from probability evidence. Each field must be declared in the
-module's object-shaped signature output: a
-[`type_boolean()`](https://ellmer.tidyverse.org/reference/type_boolean.html)
-field for
+module's object-shaped signature output: a `type_boolean()` field for
 [`decision_bool()`](https://jameshwade.github.io/dsprrr/reference/decision_types.md),
-or a
-[`type_enum()`](https://ellmer.tidyverse.org/reference/type_boolean.html)
-field for
+or a `type_enum()` field for
 [`decision_score()`](https://jameshwade.github.io/dsprrr/reference/decision_types.md)
 and
 [`decision_choice()`](https://jameshwade.github.io/dsprrr/reference/decision_types.md).
@@ -53,10 +49,11 @@ A modified copy of `module`. The original is unchanged.
 
 ## See also
 
-[decision_types](https://jameshwade.github.io/dsprrr/reference/decision_types.md),
+Other decisions:
+[`ReAnchor()`](https://jameshwade.github.io/dsprrr/reference/ReAnchor.md),
 [`decision_evidence()`](https://jameshwade.github.io/dsprrr/reference/decision_evidence.md),
 [`decision_settings()`](https://jameshwade.github.io/dsprrr/reference/decision_settings.md),
-[`ReAnchor()`](https://jameshwade.github.io/dsprrr/reference/ReAnchor.md)
+[`decision_types`](https://jameshwade.github.io/dsprrr/reference/decision_types.md)
 
 ## Examples
 

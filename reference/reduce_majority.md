@@ -1,8 +1,9 @@
-# Majority Vote Reducer
+# Pick the most common ensemble output
 
-Creates a reduce function that returns the most common output among the
-ensemble members. For structured outputs (lists), compares by the first
-field or a specified field.
+`reduce_majority()` makes a reducer for
+[`ensemble()`](https://jameshwade.github.io/dsprrr/reference/ensemble.md)
+that returns the output whose value occurs most often. It is the default
+reducer.
 
 ## Usage
 
@@ -14,27 +15,53 @@ reduce_majority(field = NULL, tie_breaker = "first")
 
 - field:
 
-  Optional field name to use for voting when outputs are lists. If NULL,
-  uses the first field of the output.
+  The output field to vote on. With `NULL`, the first field.
 
 - tie_breaker:
 
-  How to handle ties: "first" (default) returns the first occurrence,
-  "random" picks randomly among tied values.
+  `"first"` picks, among tied values, the one that occurs first;
+  `"random"` picks one at random.
 
 ## Value
 
-A reduce function for use with
-[`ensemble()`](https://jameshwade.github.io/dsprrr/reference/ensemble_module.md)
+A function `function(outputs, weights = NULL)` for the `reduce_fn`
+argument of
+[`ensemble()`](https://jameshwade.github.io/dsprrr/reference/ensemble.md).
+
+## Details
+
+Values are compared as strings. If the ensemble has `weights`, each vote
+counts with its module's weight. The reducer returns the whole output of
+the first module that gave the winning value.
+
+## See also
+
+Other composition:
+[`as_reward_fn()`](https://jameshwade.github.io/dsprrr/reference/as_reward_fn.md),
+[`best_of_n()`](https://jameshwade.github.io/dsprrr/reference/best_of_n.md),
+[`ensemble()`](https://jameshwade.github.io/dsprrr/reference/ensemble.md),
+[`module-graph`](https://jameshwade.github.io/dsprrr/reference/module-graph.md),
+[`pipeline()`](https://jameshwade.github.io/dsprrr/reference/pipeline.md),
+[`reduce_best_by_metric()`](https://jameshwade.github.io/dsprrr/reference/reduce_best_by_metric.md),
+[`reduce_first()`](https://jameshwade.github.io/dsprrr/reference/reduce_first.md),
+[`reduce_weighted_vote()`](https://jameshwade.github.io/dsprrr/reference/reduce_weighted_vote.md),
+[`refine()`](https://jameshwade.github.io/dsprrr/reference/refine.md),
+[`step()`](https://jameshwade.github.io/dsprrr/reference/step.md),
+[`with_assertions()`](https://jameshwade.github.io/dsprrr/reference/with_assertions.md)
 
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-# Basic majority voting
-ens <- ensemble(modules, reduce_fn = reduce_majority())
-
-# Vote based on specific field
-ens <- ensemble(modules, reduce_fn = reduce_majority(field = "sentiment"))
-} # }
+vote <- reduce_majority(field = "sentiment")
+vote(list(
+  list(sentiment = "positive", confidence = 0.6),
+  list(sentiment = "negative", confidence = 0.9),
+  list(sentiment = "positive", confidence = 0.8)
+))
+#> $sentiment
+#> [1] "positive"
+#> 
+#> $confidence
+#> [1] 0.6
+#> 
 ```

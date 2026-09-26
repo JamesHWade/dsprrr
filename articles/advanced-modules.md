@@ -1,504 +1,358 @@
-# Advanced Reasoning Modules
+# Choose a module type
 
 ``` r
 
 library(dsprrr)
-library(ellmer)
 ```
 
-## Overview
+Every dsprrr module comes from a constructor and runs with
+[`run()`](https://jameshwade.github.io/dsprrr/reference/run.md). The
+constructors differ in how they reach an answer: one prompt, several
+attempts, tools, or generated R code. This page helps you pick one. The
+table compares them, and the sections below run one small task through
+each pattern so you can see what changes in the code and in the number
+of model calls.
 
-Choose a module by the work it needs to do:
+| Constructor | What it does | Use it when | Model calls per input |
+|----|----|----|----|
+| [`module()`](https://jameshwade.github.io/dsprrr/reference/module.md) | One structured prediction | The task fits in one prompt | 1 |
+| [`chain_of_thought()`](https://jameshwade.github.io/dsprrr/reference/chain_of_thought.md) | Adds a `reasoning` output before the answer | Worked steps help the answer | 1 |
+| [`best_of_n()`](https://jameshwade.github.io/dsprrr/reference/best_of_n.md) | Reruns a module and keeps the attempt with the highest reward | You can score an output in R | 1 to `N` |
+| [`refine()`](https://jameshwade.github.io/dsprrr/reference/refine.md) | Like [`best_of_n()`](https://jameshwade.github.io/dsprrr/reference/best_of_n.md), and each retry gets feedback text | A retry can be told what to fix | 1 to `N` |
+| [`with_assertions()`](https://jameshwade.github.io/dsprrr/reference/with_assertions.md) | Checks outputs against rules and retries with the failed rules’ messages | Outputs must meet hard constraints | 1 to `max_retries` + 1 |
+| [`multi_chain_comparison()`](https://jameshwade.github.io/dsprrr/reference/multi_chain_comparison.md) | Runs `M` reasoning chains, then one call compares them | Samples disagree and you want one reconciled answer | `M` + 1 |
+| [`ensemble()`](https://jameshwade.github.io/dsprrr/reference/ensemble.md) | Runs several modules and combines their outputs | You have variants to vote between | Sum over members |
+| [`react()`](https://jameshwade.github.io/dsprrr/reference/react.md) | Lets the model call your R functions as tools | The answer needs data or actions the model lacks | 2, plus 1 per tool round |
+| [`program_of_thought()`](https://jameshwade.github.io/dsprrr/reference/program_of_thought.md) | The model writes R code and R runs it | The answer needs exact computation | 1, plus 1 per repair |
+| [`code_act()`](https://jameshwade.github.io/dsprrr/reference/code_act.md) | An agent with your tools and an R execution tool | A task needs both tools and computation | 1, plus 1 per tool round |
+| [`rlm_module()`](https://jameshwade.github.io/dsprrr/reference/rlm_module.md) | The model explores large R objects one step at a time (experimental) | The input is too big or irregular for one prompt | 1 per step, plus recursive queries |
+| [`flex()`](https://jameshwade.github.io/dsprrr/reference/flex.md) | A program whose structure an optimizer can rewrite (experimental) | The best program shape is the open question | Depends on the program |
+| [`module_fn()`](https://jameshwade.github.io/dsprrr/reference/module_fn.md) | Wraps an R function as a module | You need custom logic around model calls | Whatever the function makes |
+| [`pipeline()`](https://jameshwade.github.io/dsprrr/reference/pipeline.md) | Runs modules in sequence | A task splits into steps | Sum over steps |
 
-- **Step-by-step reasoning** with ChainOfThought
-- **Multiple attempts** with BestOfN
-- **Iterative refinement** with Refine
-- **Ensemble reasoning** with MultiChainComparison
-- **Exact computation** with ProgramOfThought (code generation)
-- **Hybrid agents** with CodeAct (tools + code execution)
-- **Adaptive investigation** of large or awkward R objects with RLM
-- **Implementation search** across predictors, R logic, and tools with
-  Flex
-
-The sections below show each execution pattern and its tradeoffs.
-
-## ChainOfThought
-
-ChainOfThought (CoT) asks the model for a reasoning field before the
-final answer.
-
-### Why Use ChainOfThought?
-
-Use it when intermediate reasoning is useful to the task or evaluator.
-It adds tokens and does not make the reasoning inherently faithful, so
-evaluate the final output against a task-specific metric.
-
-### Basic Usage
-
-The simplest way to use CoT is with
-[`chain_of_thought()`](https://jameshwade.github.io/dsprrr/reference/chain_of_thought.md):
+With `.return_format = "structured"`, most modules report what a call
+actually used in `metadata$provider_calls`, `metadata$total_tokens` and
+`metadata$cost`. The examples below answer one question whose correct
+answer is 205:
 
 ``` r
 
-# Create a CoT module
-math_solver <- chain_of_thought("problem -> solution")
-
-# Run it
-result <- run(
-  math_solver,
-  problem = "If a train travels 120 miles in 2 hours, what is its average speed?",
-  .llm = chat_openai()
-)
-
-# Result includes both reasoning and answer
-result$reasoning
-#> "To find average speed, I need to divide total distance by total time.
-#>  Distance = 120 miles, Time = 2 hours.
-#>  Speed = 120 / 2 = 60 miles per hour."
-
-result$solution
-#> "60 miles per hour"
+llm <- ellmer::chat_openai(model = "gpt-6-luna")
+question <- "A train leaves at 9:40 and arrives at 13:05. How many minutes is the trip?"
 ```
 
-### Signature Transforms
+## One prompt: module() and chain_of_thought()
 
-Under the hood,
+[`module()`](https://jameshwade.github.io/dsprrr/reference/module.md)
+makes one structured call.
 [`chain_of_thought()`](https://jameshwade.github.io/dsprrr/reference/chain_of_thought.md)
-uses
-[`with_reasoning()`](https://jameshwade.github.io/dsprrr/reference/with_reasoning.md)
-to transform the signature. You can use this directly for more control:
+makes the same call with an extra `reasoning` output placed before the
+answer, so the model writes out its steps first:
 
 ``` r
 
-# Start with a regular signature
-sig <- signature("question -> answer: string")
-
-# Transform it to include reasoning
-cot_sig <- with_reasoning(sig)
-
-# The output now includes a reasoning field
-names(cot_sig@output_type@properties)
-#> [1] "reasoning" "answer"
-
-# Check if a signature has reasoning
-has_reasoning(cot_sig)
-#> TRUE
-has_reasoning(sig)
-#> FALSE
-```
-
-### Custom Reasoning Prefix
-
-You can customize the reasoning prompt:
-
-``` r
-
-# Default: "Let's think step by step in order to"
-math_cot <- with_reasoning(
-  "equation -> result",
-  prefix = "Let me solve this equation carefully:"
-)
-
-# For code tasks
-code_cot <- with_reasoning(
-  "task -> code",
-  prefix = "Let me break down the implementation:"
-)
-```
-
-### Removing Reasoning
-
-For A/B testing CoT vs non-CoT performance:
-
-``` r
-
-cot_sig <- with_reasoning("question -> answer")
-plain_sig <- without_reasoning(cot_sig)
-
-has_reasoning(plain_sig)
-#> FALSE
-```
-
-## BestOfN
-
-BestOfN addresses output variance by running a module multiple times and
-selecting the best result based on a reward function.
-
-### Why Use BestOfN?
-
-LLM outputs can be inconsistent. The same prompt might produce correct
-output 70% of the time. BestOfN increases reliability by: - Making
-multiple attempts - Scoring each attempt with a reward function -
-Returning the highest-scoring result - Optionally stopping early when a
-threshold is met
-
-### Basic Usage
-
-``` r
-
-# Create a QA module
-qa <- module(signature("question -> answer"))
-
-# Wrap with BestOfN (default N=3)
-reliable_qa <- best_of_n(qa, N = 5)
-
-# Run - internally makes up to 5 attempts
-result <- run(
-  reliable_qa,
-  question = "What is the capital of France?",
-  .llm = chat_openai()
-)
-```
-
-### Reward Functions
-
-The power of BestOfN comes from custom reward functions that score
-outputs:
-
-``` r
-
-# Reward function signature: function(prediction, inputs) -> [0, 1]
-
-# Example: Prefer single-word answers
-one_word_reward <- function(pred, inputs) {
-
-  words <- strsplit(as.character(pred$answer), "\\s+")[[1]]
-  if (length(words) == 1) 1.0 else 0.0
-}
-
-# Example: Prefer confident answers
-confidence_reward <- function(pred, inputs) {
-  # Check for hedging language
-  hedges <- c("maybe", "perhaps", "possibly", "might")
-  answer <- tolower(pred$answer)
-  if (any(sapply(hedges, grepl, answer))) 0.3 else 1.0
-}
-
-wrapper <- best_of_n(
-  qa,
-  N = 5,
-  reward_fn = one_word_reward,
-  threshold = 1.0  # Stop early if we get a one-word answer
-)
-```
-
-### Using Metrics as Rewards
-
-Convert existing metrics to reward functions with
-[`as_reward_fn()`](https://jameshwade.github.io/dsprrr/reference/as_reward_fn.md):
-
-``` r
-
-# When you have expected values in your inputs
-wrapper <- best_of_n(
-  qa,
-  N = 3,
-  reward_fn = as_reward_fn(
-    metric_exact_match(field = "answer"),
-    expected_field = "expected_answer"
-  )
-)
-
-# Run with expected value for reward calculation
-result <- run(
-  wrapper,
-  question = "What is 2+2?",
-  expected_answer = "4",
-  .llm = chat_openai()
-)
-```
-
-### Inspecting Attempts
-
-After running, you can examine all attempts:
-
-``` r
-
-# Get attempts from last run
-attempts <- wrapper$get_attempts()
-attempts
-#> # A tibble: 3 x 4
-#>     run attempt prediction       score
-#>   <int>   <int> <list>           <dbl>
-#> 1     1       1 <named list [1]>   0
-#> 2     1       2 <named list [1]>   1
-#> 3     1       3 <named list [1]>   0
-
-# Get all attempts across multiple runs
-all_attempts <- wrapper$get_attempts(all = TRUE)
-```
-
-### Metadata
-
-BestOfN tracks useful metadata. Use `.return_format = "structured"` to
-access it:
-
-``` r
-
-# Use structured format to access metadata
-result <- run(wrapper, question = "Test", .llm = llm, .return_format = "structured")
-
-# Access metadata fields
-result$metadata$n_attempts     # How many attempts were made
-result$metadata$best_score     # Score of selected result
-result$metadata$all_scores     # Scores of all attempts
-result$metadata$early_stopped  # Did we hit threshold?
-result$metadata$total_tokens   # Tokens across all attempts, or NA if unknown
-result$metadata$cost           # Cost across all attempts, or NA if unknown
-result$metadata$provider_calls # Provider calls across all attempts, or NA
-
-# For batch operations with run_dataset(), use .metadata column:
-# batch_result$.metadata[[1]]$n_attempts
-```
-
-## Refine
-
-Refine extends BestOfN with a feedback loop. After each failed attempt,
-it generates feedback explaining what was wrong and injects this into
-the next attempt.
-
-### Why Use Refine?
-
-While BestOfN makes independent attempts, Refine learns from mistakes.
-Each iteration receives feedback about the previous attempt, allowing
-the model to correct specific issues.
-
-### Basic Usage
-
-``` r
-
-# Create module that accepts feedback
-qa <- module(signature("question, feedback -> answer"))
-
-# One-word answer reward
-one_word_reward <- function(pred, inputs) {
-  words <- strsplit(as.character(pred$answer), "\\s+")[[1]]
-  if (length(words) == 1) 1.0 else 0.0
-}
-
-# Wrap with Refine
-refined <- refine(
-  qa,
-  N = 3,
-  reward_fn = one_word_reward,
-  threshold = 1.0,
-  feedback_template = "Your answer '{prediction}' scored {score}. Please give a single word answer."
-)
-
-result <- run(
-  refined,
-  question = "What is the capital of France?",
-  .llm = chat_openai()
-)
-```
-
-### Feedback Templates
-
-Feedback templates use glue syntax with these variables: - `{score}` -
-The score from the reward function -
-[prediction](https://github.com/bbolker/prediction) - The previous
-output (formatted as string) - Any input field names from your signature
-
-``` r
-
-# Reference input fields
-template <- "For the question '{question}', your answer '{prediction}' scored {score}. Try again."
-
-# Be specific about what's wrong
-template <- "Score: {score}. Your answer was too verbose. Give only the city name."
-
-# Use conditional language
-template <- "Previous attempt scored {score}/1.0. Focus on precision and brevity."
-```
-
-### Custom Feedback Field
-
-By default, feedback is injected as a field called `feedback`. You can
-customize this:
-
-``` r
-
-refined <- refine(
-  module(signature("question, hint -> answer")),
-  N = 3,
-  reward_fn = my_reward,
-  feedback_field = "hint"  # Use 'hint' instead of 'feedback'
-)
-```
-
-### Feedback History
-
-Track the feedback generated across iterations:
-
-``` r
-
-result <- run(refined, question = "Test", .llm = llm)
-
-# Get feedback from last run
-refined$get_feedback_history()
-#> [1] "Your answer 'The capital is Paris' scored 0..."
-#> [2] "Your answer 'Paris, France' scored 0..."
-
-# Get all feedback across runs
-refined$get_feedback_history(all = TRUE)
-```
-
-## MultiChainComparison
-
-MultiChainComparison (MCC) runs several independent reasoning chains and
-asks a final model call to synthesize one answer.
-
-### Why Use MultiChainComparison?
-
-MCC: - Generates M diverse reasoning attempts (using temperature for
-variation) - Compares all attempts in a synthesis step - Produces one
-answer from the compared attempts
-
-### Basic Usage
-
-``` r
-
-# Create MCC module
-mcc <- multi_chain_comparison(
-  "question -> answer",
-  M = 3,           # Number of reasoning chains
-  temperature = 0.7 # Higher = more diversity
-)
-
-result <- run(
-  mcc,
-  question = "What are the pros and cons of renewable energy?",
-  .llm = chat_openai()
-)
-
-# Result is synthesized from all chains
+basic <- module(signature("question -> answer"))
+run(basic, question = question, .llm = llm)
+
+cot <- chain_of_thought("question -> answer")
+result <- run(cot, question = question, .llm = llm)
 result$reasoning
 result$answer
 ```
 
-### Using the Module Factory
-
-MCC is also available via the
-[`module()`](https://jameshwade.github.io/dsprrr/reference/module.md)
-factory:
+The reasoning costs output tokens and is not guaranteed to reflect how
+the model reached its answer, so judge the answer with a metric. Under
+the hood,
+[`chain_of_thought()`](https://jameshwade.github.io/dsprrr/reference/chain_of_thought.md)
+builds its signature with
+[`with_reasoning()`](https://jameshwade.github.io/dsprrr/reference/with_reasoning.md),
+which describes the new field with `prefix` followed by “produce the”
+and the output names. Write the prefix as the start of a sentence that
+ends in “to”:
 
 ``` r
 
-mcc <- multi_chain_comparison(
-  signature("context, question -> answer"),
-  M = 5,
-  temperature = 0.8
+sig <- with_reasoning(
+  "question -> answer",
+  prefix = "Convert both times to minutes after midnight in order to"
 )
+sig@output_type@properties$reasoning@description
+#> [1] "Reasoning: Convert both times to minutes after midnight in order to produce the answer."
 ```
 
-### Custom Inner Module
+Pass the same `prefix` to
+[`chain_of_thought()`](https://jameshwade.github.io/dsprrr/reference/chain_of_thought.md).
+[`without_reasoning()`](https://jameshwade.github.io/dsprrr/reference/without_reasoning.md)
+removes the field again, which is handy for comparing both versions on
+the same data.
 
-By default, MCC uses ChainOfThought for the inner module. You can
-provide your own:
+## Retry until an output passes
+
+Suppose the answer must be a bare number such as `205`, not
+`205 minutes` or `3 h 25 min`. Three wrappers can enforce that, and they
+differ in what the next attempt learns from a failure:
+
+|  | [`best_of_n()`](https://jameshwade.github.io/dsprrr/reference/best_of_n.md) | [`refine()`](https://jameshwade.github.io/dsprrr/reference/refine.md) | [`with_assertions()`](https://jameshwade.github.io/dsprrr/reference/with_assertions.md) |
+|----|----|----|----|
+| Scores an attempt with | a reward function (0 to 1) | a reward function | pass/fail rules |
+| The next attempt sees | nothing new | your feedback template | the messages of the failed rules |
+| When nothing passes | returns the best attempt | returns the best attempt | errors, or warns with `on_failure = "warn"` |
+
+A reward function takes the prediction and the inputs and returns a
+score:
 
 ``` r
 
-# Use a custom CoT module
-cot <- chain_of_thought(
-  "question -> answer",
-  prefix = "Let me analyze this from multiple angles:"
-)
+digits_only <- function(prediction, inputs) {
+  as.numeric(grepl("^[0-9]+$", trimws(prediction$answer)))
+}
 
-mcc <- multi_chain_comparison(
-  "question -> answer",
-  inner_module = cot,
-  M = 5
-)
+digits_only(list(answer = "205"), list())
+#> [1] 1
+digits_only(list(answer = "205 minutes"), list())
+#> [1] 0
 ```
 
-### Custom Comparison Template
+### best_of_n()
 
-Customize how attempts are compared:
+[`best_of_n()`](https://jameshwade.github.io/dsprrr/reference/best_of_n.md)
+runs the module up to `N` times and stops at the first attempt that
+scores at least `threshold` (default 1). Each attempt gets its own cache
+key, so retries are fresh samples, but they are independent: nothing
+from a failed attempt reaches the next one. If no attempt reaches the
+threshold, you get the highest-scoring one.
 
 ``` r
 
-mcc <- multi_chain_comparison(
-  "question -> answer",
-  M = 3,
-  comparison_template = paste0(
-    "You have {M} expert analyses of the same question.\n\n",
-    "{attempts_text}\n\n",
-    "Synthesize these into a single authoritative answer. ",
-    "Note where experts agree and resolve any disagreements."
+qa <- module(signature("question -> answer"))
+best <- best_of_n(qa, N = 3L, reward_fn = digits_only)
+
+result <- run(best, question = question, .llm = llm, .return_format = "structured")
+result$output$answer
+result$metadata$all_scores
+best$get_attempts()
+```
+
+Always pass a `reward_fn`. The default gives every non-`NULL` prediction
+a score of 1, so the first answer ends the loop and
+[`best_of_n()`](https://jameshwade.github.io/dsprrr/reference/best_of_n.md)
+behaves like the module it wraps.
+
+When you have labeled data,
+[`as_reward_fn()`](https://jameshwade.github.io/dsprrr/reference/as_reward_fn.md)
+turns a metric into a reward. It compares one output field
+(`prediction_field`) with an input that holds the expected value
+(`expected_field`). It extracts both values itself, so pass the metric
+without `field`:
+
+``` r
+
+matches_label <- as_reward_fn(
+  metric_exact_match(),
+  expected_field = "expected",
+  prediction_field = "answer"
+)
+
+matches_label(list(answer = "205"), list(expected = "205"))
+#> [1] 1
+matches_label(list(answer = "205 minutes"), list(expected = "205"))
+#> [1] 0
+```
+
+At run time the expected value travels as an extra input, and dsprrr
+warns that it is not declared in the signature. A module without a
+`template` adds every input to its prompt, so give it a template that
+leaves the label out:
+
+``` r
+
+labeled <- best_of_n(
+  module(signature("question -> answer"), template = "{question}"),
+  N = 3L,
+  reward_fn = matches_label
+)
+run(labeled, question = question, expected = "205", .llm = llm)
+```
+
+### refine()
+
+[`refine()`](https://jameshwade.github.io/dsprrr/reference/refine.md)
+takes the same reward and threshold. When an attempt falls short, it
+fills `feedback_template`, a glue string that can use `{score}`,
+[prediction](https://github.com/bbolker/prediction) and any input field,
+and passes the text to the next attempt. That rendered template is the
+whole feedback: the model is not asked to diagnose its mistake.
+
+``` r
+
+refined <- refine(
+  qa,
+  N = 3L,
+  reward_fn = digits_only,
+  feedback_template = paste(
+    "Your previous attempt ({prediction}) was not a bare number.",
+    "Reply with the number of minutes only."
   )
 )
+run(refined, question = question, .llm = llm)
+refined$get_feedback_history()
 ```
 
-### Inspecting Chains
+[prediction](https://github.com/bbolker/prediction) renders as
+`field: value` pairs, for example `answer: 3 h 25 min`. Here the wrapped
+signature has no `feedback` input, so the feedback is added to later
+prompts as a `feedback:` line. A signature can declare the input instead
+(`"question, feedback -> answer"`); the first attempt then receives “No
+feedback yet.”.
 
-View the individual reasoning chains:
+### with_assertions()
+
+[`with_assertions()`](https://jameshwade.github.io/dsprrr/reference/with_assertions.md)
+checks each output against rules.
+[`assert_output()`](https://jameshwade.github.io/dsprrr/reference/assertions.md)
+rules must pass: when one fails, the module runs again with the failure
+messages added as an `assertion_feedback` input, up to `max_retries`
+more times.
+[`suggest_output()`](https://jameshwade.github.io/dsprrr/reference/assertions.md)
+rules only warn.
 
 ``` r
 
-result <- run(mcc, question = "Complex question...", .llm = llm)
-
-# Get all chain results
-chains <- mcc$get_attempts()
-chains
-#> # A tibble: 3 x 3
-#>     run attempt prediction
-#>   <int>   <int> <list>
-#> 1     1       1 <named list [2]>
-#> 2     1       2 <named list [2]>
-#> 3     1       3 <named list [2]>
-
-# Each prediction has reasoning and answer
-chains$prediction[[1]]
-#> $reasoning
-#> [1] "First, let me consider..."
-#> $answer
-#> [1] "The answer is..."
-```
-
-## ProgramOfThought
-
-ProgramOfThought addresses a fundamental LLM limitation: they’re
-unreliable at exact computation. Instead of asking the model to compute
-directly, it generates R code that R executes.
-
-### Why Use ProgramOfThought?
-
-LLMs frequently make arithmetic errors, especially with multi-step
-calculations. ProgramOfThought solves this by: - Having the LLM generate
-R code to solve the problem - Executing that code in an isolated
-subprocess - If execution fails, feeding the error back for code
-repair - Extracting the final answer from the execution result
-
-### Setting Up Code Execution
-
-Code execution requires explicit opt-in via a runner or interpreter
-factory. Here is the caller-owned form:
-
-``` r
-
-# Create a runner - this enables code execution
-runner <- r_code_runner(
-  timeout = 30,                    # Max execution time
-  allowed_packages = c("base", "stats", "utils")  # Allowed packages
+checked <- with_assertions(
+  qa,
+  assertions = list(
+    assert_output(
+      ~ grepl("^[0-9]+$", .x$answer),
+      "Reply with the number of minutes only, as digits."
+    )
+  ),
+  max_retries = 2L
 )
+run(checked, question = question, .llm = llm)
+checked$get_attempts()
 ```
 
-**Security note**:
-[`r_code_runner()`](https://jameshwade.github.io/dsprrr/reference/r_code_runner.md)
-provides subprocess isolation but is not a security sandbox. For
-untrusted generated code, use a fresh managed
-[`mcp_repl_runner()`](https://jameshwade.github.io/dsprrr/reference/mcp_repl_runner.md)
-from an interpreter factory or another runner with verified OS-level
-sandboxing.
+## Compare several answers
 
-ProgramOfThought, CodeAct, and RLM accept exactly one execution binding.
-Pass `runner` to retain a caller-owned runner object that dsprrr reuses
-and never shuts down. Whether execution state persists depends on the
-backend. Serialize a stateful runner, and reset it between unrelated
-jobs when that backend supports `reset()`. Alternatively, pass a
-zero-argument `interpreter_factory`; dsprrr calls it once per
-invocation, owns the fresh runner, and shuts it down exactly once when
-the invocation ends, including after an error:
+[`multi_chain_comparison()`](https://jameshwade.github.io/dsprrr/reference/multi_chain_comparison.md)
+runs a chain-of-thought version of the signature `M` times at
+`temperature` (default 0.7), then makes one more call that reads all
+attempts and returns a reasoned final answer. gpt-6-luna accepts that
+temperature only with reasoning turned off, so the example gives it its
+own chat with `reasoning_effort = "none"`. The default comparison prompt
+lists the attempts but not the original inputs, so pass a
+`comparison_template` that includes them. It is a glue string with
+`{M}`, `{attempts_text}` and your input fields:
+
+``` r
+
+mcc <- multi_chain_comparison(
+  "question -> answer",
+  M = 3L,
+  comparison_template = paste0(
+    "Question: {question}\n\n{attempts_text}\n\n",
+    "Compare the {M} attempts above and give the best final answer."
+  )
+)
+mcc_llm <- ellmer::chat_openai(
+  model = "gpt-6-luna",
+  params = ellmer::params(reasoning_effort = "none")
+)
+run(mcc, question = question, .llm = mcc_llm)
+mcc$get_attempts()
+```
+
+[`ensemble()`](https://jameshwade.github.io/dsprrr/reference/ensemble.md)
+runs each member once and combines their outputs with `reduce_fn`.
+Members must share input names. Unlike the comparison call above, a
+reducer only picks among the answers it got:
+
+``` r
+
+voters <- ensemble(
+  list(
+    module(signature("question -> answer")),
+    chain_of_thought("question -> answer"),
+    chain_of_thought(
+      "question -> answer",
+      prefix = "Convert both times to minutes after midnight in order to"
+    )
+  ),
+  reduce_fn = reduce_majority(field = "answer")
+)
+run(voters, question = question, .llm = llm)
+```
+
+[`reduce_majority()`](https://jameshwade.github.io/dsprrr/reference/reduce_majority.md)
+votes on the first output field unless you name one, and for a
+chain-of-thought member the first field is `reasoning`, so pass `field`.
+Other reducers include
+[`reduce_weighted_vote()`](https://jameshwade.github.io/dsprrr/reference/reduce_weighted_vote.md),
+which uses `weights` such as validation scores, and
+[`reduce_first()`](https://jameshwade.github.io/dsprrr/reference/reduce_first.md).
+Ensembles are most useful over variants you already have, such as one
+program compiled with different demos.
+
+## Use tools: react()
+
+When the answer depends on data the model does not have, give it tools.
+A tool is an ordinary R function described with
+[`ellmer::tool()`](https://ellmer.tidyverse.org/reference/tool.html), so
+you can test it before a model sees it:
+
+``` r
+
+timetable <- data.frame(
+  train = c("412", "415"),
+  departs = c("09:40", "11:15"),
+  arrives = c("13:05", "14:50")
+)
+
+lookup_train <- ellmer::tool(
+  function(train) {
+    row <- timetable[timetable$train == train, ]
+    if (nrow(row) == 0) return(paste("No train numbered", train))
+    paste("Train", train, "departs at", row$departs, "and arrives at", row$arrives)
+  },
+  description = "Look up when a train departs and arrives.",
+  arguments = list(train = ellmer::type_string("Train number, such as '412'")),
+  name = "lookup_train"
+)
+
+lookup_train(train = "412")
+#> [1] "Train 412 departs at 09:40 and arrives at 13:05"
+```
+
+[`react()`](https://jameshwade.github.io/dsprrr/reference/react.md) lets
+the model call the tool as often as it needs, then makes one structured
+call for the signature’s outputs:
+
+``` r
+
+agent <- react("question -> answer", tools = list(lookup_train))
+result <- run(
+  agent,
+  question = "How many minutes does train 412 take?",
+  .llm = ellmer::chat_openai(model = "gpt-6-luna"),
+  .return_format = "structured"
+)
+result$output$answer
+result$metadata$tools_used
+```
+
+`max_iterations` (default 10) caps the tool rounds and errors when the
+model goes past it. The agent registers its tools on the chat it runs
+with, which is why this example gives it a chat of its own. Tools run in
+your R session with your permissions, so keep them narrow.
+
+## Compute with code
+
+[`program_of_thought()`](https://jameshwade.github.io/dsprrr/reference/program_of_thought.md)
+asks the model for R code, runs it in a separate R process, and uses the
+value as the answer. A single value becomes the answer directly;
+anything else goes back to the model to phrase. If the code fails, the
+error goes back to the model for a repair, up to `max_iters` (default 3)
+attempts. Inputs are available to the code as `.context$<name>`.
 
 ``` r
 
@@ -506,480 +360,128 @@ pot <- program_of_thought(
   "question -> answer",
   interpreter_factory = function() r_code_runner(timeout = 30)
 )
+result <- run(pot, question = question, .llm = llm, .return_format = "structured")
+result$output$answer
+result$metadata$final_code
 ```
 
-The factory form prevents state from crossing invocation boundaries. A
-direct runner is caller-owned and sequential; never share a stateful
-runner across concurrent calls. Supplying both forms is an error.
-Factory-backed ProgramOfThought, CodeAct, and RLM support
-[`run_async()`](https://jameshwade.github.io/dsprrr/reference/run_async.md)
-and isolated mirai batch execution because every invocation owns a fresh
-runner. Caller-owned runners remain sequential. Specialized token
-streaming is still rejected before provider or factory work;
-[`run_stream()`](https://jameshwade.github.io/dsprrr/reference/run_stream.md)
-without a matching token listener preserves the ordinary synchronous
-`forward()` path.
-
-### Basic Usage
-
-``` r
-
-# Create a ProgramOfThought module
-pot <- program_of_thought("question -> answer", runner = runner)
-
-# Run it - the LLM generates code, R executes it
-result <- run(
-  pot,
-  question = "What is the sum of all prime numbers under 100?",
-  .llm = chat_openai()
-)
-
-# Result is the computed answer
-result$answer
-#> "1060"
-```
-
-### Automatic Error Recovery
-
-If the generated code fails, ProgramOfThought automatically feeds the
-error back to the LLM for repair:
-
-``` r
-
-pot <- program_of_thought(
-  "question -> answer",
-  runner = runner,
-  max_iters = 3  # Try up to 3 times to get working code
-)
-
-# Even if first attempt has a bug, it may self-correct
-result <- run(pot, question = "Calculate factorial of 10", .llm = llm)
-```
-
-### Accessing Execution History
-
-Track the code generation and execution process:
-
-``` r
-
-# After running, inspect execution history
-executions <- pot$get_executions()
-executions[[1]]$iterations  # List of code attempts
-executions[[1]]$success     # Whether it succeeded
-```
-
-### Using Context Data
-
-Pass data to your code via the `.context` list:
-
-``` r
-
-pot <- program_of_thought("data, question -> answer", runner = runner)
-
-result <- run(
-  pot,
-  data = mtcars,
-  question = "What is the correlation between mpg and hp?",
-  .llm = llm
-)
-# The LLM can generate: cor(.context$data$mpg, .context$data$hp)
-```
-
-## CodeAct
-
-CodeAct combines declared host tools with generated R execution. Use it
-when a task needs both an external action and computation inside one
-bounded agent loop.
-
-### Why Use CodeAct?
-
-Some tasks require multiple capabilities: - Search for information (tool
-calling) - Perform calculations on that information (code execution) -
-Iterate until the answer is found (agent loop)
-
-CodeAct provides all of these in a single module.
-
-### Basic Usage
-
-``` r
-
-# Create tools
-search_tool <- ellmer::tool(
-  function(query) search_api(query),
-  description = "Search for information",
-  arguments = list(query = ellmer::type_string())
-)
-
-# Create CodeAct agent with tools and code execution
-runner <- r_code_runner(timeout = 30)
-agent <- code_act(
-  "question -> answer",
-  tools = list(search = search_tool),
-  runner = runner
-)
-
-# The agent can search AND compute
-result <- run(
-  agent,
-  question = "What is 10% of France's current population?",
-  .llm = chat_openai()
-)
-# Agent might: 1) Search for France's population, 2) Execute: 67000000 * 0.10
-```
-
-### Built-in Code Execution Tool
-
-CodeAct automatically includes an `execute_r_code` tool that the LLM can
-call:
-
-``` r
-
-agent <- code_act("question -> answer", runner = runner)
-
-# The LLM sees this tool:
-# execute_r_code(code): Execute R code in an isolated environment.
-#   The input data is available in the `.context` list.
-```
-
-### Controlling Iterations
-
-``` r
-
-agent <- code_act(
-  "question -> answer",
-  runner = runner,
-  # Caps outer agent iterations and inner tool calls; excess tool calls error.
-  max_iterations = 10
-)
-```
-
-### Inspecting Agent Trajectory
-
-Track the agent’s decision-making process:
-
-``` r
-
-result <- run(agent, question = "Complex question...", .llm = llm)
-
-# Get the trajectory
-trajectories <- agent$get_trajectories()
-trajectories[[1]]$iterations    # Number of iterations
-trajectories[[1]]$trajectory    # List of steps taken
-```
-
-### Combining with Custom Tools
-
-``` r
-
-# Create multiple tools
-weather_tool <- ellmer::tool(
-  function(city) get_weather(city),
-  description = "Get current weather",
-  arguments = list(city = ellmer::type_string())
-)
-
-database_tool <- ellmer::tool(
-  function(query) run_sql(query),
-  description = "Query the database",
-  arguments = list(query = ellmer::type_string())
-)
-
-# CodeAct with multiple tools + code execution
-agent <- code_act(
-  "question -> answer",
-  tools = list(weather = weather_tool, database = database_tool),
-  runner = runner
-)
-```
-
-## Recursive Language Model (experimental)
-
-Use an RLM when the answer is inside an R object but the useful slice
-and calculation are not known in advance. The model proposes one R
-operation, observes bounded output, and chooses the next operation. The
-full object does not enter every model prompt.
-
-That is a different job from the other code-oriented modules:
-
-| Need | Module |
-|----|----|
-| Execute a calculation whose steps are already known | [`program_of_thought()`](https://jameshwade.github.io/dsprrr/reference/program_of_thought.md) |
-| Discover an exploration path for this invocation | [`rlm_module()`](https://jameshwade.github.io/dsprrr/reference/rlm_module.md) |
-| Learn a reusable implementation from labeled examples | [`flex()`](https://jameshwade.github.io/dsprrr/reference/flex.md) with GEPA |
-
-### Investigate a large R object
-
-The release-regression tutorial uses 40,000 session rows and 200 change
-records. A persistent callr runner stages those rich R objects once and
-keeps derived values between iterations:
-
-``` r
-
-incident <- rlm_module(
-  paste(
-    "sessions, changes, question ->",
-    "release: string, cohort: string, before_rate: number,",
-    "after_rate: number, drop_pp: number, change_id: string, evidence: string"
-  ),
-  interpreter_factory = function() {
-    r_code_runner(timeout = 30, persistent = TRUE)
-  },
-  max_iterations = 8,
-  max_llm_calls = 0L,
-  max_output_chars = 10000
-)
-
-result <- run(
-  incident,
-  sessions = sessions,
-  changes = changes,
-  question = "Which cohort regressed, and which change best explains it?",
-  .llm = chat_openai(),
-  .return_format = "structured"
-)
-```
-
-This configuration is appropriate only when the fixture and generated
-code are trusted. `persistent = TRUE` preserves one callr process, but
-that process has the host user’s file, network, and environment
-permissions.
-
-The default `max_output_chars = 10000` keeps a head-and-tail excerpt
-from each execution in the next prompt. It bounds model-visible
-evidence; it does not increase a runner’s transport limit.
-
-### Recursive queries return values
-
-`sub_lm = NULL` inherits the outer model passed to
-[`run()`](https://jameshwade.github.io/dsprrr/reference/run.md).
-Generated code can therefore assign and use the result of a focused
-query:
-
-``` r
-
-candidate <- subset(.context$changes, component == "checkout-auth")
-interpretation <- llm_query(
-  "Which change could reduce successful token refreshes?",
-  paste(candidate$note, collapse = "\n")
-)
-SUBMIT(answer = interpretation)
-```
-
-The guest emits a nonce-bound, schema-checked request, dsprrr calls the
-model in the host, then replays the same code evaluation with the
-returned value. One ordered ledger prevents query/tool replay from
-changing operation kind. It cannot roll back an external side effect
-performed directly by generated code before the query, so RLM code
-should keep pre-query work read-only.
-
-`SUBMIT()` is checked against the signature. Missing required, extra, or
-incompatible fields become a repairable observation so the next
-iteration can correct the submission; optional fields may be omitted. If
-the iteration budget ends first, the extraction predictor attempts to
-produce the best typed answer supported by the trajectory; provider or
-type-validation failure remains terminal.
-
-The action and fallback extraction steps are graph-visible child
-predictors:
-
-``` r
-
-names(incident$graph_children())
-#> [1] "generate_action" "extract"
-```
-
-Structured results report whether the answer came from `SUBMIT()` or
-fallback, and retain the bounded trajectory:
-
-``` r
-
-result$output
-result$metadata$output_source
-result$metadata$repl_history
-result$metadata$runner_policy
-```
-
-### Choose the execution boundary
-
-The one-call helper creates a fresh managed MCP sandbox by default:
-
-``` r
-
-answer <- rlm(
-  "document, question -> answer",
-  document = "Owner: team-a\nCommitment: rotate signing keys quarterly",
-  question = "Which commitments have no owner?",
-  .llm = chat_openai(),
-  .max_iterations = 4L,
-  .max_llm_calls = 0L
-)
-```
-
-Managed `mcp-repl` requires the suggested R package `mcptools` plus the
-external `mcp-repl` executable. It disables network access and applies
-an OS sandbox, but workspace writes remain allowed. Requests have a 7 KB
-wire bound and RLM control frames have a 3,000-byte encoded bound. When
-a raw request is too large, dsprrr first tries a gzip/base64 wrapper;
-the final JSON-RPC request must still fit the wire bound. Oversized
-output may be rejected by the runner before the module’s
-10,000-character head-and-tail formatter. Host tools run outside that
-sandbox with host permissions. Use explicit persistent
+Code execution is opt-in. Pass exactly one of `runner` (a runner you
+create and reuse) or `interpreter_factory` (a function that returns a
+fresh runner for each
+[`run()`](https://jameshwade.github.io/dsprrr/reference/run.md), shut
+down afterwards).
 [`r_code_runner()`](https://jameshwade.github.io/dsprrr/reference/r_code_runner.md)
-for trusted large data frames and fitted models; it is not a sandbox.
+runs code in a separate R process with your user’s file and network
+access; it is not a sandbox. For code you do not trust, use a sandboxed
+runner such as
+[`mcp_repl_runner()`](https://jameshwade.github.io/dsprrr/reference/mcp_repl_runner.md),
+which needs the mcptools package and Posit’s `mcp-repl` executable.
 
-See [Investigate a Release Regression with an
+[`code_act()`](https://jameshwade.github.io/dsprrr/reference/code_act.md)
+combines tools with code: the model gets your tools plus an
+`execute_r_code` tool, so it can look up the times and do the arithmetic
+in R. Its answer is the model’s final message, returned as the
+signature’s one output field.
+
+``` r
+
+agent <- code_act(
+  "question -> answer",
+  tools = list(lookup_train),
+  interpreter_factory = function() r_code_runner(timeout = 30)
+)
+run(agent, question = "How many minutes does train 412 take?", .llm = llm)
+```
+
+## Custom logic: module_fn()
+
+[`module_fn()`](https://jameshwade.github.io/dsprrr/reference/module_fn.md)
+turns an R function into a module with a signature, so it works with
+[`run()`](https://jameshwade.github.io/dsprrr/reference/run.md),
+[`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md),
+[`evaluate()`](https://jameshwade.github.io/dsprrr/reference/evaluate.md)
+and pipelines. This one needs no model at all:
+
+``` r
+
+trip_minutes <- module_fn(
+  "departs, arrives -> minutes: int",
+  function(departs, arrives) {
+    to_minutes <- function(time) {
+      parts <- as.integer(strsplit(time, ":")[[1]])
+      parts[1] * 60L + parts[2]
+    }
+    list(minutes = to_minutes(arrives) - to_minutes(departs))
+  }
+)
+
+run(trip_minutes, departs = "9:40", arrives = "13:05")
+#> $minutes
+#> [1] 205
+```
+
+Put a model step in front of it and the model only has to read the
+times, while R does the arithmetic:
+
+``` r
+
+extract_times <- module(signature("question -> departs, arrives"))
+trip <- extract_times %>>% trip_minutes
+run(trip, question = question, .llm = llm)
+```
+
+If the function has a `.llm` (or `...`) argument, it receives the active
+chat and can call other modules itself.
+[`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md)
+refuses
+[`module_fn()`](https://jameshwade.github.io/dsprrr/reference/module_fn.md)
+programs, because an optimizer cannot see inside the function; compile
+the modules it calls instead.
+
+## Explore large inputs: rlm_module() (experimental)
+
+[`rlm_module()`](https://jameshwade.github.io/dsprrr/reference/rlm_module.md)
+keeps its inputs in an R session and lets the model examine them one
+step at a time: it writes a little R, reads bounded output, decides what
+to look at next, and calls `SUBMIT()` when it has the answer. Use it
+when the evidence sits in an object too large or irregular to paste into
+a prompt and you cannot say in advance which slice matters. It needs a
+persistent runner. [How RLM
+works](https://jameshwade.github.io/dsprrr/articles/how-rlm-works.md)
+explains the execution model and runner choices, and [Investigate a
+regression with
 RLM](https://jameshwade.github.io/dsprrr/articles/tutorial-rlm-dsprrr.md)
-for the deterministic demo and [How the RLM
-Works](https://jameshwade.github.io/dsprrr/articles/how-rlm-works.md)
-for the complete execution contract.
+works through an example.
 
-## Flex (experimental)
+## Search the program shape: flex() (experimental)
 
-Use [`flex()`](https://jameshwade.github.io/dsprrr/reference/flex.md)
-when the implementation strategy is the search problem. GEPA can change
-which predictors run, add deterministic R logic, or call a selected
-tool—not only rewrite instructions inside a fixed module.
+[`flex()`](https://jameshwade.github.io/dsprrr/reference/flex.md) wraps
+a signature in a program whose source GEPA can rewrite: it can add or
+remove predictor steps and, with executable source, add R logic or tool
+calls. Use it when the right structure is what you want to find out. If
+you already know the structure, write a module or a pipeline. [Flex:
+optimize a whole
+program](https://jameshwade.github.io/dsprrr/articles/flex-optimization.md)
+shows a complete run.
 
-``` r
+## Wrappers and optimization
 
-program <- flex("question -> answer")
-program$module_src
-```
-
-Use a regular module when its shape is known, or an explicit pipeline
-when people should own the workflow. See [Flex: Optimize the Whole
-Program](https://jameshwade.github.io/dsprrr/articles/flex-optimization.md)
-for a deterministic GEPA replay that preserves router accuracy while
-removing unnecessary model calls.
-
-## Combining Modules
-
-These modules can be composed when one execution pattern is not enough:
+Wrappers keep the module they wrap.
+[`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md)
+can tune their settings, for example `parameters = list(N = c(1L, 3L))`,
+and changes the wrapper in place. Demo-based compilation does not work
+on a wrapped program
+([`LabeledFewShot()`](https://jameshwade.github.io/dsprrr/reference/LabeledFewShot.md)
+stops with “cannot label nested predictors”), so compile the inner
+module on a labeled `trainset` (columns `question` and `answer`) and
+wrap the compiled copy:
 
 ``` r
 
-# ChainOfThought inside BestOfN
-cot <- chain_of_thought("math_problem -> solution")
-reliable_cot <- best_of_n(cot, N = 3, reward_fn = math_checker)
-
-# Refine with CoT
-cot_with_feedback <- module(
-  with_reasoning(signature("question, feedback -> answer"))
-)
-refined_cot <- refine(cot_with_feedback, N = 3, reward_fn = quality_score)
-
-# MCC already uses CoT internally by default
+compiled_qa <- compile(qa, LabeledFewShot(k = 4L), trainset)
+reliable <- best_of_n(compiled_qa, N = 3L, reward_fn = digits_only)
 ```
 
-## Optimization Support
-
-Wrapper modules retain their underlying optimizable predictors. RLM
-exposes separate `generate_action` and `extract` children, but optimizer
-support is deliberately explicit:
-
-| Optimizer | RLM support |
-|----|----|
-| [`GEPA()`](https://jameshwade.github.io/dsprrr/reference/GEPA.md) | Tunes both child predictors with end-to-end feedback; [`metric_with_trace()`](https://jameshwade.github.io/dsprrr/reference/metric_with_trace.md) can derive feedback from the bounded RLM trajectory |
-| [`AutoResearch()`](https://jameshwade.github.io/dsprrr/reference/AutoResearch.md) / [`MetaHarness()`](https://jameshwade.github.io/dsprrr/reference/MetaHarness.md) | Discovers and applies both graph children |
-| [`MIPROv2()`](https://jameshwade.github.io/dsprrr/reference/MIPROv2.md) | Tunes child instructions only when `max_bootstrapped_demos = 0L` |
-| [`BootstrapFewShot()`](https://jameshwade.github.io/dsprrr/reference/BootstrapFewShot.md) / [`BootstrapFewShotWithRandomSearch()`](https://jameshwade.github.io/dsprrr/reference/BootstrapFewShotWithRandomSearch.md) | Programs containing Flex or an RLM are rejected; use GEPA, or instruction-only MIPROv2 for an RLM graph |
-| [`LabeledFewShot()`](https://jameshwade.github.io/dsprrr/reference/LabeledFewShot.md) | Programs containing an RLM are rejected because root examples do not match child signatures |
-
-Nested MIPRO demo bootstrapping fails with an actionable typed error
-until RLM collects predictor-local child evidence. This avoids attaching
-task-level demos to incompatible `state -> ...` predictors.
-
-``` r
-
-# Grid search over wrapper parameters
-wrapper <- best_of_n(qa, N = 3)
-optimize_grid(  wrapper,
-  data = dev_data,
-  metric = metric_exact_match(),
-  parameters = list(
-    N = c(3, 5, 7),
-    threshold = c(0.8, 0.9, 1.0)
-  )
-)
-
-# Teleprompter compilation
-tp <- LabeledFewShot(k = 4)
-compiled <- compile(wrapper, tp, trainset)
-```
-
-## Performance Considerations
-
-### Token Usage
-
-Advanced modules trade additional calls for reasoning, retries,
-comparison, or exploration. The actual cost depends on early stopping,
-provider behavior, trajectory length, and recursive queries. Set
-explicit iteration and call budgets, then inspect returned metadata
-rather than relying on a fixed multiplier.
-
-### Cost Tracking
-
-Structured results expose the usage and cost metadata available for the
-module:
-
-``` r
-
-result <- run(
-  mcc,
-  question = "Test",
-  .llm = llm,
-  .return_format = "structured"
-)
-result$metadata$cost
-result$metadata$total_tokens
-```
-
-## Summary
-
-These modules cover distinct execution strategies:
-
-| Module | Best For | Trade-off |
-|----|----|----|
-| [`chain_of_thought()`](https://jameshwade.github.io/dsprrr/reference/chain_of_thought.md) | Complex reasoning, math, logic | Longer model output |
-| [`best_of_n()`](https://jameshwade.github.io/dsprrr/reference/best_of_n.md) | High-variance tasks, critical outputs | Additional candidate calls |
-| [`refine()`](https://jameshwade.github.io/dsprrr/reference/refine.md) | Tasks with clear failure modes | Iterative feedback calls |
-| [`multi_chain_comparison()`](https://jameshwade.github.io/dsprrr/reference/multi_chain_comparison.md) | Complex analysis, multiple valid approaches | Candidate and comparison calls |
-| [`program_of_thought()`](https://jameshwade.github.io/dsprrr/reference/program_of_thought.md) | Exact computation, data analysis | Code execution overhead |
-| [`code_act()`](https://jameshwade.github.io/dsprrr/reference/code_act.md) | Tasks needing both tools AND computation | Agent loop overhead |
-| [`rlm_module()`](https://jameshwade.github.io/dsprrr/reference/rlm_module.md) | Adaptive exploration of large or irregular R objects | Experimental; iterative calls and an explicit execution boundary |
-| [`flex()`](https://jameshwade.github.io/dsprrr/reference/flex.md) | Optimizing the choice among predictors, R logic, and tools | Experimental; executable source requires a sandbox |
-
-**Getting started:** - Start with **ChainOfThought** for complex
-reasoning tasks - Add **BestOfN** when you need reliability - Use
-**ProgramOfThought** for exact computation (math, statistics) - Use
-**CodeAct** when you need tools AND code execution together - Use
-**RLM** when the exploration path is unknown for this input - Use
-**Flex** when the implementation strategy itself is the experiment
-
-## Further Reading
-
-**Tutorials:** - [Improving with
-Examples](https://jameshwade.github.io/dsprrr/articles/tutorial-improve-with-demos.md)
-— Learn few-shot prompting - [Finding Best
-Configuration](https://jameshwade.github.io/dsprrr/articles/tutorial-optimize-your-module.md)
-— Grid search optimization - [Investigate a Release Regression with an
-RLM](https://jameshwade.github.io/dsprrr/articles/tutorial-rlm-dsprrr.md)
-— Explore a deterministic large object
-
-**How-to Guides:** - [Compile &
-Optimize](https://jameshwade.github.io/dsprrr/articles/compilation-optimization.md)
-— Full optimization workflow with advanced modules - [Build RAG
-Pipelines](https://jameshwade.github.io/dsprrr/articles/rag-workflows.md)
-— Use modules in retrieval workflows
-
-**Concepts:** - [Understanding Signatures &
-Modules](https://jameshwade.github.io/dsprrr/articles/concepts-signatures-modules.md)
-— S7 vs R6 design choices - [How Optimization
-Works](https://jameshwade.github.io/dsprrr/articles/concepts-optimization-theory.md)
-— Teleprompter theory - [How the RLM
-Works](https://jameshwade.github.io/dsprrr/articles/how-rlm-works.md) —
-Lifecycle, replay, typed submission, and runner boundaries
-
-**Reference:** - [Quick
-Reference](https://jameshwade.github.io/dsprrr/articles/cheatsheet.md) —
-Syntax and patterns at a glance
+For multi-step programs, [Chain modules into
+pipelines](https://jameshwade.github.io/dsprrr/articles/chaining-modules.md)
+shows how to connect modules and compile them together.

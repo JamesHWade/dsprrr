@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Investigate a Release Regression with an RLM • dsprrr</title>
+<title>Investigate a regression with RLM • dsprrr</title>
 <!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="../favicon-96x96.png">
 <link rel="icon" type="”image/svg+xml”" href="../favicon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
@@ -17,7 +17,7 @@
 <link href="../deps/Fira_Code-0.4.10/font.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Investigate a Release Regression with an RLM">
+<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Investigate a regression with RLM">
 <meta name="description" content="Use an RLM to explore a large R data frame, isolate a conversion regression, and connect it to a relevant change record.
 ">
 <meta property="og:description" content="Use an RLM to explore a large R data frame, isolate a conversion regression, and connect it to a relevant change record.
@@ -41,67 +41,67 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
-<li class="nav-item"><a class="nav-link" href="../articles/getting-started.html">Get Started</a></li>
+<li class="nav-item"><a class="nav-link" href="../articles/tutorial-hello-world.html">Get started</a></li>
 <li class="active nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-tutorials" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Tutorials</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-tutorials">
-<li><h6 class="dropdown-header" data-toc-skip>Learning Path</h6></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-hello-world.html">1. Your First LLM Call</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-build-classifier.html">2. Building a Classifier</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-structured-outputs.html">3. Structured Outputs</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-improve-with-demos.html">4. Improving with Examples</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-optimize-your-module.html">5. Optimization</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-deploy-to-production.html">6. Production</a></li>
+<li><a class="dropdown-item" href="../articles/tutorial-hello-world.html">1. Your first LLM call</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-build-classifier.html">2. Build a classifier</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-structured-outputs.html">3. Extract structured data</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-improve-with-demos.html">4. Improve with examples</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-optimize-your-module.html">5. Optimize a module</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-deploy-to-production.html">6. Save and reuse a module</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Advanced Tutorials</h6></li>
-    <li><a class="dropdown-item" href="../articles/text-adventure.html">Build an AI Game Master</a></li>
-    <li><a class="dropdown-item" href="../articles/llms-txt.html">Generate Package Docs</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-rlm-dsprrr.html">Investigate a Regression with RLM</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Projects</h6></li>
+    <li><a class="dropdown-item" href="../articles/llms-txt.html">Generate an llms.txt file</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-rlm-dsprrr.html">Investigate a regression with RLM</a></li>
+    <li><a class="dropdown-item" href="../articles/text-adventure.html">Build a text adventure</a></li>
   </ul>
 </li>
 <li class="nav-item dropdown">
-  <button class="nav-link dropdown-toggle" type="button" id="dropdown-how-to-guides" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">How-to Guides</button>
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-how-to-guides" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">How-to guides</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-how-to-guides">
-<li><a class="dropdown-item" href="../articles/troubleshooting.html">Troubleshooting</a></li>
-    <li><a class="dropdown-item" href="../articles/compilation-optimization.html">Compile &amp; Optimize</a></li>
-    <li><a class="dropdown-item" href="../articles/vitals-recipes.html">Evaluate with Vitals</a></li>
-    <li><a class="dropdown-item" href="../articles/rag-workflows.html">Build RAG Pipelines</a></li>
-    <li><a class="dropdown-item" href="../articles/chaining-modules.html">Chaining Modules</a></li>
-    <li><a class="dropdown-item" href="../articles/calibrated-decisions.html">Calibrated Decisions</a></li>
-    <li><a class="dropdown-item" href="../articles/orchestration.html">Deploy to Production</a></li>
+<li><h6 class="dropdown-header" data-toc-skip>Build</h6></li>
+    <li><a class="dropdown-item" href="../articles/advanced-modules.html">Choose a module type</a></li>
+    <li><a class="dropdown-item" href="../articles/chaining-modules.html">Chain modules into pipelines</a></li>
+    <li><a class="dropdown-item" href="../articles/rag-workflows.html">Retrieval-augmented generation</a></li>
+    <li><a class="dropdown-item" href="../articles/calibrated-decisions.html">Calibrated decisions</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Integrations</h6></li>
-    <li><a class="dropdown-item" href="../articles/vitals-integration.html">Vitals Package</a></li>
-    <li><a class="dropdown-item" href="../articles/tidymodels-integration.html">tidymodels</a></li>
-    <li><a class="dropdown-item" href="../articles/advanced-ellmer.html">Advanced ellmer</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Measure and improve</h6></li>
+    <li><a class="dropdown-item" href="../articles/compilation-optimization.html">Compile and optimize</a></li>
+    <li><a class="dropdown-item" href="../articles/advanced-optimization.html">Choose an optimizer</a></li>
+    <li><a class="dropdown-item" href="../articles/vitals-recipes.html">Evaluate with vitals</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Run</h6></li>
+    <li><a class="dropdown-item" href="../articles/models-and-providers.html">Models, providers and streaming</a></li>
+    <li><a class="dropdown-item" href="../articles/orchestration.html">Run dsprrr in pipelines</a></li>
+    <li><a class="dropdown-item" href="../articles/tidymodels-integration.html">Use dsprrr with tidymodels</a></li>
+    <li><a class="dropdown-item" href="../articles/troubleshooting.html">Troubleshooting</a></li>
   </ul>
 </li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-concepts" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Concepts</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-concepts">
-<li><a class="dropdown-item" href="../articles/concepts-dspy-philosophy.html">The DSPy Philosophy</a></li>
-    <li><a class="dropdown-item" href="../articles/dspy-comparison.html">dsprrr vs. DSPy</a></li>
-    <li><a class="dropdown-item" href="../articles/concepts-signatures-modules.html">Signatures &amp; Modules</a></li>
-    <li><a class="dropdown-item" href="../articles/concepts-optimization-theory.html">How Optimization Works</a></li>
-    <li><a class="dropdown-item" href="../articles/concepts-why-metrics-matter.html">Why Metrics Matter</a></li>
-    <li><a class="dropdown-item" href="../articles/how-rlm-works.html">How RLMs Work</a></li>
+<li><a class="dropdown-item" href="../articles/concepts-signatures-modules.html">How dsprrr works</a></li>
+    <li><a class="dropdown-item" href="../articles/concepts-why-metrics-matter.html">Metrics and evaluation</a></li>
+    <li><a class="dropdown-item" href="../articles/concepts-optimization-theory.html">How optimization works</a></li>
+    <li><a class="dropdown-item" href="../articles/dspy-comparison.html">dsprrr for DSPy users</a></li>
+    <li><a class="dropdown-item" href="../articles/how-rlm-works.html">How RLM works</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Deep Dives</h6></li>
-    <li><a class="dropdown-item" href="../articles/flex-optimization.html">Flex: Optimize the Whole Program</a></li>
-    <li><a class="dropdown-item" href="../articles/advanced-modules.html">Advanced Reasoning</a></li>
-    <li><a class="dropdown-item" href="../articles/advanced-optimization.html">Advanced Optimization</a></li>
-    <li><a class="dropdown-item" href="../articles/omni-meta-optimization.html">Composing Optimizers with Omni</a></li>
-    <li><a class="dropdown-item" href="../articles/agentic-optimization-harnesses.html">Agentic Optimization Harnesses</a></li>
-    <li><a class="dropdown-item" href="../articles/reasoning-models.html">Reasoning Models</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Experimental</h6></li>
+    <li><a class="dropdown-item" href="../articles/flex-optimization.html">Flex: optimize a whole program</a></li>
+    <li><a class="dropdown-item" href="../articles/omni-meta-optimization.html">Compose optimizers with Omni</a></li>
+    <li><a class="dropdown-item" href="../articles/agentic-optimization-harnesses.html">Agentic optimization harnesses</a></li>
   </ul>
 </li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-reference" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Reference</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-reference">
-<li><a class="dropdown-item" href="../articles/cheatsheet.html">Quick Reference</a></li>
-    <li><a class="dropdown-item" href="../reference/index.html">API Documentation</a></li>
+<li><a class="dropdown-item" href="../reference/index.html">Function reference</a></li>
+    <li><a class="dropdown-item" href="../articles/cheatsheet.html">Quick reference</a></li>
   </ul>
 </li>
+<li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul>
 <ul class="navbar-nav">
 <li class="nav-item"><form class="form-inline" role="search">
@@ -128,7 +128,7 @@
 
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
-      <img src="../logo.svg" class="logo" alt=""><h1>Investigate a Release Regression with an RLM</h1>
+      <img src="../logo.svg" class="logo" alt=""><h1>Investigate a regression with RLM</h1>
             
       
       <small class="dont-index">Source: <a href="https://github.com/JamesHWade/dsprrr/blob/main/vignettes/articles/tutorial-rlm-dsprrr.Rmd" class="external-link"><code>vignettes/articles/tutorial-rlm-dsprrr.Rmd</code></a></small>
@@ -137,14 +137,14 @@
 
     
     
-<p>An RLM is useful when the answer is buried in a large object and you
-do not know the right exploration path in advance. It keeps the object
-in an R environment, lets the model inspect it with R code, and returns
-only selected results to the model between steps.</p>
-<p>This worked example asks an RLM to investigate a checkout regression.
-The deterministic fixture contains 40,000 sessions (about 3.6 MB as
-row-oriented JSON) and 200 change records. The expected finding is fixed
-and independently checkable:</p>
+<p>You will build a 40,000-row session table and a 200-row change log,
+ask an RLM why checkout conversion fell after a release, and check its
+answer against a calculation that does not involve the model. RLM suits
+this kind of question: the answer is buried in a large object, and you
+do not know in advance which slice of it to look at. The model inspects
+the data with R code and only sees the results it prints.</p>
+<p>The data are built without random numbers, so the right answer is
+fixed:</p>
 <pre class="text"><code>release:      2.4.0
 cohort:       platform=mobile / plan=pro
 before_rate:  0.92
@@ -152,34 +152,29 @@ after_rate:   0.61
 drop_pp:      31
 change_id:    CHG-1842
 evidence:     Mobile Pro token refresh: retry budget changed from 3 to 0 and timeout from 8 s to 800 ms.</code></pre>
-<p>The model must discover which low-cardinality categorical fields
-define the affected cohort, calculate the change, and find the most
-relevant release note. It does not receive the complete session table in
-its prompt.</p>
+<p>The model has to discover which categorical columns define the
+affected cohort, calculate the drop, and find the change record that
+best explains it. Of the session table (about 3.6 MB as row-oriented
+JSON), only a short <code><a href="https://rdrr.io/r/utils/str.html" class="external-link">str()</a></code> preview goes into the prompt. <a href="#check-the-answer-independently">Check the answer
+independently</a> computes the same answer without a model.</p>
 <div class="section level2">
-<h2 id="why-use-an-rlm-here">Why use an RLM here?<a class="anchor" aria-label="anchor" href="#why-use-an-rlm-here"></a>
+<h2 id="where-rlm-fits">Where RLM fits<a class="anchor" aria-label="anchor" href="#where-rlm-fits"></a>
 </h2>
-<p>The task combines three properties:</p>
-<ul>
-<li>the source object is expensive and distracting to serialize into a
-prompt;</li>
-<li>the useful grouping is not supplied in the question; and</li>
-<li>the answer needs both exact aggregation and interpretation of a
-small piece of text.</li>
-</ul>
-<p>A regular <code>Predict</code> or <code>ChainOfThought</code> module
-would put the supplied context in token space.
-<code>ProgramOfThought</code> is a better fit when the required
-computation is already known. A deterministic R pipeline is best once
-the investigation pattern is stable. RLM occupies the exploratory
-middle: the model decides what to inspect, uses R for exact work, and
-revises its plan from the results.</p>
+<p>The task needs exact aggregation over a table too large to paste into
+a prompt, a grouping the question does not name, and a judgment about
+one short piece of text. <code><a href="../reference/module.html">module()</a></code> or
+<code><a href="../reference/chain_of_thought.html">chain_of_thought()</a></code> would have to receive the data in the
+prompt. <code><a href="../reference/program_of_thought.html">program_of_thought()</a></code> fits when you already know
+which calculation to run. Once an investigation like this becomes
+routine, a plain R function is the better tool. RLM covers the
+exploratory middle: the model decides what to inspect, R does the
+arithmetic, and the model revises its plan from the results.</p>
 </div>
 <div class="section level2">
-<h2 id="build-the-deterministic-incident">Build the deterministic incident<a class="anchor" aria-label="anchor" href="#build-the-deterministic-incident"></a>
+<h2 id="build-the-incident-data">Build the incident data<a class="anchor" aria-label="anchor" href="#build-the-incident-data"></a>
 </h2>
-<p>The fixture uses no random numbers. Every cohort contains exactly
-5,000 sessions per release.</p>
+<p>Every cohort has exactly 5,000 sessions per release. Only mobile Pro
+users on release 2.4.0 convert less often:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">n</span> <span class="op">&lt;-</span> <span class="fl">5000L</span></span>
 <span></span>
@@ -207,8 +202,8 @@ revises its plan from the results.</p>
 <span></span>
 <span><span class="va">sessions</span><span class="op">$</span><span class="va">converted</span> <span class="op">&lt;-</span></span>
 <span>  <span class="va">sessions</span><span class="op">$</span><span class="va">within_group</span> <span class="op">&lt;=</span> <span class="va">n</span> <span class="op">*</span> <span class="va">conversion_rate</span></span></code></pre></div>
-<p>Most change records are irrelevant. One describes a
-checkout-authentication change for the affected release and cohort.</p>
+<p>Most change records are routine. One describes a
+checkout-authentication change for the affected release and cohort:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">changes</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
 <span>  change_id <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span><span class="st">"CHG-%04d"</span>, <span class="fl">1701</span><span class="op">:</span><span class="fl">1900</span><span class="op">)</span>,</span>
@@ -236,12 +231,11 @@ checkout-authentication change for the affected release and cohort.</p>
 <div class="section level2">
 <h2 id="define-the-investigation">Define the investigation<a class="anchor" aria-label="anchor" href="#define-the-investigation"></a>
 </h2>
-<p>The output signature makes the evidence checkable.
-<code>SUBMIT()</code> must provide all of these fields with compatible
-types.</p>
+<p>The output signature makes the answer checkable.
+<code>SUBMIT()</code> must provide every field with a compatible
+type.</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/dsprrr" class="external-link">dsprrr</a></span><span class="op">)</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ellmer.tidyverse.org" class="external-link">ellmer</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">incident_signature</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span></span>
@@ -271,20 +265,23 @@ types.</p>
 <span>  max_llm_calls <span class="op">=</span> <span class="fl">0L</span>,</span>
 <span>  max_output_chars <span class="op">=</span> <span class="fl">10000</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p>This example deliberately uses persistent
-<code><a href="../reference/r_code_runner.html">r_code_runner()</a></code> because the input is a large, rich R object
-and the fixture and generated trajectory are assumed trusted. A callr
-subprocess provides process isolation, not an operating-system security
-sandbox. Do not use this configuration for adversarial context or
-untrusted generated code.</p>
-<p>The factory creates one runner for the invocation. State remains
-available between RLM iterations, and dsprrr shuts down the runner when
-the invocation ends.</p>
+<p>This example uses <code>r_code_runner(persistent = TRUE)</code>
+because the input is a large R data frame and both the data and the
+generated code are treated as trusted. The callr process is a separate R
+session, not a security sandbox: it has your file, network and
+environment access. Do not use this configuration for input you do not
+control. The factory creates one runner per call, keeps its state
+between steps, and shuts it down when the call ends.</p>
+<p><code>max_llm_calls = 0L</code> turns off recursive queries, because
+R aggregation and one change record are enough here. When generated code
+must read text that R cannot classify, such as vague change notes,
+<code>llm_query()</code> asks a model about that slice; <a href="how-rlm-works.html#recursive-queries">How RLM works</a> explains
+how those calls run.</p>
 </div>
 <div class="section level2">
-<h2 id="run-and-retain-the-evidence">Run and retain the evidence<a class="anchor" aria-label="anchor" href="#run-and-retain-the-evidence"></a>
+<h2 id="run-the-investigation">Run the investigation<a class="anchor" aria-label="anchor" href="#run-the-investigation"></a>
 </h2>
-<p>Request structured output so the answer and its trajectory travel
+<p>Request the structured result so the answer and its trajectory stay
 together:</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
@@ -292,26 +289,24 @@ together:</p>
 <span>  sessions <span class="op">=</span> <span class="va">sessions</span>,</span>
 <span>  changes <span class="op">=</span> <span class="va">changes</span>,</span>
 <span>  question <span class="op">=</span> <span class="va">question</span>,</span>
-<span>  .llm <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-luna"</span><span class="op">)</span>,</span>
 <span>  .return_format <span class="op">=</span> <span class="st">"structured"</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">result</span><span class="op">$</span><span class="va">output</span></span></code></pre></div>
-<p>This article does not claim a recorded model run. Model-generated
-code and the number of iterations can vary. The fixed output at the top
-is the result that a successful run must recover from the deterministic
-fixture.</p>
+<p>This page does not show a recorded model run. The generated code and
+the number of steps vary from run to run; the fixed answer at the top is
+what a successful run must recover.</p>
 </div>
 <div class="section level2">
 <h2 id="what-a-successful-trajectory-looks-like">What a successful trajectory looks like<a class="anchor" aria-label="anchor" href="#what-a-successful-trajectory-looks-like"></a>
 </h2>
-<p>The exact R code may differ, but the useful work should be
-recognizable in four steps.</p>
+<p>The exact code will differ, but the useful work falls into four
+steps.</p>
 <div class="section level3">
-<h3 id="orient-to-the-objects">1. Orient to the objects<a class="anchor" aria-label="anchor" href="#orient-to-the-objects"></a>
+<h3 id="look-at-the-shape-of-the-data">1. Look at the shape of the data<a class="anchor" aria-label="anchor" href="#look-at-the-shape-of-the-data"></a>
 </h3>
-<p>The first step should inspect shape and schema, not print the full
-data:</p>
+<p>The first step inspects the schema instead of printing the rows:</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>  session_dim <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/dim.html" class="external-link">dim</a></span><span class="op">(</span><span class="va">.context</span><span class="op">$</span><span class="va">sessions</span><span class="op">)</span>,</span>
@@ -323,7 +318,7 @@ data:</p>
 <div class="section level3">
 <h3 id="calculate-cohort-level-changes">2. Calculate cohort-level changes<a class="anchor" aria-label="anchor" href="#calculate-cohort-level-changes"></a>
 </h3>
-<p>R performs the aggregation exactly:</p>
+<p>R does the aggregation exactly:</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">rates</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/aggregate.html" class="external-link">aggregate</a></span><span class="op">(</span></span>
 <span>  <span class="va">converted</span> <span class="op">~</span> <span class="va">release</span> <span class="op">+</span> <span class="va">platform</span> <span class="op">+</span> <span class="va">plan</span>,</span>
@@ -341,33 +336,35 @@ data:</p>
 <span><span class="op">)</span></span>
 <span><span class="va">deltas</span><span class="op">$</span><span class="va">drop_pp</span> <span class="op">&lt;-</span></span>
 <span>  <span class="fl">100</span> <span class="op">*</span> <span class="op">(</span><span class="va">deltas</span><span class="op">$</span><span class="va">converted_before</span> <span class="op">-</span> <span class="va">deltas</span><span class="op">$</span><span class="va">converted_after</span><span class="op">)</span></span>
+<span><span class="va">winner</span> <span class="op">&lt;-</span> <span class="va">deltas</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/which.min.html" class="external-link">which.max</a></span><span class="op">(</span><span class="va">deltas</span><span class="op">$</span><span class="va">drop_pp</span><span class="op">)</span>, <span class="op">]</span></span>
 <span><span class="va">deltas</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/order.html" class="external-link">order</a></span><span class="op">(</span><span class="op">-</span><span class="va">deltas</span><span class="op">$</span><span class="va">drop_pp</span><span class="op">)</span>, <span class="op">]</span></span></code></pre></div>
-<p>The small printed table, rather than all 40,000 rows, enters the next
-model turn.</p>
+<p>Only this four-row table, not the 40,000 sessions, goes into the next
+prompt.</p>
 </div>
 <div class="section level3">
-<h3 id="inspect-candidate-changes">3. Inspect candidate changes<a class="anchor" aria-label="anchor" href="#inspect-candidate-changes"></a>
+<h3 id="find-the-matching-change-records">3. Find the matching change records<a class="anchor" aria-label="anchor" href="#find-the-matching-change-records"></a>
 </h3>
-<p>Once the cohort is known, the model can narrow the change log:</p>
+<p>The model cannot search for words it has not seen yet, so it starts
+from what step 2 found: 2.4.0 records that mention the affected platform
+and plan.</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">candidate</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span></span>
-<span>  <span class="va">.context</span><span class="op">$</span><span class="va">changes</span>,</span>
-<span>  <span class="va">release</span> <span class="op">==</span> <span class="st">"2.4.0"</span> <span class="op">&amp;</span></span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grepl</a></span><span class="op">(</span></span>
-<span>      <span class="st">"token|retry"</span>,</span>
-<span>      <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">component</span>, <span class="va">note</span><span class="op">)</span>,</span>
-<span>      ignore.case <span class="op">=</span> <span class="cn">TRUE</span></span>
-<span>    <span class="op">)</span></span>
-<span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="va">mentions</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">value</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grepl</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"\\b"</span>, <span class="va">value</span>, <span class="st">"\\b"</span><span class="op">)</span>, <span class="va">.context</span><span class="op">$</span><span class="va">changes</span><span class="op">$</span><span class="va">note</span>, ignore.case <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span><span class="op">}</span></span>
+<span><span class="va">candidate</span> <span class="op">&lt;-</span> <span class="va">.context</span><span class="op">$</span><span class="va">changes</span><span class="op">[</span></span>
+<span>  <span class="va">.context</span><span class="op">$</span><span class="va">changes</span><span class="op">$</span><span class="va">release</span> <span class="op">==</span> <span class="st">"2.4.0"</span> <span class="op">&amp;</span></span>
+<span>    <span class="fu">mentions</span><span class="op">(</span><span class="va">winner</span><span class="op">$</span><span class="va">platform</span><span class="op">)</span> <span class="op">&amp;</span></span>
+<span>    <span class="fu">mentions</span><span class="op">(</span><span class="va">winner</span><span class="op">$</span><span class="va">plan</span><span class="op">)</span>,</span>
+<span><span class="op">]</span></span>
+<span><span class="va">candidate</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="submit-typed-evidence">4. Submit typed evidence<a class="anchor" aria-label="anchor" href="#submit-typed-evidence"></a>
 </h3>
-<p>The closing step returns the calculated values and the relevant
+<p>The last step returns the calculated values and the matching
 record:</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">winner</span> <span class="op">&lt;-</span> <span class="va">deltas</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/which.min.html" class="external-link">which.max</a></span><span class="op">(</span><span class="va">deltas</span><span class="op">$</span><span class="va">drop_pp</span><span class="op">)</span>, <span class="op">]</span></span>
-<span><span class="fu">SUBMIT</span><span class="op">(</span></span>
+<code class="sourceCode R"><span><span class="fu">SUBMIT</span><span class="op">(</span></span>
 <span>  release <span class="op">=</span> <span class="va">after</span><span class="op">$</span><span class="va">release</span><span class="op">[[</span><span class="fl">1L</span><span class="op">]</span><span class="op">]</span>,</span>
 <span>  cohort <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span></span>
 <span>    <span class="st">"platform="</span>, <span class="va">winner</span><span class="op">$</span><span class="va">platform</span>,</span>
@@ -379,30 +376,29 @@ record:</p>
 <span>  change_id <span class="op">=</span> <span class="va">candidate</span><span class="op">$</span><span class="va">change_id</span><span class="op">[[</span><span class="fl">1L</span><span class="op">]</span><span class="op">]</span>,</span>
 <span>  evidence <span class="op">=</span> <span class="va">candidate</span><span class="op">$</span><span class="va">note</span><span class="op">[[</span><span class="fl">1L</span><span class="op">]</span><span class="op">]</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p>If a submitted value is missing or has the wrong type, the RLM
-receives that validation error and can correct the submission on a later
-iteration.</p>
+<p>If a value is missing or has the wrong type, the RLM receives the
+validation error and can correct the submission on a later step. Run in
+order in a real runner, these four blocks produce exactly the answer at
+the top of the page.</p>
 </div>
 </div>
 <div class="section level2">
-<h2 id="inspect-and-validate-the-result">Inspect and validate the result<a class="anchor" aria-label="anchor" href="#inspect-and-validate-the-result"></a>
+<h2 id="check-the-answer-independently">Check the answer independently<a class="anchor" aria-label="anchor" href="#check-the-answer-independently"></a>
 </h2>
-<p>The structured result carries the trajectory produced during this
-invocation:</p>
+<p>The structured result carries the trajectory of this call:</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">trajectory</span> <span class="op">&lt;-</span> <span class="va">result</span><span class="op">$</span><span class="va">metadata</span><span class="op">$</span><span class="va">repl_history</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span><span class="va">trajectory</span>, <span class="kw">function</span><span class="op">(</span><span class="va">step</span><span class="op">)</span> <span class="va">step</span><span class="op">$</span><span class="va">code</span>, <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span><span class="va">trajectory</span>, <span class="kw">function</span><span class="op">(</span><span class="va">step</span><span class="op">)</span> <span class="va">step</span><span class="op">$</span><span class="va">success</span>, <span class="fu"><a href="https://rdrr.io/r/base/logical.html" class="external-link">logical</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<p>Validate the model output against an independent calculation rather
-than trusting its prose:</p>
+<p>Do not trust the model’s prose. Compute the expected answer from the
+data without it:</p>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">rates</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/aggregate.html" class="external-link">aggregate</a></span><span class="op">(</span></span>
 <span>  <span class="va">converted</span> <span class="op">~</span> <span class="va">release</span> <span class="op">+</span> <span class="va">platform</span> <span class="op">+</span> <span class="va">plan</span>,</span>
 <span>  data <span class="op">=</span> <span class="va">sessions</span>,</span>
 <span>  FUN <span class="op">=</span> <span class="va">mean</span></span>
 <span><span class="op">)</span></span>
-<span></span>
 <span><span class="va">before</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span><span class="va">rates</span>, <span class="va">release</span> <span class="op">==</span> <span class="st">"2.3.9"</span><span class="op">)</span></span>
 <span><span class="va">after</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span><span class="va">rates</span>, <span class="va">release</span> <span class="op">==</span> <span class="st">"2.4.0"</span><span class="op">)</span></span>
 <span><span class="va">comparison</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/merge.html" class="external-link">merge</a></span><span class="op">(</span></span>
@@ -414,116 +410,71 @@ than trusting its prose:</p>
 <span><span class="va">comparison</span><span class="op">$</span><span class="va">drop_pp</span> <span class="op">&lt;-</span></span>
 <span>  <span class="fl">100</span> <span class="op">*</span> <span class="op">(</span><span class="va">comparison</span><span class="op">$</span><span class="va">converted_before</span> <span class="op">-</span> <span class="va">comparison</span><span class="op">$</span><span class="va">converted_after</span><span class="op">)</span></span>
 <span><span class="va">oracle</span> <span class="op">&lt;-</span> <span class="va">comparison</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/which.min.html" class="external-link">which.max</a></span><span class="op">(</span><span class="va">comparison</span><span class="op">$</span><span class="va">drop_pp</span><span class="op">)</span>, <span class="op">]</span></span>
-<span><span class="va">candidate</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span></span>
-<span>  <span class="va">changes</span>,</span>
-<span>  <span class="va">release</span> <span class="op">==</span> <span class="st">"2.4.0"</span> <span class="op">&amp;</span></span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grepl</a></span><span class="op">(</span><span class="st">"token|retry"</span>, <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">component</span>, <span class="va">note</span><span class="op">)</span>,</span>
-<span>      ignore.case <span class="op">=</span> <span class="cn">TRUE</span></span>
-<span>    <span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">sessions</span><span class="op">)</span> <span class="op">==</span> <span class="fl">40000L</span>,</span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">candidate</span><span class="op">)</span> <span class="op">==</span> <span class="fl">1L</span>,</span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="va">candidate</span><span class="op">$</span><span class="va">change_id</span>, <span class="st">"CHG-1842"</span><span class="op">)</span>,</span>
+<span><span class="va">oracle</span></span>
+<span><span class="co">#&gt;   platform plan release_before converted_before release_after converted_after</span></span>
+<span><span class="co">#&gt; 4   mobile  pro          2.3.9             0.92         2.4.0            0.61</span></span>
+<span><span class="co">#&gt;   drop_pp</span></span>
+<span><span class="co">#&gt; 4      31</span></span></code></pre></div>
+<p>The change lookup starts from the computed cohort, not from words in
+the expected note:</p>
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">mentions</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">value</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grepl</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"\\b"</span>, <span class="va">value</span>, <span class="st">"\\b"</span><span class="op">)</span>, <span class="va">changes</span><span class="op">$</span><span class="va">note</span>, ignore.case <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span><span class="op">}</span></span>
+<span><span class="va">expected_change</span> <span class="op">&lt;-</span> <span class="va">changes</span><span class="op">[</span></span>
+<span>  <span class="va">changes</span><span class="op">$</span><span class="va">release</span> <span class="op">==</span> <span class="st">"2.4.0"</span> <span class="op">&amp;</span></span>
+<span>    <span class="fu">mentions</span><span class="op">(</span><span class="va">oracle</span><span class="op">$</span><span class="va">platform</span><span class="op">)</span> <span class="op">&amp;</span></span>
+<span>    <span class="fu">mentions</span><span class="op">(</span><span class="va">oracle</span><span class="op">$</span><span class="va">plan</span><span class="op">)</span>,</span>
+<span><span class="op">]</span></span>
+<span><span class="va">expected_change</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"change_id"</span>, <span class="st">"component"</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="co">#&gt;     change_id     component</span></span>
+<span><span class="co">#&gt; 142  CHG-1842 checkout-auth</span></span></code></pre></div>
+<p>This lookup relies on a property of the fixture: exactly one 2.4.0
+record names the affected platform and plan. In a real change log,
+linking a cohort to a change is a judgment call, which is why the
+signature asks for the note as evidence rather than proof.</p>
+<p>Then compare the model’s answer with both:</p>
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">output</span><span class="op">$</span><span class="va">release</span>, <span class="st">"2.4.0"</span><span class="op">)</span>,</span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">output</span><span class="op">$</span><span class="va">cohort</span>, <span class="st">"platform=mobile / plan=pro"</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span></span>
+<span>    <span class="va">result</span><span class="op">$</span><span class="va">output</span><span class="op">$</span><span class="va">cohort</span>,</span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"platform="</span>, <span class="va">oracle</span><span class="op">$</span><span class="va">platform</span>, <span class="st">" / plan="</span>, <span class="va">oracle</span><span class="op">$</span><span class="va">plan</span><span class="op">)</span></span>
+<span>  <span class="op">)</span>,</span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/Logic.html" class="external-link">isTRUE</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/all.equal.html" class="external-link">all.equal</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">output</span><span class="op">$</span><span class="va">before_rate</span>, <span class="va">oracle</span><span class="op">$</span><span class="va">converted_before</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/Logic.html" class="external-link">isTRUE</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/all.equal.html" class="external-link">all.equal</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">output</span><span class="op">$</span><span class="va">after_rate</span>, <span class="va">oracle</span><span class="op">$</span><span class="va">converted_after</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/Logic.html" class="external-link">isTRUE</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/all.equal.html" class="external-link">all.equal</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">output</span><span class="op">$</span><span class="va">drop_pp</span>, <span class="va">oracle</span><span class="op">$</span><span class="va">drop_pp</span><span class="op">)</span><span class="op">)</span>,</span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">output</span><span class="op">$</span><span class="va">change_id</span>, <span class="st">"CHG-1842"</span><span class="op">)</span>,</span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">output</span><span class="op">$</span><span class="va">evidence</span>, <span class="va">candidate</span><span class="op">$</span><span class="va">note</span><span class="op">[[</span><span class="fl">1L</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">output</span><span class="op">$</span><span class="va">change_id</span>, <span class="va">expected_change</span><span class="op">$</span><span class="va">change_id</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">output</span><span class="op">$</span><span class="va">evidence</span>, <span class="va">expected_change</span><span class="op">$</span><span class="va">note</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="recursive-queries-are-optional">Recursive queries are optional<a class="anchor" aria-label="anchor" href="#recursive-queries-are-optional"></a>
+<h2 id="choose-the-runner">Choose the runner<a class="anchor" aria-label="anchor" href="#choose-the-runner"></a>
 </h2>
-<p><code>sub_lm = NULL</code> inherits the outer model supplied to
-<code><a href="../reference/run.html">run()</a></code>. If generated code calls <code>llm_query()</code> or
-<code>llm_query_batched()</code>, dsprrr performs those calls in the
-host process and replays their results into the same code evaluation. A
-separate, cheaper model can handle those focused reads:</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">investigator</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/rlm_module.html">rlm_module</a></span><span class="op">(</span></span>
-<span>  <span class="va">incident_signature</span>,</span>
-<span>  interpreter_factory <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="op">{</span></span>
-<span>    <span class="fu"><a href="../reference/r_code_runner.html">r_code_runner</a></span><span class="op">(</span>timeout <span class="op">=</span> <span class="fl">30</span>, persistent <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
-<span>  <span class="op">}</span>,</span>
-<span>  sub_lm <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>  max_llm_calls <span class="op">=</span> <span class="fl">4</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p>This incident does not require a sub-query: R aggregation plus one
-targeted change record is enough. Do not add recursive calls merely
-because the module supports them.</p>
-</div>
-<div class="section level2">
-<h2 id="choose-the-runner-deliberately">Choose the runner deliberately<a class="anchor" aria-label="anchor" href="#choose-the-runner-deliberately"></a>
-</h2>
-<table class="table">
-<colgroup>
-<col width="33%">
-<col width="33%">
-<col width="33%">
-</colgroup>
-<thead><tr class="header">
-<th>Configuration</th>
-<th>Use it for</th>
-<th>Boundary</th>
-</tr></thead>
-<tbody>
-<tr class="odd">
-<td>
-<code><a href="../reference/rlm.html">rlm()</a></code> with no runner arguments</td>
-<td>Compact, JSON-compatible context</td>
-<td>Fresh managed OS sandbox; network disabled, workspace writes
-allowed, bounded transport</td>
-</tr>
-<tr class="even">
-<td><code>interpreter_factory = function() mcp_repl_runner()</code></td>
-<td>Explicit managed-sandbox configuration</td>
-<td>OS sandbox, fresh runner per invocation, bounded transport</td>
-</tr>
-<tr class="odd">
-<td><code>r_code_runner(persistent = TRUE)</code></td>
-<td>Trusted tasks with rich or large R objects</td>
-<td>Persistent callr process with the host user’s permissions</td>
-</tr>
-</tbody>
-</table>
-<p>The managed MCP path is the default for the one-call
-<code><a href="../reference/rlm.html">rlm()</a></code> helper. It requires the suggested R package
-<code>mcptools</code> and the external <code>mcp-repl</code> executable.
-It disables network access but still permits writes inside the allowed
-workspace. The final JSON-RPC request must fit the 7 KB wire bound;
-dsprrr tries a gzip/base64 wrapper when the raw request is too large.
-Each encoded RLM control frame must fit 3,000 bytes. Large data frames
-and model objects need a runner or resource adapter that preserves those
-values without forcing them through the compact MCP request. Declared
-host tools execute outside the guest sandbox with the host process’s
-permissions.</p>
-<p>For a compact document, the managed one-call form is enough:</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<p>The one-call <code><a href="../reference/rlm.html">rlm()</a></code> helper runs in a fresh
+<code><a href="../reference/mcp_repl_runner.html">mcp_repl_runner()</a></code> sandbox by default. That sandbox suits
+compact inputs you do not control, but every input is sent with every
+step, so this 40,000-row table is far too large for it. See <a href="how-rlm-works.html#limits">How RLM works</a> for the sandbox’s
+size limits and safety model. For a compact document, the one-call form
+is enough:</p>
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">answer</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/rlm.html">rlm</a></span><span class="op">(</span></span>
 <span>  <span class="st">"document, question -&gt; answer"</span>,</span>
 <span>  document <span class="op">=</span> <span class="st">"Owner: team-a\nCommitment: publish the audit by Friday"</span>,</span>
 <span>  question <span class="op">=</span> <span class="st">"Which commitments have no owner?"</span>,</span>
-<span>  .llm <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-luna"</span><span class="op">)</span>,</span>
 <span>  .max_iterations <span class="op">=</span> <span class="fl">4L</span>,</span>
 <span>  .max_llm_calls <span class="op">=</span> <span class="fl">0L</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p>See <a href="how-rlm-works.html">How the RLM Works</a> for runner
-lifecycle, recursive calls, budgets, and failure behavior.</p>
 </div>
 <div class="section level2">
 <h2 id="turn-discovery-into-a-program">Turn discovery into a program<a class="anchor" aria-label="anchor" href="#turn-discovery-into-a-program"></a>
 </h2>
 <p>RLM is a poor default for a known report. If several investigations
-repeatedly aggregate the same columns and join the same records, encode
-that path in R or a dsprrr pipeline. If the best implementation is
-itself the search problem, evaluate it over labeled cases and consider
-Flex.</p>
-<p>Use RLM to discover the path. Use deterministic code once you know
-it.</p>
+aggregate the same columns and join the same records, write that path in
+R or as a dsprrr pipeline. If the best implementation is itself the
+thing to search for, evaluate candidates over labeled cases with <a href="flex-optimization.html">Flex</a>. Use RLM to discover the path,
+then replace it with code once you know it.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

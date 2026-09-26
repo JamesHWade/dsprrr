@@ -289,9 +289,9 @@ First development changelog. dsprrr is experimental; the API may change.
   requests, cache keys, or artifact identity.
 
 - DSPy 3.3 alignment adds immutable
-  [`with_instructions()`](https://jameshwade.github.io/dsprrr/reference/signature-transforms.md)
+  [`with_instructions()`](https://jameshwade.github.io/dsprrr/reference/with_instructions.md)
   and
-  [`append_instructions()`](https://jameshwade.github.io/dsprrr/reference/signature-transforms.md)
+  [`append_instructions()`](https://jameshwade.github.io/dsprrr/reference/with_instructions.md)
   transforms, plus
   [`metric_with_trace()`](https://jameshwade.github.io/dsprrr/reference/metric_with_trace.md)
   for objectives that score both outputs and row-owned execution traces.
@@ -334,6 +334,102 @@ First development changelog. dsprrr is experimental; the API may change.
   a better candidate.
 
 ### Bug fixes
+
+- [`metric_exact_match()`](https://jameshwade.github.io/dsprrr/reference/metric_exact_match.md)
+  and
+  [`metric_f1()`](https://jameshwade.github.io/dsprrr/reference/metric_f1.md)
+  now work without `field` in
+  [`evaluate()`](https://jameshwade.github.io/dsprrr/reference/evaluate.md),
+  [`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md),
+  and
+  [`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md).
+  Those functions pass the whole data row as `expected`, so every row
+  used to fail with “Metric must return a single logical or numeric
+  score” (and
+  [`metric_f1()`](https://jameshwade.github.io/dsprrr/reference/metric_f1.md)
+  scored against every column). The metric now compares the one
+  prediction field that is also a data column, and asks for `field` when
+  that is ambiguous. This also fixes
+  [`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md)’s
+  default metric.
+
+- [`refine()`](https://jameshwade.github.io/dsprrr/reference/refine.md)
+  and
+  [`rag_module()`](https://jameshwade.github.io/dsprrr/reference/rag_module.md)
+  programs now run through
+  [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md),
+  [`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md)
+  and
+  [`evaluate()`](https://jameshwade.github.io/dsprrr/reference/evaluate.md).
+  Input validation used to demand the `feedback` and `relevant_context`
+  fields the modules fill in themselves. When a refined module declares
+  `feedback`, the first attempt receives “No feedback yet.”.
+
+- ragnar integration matches ragnar’s API: retrieval passes `top_k`,
+  [`ragnar_tool()`](https://jameshwade.github.io/dsprrr/reference/ragnar_tool.md)
+  returns an ellmer tool definition that
+  [`react()`](https://jameshwade.github.io/dsprrr/reference/react.md)
+  and `Chat$register_tool()` accept, and
+  [`create_search_tool()`](https://jameshwade.github.io/dsprrr/reference/create_search_tool.md)
+  builds its store with `ragnar_store_create(embed = )`,
+  `markdown_chunk()`, and `ragnar_store_insert()`.
+
+- Print methods work in the installed package. Top-level
+  `S7::method(print, ...) <-` calls created a `print` binding in the
+  namespace, which sent every `S3method(print, ...)` registration to the
+  wrong methods table, so evaluation results, cache statistics, prompt
+  inspections, costs and optimizer objects printed as raw lists. The S7
+  print methods are now registered in `.onLoad()`.
+
+- `evaluate(epochs = )` samples fresh responses in every epoch. Epochs
+  after the first now use their own cache partition; previously they
+  replayed epoch 1 from the response cache, so `score_std` and `ci_95`
+  collapsed to 0 unless `.cache = FALSE` was set.
+
+- Image and other content inputs work in single
+  [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md) calls,
+  sequential batches and
+  [`run_async()`](https://jameshwade.github.io/dsprrr/reference/run_async.md).
+  The prompt parts were passed to ellmer as one list argument, which
+  ellmer 0.5.0 rejects; only batches on the ellmer backend worked.
+
+- Runtime parameters set on a module (`config$params`,
+  [`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md)
+  grids,
+  [`reasoning_effort()`](https://jameshwade.github.io/dsprrr/reference/reasoning_effort.md))
+  now go through ellmer’s standard `params`, so ellmer sends them in
+  each provider’s format. `reasoning_effort` used to be sent as a
+  top-level field that OpenAI’s Responses API does not accept; it is now
+  sent as `reasoning.effort`. Parameters ellmer does not know are still
+  sent verbatim.
+  [`is_reasoning_model()`](https://jameshwade.github.io/dsprrr/reference/is_reasoning_model.md)
+  recognizes the gpt-6 family.
+
+- `optimize_grid(parameters = )` no longer leaves
+  [`expand.grid()`](https://rdrr.io/r/base/expand.grid.html)’s
+  `out.attrs` attribute on `best_params`, which made
+  [`save_program()`](https://jameshwade.github.io/dsprrr/reference/program-artifact.md)
+  and
+  [`pin_module_config()`](https://jameshwade.github.io/dsprrr/reference/pin_module_config.md)
+  fail on grid-searched modules. Printing
+  [`session_cost()`](https://jameshwade.github.io/dsprrr/reference/session_cost.md)
+  no longer errors when the cost is unknown.
+
+- [`dsp_configure()`](https://jameshwade.github.io/dsprrr/reference/dsp_configure.md)
+  applies `temperature` to the chat (through
+  [`ellmer::params()`](https://ellmer.tidyverse.org/reference/params.html))
+  instead of only recording it, and honors `model` and `api_key` when it
+  detects the provider from environment variables.
+
+- [`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md)’s
+  `instructions_suffix` parameter appends to the module’s instructions
+  instead of replacing them.
+
+- [`export_traces()`](https://jameshwade.github.io/dsprrr/reference/export_traces.md)
+  and
+  [`pin_trace()`](https://jameshwade.github.io/dsprrr/reference/pin_trace.md)
+  leave out prompts and responses unless `include_prompts` or
+  `include_outputs` is `TRUE`, as documented.
 
 - DSPy 3.3 execution contracts are enforced in the R runtime:
   [`rlm_module()`](https://jameshwade.github.io/dsprrr/reference/rlm_module.md)

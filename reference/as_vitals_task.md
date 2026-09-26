@@ -1,13 +1,11 @@
-# Create a vitals Task from a dsprrr module
+# Build a vitals Task from a module and a data set
 
-Convenience function that builds a vitals
-[vitals::Task](https://vitals.tidyverse.org/reference/Task.html) from a
-dsprrr module and dataset. This makes it trivial to evaluate dsprrr
-modules using vitals infrastructure without manual solver wrapping.
-
-For multi-input modules, the function automatically nests all signature
-input columns into a single `input` list column that vitals expects. The
-solver then extracts these fields when processing each sample.
+`as_vitals_task()` creates a vitals `Task` that uses the module as its
+solver (see
+[`as_vitals_solver()`](https://jameshwade.github.io/dsprrr/reference/as_vitals_solver.md)),
+so you can evaluate the module with vitals' scoring, logging and viewer.
+Call the task's `$eval()` method to run it and `$view()` to browse the
+results.
 
 ## Usage
 
@@ -30,89 +28,105 @@ as_vitals_task(
 
 - module:
 
-  A DSPrrr module (e.g., created via
-  [`module()`](https://jameshwade.github.io/dsprrr/reference/module.md)).
+  A module, such as one created with
+  [`module()`](https://jameshwade.github.io/dsprrr/reference/module.md).
 
 - dataset:
 
-  A tibble/data frame with columns matching the module's signature
-  inputs plus a `target` column. The function will nest signature inputs
-  into the `input` column format vitals requires.
+  A data frame with the signature's input columns and a `target` column.
 
 - scorer:
 
-  A vitals scorer function (e.g.,
+  A vitals scorer, such as
+  [`vitals::detect_includes()`](https://vitals.tidyverse.org/reference/scorer_detect.html).
+  The default,
   [`vitals::model_graded_qa()`](https://vitals.tidyverse.org/reference/scorer_model.html),
-  [`vitals::detect_match()`](https://vitals.tidyverse.org/reference/scorer_detect.html)).
-  Defaults to
-  [`vitals::model_graded_qa()`](https://vitals.tidyverse.org/reference/scorer_model.html).
+  asks the solver's chat to grade.
 
 - .llm:
 
-  Optional ellmer chat object for the solver. When `NULL`, each
-  invocation will create a fresh default client.
+  An ellmer Chat for the solver. `NULL` (the default) uses the module's
+  own chat or the default chat, resolved when the task is created.
 
 - name:
 
-  Optional name for the task. Defaults to the dataset name.
+  Task name. Defaults to the expression passed as `dataset`.
 
 - epochs:
 
-  Number of times to repeat each sample for statistical significance.
-  Defaults to 1L.
+  Integer number of times each sample is run (default `1L`).
 
 - metrics:
 
-  Optional named list of metric functions. Each function takes a vector
-  of scores and returns a single numeric value.
+  Optional named list of functions that summarize a vector of scores
+  into one number.
 
 - dir:
 
-  Directory for evaluation logs. Defaults to
+  Directory for the evaluation logs. Defaults to
   [`vitals::vitals_log_dir()`](https://vitals.tidyverse.org/reference/vitals_log_dir.html).
 
 - .concurrency:
 
-  Optional policy created by
+  Optional policy from
   [`concurrency_control()`](https://jameshwade.github.io/dsprrr/reference/concurrency_control.md).
-  Omission uses sequential execution.
 
 - ...:
 
-  Additional arguments passed to
+  Further arguments passed to
   [`as_vitals_solver()`](https://jameshwade.github.io/dsprrr/reference/as_vitals_solver.md).
 
 ## Value
 
-A vitals
-[vitals::Task](https://vitals.tidyverse.org/reference/Task.html) object
-ready for evaluation.
+A vitals `Task` object.
 
 ## Details
 
-The returned Task object can be evaluated by calling its `$eval()`
-method, which runs the solver, scores results, computes metrics, and
-logs output. Use `$view()` to see results interactively.
+`dataset` needs one column per signature input and a `target` column.
+The input columns are nested into the `input` list-column that vitals
+expects; other columns are kept.
+
+## See also
+
+Other integrations:
+[`as_dsprrr_metric()`](https://jameshwade.github.io/dsprrr/reference/as_dsprrr_metric.md),
+[`as_dsprrr_traces()`](https://jameshwade.github.io/dsprrr/reference/as_dsprrr_traces.md),
+[`as_ellmer_tool()`](https://jameshwade.github.io/dsprrr/reference/as_ellmer_tool.md),
+[`as_vitals_cost()`](https://jameshwade.github.io/dsprrr/reference/as_vitals_cost.md),
+[`as_vitals_samples()`](https://jameshwade.github.io/dsprrr/reference/as_vitals_samples.md),
+[`as_vitals_solver()`](https://jameshwade.github.io/dsprrr/reference/as_vitals_solver.md),
+[`create_search_tool()`](https://jameshwade.github.io/dsprrr/reference/create_search_tool.md),
+[`llm_predict()`](https://jameshwade.github.io/dsprrr/reference/llm_predict.md),
+[`ragnar_tool()`](https://jameshwade.github.io/dsprrr/reference/ragnar_tool.md),
+[`reasoning_effort()`](https://jameshwade.github.io/dsprrr/reference/reasoning_effort.md),
+[`register_dsprrr_engine()`](https://jameshwade.github.io/dsprrr/reference/register_dsprrr_engine.md),
+[`summarize_traces_df()`](https://jameshwade.github.io/dsprrr/reference/summarize_traces_df.md),
+[`temperature()`](https://jameshwade.github.io/dsprrr/reference/temperature.md),
+[`top_p()`](https://jameshwade.github.io/dsprrr/reference/top_p.md),
+[`use_dsprrr_template()`](https://jameshwade.github.io/dsprrr/reference/use_dsprrr_template.md),
+[`validate_workflow()`](https://jameshwade.github.io/dsprrr/reference/validate_workflow.md),
+[`vitals_metrics`](https://jameshwade.github.io/dsprrr/reference/vitals_metrics.md)
 
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-# Single-input module
-mod <- module(signature("question -> answer"))
-test_data <- tibble::tibble(
+qa <- module(signature("question -> answer"))
+test_data <- data.frame(
   question = c("What is 2+2?", "Capital of France?"),
   target = c("4", "Paris")
 )
-task <- as_vitals_task(mod, test_data, scorer = vitals::detect_includes())
-
-# Multi-input module
-mod <- module(signature("shapes, pick -> answer"))
-test_data <- tibble::tibble(
-  shapes = c("square, circle", "triangle, star"),
-  pick = c("square", "star"),
-  target = c("square", "star")
+tsk <- as_vitals_task(
+  qa,
+  test_data,
+  scorer = vitals::detect_includes(),
+  .llm = ellmer::chat_openai(model = "gpt-6-luna"),
+  dir = tempdir()
 )
-task <- as_vitals_task(mod, test_data, scorer = vitals::detect_includes())
+tsk
+#> An evaluation task test-data.
+
+if (FALSE) { # \dontrun{
+tsk$eval()
+tsk$get_cost()
 } # }
 ```

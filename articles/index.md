@@ -2,122 +2,123 @@
 
 ### Tutorials
 
-Learn dsprrr step by step, from first LLM call to production deployment
+Start here. Six short steps from a first call to a saved, optimized
+module; each one builds on the last.
 
-- [Getting Started with
-  dsprrr](https://jameshwade.github.io/dsprrr/articles/getting-started.md):
+- [Tutorial 1: Your first LLM
+  call](https://jameshwade.github.io/dsprrr/articles/tutorial-hello-world.md):
+- [Tutorial 2: Build a
+  classifier](https://jameshwade.github.io/dsprrr/articles/tutorial-build-classifier.md):
+- [Tutorial 3: Extract structured
+  data](https://jameshwade.github.io/dsprrr/articles/tutorial-structured-outputs.md):
+- [Tutorial 4: Improve with
+  examples](https://jameshwade.github.io/dsprrr/articles/tutorial-improve-with-demos.md):
+- [Tutorial 5: Optimize a
+  module](https://jameshwade.github.io/dsprrr/articles/tutorial-optimize-your-module.md):
+- [Tutorial 6: Save and reuse a
+  module](https://jameshwade.github.io/dsprrr/articles/tutorial-deploy-to-production.md):
 
-- [Tutorial 1: Your First LLM
-  Call](https://jameshwade.github.io/dsprrr/articles/tutorial-hello-world.md):
+### Projects
 
-- [Tutorial 2: Building a Reusable
-  Classifier](https://jameshwade.github.io/dsprrr/articles/tutorial-build-classifier.md):
+Longer worked examples on a realistic task.
 
-- [Tutorial 3: Extracting Structured
-  Data](https://jameshwade.github.io/dsprrr/articles/tutorial-structured-outputs.md):
+- [Generate an llms.txt
+  file](https://jameshwade.github.io/dsprrr/articles/llms-txt.md):
 
-- [Tutorial 4: Improving with
-  Examples](https://jameshwade.github.io/dsprrr/articles/tutorial-improve-with-demos.md):
-
-- [Tutorial 5: Finding the Best
-  Configuration](https://jameshwade.github.io/dsprrr/articles/tutorial-optimize-your-module.md):
-
-- [Tutorial 6: Taking to
-  Production](https://jameshwade.github.io/dsprrr/articles/tutorial-deploy-to-production.md):
-
-- [Building a Text Adventure
-  Game](https://jameshwade.github.io/dsprrr/articles/text-adventure.md):
-
-- [Generating llms.txt for R
-  Packages](https://jameshwade.github.io/dsprrr/articles/llms-txt.md):
-
-- [Investigate a Release Regression with an
+- [Investigate a regression with
   RLM](https://jameshwade.github.io/dsprrr/articles/tutorial-rlm-dsprrr.md):
 
   Use an RLM to explore a large R data frame, isolate a conversion
   regression, and connect it to a relevant change record.
 
-### How-to Guides
+- [Build a text
+  adventure](https://jameshwade.github.io/dsprrr/articles/text-adventure.md):
 
-Task-oriented guides for specific workflows
+### Build
 
-- [Troubleshooting](https://jameshwade.github.io/dsprrr/articles/troubleshooting.md):
-- [Automatic Prompt Optimization with
-  dsprrr](https://jameshwade.github.io/dsprrr/articles/compilation-optimization.md):
-- [Vitals Integration
-  Recipes](https://jameshwade.github.io/dsprrr/articles/vitals-recipes.md):
-- [RAG Workflows with
-  ragnar](https://jameshwade.github.io/dsprrr/articles/rag-workflows.md):
-- [Chaining Modules and
-  Pipelines](https://jameshwade.github.io/dsprrr/articles/chaining-modules.md):
+Pick a module type, compose modules, and add retrieval or decisions.
+
+- [Choose a module
+  type](https://jameshwade.github.io/dsprrr/articles/advanced-modules.md):
+- [Chain modules into
+  pipelines](https://jameshwade.github.io/dsprrr/articles/chaining-modules.md):
+- [Retrieval-augmented
+  generation](https://jameshwade.github.io/dsprrr/articles/rag-workflows.md):
 - [Calibrated
-  Decisions](https://jameshwade.github.io/dsprrr/articles/calibrated-decisions.md):
-- [Production Workflows with
-  dsprrr](https://jameshwade.github.io/dsprrr/articles/orchestration.md):
-- [Integration with
-  vitals](https://jameshwade.github.io/dsprrr/articles/vitals-integration.md):
-- [tidymodels
-  Integration](https://jameshwade.github.io/dsprrr/articles/tidymodels-integration.md):
-- [Advanced ellmer
-  Integration](https://jameshwade.github.io/dsprrr/articles/advanced-ellmer.md):
+  decisions](https://jameshwade.github.io/dsprrr/articles/calibrated-decisions.md):
+
+### Measure and improve
+
+Evaluate modules and optimize them with data.
+
+- [Compile and
+  optimize](https://jameshwade.github.io/dsprrr/articles/compilation-optimization.md):
+- [Choose an
+  optimizer](https://jameshwade.github.io/dsprrr/articles/advanced-optimization.md):
+- [Evaluate with
+  vitals](https://jameshwade.github.io/dsprrr/articles/vitals-recipes.md):
+
+### Run
+
+Configure models and run dsprrr in larger workflows.
+
+- [Models, providers and
+  streaming](https://jameshwade.github.io/dsprrr/articles/models-and-providers.md):
+- [Run dsprrr in
+  pipelines](https://jameshwade.github.io/dsprrr/articles/orchestration.md):
+- [Use dsprrr with
+  tidymodels](https://jameshwade.github.io/dsprrr/articles/tidymodels-integration.md):
+- [Troubleshooting](https://jameshwade.github.io/dsprrr/articles/troubleshooting.md):
 
 ### Concepts
 
-Understand the philosophy, design, and theory behind dsprrr
+How dsprrr works and why, and how it maps to DSPy.
 
-- [The DSPy Philosophy: Programs, Not
-  Prompts](https://jameshwade.github.io/dsprrr/articles/concepts-dspy-philosophy.md):
+- [How dsprrr
+  works](https://jameshwade.github.io/dsprrr/articles/concepts-signatures-modules.md):
 
-- [dsprrr vs. DSPy: Feature
-  Comparison](https://jameshwade.github.io/dsprrr/articles/dspy-comparison.md):
+- [Metrics and
+  evaluation](https://jameshwade.github.io/dsprrr/articles/concepts-why-metrics-matter.md):
 
-- [Understanding Signatures and
-  Modules](https://jameshwade.github.io/dsprrr/articles/concepts-signatures-modules.md):
+- [How optimization
+  works](https://jameshwade.github.io/dsprrr/articles/concepts-optimization-theory.md):
 
-- [How Prompt Optimization
-  Works](https://jameshwade.github.io/dsprrr/articles/concepts-optimization-theory.md):
+- [dsprrr for DSPy
+  users](https://jameshwade.github.io/dsprrr/articles/dspy-comparison.md):
 
-- [Why Metrics Drive Better LLM
-  Applications](https://jameshwade.github.io/dsprrr/articles/concepts-why-metrics-matter.md):
+- [How RLM
+  works](https://jameshwade.github.io/dsprrr/articles/how-rlm-works.md):
 
-- [How the Recursive Language Model (RLM)
-  Works](https://jameshwade.github.io/dsprrr/articles/how-rlm-works.md):
+  What happens during an RLM call: where the inputs live, what the model
+  sees, where its code runs, how answers are checked, and the limits
+  that apply.
 
-  The RLM execution contract: external context, iterative R code,
-  recursive queries, typed submission, runner ownership, and bounded
-  evidence.
+### Experimental
 
-- [Flex: Optimize the Whole
-  Program](https://jameshwade.github.io/dsprrr/articles/flex-optimization.md):
+Features whose interfaces may change.
+
+- [Flex: optimize a whole
+  program](https://jameshwade.github.io/dsprrr/articles/flex-optimization.md):
 
   Use Flex when optimization should decide which model calls,
-  deterministic code, or tools a task needs—not only rewrite a prompt.
+  deterministic code or tools a task needs, not only rewrite a prompt.
 
-- [Advanced Reasoning
-  Modules](https://jameshwade.github.io/dsprrr/articles/advanced-modules.md):
-
-- [Advanced Optimizer
-  Guide](https://jameshwade.github.io/dsprrr/articles/advanced-optimization.md):
-
-- [Composing Optimizers with
+- [Compose optimizers with
   Omni](https://jameshwade.github.io/dsprrr/articles/omni-meta-optimization.md):
 
   Explore several dsprrr teleprompters from one seed, compare them
   fairly, and continue from the strongest candidate.
 
-- [Agentic Optimization with AutoResearch and
-  Meta-Harness](https://jameshwade.github.io/dsprrr/articles/agentic-optimization-harnesses.md):
+- [Agentic optimization
+  harnesses](https://jameshwade.github.io/dsprrr/articles/agentic-optimization-harnesses.md):
 
-  Run persistent or frontier-driven research agents against a trusted
-  dsprrr evaluator, with Posit mcp-repl sandboxing, budgets, lineage,
-  and checkpoints.
-
-- [Working with Reasoning
-  Models](https://jameshwade.github.io/dsprrr/articles/reasoning-models.md):
+  Run persistent or fresh-per-iteration research agents against a
+  trusted dsprrr evaluator, with Posit mcp-repl sandboxing, budgets,
+  lineage, and checkpoints.
 
 ### Reference
 
-Quick lookup
+Quick lookup.
 
 - [Quick
-  Reference](https://jameshwade.github.io/dsprrr/articles/cheatsheet.md):
+  reference](https://jameshwade.github.io/dsprrr/articles/cheatsheet.md):

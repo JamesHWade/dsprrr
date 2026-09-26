@@ -37,4 +37,30 @@ self-reported confidence.
 
 ## See also
 
+Other decisions:
+[`ReAnchor()`](https://jameshwade.github.io/dsprrr/reference/ReAnchor.md),
+[`decision_settings()`](https://jameshwade.github.io/dsprrr/reference/decision_settings.md),
+[`decision_types`](https://jameshwade.github.io/dsprrr/reference/decision_types.md),
 [`with_decisions()`](https://jameshwade.github.io/dsprrr/reference/with_decisions.md)
+
+## Examples
+
+``` r
+if (FALSE) { # \dontrun{
+sig <- signature(
+  inputs = list(input("ticket", description = "Customer report")),
+  output_type = ellmer::type_object(
+    urgent = ellmer::type_boolean("Is the service blocked?")
+  )
+)
+triage <- module(sig) |> with_decisions(urgent = decision_bool())
+
+result <- run(
+  triage,
+  ticket = "Checkout fails for every customer since 9am.",
+  .llm = ellmer::chat_openai(model = "gpt-6-luna"),
+  .return_format = "structured"
+)
+decision_evidence(result)
+} # }
+```

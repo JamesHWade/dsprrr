@@ -1,10 +1,13 @@
-# Summarise optimisation metrics per trial
+# Per-trial rows from a grid search
 
-Flatten the optimisation trials recorded on a module into a tidy data
-frame containing per-trial metric summaries. Useful for producing tables
-or visualisations comparing trial performance. When yardstick metrics
-are supplied, the function also computes those metrics for each trial
-using the stored evaluation datasets.
+`module_metrics()` returns one row per grid-search trial recorded on a
+module by
+[`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md)
+(or
+[`GridSearchTeleprompter()`](https://jameshwade.github.io/dsprrr/reference/GridSearchTeleprompter.md)).
+Like
+[`module_trials()`](https://jameshwade.github.io/dsprrr/reference/module_trials.md),
+it reads only `module$state$trials`.
 
 ## Usage
 
@@ -16,57 +19,55 @@ module_metrics(module, metrics = NULL, truth = NULL, estimate = NULL, ...)
 
 - module:
 
-  A DSPrrr module optimised with
-  [`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md).
+  A module.
 
 - metrics:
 
-  Optional yardstick metric (or metric set) to compute for each trial.
+  Optional yardstick metric or metric set. Currently never computed; see
+  Details.
 
-- truth:
+- truth, estimate:
 
-  Column name (string) containing the ground-truth labels when computing
-  yardstick metrics.
-
-- estimate:
-
-  Column name (string) containing the model predictions when computing
-  yardstick metrics.
+  Column names for the yardstick metrics. Required when `metrics` is
+  supplied.
 
 - ...:
 
-  Additional arguments passed to yardstick metrics.
+  Passed to the yardstick metrics.
 
 ## Value
 
-A tibble with one row per trial containing columns:
+A tibble with one row per trial and columns `trial_id`, `score`,
+`mean_score` (the trial score), `median_score`, `std_dev`,
+`n_evaluated`, `n_errors`, `params` (list-column of the trial's
+parameters), `scores` and `yardstick`.
 
-- `trial_id` - trial identifier.
+## Details
 
-- `score` - overall score recorded for the trial.
+The per-example evaluation results are not kept with the trials, so
+`median_score`, `std_dev`, `n_evaluated` and `n_errors` are `NA`,
+`scores` is empty, and the yardstick metrics requested with `metrics`
+are not computed: the `yardstick` column is always `NULL`. Use
+[`module_trials()`](https://jameshwade.github.io/dsprrr/reference/module_trials.md)
+or
+[`top_trials()`](https://jameshwade.github.io/dsprrr/reference/top_trials.md)
+for trial scores.
 
-- `mean_score`, `median_score`, `std_dev` - summary statistics across
-  the evaluation scores.
+## See also
 
-- `n_evaluated`, `n_errors` - counts reported by the evaluation.
-
-- `params` - list-column with the parameters evaluated in the trial.
-
-- `scores` - list-column with the raw per-example scores (if available).
-
-- `yardstick` - list-column containing yardstick metric results when
-  requested.
+Other grid search:
+[`GridSearchTeleprompter()`](https://jameshwade.github.io/dsprrr/reference/GridSearchTeleprompter.md),
+[`module_parameters()`](https://jameshwade.github.io/dsprrr/reference/module_parameters.md),
+[`module_trials()`](https://jameshwade.github.io/dsprrr/reference/module_trials.md),
+[`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md)
 
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-trial_metrics <- module_metrics(my_module)
-yardstick_metrics <- module_metrics(
-  my_module,
-  metrics = yardstick::metric_set(yardstick::accuracy),
-  truth = target,
-  estimate = result
-)
-} # }
+# Without trials the result is an empty tibble with these columns
+module_metrics(module(signature("text -> sentiment")))
+#> # A tibble: 0 × 10
+#> # ℹ 10 variables: trial_id <int>, score <dbl>, mean_score <dbl>,
+#> #   median_score <dbl>, std_dev <dbl>, n_evaluated <int>, n_errors <int>,
+#> #   params <list>, scores <list>, yardstick <list>
 ```

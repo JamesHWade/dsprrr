@@ -1,9 +1,9 @@
-# Predict Method for Modules (tidymodels-style)
+# Predict with a module on new data
 
-S3 predict method for dsprrr Modules, providing a tidymodels-familiar
-interface. This is an alternative to
+[`predict()`](https://rdrr.io/r/stats/predict.html) on a module is
 [`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md)
-that matches the pattern used by parsnip and other tidymodels packages.
+under the name tidymodels users expect: `predict(module, new_data)` is
+`run_dataset(module, new_data)`.
 
 ## Usage
 
@@ -16,41 +16,53 @@ predict(object, new_data, .llm = NULL, ...)
 
 - object:
 
-  A dsprrr Module object
+  A module, such as one created with
+  [`module()`](https://jameshwade.github.io/dsprrr/reference/module.md).
 
 - new_data:
 
-  A data frame or tibble with columns matching the module's signature
-  inputs
+  A data frame with one column per signature input.
 
 - .llm:
 
-  Optional ellmer Chat object. When supplied, it takes precedence over
-  the Chat stored on `object` and the package default.
+  An ellmer Chat to use instead of the one stored on `object` or the
+  default chat.
 
 - ...:
 
-  Additional arguments passed to
-  [`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md)
+  Passed to
+  [`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md),
+  for example `.return_format`, `.concurrency` or `.cache`.
 
 ## Value
 
-A tibble with the input columns plus prediction results. The output
-column is named according to the signature's output field.
+A tibble with the columns of `new_data` plus a `result` list-column
+holding each row's output as a named list, exactly as returned by
+[`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md).
+
+## See also
+
+Other execution:
+[`concurrency_control()`](https://jameshwade.github.io/dsprrr/reference/concurrency_control.md),
+[`evaluate()`](https://jameshwade.github.io/dsprrr/reference/evaluate.md),
+[`run()`](https://jameshwade.github.io/dsprrr/reference/run.md),
+[`run_async()`](https://jameshwade.github.io/dsprrr/reference/run_async.md),
+[`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md),
+[`run_stream()`](https://jameshwade.github.io/dsprrr/reference/run_stream.md),
+[`stream_async()`](https://jameshwade.github.io/dsprrr/reference/stream_async.md),
+[`stream_listener()`](https://jameshwade.github.io/dsprrr/reference/stream_listener.md)
 
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-# Create a module
-mod <- signature("text -> sentiment") |>
-  module( chat = chat_openai())
-
-# Use predict() like parsnip models
-new_data <- tibble::tibble(text = c("Great!", "Terrible"))
-predict(mod, new_data)
-
-# Equivalent to run_dataset()
-run_dataset(mod, new_data, .llm = mod$chat)
-} # }
+shout <- module_fn("text -> reply", function(text) toupper(text))
+predictions <- predict(shout, data.frame(text = c("great", "terrible")))
+predictions
+#> # A tibble: 2 × 2
+#>   text     result          
+#>   <chr>    <list>          
+#> 1 great    <named list [1]>
+#> 2 terrible <named list [1]>
+vapply(predictions$result, function(r) r$reply, character(1))
+#> [1] "GREAT"    "TERRIBLE"
 ```

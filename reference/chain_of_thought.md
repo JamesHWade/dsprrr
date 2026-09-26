@@ -1,9 +1,8 @@
-# Create a Chain-of-Thought Module
+# Create a chain-of-thought module
 
-Convenience function that creates a PredictModule with chain-of-thought
-reasoning enabled. This is equivalent to calling
-[`with_reasoning()`](https://jameshwade.github.io/dsprrr/reference/with_reasoning.md)
-on a signature and then creating a module from it.
+`chain_of_thought()` is `module(with_reasoning(x))`: a prediction module
+whose output starts with a `reasoning` field, so the model reasons step
+by step before it gives the other outputs.
 
 ## Usage
 
@@ -23,29 +22,19 @@ chain_of_thought(
 
 - x:
 
-  A signature object created by
+  A signature from
   [`signature()`](https://jameshwade.github.io/dsprrr/reference/signature.md),
-  or string notation.
+  or a signature string.
 
 - prefix:
 
-  Character. The prefix for the reasoning field.
+  Start of the reasoning field's description; see
+  [`with_reasoning()`](https://jameshwade.github.io/dsprrr/reference/with_reasoning.md).
 
-- chat:
+- chat, template, demos, config:
 
-  Optional ellmer Chat object.
-
-- template:
-
-  Optional glue template.
-
-- demos:
-
-  Optional demonstration examples.
-
-- config:
-
-  Optional prediction configuration.
+  As in
+  [`module()`](https://jameshwade.github.io/dsprrr/reference/module.md).
 
 - ...:
 
@@ -53,16 +42,55 @@ chain_of_thought(
 
 ## Value
 
-A PredictModule with reasoning enabled
+A prediction module, as from
+[`module()`](https://jameshwade.github.io/dsprrr/reference/module.md).
+[`run()`](https://jameshwade.github.io/dsprrr/reference/run.md) returns
+the reasoning along with the other outputs, for example
+`list(reasoning = "...", answer = "...")`.
+
+## See also
+
+Other program constructors:
+[`code_act()`](https://jameshwade.github.io/dsprrr/reference/code_act.md),
+[`flex()`](https://jameshwade.github.io/dsprrr/reference/flex.md),
+[`module()`](https://jameshwade.github.io/dsprrr/reference/module.md),
+[`module_fn()`](https://jameshwade.github.io/dsprrr/reference/module_fn.md),
+[`multi_chain_comparison()`](https://jameshwade.github.io/dsprrr/reference/multi_chain_comparison.md),
+[`program_of_thought()`](https://jameshwade.github.io/dsprrr/reference/program_of_thought.md),
+[`rag_module()`](https://jameshwade.github.io/dsprrr/reference/rag_module.md),
+[`react()`](https://jameshwade.github.io/dsprrr/reference/react.md),
+[`rlm()`](https://jameshwade.github.io/dsprrr/reference/rlm.md),
+[`rlm_module()`](https://jameshwade.github.io/dsprrr/reference/rlm_module.md)
 
 ## Examples
 
 ``` r
-# Create a chain-of-thought QA module
-mod <- chain_of_thought("question -> answer")
+solver <- chain_of_thought("question -> answer: float")
+solver
+#> 
+#> ── PredictModule ──
+#> 
+#> ── Signature 
+#> 
+#> ── Signature ──
+#> 
+#> ── Inputs 
+#> • question: "string" - Input: question
+#> 
+#> ── Output 
+#> Type: "object(reasoning: string, answer: number)"
+#> 
+#> ── Instructions 
+#> Given the fields `question`, produce the fields `answer`. Think through your
+#> reasoning step by step before providing the answer.
 
-# Use it like any other module
-# result <- run(mod, question = "What is 15 * 24?", .llm = llm)
-# result$reasoning contains step-by-step reasoning
-# result$answer contains the final answer
+if (FALSE) { # \dontrun{
+result <- run(
+  solver,
+  question = "What is 15 * 24?",
+  .llm = ellmer::chat_openai(model = "gpt-6-luna")
+)
+result$reasoning
+result$answer
+} # }
 ```

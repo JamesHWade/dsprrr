@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Flex: Optimize the Whole Program • dsprrr</title>
+<title>Flex: optimize a whole program • dsprrr</title>
 <!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="../favicon-96x96.png">
 <link rel="icon" type="”image/svg+xml”" href="../favicon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
@@ -17,10 +17,10 @@
 <link href="../deps/Fira_Code-0.4.10/font.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Flex: Optimize the Whole Program">
-<meta name="description" content="Use Flex when optimization should decide which model calls, deterministic code, or tools a task needs—not only rewrite a prompt.
+<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Flex: optimize a whole program">
+<meta name="description" content="Use Flex when optimization should decide which model calls, deterministic code or tools a task needs, not only rewrite a prompt.
 ">
-<meta property="og:description" content="Use Flex when optimization should decide which model calls, deterministic code, or tools a task needs—not only rewrite a prompt.
+<meta property="og:description" content="Use Flex when optimization should decide which model calls, deterministic code or tools a task needs, not only rewrite a prompt.
 ">
 <meta property="og:image" content="https://jameshwade.github.io/dsprrr/logo.svg">
 </head>
@@ -41,67 +41,67 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
-<li class="nav-item"><a class="nav-link" href="../articles/getting-started.html">Get Started</a></li>
+<li class="nav-item"><a class="nav-link" href="../articles/tutorial-hello-world.html">Get started</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-tutorials" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Tutorials</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-tutorials">
-<li><h6 class="dropdown-header" data-toc-skip>Learning Path</h6></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-hello-world.html">1. Your First LLM Call</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-build-classifier.html">2. Building a Classifier</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-structured-outputs.html">3. Structured Outputs</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-improve-with-demos.html">4. Improving with Examples</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-optimize-your-module.html">5. Optimization</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-deploy-to-production.html">6. Production</a></li>
+<li><a class="dropdown-item" href="../articles/tutorial-hello-world.html">1. Your first LLM call</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-build-classifier.html">2. Build a classifier</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-structured-outputs.html">3. Extract structured data</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-improve-with-demos.html">4. Improve with examples</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-optimize-your-module.html">5. Optimize a module</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-deploy-to-production.html">6. Save and reuse a module</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Advanced Tutorials</h6></li>
-    <li><a class="dropdown-item" href="../articles/text-adventure.html">Build an AI Game Master</a></li>
-    <li><a class="dropdown-item" href="../articles/llms-txt.html">Generate Package Docs</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-rlm-dsprrr.html">Investigate a Regression with RLM</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Projects</h6></li>
+    <li><a class="dropdown-item" href="../articles/llms-txt.html">Generate an llms.txt file</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-rlm-dsprrr.html">Investigate a regression with RLM</a></li>
+    <li><a class="dropdown-item" href="../articles/text-adventure.html">Build a text adventure</a></li>
   </ul>
 </li>
 <li class="nav-item dropdown">
-  <button class="nav-link dropdown-toggle" type="button" id="dropdown-how-to-guides" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">How-to Guides</button>
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-how-to-guides" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">How-to guides</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-how-to-guides">
-<li><a class="dropdown-item" href="../articles/troubleshooting.html">Troubleshooting</a></li>
-    <li><a class="dropdown-item" href="../articles/compilation-optimization.html">Compile &amp; Optimize</a></li>
-    <li><a class="dropdown-item" href="../articles/vitals-recipes.html">Evaluate with Vitals</a></li>
-    <li><a class="dropdown-item" href="../articles/rag-workflows.html">Build RAG Pipelines</a></li>
-    <li><a class="dropdown-item" href="../articles/chaining-modules.html">Chaining Modules</a></li>
-    <li><a class="dropdown-item" href="../articles/calibrated-decisions.html">Calibrated Decisions</a></li>
-    <li><a class="dropdown-item" href="../articles/orchestration.html">Deploy to Production</a></li>
+<li><h6 class="dropdown-header" data-toc-skip>Build</h6></li>
+    <li><a class="dropdown-item" href="../articles/advanced-modules.html">Choose a module type</a></li>
+    <li><a class="dropdown-item" href="../articles/chaining-modules.html">Chain modules into pipelines</a></li>
+    <li><a class="dropdown-item" href="../articles/rag-workflows.html">Retrieval-augmented generation</a></li>
+    <li><a class="dropdown-item" href="../articles/calibrated-decisions.html">Calibrated decisions</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Integrations</h6></li>
-    <li><a class="dropdown-item" href="../articles/vitals-integration.html">Vitals Package</a></li>
-    <li><a class="dropdown-item" href="../articles/tidymodels-integration.html">tidymodels</a></li>
-    <li><a class="dropdown-item" href="../articles/advanced-ellmer.html">Advanced ellmer</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Measure and improve</h6></li>
+    <li><a class="dropdown-item" href="../articles/compilation-optimization.html">Compile and optimize</a></li>
+    <li><a class="dropdown-item" href="../articles/advanced-optimization.html">Choose an optimizer</a></li>
+    <li><a class="dropdown-item" href="../articles/vitals-recipes.html">Evaluate with vitals</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Run</h6></li>
+    <li><a class="dropdown-item" href="../articles/models-and-providers.html">Models, providers and streaming</a></li>
+    <li><a class="dropdown-item" href="../articles/orchestration.html">Run dsprrr in pipelines</a></li>
+    <li><a class="dropdown-item" href="../articles/tidymodels-integration.html">Use dsprrr with tidymodels</a></li>
+    <li><a class="dropdown-item" href="../articles/troubleshooting.html">Troubleshooting</a></li>
   </ul>
 </li>
 <li class="active nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-concepts" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Concepts</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-concepts">
-<li><a class="dropdown-item" href="../articles/concepts-dspy-philosophy.html">The DSPy Philosophy</a></li>
-    <li><a class="dropdown-item" href="../articles/dspy-comparison.html">dsprrr vs. DSPy</a></li>
-    <li><a class="dropdown-item" href="../articles/concepts-signatures-modules.html">Signatures &amp; Modules</a></li>
-    <li><a class="dropdown-item" href="../articles/concepts-optimization-theory.html">How Optimization Works</a></li>
-    <li><a class="dropdown-item" href="../articles/concepts-why-metrics-matter.html">Why Metrics Matter</a></li>
-    <li><a class="dropdown-item" href="../articles/how-rlm-works.html">How RLMs Work</a></li>
+<li><a class="dropdown-item" href="../articles/concepts-signatures-modules.html">How dsprrr works</a></li>
+    <li><a class="dropdown-item" href="../articles/concepts-why-metrics-matter.html">Metrics and evaluation</a></li>
+    <li><a class="dropdown-item" href="../articles/concepts-optimization-theory.html">How optimization works</a></li>
+    <li><a class="dropdown-item" href="../articles/dspy-comparison.html">dsprrr for DSPy users</a></li>
+    <li><a class="dropdown-item" href="../articles/how-rlm-works.html">How RLM works</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Deep Dives</h6></li>
-    <li><a class="dropdown-item" href="../articles/flex-optimization.html">Flex: Optimize the Whole Program</a></li>
-    <li><a class="dropdown-item" href="../articles/advanced-modules.html">Advanced Reasoning</a></li>
-    <li><a class="dropdown-item" href="../articles/advanced-optimization.html">Advanced Optimization</a></li>
-    <li><a class="dropdown-item" href="../articles/omni-meta-optimization.html">Composing Optimizers with Omni</a></li>
-    <li><a class="dropdown-item" href="../articles/agentic-optimization-harnesses.html">Agentic Optimization Harnesses</a></li>
-    <li><a class="dropdown-item" href="../articles/reasoning-models.html">Reasoning Models</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Experimental</h6></li>
+    <li><a class="dropdown-item" href="../articles/flex-optimization.html">Flex: optimize a whole program</a></li>
+    <li><a class="dropdown-item" href="../articles/omni-meta-optimization.html">Compose optimizers with Omni</a></li>
+    <li><a class="dropdown-item" href="../articles/agentic-optimization-harnesses.html">Agentic optimization harnesses</a></li>
   </ul>
 </li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-reference" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Reference</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-reference">
-<li><a class="dropdown-item" href="../articles/cheatsheet.html">Quick Reference</a></li>
-    <li><a class="dropdown-item" href="../reference/index.html">API Documentation</a></li>
+<li><a class="dropdown-item" href="../reference/index.html">Function reference</a></li>
+    <li><a class="dropdown-item" href="../articles/cheatsheet.html">Quick reference</a></li>
   </ul>
 </li>
+<li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul>
 <ul class="navbar-nav">
 <li class="nav-item"><form class="form-inline" role="search">
@@ -128,7 +128,7 @@
 
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
-      <img src="../logo.svg" class="logo" alt=""><h1>Flex: Optimize the Whole Program</h1>
+      <img src="../logo.svg" class="logo" alt=""><h1>Flex: optimize a whole program</h1>
             
       
       <small class="dont-index">Source: <a href="https://github.com/JamesHWade/dsprrr/blob/main/vignettes/articles/flex-optimization.Rmd" class="external-link"><code>vignettes/articles/flex-optimization.Rmd</code></a></small>
@@ -137,13 +137,18 @@
 
     
     
+<p><code><a href="../reference/flex.html">flex()</a></code> is experimental: its source format and behavior
+may change.</p>
 <p>Most dsprrr optimizers improve the instructions or examples inside a
 program whose shape you chose. <code><a href="../reference/flex.html">flex()</a></code> makes the
-implementation itself optimizable. GEPA can change how many predictors
-run, add a deterministic branch, or call a tool you supplied.</p>
-<p>That extra freedom is useful when you can score the outcome but do
-not yet know the best decomposition. It is unnecessary when the workflow
-is already clear.</p>
+implementation itself optimizable: GEPA can change how many predictors
+run, add a deterministic branch, or call a tool you supplied. This page
+builds a support-ticket router, sets up a search that rewards skipping
+the model when a lookup table already knows the answer, and shows how to
+judge and keep the result.</p>
+<p>That freedom helps when you can score the outcome but do not yet know
+the best decomposition. It is unnecessary when the workflow is already
+clear.</p>
 <table class="table">
 <colgroup>
 <col width="50%">
@@ -181,12 +186,17 @@ judgment.</p>
 <p>A conventional predictor sends every ticket to the model. The Flex
 objective is more specific: keep routing accuracy, but avoid a predictor
 call when the incident catalog already contains the answer.</p>
+<p>The example runs optimizer-written R code inside Posit’s <a href="https://github.com/posit-dev/mcp-repl" class="external-link">mcp-repl</a>
+operating-system sandbox. Install the R client and the executable
+first:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="ex">Rscript</span> <span class="at">-e</span> <span class="st">'install.packages("mcptools")'</span></span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a><span class="ex">uv</span> tool install posit-mcp-repl   <span class="co"># or: pipx install posit-mcp-repl</span></span></code></pre></div>
 <div class="section level3">
 <h3 id="define-the-task-and-its-evidence">Define the task and its evidence<a class="anchor" aria-label="anchor" href="#define-the-task-and-its-evidence"></a>
 </h3>
 <p>Use separate training and validation rows during search, then reserve
 a holdout set for the final comparison:</p>
-<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/dsprrr" class="external-link">dsprrr</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">route_signature</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
@@ -231,7 +241,7 @@ a holdout set for the final comparison:</p>
 definition. Its description tells GEPA what the tool returns; supplying
 it to Flex gives generated code one named capability rather than the
 rest of the host session.</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">lookup_incident_fn</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/eval.html" class="external-link">local</a></span><span class="op">(</span><span class="op">{</span></span>
 <span>  <span class="va">catalog</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
 <span>    <span class="st">"INC-DB-17"</span> <span class="op">=</span> <span class="st">"database"</span>,</span>
@@ -267,7 +277,17 @@ rest of the host session.</p>
 <span>      description <span class="op">=</span> <span class="st">"Complete support-ticket text."</span></span>
 <span>    <span class="op">)</span></span>
 <span>  <span class="op">)</span></span>
-<span><span class="op">)</span></span></code></pre></div>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu">lookup_incident_fn</span><span class="op">(</span><span class="st">"[INC-DB-17] replicas unavailable"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; $found</span></span>
+<span><span class="co">#&gt; [1] TRUE</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $queue</span></span>
+<span><span class="co">#&gt; [1] "database"</span></span>
+<span><span class="fu">lookup_incident_fn</span><span class="op">(</span><span class="st">"Reset email arrives after its token expires"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; $found</span></span>
+<span><span class="co">#&gt; [1] FALSE</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="start-with-one-predictor">Start with one predictor<a class="anchor" aria-label="anchor" href="#start-with-one-predictor"></a>
@@ -275,7 +295,7 @@ rest of the host session.</p>
 <p>Executable Flex source defines a top-level <code>forward()</code>
 function. This baseline always calls one predictor, even for a ticket
 whose incident code is already in the catalog.</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">baseline_source</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span></span>
 <span>  <span class="st">"router &lt;- Predict(\"$outer\", instructions = \"Choose the owning queue.\")"</span>,</span>
 <span>  <span class="st">"forward &lt;- function(ticket) router(ticket = ticket)"</span>,</span>
@@ -293,14 +313,9 @@ whose incident code is already in the catalog.</p>
 <span>  max_predictor_calls <span class="op">=</span> <span class="fl">1L</span>,</span>
 <span>  max_tool_calls <span class="op">=</span> <span class="fl">1L</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p>Install <code>mcptools</code> and <a href="https://github.com/posit-dev/mcp-repl" class="external-link">Posit mcp-repl</a> before
-running this example:</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"mcptools"</span><span class="op">)</span></span>
-<span><span class="co"># In a shell:</span></span>
-<span><span class="co"># uv tool install posit-mcp-repl</span></span></code></pre></div>
-<p>mcp-repl’s OS sandbox is the execution boundary for
-optimizer-authored R source.</p>
+<p><code>sandbox_factory</code> gives every call a fresh sandboxed R
+session; mcp-repl’s sandbox is what stands between optimizer-written
+source and your machine.</p>
 </div>
 <div class="section level3">
 <h3 id="score-the-answer-and-the-work">Score the answer and the work<a class="anchor" aria-label="anchor" href="#score-the-answer-and-the-work"></a>
@@ -339,15 +354,13 @@ route scores <code>0</code>.</p>
 <span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
-<h3 id="optional-run-a-live-search">Optional: run a live search<a class="anchor" aria-label="anchor" href="#optional-run-a-live-search"></a>
+<h3 id="run-the-search">Run the search<a class="anchor" aria-label="anchor" href="#run-the-search"></a>
 </h3>
-<p>The deterministic package test below is the reproducible proof. A
-live search also lets GEPA propose complete <code>module_src</code>
-candidates, but remote model output and runtime vary. Training rows
-generate feedback; validation rows decide which candidate survives. Keep
-the first run deliberately small and bounded:</p>
+<p>GEPA proposes complete <code>module_src</code> candidates. Training
+rows generate feedback; validation rows decide which candidate survives.
+Keep the first run small and bounded:</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">llm</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-5-mini"</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">llm</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-luna"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">optimized</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span></span>
 <span>  <span class="va">baseline</span>,</span>
@@ -372,11 +385,15 @@ the first run deliberately small and bounded:</p>
 <span>    progress <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span>  <span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p>Remote model output is stochastic, so a seed does not guarantee
-identical source. Judge the result on held-out behavior, not whether it
-reproduces one particular program string. The limits stop the search and
-return its best partial result after 30 metric calls, 30 provider calls,
-or five active minutes.</p>
+<p><code>metric_threshold = 0.95</code> decides which training rows GEPA
+shows its proposer as failures: every row scoring below 0.95. With this
+metric that includes correct routes that needed a predictor (0.9), so
+their feedback (“Prefer the incident catalog…”) reaches the
+proposer.</p>
+<p>Model output varies, so a seed does not guarantee identical source.
+Judge the result on held-out behavior, not on whether it reproduces one
+program string. The limits stop the search and return its best partial
+result after 30 metric calls, 30 provider calls, or five minutes.</p>
 </div>
 <div class="section level3">
 <h3 id="compare-quality-and-calls">Compare quality and calls<a class="anchor" aria-label="anchor" href="#compare-quality-and-calls"></a>
@@ -421,13 +438,22 @@ objective:</p>
 <span>  <span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span><span class="va">comparison</span></span></code></pre></div>
-<p>The package’s deterministic regressions fix the GEPA proposal and
-model responses. One compiles the baseline and selects the hybrid on
-disjoint training and validation rows; the other runs both reviewed
-programs on six held-out tickets:</p>
+<p>This page shows no live results. dsprrr’s own tests run this workflow
+with a mock model that routes every ticket correctly and, when GEPA asks
+for a new program, returns a hybrid written by hand (shown in the next
+section). They check that GEPA selects that program on the validation
+rows and that Flex runs and counts it correctly; they say nothing about
+whether GEPA would write the hybrid itself. On the six holdout tickets
+the tests record:</p>
 <table class="table">
+<colgroup>
+<col width="20%">
+<col width="26%">
+<col width="26%">
+<col width="26%">
+</colgroup>
 <thead><tr class="header">
-<th>Reviewed program</th>
+<th>Program in the test</th>
 <th align="right">Holdout accuracy</th>
 <th align="right">Predictor calls</th>
 <th align="right">Tool calls</th>
@@ -440,36 +466,32 @@ programs on six held-out tickets:</p>
 <td align="right">0</td>
 </tr>
 <tr class="even">
-<td>Hybrid</td>
+<td>Hand-written hybrid</td>
 <td align="right">1.00</td>
 <td align="right">3</td>
 <td align="right">3</td>
 </tr>
 </tbody>
 </table>
-<p>That replay verifies proposal, selection, runtime, and call
-accounting; it is not a promise that every stochastic GEPA run will
-discover the same source. For a live run, accept the candidate only when
-held-out quality is at least as good and predictor calls fall:</p>
+<p>For a live run, accept the candidate only when held-out quality is at
+least as good and predictor calls fall:</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span></span>
 <span>  <span class="va">after</span><span class="op">$</span><span class="va">mean_score</span> <span class="op">&gt;=</span> <span class="va">before</span><span class="op">$</span><span class="va">mean_score</span>,</span>
 <span>  <span class="fu">count_calls</span><span class="op">(</span><span class="va">after</span>, <span class="st">"predictor_calls"</span><span class="op">)</span> <span class="op">&lt;</span></span>
 <span>    <span class="fu">count_calls</span><span class="op">(</span><span class="va">before</span>, <span class="st">"predictor_calls"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p>The reveal is simple: <strong>Flex did not find a better prompt. It
-found that half the tickets did not need one.</strong></p>
 </div>
 </div>
 <div class="section level2">
 <h2 id="read-the-program-gepa-selected">Read the program GEPA selected<a class="anchor" aria-label="anchor" href="#read-the-program-gepa-selected"></a>
 </h2>
-<p>Always inspect executable source before promoting it. A useful
-candidate for this task has a deterministic catalog path and a predictor
-fallback:</p>
+<p>Always read executable source before you use it:</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">optimized</span><span class="op">$</span><span class="va">module_src</span></span></code></pre></div>
-<p>The deterministic replay selects this shape:</p>
+<p>A useful candidate for this task has a deterministic catalog path and
+a predictor fallback, like the hand-written hybrid that the package
+tests feed to GEPA:</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fallback</span> <span class="op">&lt;-</span> <span class="fu">Predict</span><span class="op">(</span></span>
 <span>  <span class="st">"$outer"</span>,</span>
@@ -484,44 +506,43 @@ fallback:</p>
 <span>  <span class="op">}</span></span>
 <span>  <span class="fu">fallback</span><span class="op">(</span>ticket <span class="op">=</span> <span class="va">ticket</span><span class="op">)</span></span>
 <span><span class="op">}</span></span></code></pre></div>
-<p><code>module_src</code> is the program Flex optimized—not an
-explanation of what happened. The runtime trace supplies the evidence:
-predictor calls, tool calls, tokens, and the exact source used for each
-row. GEPA also records the winning candidate ID and validation
-score:</p>
+<p><code>module_src</code> is the program itself, not an explanation of
+what happened. The evidence is in each row’s run metadata, which records
+the <code>module_src</code> it ran along with predictor calls, tool
+calls and tokens. GEPA also records the winning candidate ID and
+validation score:</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">optimized</span><span class="op">)</span><span class="op">$</span><span class="va">lineage</span><span class="op">$</span><span class="va">best_candidate_id</span></span>
 <span><span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">optimized</span><span class="op">)</span><span class="op">$</span><span class="va">extensions</span><span class="op">$</span><span class="va">gepa</span><span class="op">$</span><span class="va">best_scores</span></span>
 <span><span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">optimized</span><span class="op">)</span><span class="op">$</span><span class="va">extensions</span><span class="op">$</span><span class="va">gepa</span><span class="op">$</span><span class="va">per_val_instance_best_candidates</span></span></code></pre></div>
-<p>Persist callable tools and factories by registry name rather than
-embedding them in the artifact:</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">board</span> <span class="op">&lt;-</span> <span class="fu">pins</span><span class="fu">::</span><span class="fu"><a href="https://pins.rstudio.com/reference/board_folder.html" class="external-link">board_folder</a></span><span class="op">(</span><span class="st">"pins"</span><span class="op">)</span></span>
-<span><span class="va">router_registry</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>  lookup_incident <span class="op">=</span> <span class="va">lookup_incident</span>,</span>
-<span>  sandbox_factory <span class="op">=</span> <span class="va">sandbox_factory</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu"><a href="../reference/pin_module_config.html">pin_module_config</a></span><span class="op">(</span></span>
-<span>  <span class="va">board</span>,</span>
-<span>  <span class="st">"issue-router-flex"</span>,</span>
-<span>  <span class="va">optimized</span>,</span>
-<span>  registry <span class="op">=</span> <span class="va">router_registry</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">restored</span> <span class="op">&lt;-</span> <span class="fu">pins</span><span class="fu">::</span><span class="fu"><a href="https://pins.rstudio.com/reference/pin_read.html" class="external-link">pin_read</a></span><span class="op">(</span><span class="va">board</span>, <span class="st">"issue-router-flex"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/restore_module_config.html">restore_module_config</a></span><span class="op">(</span>registry <span class="op">=</span> <span class="va">router_registry</span><span class="op">)</span></span></code></pre></div>
-<p>Use the same registry names when restoring. Saving and restoring the
-artifact does not invoke the factory. The registry supplies executable
-authority, so version and review its definitions as code. Record the
-model, package versions, data split, metric, and seed beside the pin;
-pass the model again when running the restored fallback path.</p>
 </div>
 <div class="section level2">
-<h2 id="choose-the-smaller-source-language-that-fits">Choose the smaller source language that fits<a class="anchor" aria-label="anchor" href="#choose-the-smaller-source-language-that-fits"></a>
+<h2 id="keep-the-selected-program">Keep the selected program<a class="anchor" aria-label="anchor" href="#keep-the-selected-program"></a>
 </h2>
-<p>Flex has two source modes because not every structural question needs
-code.</p>
+<p>Save the selected source with your code, and rebuild the module from
+it where you deploy. The tool and the sandbox factory stay in your code,
+where you can review and version them:</p>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/writeLines.html" class="external-link">writeLines</a></span><span class="op">(</span><span class="va">optimized</span><span class="op">$</span><span class="va">module_src</span>, <span class="st">"ticket-router.R"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">router</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/flex.html">flex</a></span><span class="op">(</span></span>
+<span>  <span class="va">route_signature</span>,</span>
+<span>  module_src <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/readLines.html" class="external-link">readLines</a></span><span class="op">(</span><span class="st">"ticket-router.R"</span><span class="op">)</span>, collapse <span class="op">=</span> <span class="st">"\n"</span><span class="op">)</span>,</span>
+<span>  tools <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>lookup_incident <span class="op">=</span> <span class="va">lookup_incident</span><span class="op">)</span>,</span>
+<span>  interpreter_factory <span class="op">=</span> <span class="va">sandbox_factory</span>,</span>
+<span>  source_format <span class="op">=</span> <span class="st">"r"</span>,</span>
+<span>  max_predictor_calls <span class="op">=</span> <span class="fl">1L</span>,</span>
+<span>  max_tool_calls <span class="op">=</span> <span class="fl">1L</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>The saved file is Flex source for the sandbox, not a script to
+<code><a href="https://rdrr.io/r/base/source.html" class="external-link">source()</a></code>. Record the model, package versions, data split,
+metric and seed next to it.</p>
+</div>
+<div class="section level2">
+<h2 id="choose-a-source-format">Choose a source format<a class="anchor" aria-label="anchor" href="#choose-a-source-format"></a>
+</h2>
+<p>Flex has two source formats because not every structural question
+needs code.</p>
 <table class="table">
 <colgroup>
 <col width="33%">
@@ -550,8 +571,8 @@ required by default</td>
 </tbody>
 </table>
 <p>JSON sources use backward references between ordered steps and map
-their final values to the outer signature. See <a href="../reference/flex.html"><code>flex()</code></a> for the schema and
-limits. Start there unless the optimization question truly needs R
+their final values to the outer signature; <code><a href="../reference/flex.html">flex()</a></code> documents
+the schema. Start with JSON unless the optimization question needs R
 control flow or tools.</p>
 <p>Executable Flex exposes a small set of predictor constructors plus
 the named tools you supply. Those tools execute on the host and keep
@@ -569,9 +590,9 @@ explicitly.</p>
 <p>Generated R must run in an enforced sandbox.
 <code><a href="../reference/r_code_runner.html">r_code_runner()</a></code> isolates a subprocess but is for source you
 already trust; do not disable <code>require_sandbox</code> for
-optimizer-authored code. Executable Flex is synchronous, so use the
-default sequential execution; specialized token streaming is not
-available.</p>
+optimizer-authored code. Each sandboxed call has size limits, listed in
+<a href="how-rlm-works.html#limits">How RLM works</a>. Executable Flex
+runs rows one at a time and does not stream tokens.</p>
 </div>
 <div class="section level2">
 <h2 id="when-flex-is-the-wrong-tool">When Flex is the wrong tool<a class="anchor" aria-label="anchor" href="#when-flex-is-the-wrong-tool"></a>
@@ -584,8 +605,7 @@ write an R function.</p>
 <p>Use Flex for the unresolved middle: the outcome is measurable,
 several implementation strategies are plausible, and the choice of model
 calls, code, or tools is itself what you want to optimize.</p>
-<p>For algorithm details, see <a href="../articles/advanced-optimization.html">Advanced Optimization</a>.
-For intentional API differences and remaining gaps, see <a href="../articles/dspy-comparison.html">dsprrr vs. DSPy</a>.</p>
+<p>To compare Flex with the other optimizers, see <a href="advanced-optimization.html">Choose an optimizer</a>.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

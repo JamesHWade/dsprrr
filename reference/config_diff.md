@@ -1,7 +1,8 @@
-# Compare Module Configuration Before and After Optimization
+# Compare a module's settings with baseline values
 
-Show what configuration values changed during optimization. Useful for
-understanding the effect of optimization on module settings.
+`config_diff()` lists the values in `module$config` next to baseline
+values, changed rows first. Use it to see which settings an optimizer
+changed.
 
 ## Usage
 
@@ -13,28 +14,29 @@ config_diff(module, baseline = NULL)
 
 - module:
 
-  A DSPrrr module (preferably compiled).
+  A module.
 
 - baseline:
 
-  Optional named list of baseline configuration values to compare
-  against. If NULL, uses reasonable defaults.
+  Optional named list of baseline values; it overrides the default
+  baseline entry by entry.
 
 ## Value
 
-A tibble with columns:
+A tibble with columns `parameter`, `before` and `after` (values
+formatted as text) and `changed` (logical).
 
-- `parameter`: Parameter name
+## Details
 
-- `before`: Value before optimization (or default)
-
-- `after`: Current value
-
-- `changed`: Logical indicating if value changed
+The default baseline assumes provider defaults: `temperature = 1`,
+`top_p = 1`, `frequency_penalty = 0` and `presence_penalty = 0`. A value
+the module never set is shown as `"<default>"` and counts as changed, as
+do internal fields such as `.module_kind`, so pass a `baseline` that
+matches your starting configuration for a meaningful comparison.
 
 ## See also
 
-Other optimizer accessors:
+Other optimization results:
 [`apply_best_config()`](https://jameshwade.github.io/dsprrr/reference/apply_best_config.md),
 [`best_demos()`](https://jameshwade.github.io/dsprrr/reference/best_demos.md),
 [`best_params()`](https://jameshwade.github.io/dsprrr/reference/best_params.md),
@@ -46,9 +48,15 @@ Other optimizer accessors:
 ## Examples
 
 ``` r
-if (FALSE) {
-mod <- module(signature("text -> sentiment"))
-optimize_grid(mod, data, metric, parameters = list(temperature = c(0.3, 1.0)))
-config_diff(mod)
-}
+mod <- module(signature("text -> sentiment"), config = list(temperature = 0))
+config_diff(mod, baseline = list(temperature = 0.7))
+#> # A tibble: 6 × 4
+#>   parameter         before    after     changed
+#>   <chr>             <chr>     <chr>     <lgl>  
+#> 1 temperature       0.70      0         TRUE   
+#> 2 top_p             1         <default> TRUE   
+#> 3 frequency_penalty 0         <default> TRUE   
+#> 4 presence_penalty  0         <default> TRUE   
+#> 5 params            <default> 0         TRUE   
+#> 6 .module_kind      <default> predict   TRUE   
 ```

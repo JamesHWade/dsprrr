@@ -1,8 +1,13 @@
-# Extract Best Parameters from a Module
+# Best parameters found by an optimizer
 
-Get the best parameter configuration from an optimized module. This is
-the parameter set that achieved the highest (or lowest, for
-minimization) score during optimization.
+`best_params()` returns the winning parameter values recorded by
+[`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md)
+or
+[`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md),
+such as the best `temperature` of a grid search or the number of
+demonstrations chosen by
+[`LabeledFewShot()`](https://jameshwade.github.io/dsprrr/reference/LabeledFewShot.md).
+It reads `optimization_result(module)$best_params`.
 
 ## Usage
 
@@ -14,21 +19,24 @@ best_params(module, flatten = TRUE)
 
 - module:
 
-  A DSPrrr module that has been optimized.
+  A module returned by
+  [`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md)
+  or modified by
+  [`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md).
 
 - flatten:
 
-  Logical; if TRUE (default), return a simple named list. If FALSE,
-  return the parameters as stored (may include nested structure).
+  If `TRUE` (the default), length-one list elements are unwrapped to
+  plain values. If `FALSE`, the parameters are returned as stored.
 
 ## Value
 
-A named list of the best parameters, or NULL if the module has not been
-optimized.
+A named list of parameters. For a module that has not been optimized,
+`NULL` with a warning.
 
 ## See also
 
-Other optimizer accessors:
+Other optimization results:
 [`apply_best_config()`](https://jameshwade.github.io/dsprrr/reference/apply_best_config.md),
 [`best_demos()`](https://jameshwade.github.io/dsprrr/reference/best_demos.md),
 [`config_diff()`](https://jameshwade.github.io/dsprrr/reference/config_diff.md),
@@ -40,16 +48,14 @@ Other optimizer accessors:
 ## Examples
 
 ``` r
-if (FALSE) {
-mod <- module(signature("text -> sentiment"))
-optimize_grid(
-  mod,
-  data = train_data,
-  metric = metric_exact_match(),
-  parameters = list(temperature = c(0.3, 0.7, 1.0))
+classifier <- module(signature("text -> sentiment"))
+trainset <- data.frame(
+  text = c("I love it!", "Terrible experience", "It's okay"),
+  sentiment = c("positive", "negative", "neutral")
 )
-best_params(mod)
-# $temperature
-# [1] 0.7
-}
+compiled <- compile(classifier, LabeledFewShot(k = 2L), trainset)
+best_params(compiled)
+#> $k
+#> [1] 2
+#> 
 ```

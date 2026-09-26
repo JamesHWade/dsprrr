@@ -1,7 +1,8 @@
-# Create an input specification for a Signature
+# Describe one signature input
 
-Create an input specification using an ellmer type or a canonical type
-label.
+`input()` describes one input field for the explicit form of
+[`signature()`](https://jameshwade.github.io/dsprrr/reference/signature.md):
+its name, its type and an optional description.
 
 ## Usage
 
@@ -13,217 +14,59 @@ input(name, type = NULL, description = NULL, ...)
 
 - name:
 
-  Character string naming the input
+  The field name. Callers pass the value under this name, as in
+  `run(mod, review = "...")`.
 
 - type:
 
-  An ellmer type object, one of `"string"`, `"number"`, `"integer"`,
-  `"boolean"`, `"array"`, or `"object"`, or `NULL` to use a string type.
+  An ellmer type, one of the labels `"string"`, `"number"`, `"integer"`,
+  `"boolean"`, `"array"` (an array of strings) or `"object"`, or `NULL`
+  for a string.
 
 - description:
 
-  Optional description of the input. When `type` is a canonical label or
-  `NULL`, this description is passed to the ellmer type.
+  Optional description. Unless the module has its own template, it is
+  written above the value in the prompt, as `# description`. With a
+  label or `NULL` `type`, it also becomes the ellmer type's description.
 
 - ...:
 
-  Additional metadata for the input
+  Extra fields stored in the specification.
 
 ## Value
 
-A list with class "dsprrr_input" containing the input specification
+A list of class `dsprrr_input` with elements `name`, `type` (an ellmer
+type) and `description`.
+
+## See also
+
+Other signatures:
+[`has_reasoning()`](https://jameshwade.github.io/dsprrr/reference/has_reasoning.md),
+[`signature()`](https://jameshwade.github.io/dsprrr/reference/signature.md),
+[`with_instructions()`](https://jameshwade.github.io/dsprrr/reference/with_instructions.md),
+[`with_reasoning()`](https://jameshwade.github.io/dsprrr/reference/with_reasoning.md),
+[`without_reasoning()`](https://jameshwade.github.io/dsprrr/reference/without_reasoning.md)
 
 ## Examples
 
 ``` r
-# Using ellmer types (recommended for consistency with outputs)
-input("text", ellmer::type_string())
-#> $name
-#> [1] "text"
-#> 
-#> $type
-#> <ellmer::TypeBasic>
-#>  @ description: NULL
-#>  @ required   : logi TRUE
-#>  @ type       : chr "string"
-#> 
-#> $description
-#> NULL
-#> 
-#> $.type_explicit
-#> [1] TRUE
-#> 
-#> attr(,"class")
-#> [1] "dsprrr_input"
-input("age", ellmer::type_number())
-#> $name
-#> [1] "age"
-#> 
-#> $type
-#> <ellmer::TypeBasic>
-#>  @ description: NULL
-#>  @ required   : logi TRUE
-#>  @ type       : chr "number"
-#> 
-#> $description
-#> NULL
-#> 
-#> $.type_explicit
-#> [1] TRUE
-#> 
-#> attr(,"class")
-#> [1] "dsprrr_input"
-input("active", ellmer::type_boolean())
-#> $name
-#> [1] "active"
-#> 
-#> $type
-#> <ellmer::TypeBasic>
-#>  @ description: NULL
-#>  @ required   : logi TRUE
-#>  @ type       : chr "boolean"
-#> 
-#> $description
-#> NULL
-#> 
-#> $.type_explicit
-#> [1] TRUE
-#> 
-#> attr(,"class")
-#> [1] "dsprrr_input"
+review <- input("review", description = "A customer review")
+stars <- input("stars", "integer")
+tags <- input("tags", ellmer::type_array(ellmer::type_string()))
 
-# Using canonical labels
-input("text", "string")
-#> $name
-#> [1] "text"
+# Inputs make up the explicit form of a signature
+signature(
+  inputs = list(review, stars, tags),
+  output_type = ellmer::type_object(summary = ellmer::type_string())
+)
 #> 
-#> $type
-#> <ellmer::TypeBasic>
-#>  @ description: NULL
-#>  @ required   : logi TRUE
-#>  @ type       : chr "string"
+#> ── Signature ──
 #> 
-#> $description
-#> NULL
+#> ── Inputs 
+#> • review: "string" - A customer review
+#> • stars: "integer"
+#> • tags: "array(string)"
 #> 
-#> $.type_explicit
-#> [1] TRUE
-#> 
-#> attr(,"class")
-#> [1] "dsprrr_input"
-input("count", "integer")
-#> $name
-#> [1] "count"
-#> 
-#> $type
-#> <ellmer::TypeBasic>
-#>  @ description: NULL
-#>  @ required   : logi TRUE
-#>  @ type       : chr "integer"
-#> 
-#> $description
-#> NULL
-#> 
-#> $.type_explicit
-#> [1] TRUE
-#> 
-#> attr(,"class")
-#> [1] "dsprrr_input"
-input("score", "number")
-#> $name
-#> [1] "score"
-#> 
-#> $type
-#> <ellmer::TypeBasic>
-#>  @ description: NULL
-#>  @ required   : logi TRUE
-#>  @ type       : chr "number"
-#> 
-#> $description
-#> NULL
-#> 
-#> $.type_explicit
-#> [1] TRUE
-#> 
-#> attr(,"class")
-#> [1] "dsprrr_input"
-
-# Type optional (defaults to string)
-input("name")
-#> $name
-#> [1] "name"
-#> 
-#> $type
-#> <ellmer::TypeBasic>
-#>  @ description: NULL
-#>  @ required   : logi TRUE
-#>  @ type       : chr "string"
-#> 
-#> $description
-#> NULL
-#> 
-#> $.type_explicit
-#> [1] FALSE
-#> 
-#> attr(,"class")
-#> [1] "dsprrr_input"
-input("name", description = "User's name")
-#> $name
-#> [1] "name"
-#> 
-#> $type
-#> <ellmer::TypeBasic>
-#>  @ description: chr "User's name"
-#>  @ required   : logi TRUE
-#>  @ type       : chr "string"
-#> 
-#> $description
-#> [1] "User's name"
-#> 
-#> $.type_explicit
-#> [1] FALSE
-#> 
-#> attr(,"class")
-#> [1] "dsprrr_input"
-
-# With ellmer types for structured data
-input("tags", ellmer::type_array(ellmer::type_string()))
-#> $name
-#> [1] "tags"
-#> 
-#> $type
-#> <ellmer::TypeArray>
-#>  @ description: NULL
-#>  @ required   : logi TRUE
-#>  @ items      : <ellmer::TypeBasic>
-#>  .. @ description: NULL
-#>  .. @ required   : logi TRUE
-#>  .. @ type       : chr "string"
-#> 
-#> $description
-#> NULL
-#> 
-#> $.type_explicit
-#> [1] TRUE
-#> 
-#> attr(,"class")
-#> [1] "dsprrr_input"
-input("status", ellmer::type_enum(c("pending", "active", "done")))
-#> $name
-#> [1] "status"
-#> 
-#> $type
-#> <ellmer::TypeEnum>
-#>  @ description: NULL
-#>  @ required   : logi TRUE
-#>  @ values     : chr [1:3] "pending" "active" "done"
-#> 
-#> $description
-#> NULL
-#> 
-#> $.type_explicit
-#> [1] TRUE
-#> 
-#> attr(,"class")
-#> [1] "dsprrr_input"
+#> ── Output 
+#> Type: "object(summary: string)"
 ```

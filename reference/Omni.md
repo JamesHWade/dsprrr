@@ -1,23 +1,10 @@
-# Omni Teleprompter
+# Omni: explore with several optimizers, then continue from the best
 
-A meta-teleprompter that explores several optimization strategies from
-the same seed program, compares their outputs with one shared validation
-metric, and seeds a fresh continuation optimizer from the winner.
-
-Inspired by the Omni meta-optimizer from the [GEPA
-project](https://github.com/gepa-ai/gepa), this adapts the explore,
-pick-best, and continue pattern described in the [GEPA Omni
-announcement](https://gepa-ai.github.io/gepa/blog/2026/07/22/optimize-anything-omni/)
-to dsprrr modules. The original program remains a candidate throughout,
-so a regressing explorer or continuation step cannot replace a better
-program.
-
-`Omni()` does not impose a common budget because dsprrr teleprompters
-expose different native budget controls. Configure comparable budgets on
-the explorer objects before constructing `Omni()`. Common validation
-re-scoring of the seed, each explorer result, and the continuation
-result is additional evaluation work outside those native optimizer
-budgets.
+`Omni()` runs several optimizers (the explorers) independently from the
+same program, scores each result on one validation set, and then runs a
+`continuation` optimizer from the winner. The original program stays a
+candidate throughout, so an explorer or continuation that makes things
+worse cannot replace a better program.
 
 ## Usage
 
@@ -40,65 +27,109 @@ Omni(
 
 - metric:
 
-  Metric function used to compare every candidate on the same validation
-  set.
+  A metric function (required) used to score every candidate on the same
+  validation set, such as `metric_exact_match(field = "answer")`.
 
 - explorers:
 
-  Named list of at least two
-  [Teleprompter](https://jameshwade.github.io/dsprrr/reference/Teleprompter.md)
-  objects. Every explorer starts from an independent copy of the input
-  program.
+  Named list of at least two optimizer objects. Each starts from its own
+  copy of the input program.
 
 - continuation:
 
-  A
-  [Teleprompter](https://jameshwade.github.io/dsprrr/reference/Teleprompter.md)
-  object run from the best exploration candidate.
+  An optimizer object run from the best exploration candidate.
 
 - metric_threshold:
 
-  Minimum score required to be considered successful.
+  Accepted for consistency with the other optimizers (see
+  [`Teleprompter()`](https://jameshwade.github.io/dsprrr/reference/Teleprompter.md));
+  `Omni()` does not use it.
 
 - max_errors:
 
-  Maximum number of errors allowed during evaluation.
+  Does not stop the run; set `max_errors` on each explorer and on the
+  continuation instead.
 
 - valset_ratio:
 
-  Fraction of `trainset` to hold out for candidate comparison when
-  `valset` is not supplied.
+  Share of `trainset` held out for validation when no `valset` is given
+  (default `0.1`, must be above 0).
 
 - parallel:
 
-  Whether to compile exploration branches concurrently with mirai.
-  Parallel exploration requires `.llm = NULL`. Each worker creates its
-  own default chat from `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or
-  `GOOGLE_API_KEY`.
+  Whether to compile the explorers at the same time with mirai (default
+  `FALSE`). Parallel exploration requires `.llm = NULL`: each worker
+  creates its own default chat from `OPENAI_API_KEY`,
+  `ANTHROPIC_API_KEY` or `GOOGLE_API_KEY`.
 
 - num_workers:
 
-  Number of mirai workers for parallel exploration. `NULL` uses one
-  worker per explorer.
+  Number of mirai workers for parallel exploration. `NULL` (the default)
+  uses one worker per explorer.
 
 - seed:
 
-  Optional whole-number random seed within R's integer range for
-  reproducible splitting, sequential exploration, and mirai worker
-  streams.
+  Optional whole-number seed for the validation split, sequential
+  exploration and the mirai worker streams.
 
 - verbose:
 
-  Whether to print progress messages.
+  Whether to print progress messages (default `TRUE`).
 
 ## Value
 
-An `Omni` teleprompter object.
+An `Omni` object to pass to
+[`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md).
+
+## Details
+
+Omni adapts the explore, pick-best and continue pattern of the Omni
+meta-optimizer in the [GEPA project](https://github.com/gepa-ai/gepa),
+described in the [GEPA Omni
+announcement](https://gepa-ai.github.io/gepa/blog/2026/07/22/optimize-anything-omni/).
+
+Omni needs validation data: pass `valset` to
+[`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md),
+or it holds out `floor(valset_ratio * nrow(trainset))` rows and stops
+with an error when that is zero. The seed program, every explorer result
+and the continuation result are all scored on it, and the highest score
+wins.
+
+Omni sets no shared budget, because each optimizer has its own budget
+controls. Give the explorers comparable budgets before building
+`Omni()`. The validation scoring is extra work on top of those budgets.
+
+[`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md)
+accepts extra arguments for this optimizer: `explorer_compile_args` (a
+list, named by explorer, of further arguments for that explorer's
+[`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md)
+call), `continuation_compile_args`, and `valset_ratio`, `parallel`,
+`num_workers` and `seed`, which override the values stored here. The
+candidates are stored in
+`optimization_result(compiled)$extensions$omni$candidate_programs`.
+
+## See also
+
+Other teleprompters:
+[`AutoResearch()`](https://jameshwade.github.io/dsprrr/reference/AutoResearch.md),
+[`BetterTogether()`](https://jameshwade.github.io/dsprrr/reference/BetterTogether.md),
+[`BootstrapFewShot()`](https://jameshwade.github.io/dsprrr/reference/BootstrapFewShot.md),
+[`BootstrapFewShotWithRandomSearch()`](https://jameshwade.github.io/dsprrr/reference/BootstrapFewShotWithRandomSearch.md),
+[`COPRO()`](https://jameshwade.github.io/dsprrr/reference/COPRO.md),
+[`GEPA()`](https://jameshwade.github.io/dsprrr/reference/GEPA.md),
+[`GridSearchTeleprompter()`](https://jameshwade.github.io/dsprrr/reference/GridSearchTeleprompter.md),
+[`KNNFewShot()`](https://jameshwade.github.io/dsprrr/reference/KNNFewShot.md),
+[`LabeledFewShot()`](https://jameshwade.github.io/dsprrr/reference/LabeledFewShot.md),
+[`MIPROv2()`](https://jameshwade.github.io/dsprrr/reference/MIPROv2.md),
+[`MetaHarness()`](https://jameshwade.github.io/dsprrr/reference/MetaHarness.md),
+[`ReAnchor()`](https://jameshwade.github.io/dsprrr/reference/ReAnchor.md),
+[`SIMBA()`](https://jameshwade.github.io/dsprrr/reference/SIMBA.md),
+[`Teleprompter()`](https://jameshwade.github.io/dsprrr/reference/Teleprompter.md),
+[`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md)
 
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
 metric <- metric_exact_match(field = "answer")
 
 tp <- Omni(
@@ -113,8 +144,31 @@ tp <- Omni(
     generations = 2L
   )
 )
+tp
+#> 
+#> ── Omni Teleprompter 
+#> Explorers: bootstrap and gepa
+#> Continuation: <dsprrr::GEPA>
+#> Validation split: 0.1
+#> Parallel exploration: FALSE
 
-compiled <- compile(qa_module, tp, trainset, valset = valset, .llm = llm)
+if (FALSE) { # \dontrun{
+qa <- module(signature("question -> answer"))
+trainset <- data.frame(
+  question = c("Capital of France?", "Capital of Peru?", "Capital of Chad?"),
+  answer = c("Paris", "Lima", "N'Djamena")
+)
+valset <- data.frame(
+  question = c("Capital of Japan?", "Capital of Kenya?"),
+  answer = c("Tokyo", "Nairobi")
+)
+compiled <- compile(
+  qa,
+  tp,
+  trainset,
+  valset = valset,
+  .llm = ellmer::chat_openai(model = "gpt-6-luna")
+)
 optimization_result(compiled)$extensions$omni$candidate_programs
 } # }
 ```

@@ -1,967 +1,542 @@
-# Advanced Optimizer Guide
+# Choose an optimizer
 
-## Introduction
+dsprrr has eleven optimizers, called teleprompters. They differ in what
+they change in a module, how much labeled data they need, and how many
+model calls they spend. This page compares them and shows a short call
+for each. The workflow around them (baseline, held-out scores, saving)
+is covered in [Compile and
+optimize](https://jameshwade.github.io/dsprrr/articles/compilation-optimization.md),
+and the ideas behind them in [How optimization
+works](https://jameshwade.github.io/dsprrr/articles/concepts-optimization-theory.md).
 
-dsprrr provides a comprehensive suite of DSPy-inspired optimizers
-(teleprompters) for automatically improving your LLM programs. This
-guide covers the advanced optimizers beyond basic few-shot learning.
+## Comparison
 
-For basic optimization concepts, see
-[`vignette("compilation-optimization")`](https://jameshwade.github.io/dsprrr/articles/compilation-optimization.md).
+In the cost column, T is the number of training rows and V the number of
+validation rows.
 
-## Quick Reference: Choosing an Optimizer
+| Optimizer | What it changes | Data it needs | Model calls to compile | Use it when |
+|----|----|----|----|----|
+| `LabeledFewShot` | Demos, copied from training rows | `k` labeled rows | None | You want a quick first improvement |
+| `BootstrapFewShot` | Demos, from the module’s own passing outputs | More rows than `max_labeled_demos` | Up to T minus `max_labeled_demos` per round | Demos should show complete outputs, or the program is a pipeline |
+| `BootstrapFewShotWithRandomSearch` | Demos, the best of several sets | `trainset` and `valset` | Several bootstrap runs, plus `num_candidate_programs` × V | You can pay to compare demo sets |
+| `KNNFewShot` | Demos, picked for each input by similarity | A varied labeled pool | None; one embedding call per run | Inputs vary widely and similar examples help most |
+| `GridSearchTeleprompter` | Instructions or templates that you write, plus demos | `valset`, or a fifth of `trainset` | Variants × V | You have a few specific wordings to compare |
+| `COPRO` | Instructions, rewritten by a model | `trainset` and `valset` | About `breadth` × `depth` × V, plus passes over T | The instructions are the weak point |
+| `MIPROv2` | Demos and instructions together | `trainset` and `valset` | Bootstrap runs, then 20, 50 or 100 trials (see below) | You want both searched on a fixed trial budget |
+| `SIMBA` | Demos and rules from hard examples | `trainset` and `valset` | Per step, `num_candidates` × `bsize` + V | A few kinds of input keep failing |
+| `GEPA` | Instructions, or a whole [`flex()`](https://jameshwade.github.io/dsprrr/reference/flex.md) program | `trainset` and `valset` | `generations` × `population_size` × (V + T), plus rewrites | Your metric can say why an output is wrong |
+| `BetterTogether` | Whatever its steps change | `valset`, or 10% of `trainset` | Its steps, plus V per step | You want to chain optimizers and keep the best stage |
+| `ReAnchor` | Decision thresholds, cuts and weights; never the prompt | Two or more rows | 2 × T, plus 2 × V with a `valset` | Yes/no or label decisions are miscalibrated |
 
-| If you want… | Use this optimizer | Complexity |
-|----|----|----|
-| Add labeled examples as demos | `LabeledFewShot` | Low |
-| Bootstrap demos from LLM outputs | `BootstrapFewShot` | Medium |
-| Bootstrap + search multiple configs | `BootstrapFewShotWithRandomSearch` | Medium |
-| Dynamic per-query demo selection | `KNNFewShot` | Medium |
-| Optimize instructions (not demos) | `COPRO` | Medium |
-| Joint instruction + demo optimization | `MIPROv2` | High |
-| Focus on hard examples | `SIMBA` | Medium |
-| Multi-objective optimization | `GEPA` | High |
-| Explore several optimizers, then continue the winner | `Omni` | High |
-| Let one research agent own an experiment loop | `AutoResearch` | High |
-| Generate batches from a scored frontier | `MetaHarness` | High |
-| Combine multiple compiled programs | [`ensemble()`](https://jameshwade.github.io/dsprrr/reference/ensemble_module.md) | Low |
+Every optimizer except `LabeledFewShot` and `KNNFewShot` requires
+`metric`. `COPRO`, `MIPROv2`, `SIMBA` and `GEPA` score candidates on
+`trainset` when you leave out `valset`, which favors candidates that fit
+the training rows rather than new ones.
 
-### Decision Tree
+A reasonable order: start with `LabeledFewShot`. If demos help but not
+enough, try `BootstrapFewShot` or `BootstrapFewShotWithRandomSearch`. If
+the wording is the problem, try `COPRO` or `GEPA`, and `MIPROv2`
+searches both. Whatever you try, compare it with the uncompiled module
+on held-out rows.
 
-``` mermaid
-flowchart TB
-  Start["Do you have labeled training data?"]
-  Start -->|No| Zero["Use zero-shot or manually write demos"]
-  Start -->|Yes| Data["How much data?"]
-  Data -->|Fewer than 30 examples| Labeled["LabeledFewShot (simple few-shot)"]
-  Data -->|30+ examples| Optimize["What do you want to optimize?"]
-  Optimize -->|Just add demos| Bootstrap["BootstrapFewShot"]
-  Optimize -->|Demos + search configs| Random["BootstrapFewShotWithRandomSearch"]
-  Optimize -->|Different demos per query| KNN["KNNFewShot"]
-  Optimize -->|Improve instructions| COPRO["COPRO"]
-  Optimize -->|Both instructions + demos| MIPRO["MIPROv2"]
-  Optimize -->|Handle hard cases better| SIMBA["SIMBA"]
-  Optimize -->|Balance quality vs cost| GEPA["GEPA"]
-  Optimize -->|Unsure which optimizer will win| Omni["Omni"]
-  Optimize -->|Run an agentic research loop| Agentic["AutoResearch or MetaHarness"]
-  Optimize -->|Combine multiple optimized modules| Ensemble["ensemble()"]
-```
+## Setup for the examples
 
-## Dataset Sizing Guidance
-
-| Dataset Size | Recommended Optimizers | Notes |
-|----|----|----|
-| 10-30 examples | `LabeledFewShot` | Minimal optimization |
-| 30-100 examples | `BootstrapFewShot`, `COPRO` | Good starting point |
-| 100-300 examples | `BootstrapFewShotWithRandomSearch`, `MIPROv2` | Meaningful search |
-| 300+ examples | All optimizers | Full optimization potential |
-
-**Key principles:**
-
-- **Train/validation split**: Use 70-80% for training, 20-30% for
-  validation
-- **Diverse examples**: Ensure coverage of edge cases and all output
-  categories
-- **Quality over quantity**: 50 high-quality examples beat 500 noisy
-  ones
+The examples below route support tickets to a team:
 
 ``` r
 
 library(dsprrr)
+```
 
-# Split your dataset properly
-full_data <- tibble::tibble(
+``` r
 
-  question = c(...),  # Your examples
-  answer = c(...)
+llm <- ellmer::chat_openai(model = "gpt-6-luna")
+
+triage <- module(signature(
+  inputs = list(input("ticket", description = "Customer support ticket")),
+  output_type = ellmer::type_object(
+    team = ellmer::type_enum(
+      c("billing", "shipping", "technical"),
+      "Which team should handle the ticket?"
+    )
+  ),
+  instructions = "Route each support ticket to one team."
+))
+
+metric <- metric_exact_match(field = "team")
+
+# Three rows show the shape; a real run needs dozens or more
+tickets <- tibble::tibble(
+  ticket = c(
+    "I was charged twice for my subscription this month.",
+    "The parcel says delivered, but nothing arrived.",
+    "The app crashes when I open the settings page."
+  ),
+  team = c("billing", "shipping", "technical")
 )
 
-set.seed(42)
-n <- nrow(full_data)
-train_idx <- sample(n, size = floor(0.7 * n))
-
-trainset <- full_data[train_idx, ]
-valset <- full_data[-train_idx, ]
-
-# Or use the built-in helper
-splits <- split_dataset(full_data, prop = 0.7, seed = 42)
+splits <- split_dataset(tickets, prop = 0.7, seed = 1)
 trainset <- splits$train
 valset <- splits$val
 ```
 
-## Setup
+Counts and sizes are integer properties, so write them as integer
+literals:
 
 ``` r
 
-library(dsprrr)
-library(ellmer)
+try(LabeledFewShot(k = 3))
+#> Error : <dsprrr::LabeledFewShot> object properties are invalid:
+#> - @k must be <integer>, not <double>
+```
 
-# Configure your LLM
-llm <- chat_openai(model = "gpt-4o-mini")
+## LabeledFewShot
 
-# Example training data for demonstrations
-trainset <- tibble::tibble(
-  question = c(
-    "What is the capital of France?",
-    "Who wrote Romeo and Juliet?",
-    "What is the chemical symbol for gold?",
-    "When did World War II end?",
-    "What is the largest planet in our solar system?"
-  ),
-  answer = c(
-    "Paris",
-    "William Shakespeare",
-    "Au",
-    "1945",
-    "Jupiter"
-  )
-)
+`LabeledFewShot` samples `k` training rows (using `seed`, 123 by
+default) and attaches them as demos. It makes no model calls and does
+not score anything, so the demos are only as good as the rows you give
+it. `sample = FALSE` takes the first `k` rows instead.
 
-# Base module to optimize
-qa_module <- module(
-  signature("question -> answer"))
+``` r
+
+labeled <- triage |> compile(LabeledFewShot(k = 4L), trainset)
 ```
 
 ## BootstrapFewShot
 
-Bootstraps demonstrations by running the module on training examples and
-keeping successful outputs as demos.
+`BootstrapFewShot` runs the module on training rows and keeps the
+outputs that pass the metric as demos. Those demos are the model’s own
+complete outputs, including fields your data does not label, such as the
+reasoning of a
+[`chain_of_thought()`](https://jameshwade.github.io/dsprrr/reference/chain_of_thought.md)
+module.
 
-**Best for:** When you want the LLM to generate its own demonstration
-format.
+The first `max_labeled_demos` rows (16 by default) become labeled demos
+as they are, and only the rows after them go to the model. A training
+set of 16 rows or fewer therefore makes no model calls with the default
+settings: every row becomes a labeled demo. Lower `max_labeled_demos` to
+bootstrap on a small set:
 
 ``` r
 
-tp <- BootstrapFewShot(
-  metric = metric_exact_match(field = "answer"),
-  max_bootstrapped_demos = 4L,
-  max_labeled_demos = 2L,
-  max_rounds = 3L,
-  max_errors = 5L,
-  seed = 42L
-)
-
-compiled <- compile(qa_module, tp, trainset, .llm = llm)
-
-# Check what demos were bootstrapped
-print(compiled$demos)
-
-# Run the optimized module
-result <- run(compiled, question = "What is the speed of light?", .llm = llm)
+bootstrapped <- triage |>
+  compile(
+    BootstrapFewShot(
+      metric = metric,
+      max_bootstrapped_demos = 4L,
+      max_labeled_demos = 2L
+    ),
+    trainset,
+    .llm = llm
+  )
 ```
 
-**Parameters:**
-
-- `max_bootstrapped_demos`: Maximum LLM-generated demos to include
-- `max_labeled_demos`: Maximum labeled examples from trainset
-- `max_rounds`: Bootstrapping iterations
-- `metric`: Evaluation metric (defaults to exact match)
+Rows are tried in order until `max_bootstrapped_demos` outputs have
+passed. An output passes when its score reaches `metric_threshold`, or,
+with no threshold, when it is above zero. `max_rounds` repeats the pass
+with the demos found so far. For a pipeline, `BootstrapFewShot` runs the
+whole program on each row, scores the final output, and takes demos for
+every step from the runs that pass (see [Chain modules into
+pipelines](https://jameshwade.github.io/dsprrr/articles/chaining-modules.md)).
 
 ## BootstrapFewShotWithRandomSearch
 
-Combines bootstrapping with random search over configurations. Produces
-multiple candidate programs and selects the best.
-
-**Best for:** When you want to explore different demo combinations and
-find the optimal configuration.
-
-``` r
-
-tp <- BootstrapFewShotWithRandomSearch(
-  metric = metric_exact_match(field = "answer"),
-  max_bootstrapped_demos = 4L,
-  max_labeled_demos = 2L,
-  num_candidate_programs = 8L,
-  num_threads = 4L,
-  seed = 42L
-)
-
-compiled <- compile(qa_module, tp, trainset, valset = valset, .llm = llm)
-
-# Access the best score
-print(optimization_result(compiled)$best_score)
-
-# Access candidate programs (list of program metadata)
-candidates <- optimization_result(compiled)$extensions$bootstrap_few_shot_with_random_search$candidate_programs
-```
-
-**Parameters:**
-
-- `num_candidate_programs`: Number of configurations to try
-- `num_threads`: Parallel evaluation threads
-- All `BootstrapFewShot` parameters are inherited
-
-**Tip:** Use
-[`ensemble()`](https://jameshwade.github.io/dsprrr/reference/ensemble_module.md)
-to combine the best optimized module with other strategies:
+This optimizer builds `num_candidate_programs` candidates (16 by
+default): the uncompiled program, a program with labeled demos only, and
+several `BootstrapFewShot` runs. It scores each on `valset`, which is
+required, and returns the best.
 
 ``` r
 
-# Compile with different strategies and ensemble them
-mod1 <- compile(qa_module, BootstrapFewShotWithRandomSearch(), trainset, valset = valset, .llm = llm)
-mod2 <- compile(qa_module, COPRO(), trainset, valset = valset, .llm = llm)
-mod3 <- compile(qa_module, LabeledFewShot(k = 3L), trainset, .llm = llm)
+searched <- triage |>
+  compile(
+    BootstrapFewShotWithRandomSearch(
+      metric = metric,
+      num_candidate_programs = 8L,
+      max_labeled_demos = 4L,
+      stop_at_score = 0.95
+    ),
+    trainset,
+    valset = valset,
+    .llm = llm
+  )
 
-# Ensemble with weights from validation scores
-ens <- ensemble(
-  list(mod1, mod2, mod3),
-  reduce_fn = reduce_weighted_vote(),
-  weights = c(0.90, 0.85, 0.80)  # Validation scores
-)
+optimization_result(searched)$trials[c("name", "score")]
 ```
+
+`stop_at_score` ends the search once a candidate reaches that score.
+`num_threads` sets how many validation rows are scored at the same time
+for each candidate; the candidates are still scored one after another.
 
 ## KNNFewShot
 
-Selects demonstrations dynamically based on similarity to the input
-query. Uses embeddings to find the most relevant examples.
-
-**Best for:** Tasks where example relevance varies significantly by
-query.
+`KNNFewShot` does not fix the demos at compile time. It embeds every
+training row once, then at run time embeds each input and uses the `k`
+most similar training rows (by cosine similarity) as that call’s demos.
 
 ``` r
 
-tp <- KNNFewShot(
-  k = 3L,
-  vectorizer = function(texts) {
-    # Use any embedding function
-    ragnar::embed_openai(texts)
-  },
-  cache_embeddings = TRUE  # Cache embeddings for efficiency
-)
+knn <- triage |>
+  compile(
+    KNNFewShot(
+      k = 3L,
+      vectorizer = ragnar::embed_openai(model = "text-embedding-3-small")
+    ),
+    trainset
+  )
 
-compiled <- compile(qa_module, tp, trainset, .llm = llm)
-
-# Each query now gets personalized demos based on similarity
-result <- run(compiled, question = "What is DNA made of?", .llm = llm)
+run(knn, ticket = "My card was charged twice this month.", .llm = llm)
 ```
 
-**Parameters:**
+`vectorizer` is any function that turns a character vector into a
+numeric matrix with one row per string. `input_text` is an optional
+function that turns a row into the text to embed; by default it pastes
+the signature’s input columns together. Compiling makes no model calls,
+but every
+[`run()`](https://jameshwade.github.io/dsprrr/reference/run.md) makes
+one embedding call before the model call.
 
-- `k`: Number of nearest neighbors to use as demos
-- `vectorizer`: Function that converts text to embeddings
-- `cache_embeddings`: Boolean to enable embedding caching
-- `input_text`: Which input field to use for similarity (default: first
-  input)
+## GridSearchTeleprompter
 
-## COPRO (Coordinate Prompt Optimization)
-
-Optimizes instructions through coordinate ascent. Generates and tests
-instruction variants to find the best wording.
-
-**Best for:** When your task benefits from better instructions rather
-than more demos.
+`GridSearchTeleprompter` scores each row of `variants` and keeps the
+best. `id` is required. An `instructions` column replaces the module’s
+instructions, `instructions_suffix` is appended to them, and `template`
+replaces the prompt template. It also attaches `k` demos (2 by default)
+sampled from `trainset`.
 
 ``` r
 
-# Optionally use a different model for instruction generation
-prompt_llm <- chat_openai(model = "gpt-4o")
-
-tp <- COPRO(
-  metric = metric_exact_match(field = "answer"),
-  prompt_model = prompt_llm,  # Model to generate instruction candidates
-  breadth = 5L,               # Candidates per iteration
-  depth = 3L,                 # Number of iterations
-  init_temperature = 1.4,
-  seed = 42L
+variants <- data.frame(
+  id = c("terse", "rules"),
+  instructions = c(
+    "Route each support ticket to one team. Answer with the team only.",
+    paste(
+      "Route each support ticket to one team.",
+      "Charges and refunds go to billing, lost or damaged parcels to",
+      "shipping, and errors or crashes to technical."
+    )
+  )
 )
 
-compiled <- compile(qa_module, tp, trainset, valset = valset, .llm = llm)
-
-# Check the optimized instructions
-print(compiled$signature@instructions)
-
-# View optimization history
-history <- optimization_result(compiled)$extensions$copro$history
-print(history)
+set.seed(1)
+gridded <- triage |>
+  compile(
+    GridSearchTeleprompter(variants = variants, metric = metric, k = 2L),
+    trainset,
+    valset = valset,
+    .llm = llm
+  )
 ```
 
-**Parameters:**
+Demos and, without a `valset`, the scoring rows are drawn with R’s
+global random number generator, hence the
+[`set.seed()`](https://rdrr.io/r/base/Random.html). Without a `valset`,
+the variants are scored on a random fifth of `trainset` (rounded up, at
+most `eval_sample_size` rows) and the demos come from the rest.
 
-- `breadth`: Number of instruction candidates per iteration
-- `depth`: Number of coordinate ascent iterations
-- `prompt_model`: Optional ellmer Chat for generating instructions;
-  `NULL` uses the task Chat supplied through `.llm`
-- `init_temperature`: Temperature for instruction generation
+## COPRO
 
-**How it works:**
+`COPRO` rewrites the instructions. It first runs the module on every
+training row to find failures. Each of `depth` rounds then asks
+`prompt_model` (by default the task chat) for `breadth` new versions of
+the current best instructions, showing it up to three failed rows. Each
+version is scored on `valset`, and the best one replaces the current
+instructions if it scores higher. After each round that improves the
+score, the training rows are checked again for failures.
 
-1.  Starts with current instructions as baseline
-2.  Generates `breadth` instruction variants
-3.  Evaluates each on validation set
-4.  Keeps the best, uses failed examples to improve
-5.  Repeats for `depth` iterations
+``` r
+
+rewritten <- triage |>
+  compile(
+    COPRO(
+      metric = metric,
+      prompt_model = ellmer::chat_openai(model = "gpt-6-luna"),
+      breadth = 5L,
+      depth = 2L
+    ),
+    trainset,
+    valset = valset,
+    .llm = llm
+  )
+
+rewritten$signature@instructions
+```
 
 ## MIPROv2
 
-Multi-prompt Instruction Proposal Optimizer. Jointly optimizes
-instructions and demonstrations using Bayesian optimization.
+`MIPROv2` searches over combinations of a demo set and an instruction
+variant. The demo sets are one labeled set plus several bootstrapped
+sets. The instruction variants are the original instructions plus
+versions that append a short summary of the input and output fields and
+one of five fixed tips, such as “Be concise and accurate.” No model
+writes new instructions.
 
-**Best for:** Maximum optimization when you have sufficient data and
-compute budget.
+Each trial scores one combination. A UCB1 bandit picks it: untried
+combinations first, then those with a high mean score or few trials.
+Most trials score a small random batch of training rows; every few
+trials, a full pass over `valset` checks the current pick, and the best
+fully scored combination wins.
 
 ``` r
 
-tp <- MIPROv2(
-  metric = metric_exact_match(field = "answer"),
-  auto = "medium",           # Preset: "light", "medium", or "heavy"
-  num_candidates = 10L,      # Optional: override instruction candidates
-  seed = 42L
-)
-
-compiled <- compile(qa_module, tp, trainset, valset = valset, .llm = llm)
-
-# MIPROv2 optimizes both instructions and demos
-print(compiled$signature@instructions)
-print(compiled$demos)
+mipro <- triage |>
+  compile(
+    MIPROv2(metric = metric, auto = "light"),
+    trainset,
+    valset = valset,
+    .llm = llm
+  )
 ```
 
-**Parameters:**
+`auto` sets the size of the search:
 
-- `auto`: Preset level - `"light"`, `"medium"`, or `"heavy"`
-- `num_candidates`: Override instruction candidates to generate
-- `task_model`: Optional ellmer Chat for task evaluation; defaults to
-  `.llm`
-- `max_bootstrapped_demos`, `max_labeled_demos`: Demo limits
-- Supports `log_dir` for detailed trial logging
+| `auto` | Trials | Rows per batch | Full pass every | Demo sets, up to | Instruction variants |
+|----|----|----|----|----|----|
+| `"light"` (default) | 20 | 5 | 5 trials | 3 | 5 |
+| `"medium"` | 50 | 10 | 10 trials | 5 | 6 |
+| `"heavy"` | 100 | 20 | 20 trials | 7 | 6 |
 
-**Presets:**
+`MIPROv2` needs more training rows than `max_labeled_demos` (4 by
+default); with fewer, it returns the module unchanged, with status
+`"partial"`. `num_candidates` applies only with `auto = NULL`, where it
+sets both the number of trials and the number of instruction variants
+(at most six). `task_model` runs the module during the search in place
+of `.llm`. For a program with nested predictors, such as an RLM,
+`MIPROv2` tunes each predictor’s instructions and requires
+`max_bootstrapped_demos = 0L`.
 
-``` r
+## SIMBA
 
-# Light preset (faster, less thorough)
-tp_light <- MIPROv2(
-  metric = metric_exact_match(),
-  auto = "light"
-)
-
-# Heavy preset (slower, more thorough)
-tp_heavy <- MIPROv2(
-  metric = metric_exact_match(),
-  auto = "heavy"
-)
-```
-
-## SIMBA (Self-Improving Model-Based Augmentation)
-
-Focuses optimization on hard examples that the model struggles with.
-
-**Best for:** When your model performs well on average but fails on edge
-cases.
+`SIMBA` works from hard examples. Each step samples `bsize` training
+rows, runs the current module `num_candidates` times on them, and ranks
+the rows by difficulty: a low mean score, or answers that differ between
+runs. The hardest rows, up to `max_demos`, become labeled demos, and
+`prompt_model` writes a short rule from them that is appended to the
+instructions. Without `prompt_model`, the appended rule just quotes the
+hardest row. A step is kept only if it raises the score on `valset`, and
+the first step that does not ends the search.
 
 ``` r
 
-tp <- SIMBA(
-  metric = metric_exact_match(field = "answer"),
-  bsize = 32L,            # Mini-batch size for evaluation
-  num_candidates = 6L,    # Candidate demos per step
-  max_steps = 8L,         # Optimization iterations
-  max_demos = 4L,         # Maximum demos to include
-  seed = 42L
-)
-
-compiled <- compile(qa_module, tp, trainset, valset = valset, .llm = llm)
-
-# SIMBA iteratively improves on hard examples
-print(compiled$demos)
-```
-
-**Parameters:**
-
-- `bsize`: Mini-batch size for evaluation
-- `num_candidates`: Number of demo candidates per step
-- `max_steps`: Number of optimization iterations
-- `max_demos`: Maximum demonstrations to include
-- `prompt_model`: Optional ellmer Chat for reflection; `NULL` uses
-  SIMBA’s deterministic example-based rule fallback
-
-**How it works:**
-
-1.  Identifies examples where the model fails
-2.  Generates targeted demos for those cases
-3.  Re-evaluates and repeats
-4.  Builds a demo set that covers edge cases
-
-## When the implementation is part of the search
-
-Most teleprompters keep module structure fixed. GEPA can also optimize a
-[`flex()`](https://jameshwade.github.io/dsprrr/reference/flex.md)
-module’s complete `module_src`: the choice and order of predictors, or
-in executable mode, deterministic R branches and selected tool calls.
-Invalid candidates are rejected before selection.
-
-Use this only when implementation strategy is genuinely unresolved. See
-[Flex: Optimize the Whole
-Program](https://jameshwade.github.io/dsprrr/articles/flex-optimization.md)
-for a complete before-and-after example and the runtime boundary.
-
-## GEPA (Reflective Prompt Evolution)
-
-Reflective instruction and Flex-source optimization with failure
-feedback, validation-example winner frontiers, and Pareto selection for
-multiple objectives. dsprrr’s adapted GEPA uses a fixed
-population/generations loop; it does not expose arbitrary package state
-or unrestricted code execution.
-
-**Best for:** Production systems where you need to balance accuracy
-against token usage or latency.
-
-``` r
-
-# Single-objective GEPA
-tp <- GEPA(
-  metric = metric_exact_match(field = "answer"),
-  population_size = 20L,
-  generations = 10L,
-  mutation_rate = 0.1,
-  crossover_rate = 0.7,
-  seed = 42L
-)
-
-# Multi-objective GEPA with named metrics
-tp_multi <- GEPA(
-  metrics = list(
-    quality = metric_exact_match(field = "answer"),
-    brevity = function(pred, expected) 1 / (1 + nchar(as.character(pred$answer)))
-  ),
-  population_size = 20L,
-  generations = 10L,
-  selection = "pareto",  # Use Pareto selection for multi-objective
-  seed = 42L
-)
-
-compiled <- compile(qa_module, tp_multi, trainset, valset = valset, .llm = llm)
-
-# GEPA returns Pareto-optimal solutions for multi-objective
-pareto <- optimization_result(compiled)$extensions$gepa$objective_pareto_front
-print(pareto)
-```
-
-When `valset` is supplied, GEPA keeps the two roles separate: `trainset`
-provides discovery failures and reflection feedback, while `valset`
-supplies aggregate selection scores, validation-example winners, and
-retained best outputs. Pareto parent selection preserves both
-validation-example winners and multi-objective Pareto candidates.
-
-**Parameters:**
-
-- `metric`: Single metric function (for single-objective)
-- `metrics`: Named list of metric functions (for multi-objective)
-- `population_size`: Number of candidates per generation
-- `generations`: Evolution iterations
-- `selection`: Selection strategy (`"current_best"` or `"pareto"`)
-- `mutation_rate`: Probability of reflection-guided component mutation
-- `crossover_rate`: Probability of recombining complete parent component
-  values
-- `component_selector`: `"round_robin"`, budget-atomic `"all"`, or a
-  custom component-ID selector
-- `max_merge_invocations`: Cap on attempted lineage merges
-
-When a program contains Flex leaves, GEPA candidates include complete
-`module_src` values as well as ordinary instructions. Invalid source
-proposals remain auditable but non-selectable. Pareto selection is
-whole-program, not an implementation of DSPy’s per-component frontier.
-The [Flex
-guide](https://jameshwade.github.io/dsprrr/articles/flex-optimization.md)
-shows how to evaluate those candidates on both answer quality and
-predictor calls.
-
-## Omni
-
-Explores several teleprompters independently, compares their outputs
-with one validation metric, and runs a fresh continuation optimizer from
-the winner. The seed remains eligible throughout, so a regressing branch
-cannot make the result worse on the comparison set.
-
-**Best for:** Tasks where several optimizer families are plausible and
-you can give each one a comparable budget. This design is inspired by
-the [Omni
-meta-optimizer](https://gepa-ai.github.io/gepa/blog/2026/07/22/optimize-anything-omni/)
-from the [GEPA project](https://github.com/gepa-ai/gepa). GEPA’s
-published Frontier-CS gains do not establish the same gain for dsprrr
-modules; benchmark your own task and budget.
-
-Omni’s common comparison pass re-evaluates the seed, every explorer
-result, and the continuation result on `valset`. Those calls are
-additional to each teleprompter’s native budget and should be included
-in your experiment budget.
-
-``` r
-
-metric <- metric_exact_match(field = "answer")
-
-tp <- Omni(
-  metric = metric,
-  explorers = list(
-    bootstrap = BootstrapFewShotWithRandomSearch(
+hardened <- triage |>
+  compile(
+    SIMBA(
       metric = metric,
-      num_candidate_programs = 8L
+      bsize = 16L,
+      num_candidates = 4L,
+      max_steps = 4L,
+      max_demos = 4L,
+      prompt_model = ellmer::chat_openai(model = "gpt-6-luna")
     ),
-    copro = COPRO(metric = metric, breadth = 8L, depth = 2L),
-    gepa = GEPA(
-      metric = metric,
-      population_size = 8L,
-      generations = 3L
-    )
-  ),
-  continuation = GEPA(
-    metric = metric,
-    population_size = 8L,
-    generations = 3L
-  ),
-  seed = 42
-)
-
-compiled <- compile(qa_module, tp, trainset, valset = valset, .llm = llm)
-
-# Every branch was re-scored with `metric` on the same validation rows.
-optimization_result(compiled)$extensions$omni$candidate_programs
-```
-
-Set `parallel = TRUE` to run the exploration branches with mirai.
-Parallel exploration requires `.llm = NULL`, because live ellmer chat
-objects are not safe to serialize across worker processes. Each worker
-creates its own chat from `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or
-`GOOGLE_API_KEY`; a session-only chat configured with
-[`set_default_chat()`](https://jameshwade.github.io/dsprrr/reference/set_default_chat.md)
-is not visible to the workers.
-
-See [Composing Optimizers with
-Omni](https://jameshwade.github.io/dsprrr/articles/omni-meta-optimization.md)
-for the full composition contract, matched-budget guidance, candidate
-provenance, failure behavior, and differences from the GEPA
-implementation that inspired it.
-
-## AutoResearch and Meta-Harness
-
-These agentic teleprompters jointly edit instructions and templates
-across optimizable module-graph leaves.
-[`AutoResearch()`](https://jameshwade.github.io/dsprrr/reference/AutoResearch.md)
-keeps one research session alive and lets it choose sandbox, evaluate,
-or finish actions.
-[`MetaHarness()`](https://jameshwade.github.io/dsprrr/reference/MetaHarness.md)
-starts a fresh proposer for each iteration and keeps candidate selection
-in a trusted R outer loop.
-
-Both require an OS-sandboxed runner by default:
-
-``` r
-
-runner <- mcp_repl_runner()
-
-tp <- MetaHarness(
-  metric = metric,
-  max_iterations = 6L,
-  max_candidates_per_iteration = 3L
-)
-
-compiled <- compile(
-  qa_module,
-  tp,
-  trainset,
-  valset = valset,
-  .llm = task_chat,
-  .agent_llm = proposer_chat,
-  runner = runner
-)
-```
-
-They use the shared optimizer ledger, preserve candidate lineage and
-per-example feedback, return the best partial program under budget
-exhaustion, and support deterministic checkpoint resume. See [Agentic
-Optimization with AutoResearch and
-Meta-Harness](https://jameshwade.github.io/dsprrr/articles/agentic-optimization-harnesses.md)
-for the sandbox, budget, provenance, and composition contracts.
-
-## Ensemble
-
-Combines multiple compiled modules using voting or aggregation
-strategies.
-
-**Best for:** Maximum robustness by combining diverse optimization
-strategies.
-
-``` r
-
-# First, compile modules with different strategies
-mod_bootstrap <- compile(qa_module, BootstrapFewShot(), trainset, .llm = llm)
-mod_copro <- compile(qa_module, COPRO(), trainset, valset = valset, .llm = llm)
-mod_knn <- compile(qa_module, KNNFewShot(k = 3L), trainset, .llm = llm)
-
-# Combine with ensemble
-ens <- ensemble(
-  list(mod_bootstrap, mod_copro, mod_knn),
-  reduce_fn = reduce_majority()
-)
-
-# Or use validation scores as weights
-ens_weighted <- ensemble(
-  list(mod_bootstrap, mod_copro, mod_knn),
-  reduce_fn = reduce_weighted_vote(),
-  weights = c(0.85, 0.90, 0.82)  # Validation scores
-)
-
-# Run the ensemble
-result <- run(ens, question = "What is photosynthesis?", .llm = llm)
-```
-
-### Reduce Functions
-
-``` r
-
-# Majority voting (default)
-reduce_majority()
-
-# Weighted voting using module weights
-reduce_weighted_vote()
-
-# Just take the first successful output
-reduce_first()
-
-# Score outputs with a metric
-reduce_best_by_metric(
-  metric = metric_f1(field = "answer")
-)
-```
-
-## Tracking and Logging
-
-All optimizers support logging for debugging and reproducibility.
-
-### Trial Logging
-
-``` r
-
-# Enable logging to a directory
-tp <- BootstrapFewShotWithRandomSearch(
-  metric = metric_exact_match(),
-  log_dir = "optimization_logs/experiment_001",
-  seed = 42L
-)
-
-compiled <- compile(qa_module, tp, trainset, .llm = llm)
-
-# Log directory contains:
-# - trials.jsonl: Authoritative append-only trial journal
-# - metadata.json: Best-effort derived run summary
-# - README.md: Best-effort human-readable summary
-# - best_program.rds: Best-effort safe program artifact
-```
-
-`TrialLog` treats `trials.jsonl` as the source of truth. It publishes
-each journal update atomically under an interprocess lock, then
-refreshes `metadata.json`, `README.md`, and `best_program.rds`
-independently. A crash or warning during those derived refreshes does
-not roll back a durable journal record, so derived files can temporarily
-lag. Delete a stale derived file and call
-[`save()`](https://rdrr.io/r/base/save.html) on the loaded log to
-rebuild it from the journal.
-
-Persistent log directories are sensitive storage. On Unix, dsprrr binds
-a log to its canonical, effective-user-owned directory identity,
-restricts the directory and files to owner access, rejects writable
-non-sticky ancestors and symbolic-link targets, and verifies
-device/inode identity around reads and atomic publications. Use a local,
-account-private path rather than a shared or network directory. On
-Windows, account filesystem ACLs apply, but base R cannot verify that
-they are owner-only; dsprrr fails closed if the platform cannot provide
-stable device and file identifiers.
-
-### Analyzing Trials
-
-``` r
-
-# Read trial logs
-trials <- read_trials_jsonl("optimization_logs/experiment_001/trials.jsonl")
-
-# Examine trial results
-print(trials)
-
-# Plot optimization progress
-library(ggplot2)
-ggplot(trials, aes(x = trial_id, y = score)) +
-  geom_line() +
-  geom_point() +
-  labs(title = "Optimization Progress", x = "Trial", y = "Score")
-```
-
-### Accessing Optimizer State
-
-``` r
-
-# After compilation, inspect the common result
-result <- optimization_result(compiled)
-result$optimizer
-result$status
-result$best_score
-result$trials
-
-# For BootstrapFewShotWithRandomSearch
-result$extensions$bootstrap_few_shot_with_random_search$candidate_programs
-
-# For COPRO
-result$extensions$copro$history
-
-# For GEPA (multi-objective)
-result$extensions$gepa$objective_pareto_front
-```
-
-## Resource Budgets and Checkpoints
-
-Use
-[`optimizer_control()`](https://jameshwade.github.io/dsprrr/reference/optimizer_control.md)
-when an optimization must stay inside a hard call, token, cost, or
-active-time envelope. Pass the control object to
-[`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md):
-
-``` r
-
-checkpoint <- "optimization_logs/bootstrap-checkpoint.rds"
-control <- optimizer_control(
-  max_trials = 50L,
-  max_metric_calls = 500L,
-  max_provider_calls = 500L,
-  max_total_tokens = 250000L,
-  max_cost = 25,
-  max_elapsed_seconds = 3600,
-  checkpoint_path = checkpoint
-)
-
-partial <- compile(
-  qa_module,
-  BootstrapFewShot(metric = metric_exact_match(field = "answer")),
-  trainset,
-  .llm = llm,
-  control = control
-)
-
-optimization_result(partial)$budget
-optimization_result(partial)$stop_reason
-```
-
-Counters are checked before each bounded work unit. Evaluation is
-subdivided into rows when a metric, provider, token, cost, or time cap
-is active, so the maximum post-call overshoot is the usage of one
-already-started evaluation row. Optimizer-side reflection or instruction
-generation has a bound of one already-started provider request. The
-typed stop reason records the resource, observed value, limit, work-unit
-type, and overshoot.
-
-Unknown usage is not treated as zero. If provider calls, tokens, or cost
-cannot be verified and the matching finite cap is active, the optimizer
-stops after that work unit and returns its best partial program.
-`budget_summary` reports known totals and unknown counts separately.
-Elapsed-time budgets use a monotonic active-run clock; time spent
-stopped between checkpointed runs is not charged.
-
-### Resume Support
-
-| Optimizer | Budget ledger and best partial | Deterministic checkpoint resume |
-|----|---:|---:|
-| `BootstrapFewShot` (module and pipeline) | Yes | Yes, by training row |
-| `MIPROv2` | Yes | Yes, through demo generation and BO evaluation rows |
-| `AutoResearch` | Yes | Yes, by experiment |
-| `MetaHarness` | Yes | Yes, by candidate and iteration |
-| `GEPA` | Yes | Not yet |
-| `SIMBA` | Yes | Not yet |
-| `COPRO` | Yes | Not yet |
-
-GEPA, SIMBA, and COPRO reject `resume = TRUE` with a typed error rather
-than silently restarting. Their fine-grained resume work is tracked
-separately.
-
-Resume Bootstrap or MIPRO by raising or removing a resource limit while
-keeping the original program, data, metric, and search settings:
-
-``` r
-
-resumed <- compile(
-  qa_module,
-  BootstrapFewShot(metric = metric_exact_match(field = "answer")),
-  trainset,
-  .llm = llm,
-  control = optimizer_control(
-    max_cost = 50,
-    checkpoint_path = checkpoint,
-    resume = TRUE
+    trainset,
+    valset = valset,
+    .llm = llm
   )
-)
 ```
 
-Checkpoints are atomically replaced safe program artifacts, not
-arbitrary serialized runtime environments. They store versioned search
-state, counters, RNG state, lineage, the best partial program, and
-deterministic hashes for the program, data, and metric. A changed
-identity is rejected with a field-level compatibility diff. Register
-custom metrics, model adapters, and other runtime objects with stable
-IDs in `checkpoint_registry`; opaque or stateful identities and
-credential-like fields are rejected.
+dsprrr’s `SIMBA` is a simplified adaptation of the DSPy optimizer of the
+same name.
 
-## Reproducibility
+## GEPA
 
-All optimizers support deterministic seeds:
+`GEPA` evolves instructions. It starts from the original instructions
+and `population_size - 1` rewrites of them. In each of `generations`
+rounds it scores every candidate on `valset` and runs it on `trainset`
+to collect the rows it gets wrong. Candidates that score best on at
+least one validation row become parents. A child takes each part of the
+program whole from one parent or the other, so crossover never splices
+text, and with probability `mutation_rate` the task chat (`.llm`)
+rewrites the child’s instructions after reading its parent’s failed
+rows.
+
+GEPA reads textual feedback when the metric returns it, which makes the
+rewrites more specific.
+[`metric_with_feedback()`](https://jameshwade.github.io/dsprrr/reference/metric_with_feedback.md)
+marks such a metric:
 
 ``` r
 
-# Set seed for reproducibility
-tp <- BootstrapFewShot(
-  metric = metric_exact_match(),
-  seed = 42L
-)
-
-# Same seed = same results
-compiled1 <- compile(qa_module, tp, trainset, .llm = llm)
-compiled2 <- compile(qa_module, tp, trainset, .llm = llm)
-
-# Demos will be identical
-identical(compiled1$demos, compiled2$demos)  # TRUE
-```
-
-## Error Handling
-
-Optimizers gracefully handle LLM errors:
-
-``` r
-
-tp <- BootstrapFewShot(
-  metric = metric_exact_match(),
-  max_errors = 10L  # Allow up to 10 errors before failing
-)
-
-# Compilation continues despite some failed examples
-compiled <- compile(qa_module, tp, trainset, .llm = llm)
-
-# Check how many errors occurred
-optimization_result(compiled)$budget$total_errors
-```
-
-## Performance Tips
-
-### 1. Start Simple, Then Advance
-
-``` r
-
-# Step 1: Try LabeledFewShot first
-simple <- compile(qa_module, LabeledFewShot(k = 3L), trainset, .llm = llm)
-simple_score <- evaluate(simple, valset, metric_exact_match(), .llm = llm)$mean_score
-
-best_module <- simple
-best_score <- simple_score
-
-# Step 2: If not good enough, try bootstrapping
-if (best_score < 0.8) {
-  bootstrap <- compile(
-    qa_module,
-    BootstrapFewShot(metric = metric_exact_match()), trainset, .llm = llm
-  )
-  bootstrap_score <- evaluate(bootstrap, valset, metric_exact_match(), .llm = llm)$mean_score
-  if (bootstrap_score > best_score) {
-    best_module <- bootstrap
-    best_score <- bootstrap_score
-  }
-}
-
-# Step 3: If still not good enough, try COPRO
-if (best_score < 0.85) {
-  copro <- compile(
-    qa_module,
-    COPRO(metric = metric_exact_match()), trainset, valset = valset, .llm = llm
-  )
-  copro_score <- evaluate(copro, valset, metric_exact_match(), .llm = llm)$mean_score
-  if (copro_score > best_score) {
-    best_module <- copro
-    best_score <- copro_score
-  }
-}
-
-# Use the best performing module
-print(paste("Best score:", best_score))
-```
-
-### 2. Use Parallel Evaluation
-
-``` r
-
-# BootstrapFewShotWithRandomSearch supports parallel evaluation
-tp <- BootstrapFewShotWithRandomSearch(
-  num_candidate_programs = 16L,
-  num_threads = 8L  # Evaluate 8 candidates in parallel
-)
-```
-
-### 3. Cache Embeddings for KNNFewShot
-
-``` r
-
-# Enable embedding caching in KNNFewShot
-tp <- KNNFewShot(
-  k = 3L,
-  vectorizer = ragnar::embed_openai,
-  cache_embeddings = TRUE  # Cache computed embeddings
-)
-
-# Or create a caching vectorizer manually
-cached_embed <- local({
-  cache <- new.env(parent = emptyenv())
-  function(texts) {
-    key <- digest::digest(texts)
-    if (!exists(key, envir = cache)) {
-      cache[[key]] <- ragnar::embed_openai(texts)
+team_feedback <- metric_with_feedback(
+  function(prediction, expected) {
+    if (identical(prediction$team, expected$team)) {
+      list(score = 1, feedback = "Correct team.")
+    } else {
+      list(
+        score = 0,
+        feedback = paste0(
+          "Sent to ", prediction$team, ", but ", expected$team,
+          " handles tickets like this."
+        )
+      )
     }
-    cache[[key]]
-  }
-})
+  },
+  field = "team"
+)
 
-tp <- KNNFewShot(k = 3L, vectorizer = cached_embed)
+evolved <- triage |>
+  compile(
+    GEPA(
+      metric = team_feedback,
+      population_size = 6L,
+      generations = 4L,
+      mutation_rate = 0.5,
+      seed = 42L
+    ),
+    trainset,
+    valset = valset,
+    .llm = llm
+  )
 ```
 
-### 4. Monitor Costs
+In a single-predictor module the instructions are the only part, so
+crossover can only copy a parent’s wording, and new wording comes from
+rewrites alone. That is why this example raises `mutation_rate` from its
+default of 0.1. A named list in `metrics` optimizes several objectives
+at once, and parents then also come from the Pareto front. For
+[`flex()`](https://jameshwade.github.io/dsprrr/reference/flex.md)
+programs, GEPA can rewrite the program’s source itself; see [Flex:
+optimize a whole
+program](https://jameshwade.github.io/dsprrr/articles/flex-optimization.md).
+
+## BetterTogether
+
+`BetterTogether` runs other teleprompters in sequence, each starting
+from the previous result, and returns the stage that scores best on
+`valset`, the uncompiled module included. Name the optimizers and give
+their order as a strategy:
 
 ``` r
 
-# Track costs during optimization
-session_cost()  # Total cost so far
+combined <- triage |>
+  compile(
+    BetterTogether(
+      metric = metric,
+      optimizers = list(
+        demos = BootstrapFewShot(metric = metric, max_labeled_demos = 2L),
+        wording = COPRO(metric = metric, breadth = 4L, depth = 1L)
+      ),
+      default_strategy = "demos -> wording"
+    ),
+    trainset,
+    valset = valset,
+    .llm = llm
+  )
 
-# Costs are tracked in traces and trial logs
-# Use session_cost() for aggregate view
+optimization_result(combined)$extensions$better_together$candidate_programs
 ```
 
-## Summary
+Without a `valset`, it holds out `valset_ratio` (10%) of `trainset`.
+`compile(..., strategy = "wording -> demos")` changes the order for one
+run. Later steps start from a compiled module, so
+[`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md)
+warns that the program is already compiled; here that is expected.
 
-| Optimizer | Optimizes | Data Needs | Compute Cost |
-|----|----|----|----|
-| `LabeledFewShot` | Demos | Low (10+) | Very Low |
-| `BootstrapFewShot` | Demos | Medium (30+) | Low |
-| `BootstrapFewShotWithRandomSearch` | Demos + Config | Medium (50+) | Medium |
-| `KNNFewShot` | Dynamic Demos | Medium (50+) | Low |
-| `COPRO` | Instructions | Medium (30+) | Medium |
-| `MIPROv2` | Instructions + Demos | High (100+) | High |
-| `SIMBA` | Hard Example Demos | Medium (50+) | Medium |
-| `GEPA` | Multi-objective | High (100+) | High |
-| `Omni` | Optimizer composition | High (100+) | High |
-| `AutoResearch` | Agent-owned program search | Medium (30+) | High |
-| `MetaHarness` | Frontier-driven program search | Medium (30+) | High |
-| [`ensemble()`](https://jameshwade.github.io/dsprrr/reference/ensemble_module.md) | Combines modules | N/A | Varies |
+## ReAnchor
 
-## Further Reading
+`ReAnchor` is experimental. It calibrates boolean and enum outputs and
+leaves the prompt alone. It runs the module on `trainset`, then runs it
+again asking for the probability behind each decision, and fits each
+decision’s threshold, cut points or option weights to those recorded
+probabilities without further model calls. A fitted setting is kept only
+if it also wins a held-out check across folds of `trainset`.
 
-**Tutorials:** - [Finding Best
-Configuration](https://jameshwade.github.io/dsprrr/articles/tutorial-optimize-your-module.md)
-— Hands-on grid search - [Taking to
-Production](https://jameshwade.github.io/dsprrr/articles/tutorial-deploy-to-production.md)
-— Deploy optimized modules
+``` r
 
-**How-to Guides:** - [Compile &
-Optimize](https://jameshwade.github.io/dsprrr/articles/compilation-optimization.md)
-— Basic optimization concepts - [Evaluate with
-Vitals](https://jameshwade.github.io/dsprrr/articles/vitals-recipes.md)
-— Integration with vitals package
+calibrated <- triage |>
+  compile(ReAnchor(metric = metric), trainset, valset = valset, .llm = llm)
 
-**Concepts:** - [How Optimization
-Works](https://jameshwade.github.io/dsprrr/articles/concepts-optimization-theory.md)
-— Theory behind teleprompters - [Why Metrics
-Matter](https://jameshwade.github.io/dsprrr/articles/concepts-why-metrics-matter.md)
-— Choosing the right metric
+decision_settings(calibrated)
+```
 
-**Reference:** - [Quick
-Reference](https://jameshwade.github.io/dsprrr/articles/cheatsheet.md) —
-Metrics and teleprompter syntax
+The outputs to calibrate need a description, like `team` above, or a
+setting from
+[`with_decisions()`](https://jameshwade.github.io/dsprrr/reference/with_decisions.md).
+`valset` is scored before and after calibration for the report and never
+used for fitting. `ReAnchor` calibrates a single
+[`module()`](https://jameshwade.github.io/dsprrr/reference/module.md)
+only. [Calibrated
+decisions](https://jameshwade.github.io/dsprrr/articles/calibrated-decisions.md)
+explains decision outputs.
+
+## Omni and the agentic harnesses
+
+Three experimental teleprompters build on the ones above.
+[`Omni()`](https://jameshwade.github.io/dsprrr/reference/Omni.md) runs
+several teleprompters from the same start, compares them on one
+validation set and continues from the winner; see [Compose optimizers
+with
+Omni](https://jameshwade.github.io/dsprrr/articles/omni-meta-optimization.md).
+[`AutoResearch()`](https://jameshwade.github.io/dsprrr/reference/AutoResearch.md)
+and
+[`MetaHarness()`](https://jameshwade.github.io/dsprrr/reference/MetaHarness.md)
+let a model propose program edits in a sandbox while dsprrr scores them;
+see [Agentic optimization
+harnesses](https://jameshwade.github.io/dsprrr/articles/agentic-optimization-harnesses.md).
+
+## Combining compiled modules
+
+To combine several compiled modules at run time, build an ensemble
+module with
+[`ensemble()`](https://jameshwade.github.io/dsprrr/reference/ensemble.md).
+It is a module, not an optimizer, so it needs no training data:
+
+``` r
+
+voted <- ensemble(
+  list(labeled, bootstrapped, rewritten),
+  reduce_fn = reduce_majority(field = "team")
+)
+
+run(voted, ticket = "I was billed after cancelling.", .llm = llm)
+```
+
+[Choose a module
+type](https://jameshwade.github.io/dsprrr/articles/advanced-modules.md)
+covers ensembles and the other reducers.
+
+## Budgets, logs and seeds
+
+`BootstrapFewShot`, `BootstrapFewShotWithRandomSearch`, `COPRO`,
+`MIPROv2`, `SIMBA` and `GEPA` accept `control = optimizer_control(...)`
+in
+[`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md).
+It caps calls, tokens, cost or time. When a cap is reached, the
+optimizer stops and returns the best module found so far, with status
+`"partial"`:
+
+``` r
+
+capped <- triage |>
+  compile(
+    COPRO(metric = metric, breadth = 5L, depth = 3L),
+    trainset,
+    valset = valset,
+    .llm = llm,
+    control = optimizer_control(max_provider_calls = 300L, max_cost = 2)
+  )
+
+optimization_result(capped)$status
+optimization_result(capped)$stop_reason
+```
+
+A cost or token cap also stops the run when usage cannot be measured.
+`BootstrapFewShot` and `MIPROv2` can resume an interrupted run: give
+[`optimizer_control()`](https://jameshwade.github.io/dsprrr/reference/optimizer_control.md)
+a `checkpoint_path`, then compile again with `resume = TRUE` and the
+same module, data, metric and settings.
+`BootstrapFewShotWithRandomSearch`, `COPRO`, `SIMBA` and `GEPA` refuse
+`resume = TRUE`.
+
+The same six teleprompters take `log_dir` and append one record per
+trial to `trials.jsonl` in that directory.
+`load_trial_log(log_dir)$as_tibble()` reads the log back as a tibble.
+When you also pass `control`, set `log_dir` in
+[`optimizer_control()`](https://jameshwade.github.io/dsprrr/reference/optimizer_control.md)
+as well, because a `control` object replaces the teleprompter’s own
+`log_dir` in every optimizer except `BootstrapFewShot`.
+
+`LabeledFewShot`, `BootstrapFewShotWithRandomSearch`, `COPRO`,
+`MIPROv2`, `SIMBA`, `GEPA` and `BetterTogether` take a `seed` for their
+own sampling. `GridSearchTeleprompter` uses R’s global generator, and
+`BootstrapFewShot` tries rows in order. No seed makes the model’s
+answers repeatable.

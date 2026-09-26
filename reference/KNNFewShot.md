@@ -1,11 +1,11 @@
-# KNNFewShot Teleprompter
+# KNN few-shot: choose demonstrations by similarity at run time
 
-A teleprompter that uses k-nearest neighbor retrieval to dynamically
-select demonstrations at runtime based on similarity to the input query.
-Unlike
-[LabeledFewShot](https://jameshwade.github.io/dsprrr/reference/LabeledFewShot.md)
-which selects static demos at compile time, KNNFewShot selects different
-demos for each query based on embedding similarity.
+`KNNFewShot()` gives every input its own demonstrations: the `k`
+training rows whose embeddings are most similar to it. Compiling embeds
+the training set once, with no model calls; each run then embeds the
+input and picks its nearest rows.
+[`LabeledFewShot()`](https://jameshwade.github.io/dsprrr/reference/LabeledFewShot.md),
+by contrast, attaches one fixed set.
 
 ## Usage
 
@@ -26,101 +26,121 @@ KNNFewShot(
 
 - metric:
 
-  Optional metric stored with the teleprompter. KNNFewShot selects
-  demonstrations by embedding similarity rather than candidate
-  evaluation.
+  Optional. It is not used for scoring, but when it has a `field`, that
+  column supplies the demonstrations' outputs.
 
-- metric_threshold:
+- metric_threshold, max_errors:
 
-  Minimum score required to be considered successful. If NULL, uses the
-  metric's default threshold.
-
-- max_errors:
-
-  Maximum number of errors allowed during optimization. Default is 5.
+  Accepted for consistency with the other optimizers (see
+  [`Teleprompter()`](https://jameshwade.github.io/dsprrr/reference/Teleprompter.md));
+  `KNNFewShot()` does not use them.
 
 - k:
 
-  Number of nearest neighbors to use as demonstrations. Default is 3.
+  Integer number of neighbors used as demonstrations (default `3L`).
 
 - vectorizer:
 
-  A function that takes a character vector and returns a numeric matrix
-  of embeddings (one row per input). Required.
+  Required. A function that takes a character vector and returns a
+  numeric matrix of embeddings, one row per string.
 
 - input_text:
 
-  A function that converts a training example (data frame row) to a
-  character string for embedding. Default concatenates all input
-  columns.
+  Optional function that turns a one-row data frame of inputs into the
+  text to embed. The default pastes the signature's input columns
+  together, separated by spaces.
 
 - cache_embeddings:
 
-  Whether to cache embeddings for the training set. Default is TRUE.
+  Currently has no effect: the training set is always embedded once, at
+  compile time.
 
 - merge_demos:
 
-  If TRUE, merge KNN-selected demos with any existing demos on the
-  module. Default is FALSE (replace).
+  If `TRUE`, keep the module's existing demonstrations and add the
+  selected ones after them. If `FALSE` (the default), the selected rows
+  replace them.
 
 ## Value
 
-A `KNNFewShot` teleprompter object.
+A `KNNFewShot` object to pass to
+[`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md).
 
 ## Details
 
-KNNFewShot works by:
+`vectorizer` turns a character vector into a numeric matrix with one row
+per string. For real embeddings, wrap a provider, for example
+`function(x) ragnar::embed_openai(x, model = "text-embedding-3-small")`.
+Similarity is cosine similarity.
 
-1.  Pre-computing embeddings for all training examples at compile time
+[`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md)
+returns a wrapper module. Each run records the chosen rows and their
+similarity scores in `compiled$state$demo_selections`. Demonstration
+outputs come from the metric's `field` when there is one, and otherwise
+from an automatically detected label column, as in
+[`LabeledFewShot()`](https://jameshwade.github.io/dsprrr/reference/LabeledFewShot.md).
 
-2.  At runtime, embedding each input query
+## See also
 
-3.  Finding the k most similar training examples using cosine similarity
-
-4.  Using those examples as demonstrations for the current query
-
-This approach is particularly effective when:
-
-- The training set is large and diverse
-
-- Different types of queries benefit from different demonstrations
-
-- Semantic similarity is a good proxy for task relevance
-
-## Vectorizer Function
-
-The `vectorizer` parameter should be a function that takes a character
-vector and returns a numeric matrix where each row is an embedding.
-Common options:
-
-- `ragnar::embed_openai()` for OpenAI embeddings
-
-- Custom embedding functions using other providers
-
-For testing, you can provide a deterministic vectorizer that returns
-consistent embeddings for the same inputs.
+Other teleprompters:
+[`AutoResearch()`](https://jameshwade.github.io/dsprrr/reference/AutoResearch.md),
+[`BetterTogether()`](https://jameshwade.github.io/dsprrr/reference/BetterTogether.md),
+[`BootstrapFewShot()`](https://jameshwade.github.io/dsprrr/reference/BootstrapFewShot.md),
+[`BootstrapFewShotWithRandomSearch()`](https://jameshwade.github.io/dsprrr/reference/BootstrapFewShotWithRandomSearch.md),
+[`COPRO()`](https://jameshwade.github.io/dsprrr/reference/COPRO.md),
+[`GEPA()`](https://jameshwade.github.io/dsprrr/reference/GEPA.md),
+[`GridSearchTeleprompter()`](https://jameshwade.github.io/dsprrr/reference/GridSearchTeleprompter.md),
+[`LabeledFewShot()`](https://jameshwade.github.io/dsprrr/reference/LabeledFewShot.md),
+[`MIPROv2()`](https://jameshwade.github.io/dsprrr/reference/MIPROv2.md),
+[`MetaHarness()`](https://jameshwade.github.io/dsprrr/reference/MetaHarness.md),
+[`Omni()`](https://jameshwade.github.io/dsprrr/reference/Omni.md),
+[`ReAnchor()`](https://jameshwade.github.io/dsprrr/reference/ReAnchor.md),
+[`SIMBA()`](https://jameshwade.github.io/dsprrr/reference/SIMBA.md),
+[`Teleprompter()`](https://jameshwade.github.io/dsprrr/reference/Teleprompter.md),
+[`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md)
 
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-# Create a simple vectorizer (in practice, use ragnar::embed_openai or similar)
-simple_vectorizer <- function(texts) {
-  # Return random embeddings for demonstration
-  matrix(runif(length(texts) * 10), nrow = length(texts))
+# A toy vectorizer that counts letters. Use real embeddings in practice.
+letter_counts <- function(texts) {
+  t(vapply(
+    tolower(texts),
+    function(x) tabulate(utf8ToInt(x) - 96L, nbins = 26L),
+    integer(26)
+  ))
 }
 
-# Create the teleprompter
-tp <- KNNFewShot(
-  k = 3L,
-  vectorizer = simple_vectorizer,
-  input_text = function(example) example$question
+tp <- KNNFewShot(k = 2L, vectorizer = letter_counts)
+tp
+#> <dsprrr::KNNFewShot>
+#>  @ metric          : NULL
+#>  @ metric_threshold: NULL
+#>  @ max_errors      : int 5
+#>  @ k               : int 2
+#>  @ vectorizer      : function (texts)  
+#>  @ input_text      : NULL
+#>  @ cache_embeddings: logi TRUE
+#>  @ merge_demos     : logi FALSE
+
+qa <- module(signature("question -> answer"))
+trainset <- data.frame(
+  question = c(
+    "What is 2 + 2?", "Capital of France?",
+    "What is 10 / 5?", "Capital of Peru?"
+  ),
+  answer = c("4", "Paris", "2", "Lima")
 )
+# Compiling embeds the training rows; no model is called
+compiled <- compile(qa, tp, trainset)
+#> Computing embeddings for 4 training examples...
 
-# Compile a module
-compiled <- compile(my_module, tp, trainset, .llm = llm)
-
-# Now queries will get dynamically selected demos
-run(compiled, question = "What is 2+2?", .llm = llm)
+if (FALSE) { # \dontrun{
+run(
+  compiled,
+  question = "Capital of Chile?",
+  .llm = ellmer::chat_openai(model = "gpt-6-luna")
+)
+compiled$state$demo_selections
 } # }
 ```

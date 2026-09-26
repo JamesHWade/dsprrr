@@ -1,7 +1,10 @@
-# Pin Module Traces
+# Pin a module's traces to a pins board
 
-Save module execution traces to a pins board. Traces include timing,
-token usage, and optionally the full prompts and outputs.
+`pin_trace()` saves a module's execution traces (timing, token use, cost
+and, optionally, prompts and outputs) to a pins board, together with a
+summary from
+[`summarize_traces()`](https://jameshwade.github.io/dsprrr/reference/summarize_traces.md).
+Use it to keep a record of a run for later analysis.
 
 ## Usage
 
@@ -21,59 +24,73 @@ pin_trace(
 
 - board:
 
-  A pins board object
+  A pins board.
 
 - name:
 
-  Character name for the pin
+  Name of the pin.
 
 - module:
 
-  A DSPrrr module with recorded traces
+  A module that has been run.
 
 - include_prompts:
 
-  Logical; include full prompts (default FALSE)
+  Whether to include the full prompts (default `FALSE`).
 
 - include_outputs:
 
-  Logical; include full outputs (default FALSE)
+  Whether to include the full outputs (default `FALSE`).
 
 - description:
 
-  Optional description for the pin
+  Optional pin description.
 
 - ...:
 
-  Additional arguments passed to
-  [`pins::pin_write()`](https://pins.rstudio.com/reference/pin_read.html)
+  Further arguments passed to
+  [`pins::pin_write()`](https://pins.rstudio.com/reference/pin_read.html).
 
 ## Value
 
-The pin name (invisibly)
+`name`, invisibly.
+
+## Details
+
+The pin is a list with `traces` (from
+[`export_traces()`](https://jameshwade.github.io/dsprrr/reference/export_traces.md)),
+`summary` and `metadata` (module class, number of traces, creation time
+and the include flags). A module without traces is not pinned; a warning
+is raised instead.
 
 ## See also
 
-Other orchestration:
-[`orchestration`](https://jameshwade.github.io/dsprrr/reference/orchestration.md),
+Other persistence:
+[`export_module_code()`](https://jameshwade.github.io/dsprrr/reference/export_module_code.md),
 [`pin_module_config()`](https://jameshwade.github.io/dsprrr/reference/pin_module_config.md),
 [`pin_vitals_log()`](https://jameshwade.github.io/dsprrr/reference/pin_vitals_log.md),
-[`restore_module_config()`](https://jameshwade.github.io/dsprrr/reference/restore_module_config.md),
-[`use_dsprrr_template()`](https://jameshwade.github.io/dsprrr/reference/use_dsprrr_template.md),
-[`validate_workflow()`](https://jameshwade.github.io/dsprrr/reference/validate_workflow.md)
+[`program-artifact`](https://jameshwade.github.io/dsprrr/reference/program-artifact.md),
+[`restore_module_config()`](https://jameshwade.github.io/dsprrr/reference/restore_module_config.md)
 
 ## Examples
 
 ``` r
 if (FALSE) { # \dontrun{
 board <- pins::board_folder("pins")
+classifier <- module(signature("text -> sentiment"))
+run(
+  classifier,
+  text = c("Great!", "Terrible."),
+  .llm = ellmer::chat_openai(model = "gpt-6-luna")
+)
 
-# Run some predictions to generate traces
-results <- run(mod, text = test_texts, .llm = llm)
-
-# Save traces for later analysis
-pin_trace(board, "experiment-2024-01-traces", mod,
-          include_prompts = TRUE,
-          description = "Production run traces")
+pin_trace(
+  board,
+  "sentiment-traces",
+  classifier,
+  include_prompts = TRUE,
+  description = "Production run traces"
+)
+pins::pin_read(board, "sentiment-traces")$summary
 } # }
 ```

@@ -1,14 +1,20 @@
-# Flex: Optimize the Whole Program
+# Flex: optimize a whole program
+
+[`flex()`](https://jameshwade.github.io/dsprrr/reference/flex.md) is
+experimental: its source format and behavior may change.
 
 Most dsprrr optimizers improve the instructions or examples inside a
 program whose shape you chose.
 [`flex()`](https://jameshwade.github.io/dsprrr/reference/flex.md) makes
-the implementation itself optimizable. GEPA can change how many
+the implementation itself optimizable: GEPA can change how many
 predictors run, add a deterministic branch, or call a tool you supplied.
+This page builds a support-ticket router, sets up a search that rewards
+skipping the model when a lookup table already knows the answer, and
+shows how to judge and keep the result.
 
-That extra freedom is useful when you can score the outcome but do not
-yet know the best decomposition. It is unnecessary when the workflow is
-already clear.
+That freedom helps when you can score the outcome but do not yet know
+the best decomposition. It is unnecessary when the workflow is already
+clear.
 
 | What should change? | Use |
 |----|----|
@@ -26,6 +32,15 @@ judgment.
 A conventional predictor sends every ticket to the model. The Flex
 objective is more specific: keep routing accuracy, but avoid a predictor
 call when the incident catalog already contains the answer.
+
+The example runs optimizer-written R code inside Posit’s
+[mcp-repl](https://github.com/posit-dev/mcp-repl) operating-system
+sandbox. Install the R client and the executable first:
+
+``` sh
+Rscript -e 'install.packages("mcptools")'
+uv tool install posit-mcp-repl   # or: pipx install posit-mcp-repl
+```
 
 ### Define the task and its evidence
 
@@ -119,6 +134,16 @@ lookup_incident <- ellmer::tool(
     )
   )
 )
+
+lookup_incident_fn("[INC-DB-17] replicas unavailable")
+#> $found
+#> [1] TRUE
+#> 
+#> $queue
+#> [1] "database"
+lookup_incident_fn("Reset email arrives after its token expires")
+#> $found
+#> [1] FALSE
 ```
 
 ### Start with one predictor
@@ -148,19 +173,9 @@ baseline <- flex(
 )
 ```
 
-Install `mcptools` and [Posit
-mcp-repl](https://github.com/posit-dev/mcp-repl) before running this
-example:
-
-``` r
-
-install.packages("mcptools")
-# In a shell:
-# uv tool install posit-mcp-repl
-```
-
-mcp-repl’s OS sandbox is the execution boundary for optimizer-authored R
-source.
+`sandbox_factory` gives every call a fresh sandboxed R session;
+mcp-repl’s sandbox is what stands between optimizer-written source and
+your machine.
 
 ### Score the answer and the work
 
@@ -199,17 +214,15 @@ route_metric <- metric_with_trace(
 )
 ```
 
-### Optional: run a live search
+### Run the search
 
-The deterministic package test below is the reproducible proof. A live
-search also lets GEPA propose complete `module_src` candidates, but
-remote model output and runtime vary. Training rows generate feedback;
-validation rows decide which candidate survives. Keep the first run
-deliberately small and bounded:
+GEPA proposes complete `module_src` candidates. Training rows generate
+feedback; validation rows decide which candidate survives. Keep the
+first run small and bounded:
 
 ``` r
 
-llm <- ellmer::chat_openai(model = "gpt-5-mini")
+llm <- ellmer::chat_openai(model = "gpt-6-luna")
 
 optimized <- compile(
   baseline,
@@ -236,11 +249,15 @@ optimized <- compile(
 )
 ```
 
-Remote model output is stochastic, so a seed does not guarantee
-identical source. Judge the result on held-out behavior, not whether it
-reproduces one particular program string. The limits stop the search and
-return its best partial result after 30 metric calls, 30 provider calls,
-or five active minutes.
+`metric_threshold = 0.95` decides which training rows GEPA shows its
+proposer as failures: every row scoring below 0.95. With this metric
+that includes correct routes that needed a predictor (0.9), so their
+feedback (“Prefer the incident catalog…”) reaches the proposer.
+
+Model output varies, so a seed does not guarantee identical source.
+Judge the result on held-out behavior, not on whether it reproduces one
+program string. The limits stop the search and return its best partial
+result after 30 metric calls, 30 provider calls, or five minutes.
 
 ### Compare quality and calls
 
@@ -287,20 +304,21 @@ comparison <- data.frame(
 comparison
 ```
 
-The package’s deterministic regressions fix the GEPA proposal and model
-responses. One compiles the baseline and selects the hybrid on disjoint
-training and validation rows; the other runs both reviewed programs on
-six held-out tickets:
+This page shows no live results. dsprrr’s own tests run this workflow
+with a mock model that routes every ticket correctly and, when GEPA asks
+for a new program, returns a hybrid written by hand (shown in the next
+section). They check that GEPA selects that program on the validation
+rows and that Flex runs and counts it correctly; they say nothing about
+whether GEPA would write the hybrid itself. On the six holdout tickets
+the tests record:
 
-| Reviewed program | Holdout accuracy | Predictor calls | Tool calls |
-|------------------|-----------------:|----------------:|-----------:|
-| Baseline         |             1.00 |               6 |          0 |
-| Hybrid           |             1.00 |               3 |          3 |
+| Program in the test | Holdout accuracy | Predictor calls | Tool calls |
+|---------------------|-----------------:|----------------:|-----------:|
+| Baseline            |             1.00 |               6 |          0 |
+| Hand-written hybrid |             1.00 |               3 |          3 |
 
-That replay verifies proposal, selection, runtime, and call accounting;
-it is not a promise that every stochastic GEPA run will discover the
-same source. For a live run, accept the candidate only when held-out
-quality is at least as good and predictor calls fall:
+For a live run, accept the candidate only when held-out quality is at
+least as good and predictor calls fall:
 
 ``` r
 
@@ -311,20 +329,18 @@ stopifnot(
 )
 ```
 
-The reveal is simple: **Flex did not find a better prompt. It found that
-half the tickets did not need one.**
-
 ## Read the program GEPA selected
 
-Always inspect executable source before promoting it. A useful candidate
-for this task has a deterministic catalog path and a predictor fallback:
+Always read executable source before you use it:
 
 ``` r
 
 optimized$module_src
 ```
 
-The deterministic replay selects this shape:
+A useful candidate for this task has a deterministic catalog path and a
+predictor fallback, like the hand-written hybrid that the package tests
+feed to GEPA:
 
 ``` r
 
@@ -343,10 +359,10 @@ forward <- function(ticket) {
 }
 ```
 
-`module_src` is the program Flex optimized—not an explanation of what
-happened. The runtime trace supplies the evidence: predictor calls, tool
-calls, tokens, and the exact source used for each row. GEPA also records
-the winning candidate ID and validation score:
+`module_src` is the program itself, not an explanation of what happened.
+The evidence is in each row’s run metadata, which records the
+`module_src` it ran along with predictor calls, tool calls and tokens.
+GEPA also records the winning candidate ID and validation score:
 
 ``` r
 
@@ -355,37 +371,34 @@ optimization_result(optimized)$extensions$gepa$best_scores
 optimization_result(optimized)$extensions$gepa$per_val_instance_best_candidates
 ```
 
-Persist callable tools and factories by registry name rather than
-embedding them in the artifact:
+## Keep the selected program
+
+Save the selected source with your code, and rebuild the module from it
+where you deploy. The tool and the sandbox factory stay in your code,
+where you can review and version them:
 
 ``` r
 
-board <- pins::board_folder("pins")
-router_registry <- list(
-  lookup_incident = lookup_incident,
-  sandbox_factory = sandbox_factory
-)
+writeLines(optimized$module_src, "ticket-router.R")
 
-pin_module_config(
-  board,
-  "issue-router-flex",
-  optimized,
-  registry = router_registry
+router <- flex(
+  route_signature,
+  module_src = paste(readLines("ticket-router.R"), collapse = "\n"),
+  tools = list(lookup_incident = lookup_incident),
+  interpreter_factory = sandbox_factory,
+  source_format = "r",
+  max_predictor_calls = 1L,
+  max_tool_calls = 1L
 )
-
-restored <- pins::pin_read(board, "issue-router-flex") |>
-  restore_module_config(registry = router_registry)
 ```
 
-Use the same registry names when restoring. Saving and restoring the
-artifact does not invoke the factory. The registry supplies executable
-authority, so version and review its definitions as code. Record the
-model, package versions, data split, metric, and seed beside the pin;
-pass the model again when running the restored fallback path.
+The saved file is Flex source for the sandbox, not a script to
+[`source()`](https://rdrr.io/r/base/source.html). Record the model,
+package versions, data split, metric and seed next to it.
 
-## Choose the smaller source language that fits
+## Choose a source format
 
-Flex has two source modes because not every structural question needs
+Flex has two source formats because not every structural question needs
 code.
 
 | Mode | Use it when | Execution boundary |
@@ -394,10 +407,10 @@ code.
 | R (opt-in) | Candidates need branches, deterministic computation, dynamic predictors, or named tools | Fresh runner from `interpreter_factory`; enforced sandbox required by default |
 
 JSON sources use backward references between ordered steps and map their
-final values to the outer signature. See
-[`flex()`](https://jameshwade.github.io/dsprrr/reference/flex.md) for
-the schema and limits. Start there unless the optimization question
-truly needs R control flow or tools.
+final values to the outer signature;
+[`flex()`](https://jameshwade.github.io/dsprrr/reference/flex.md)
+documents the schema. Start with JSON unless the optimization question
+needs R control flow or tools.
 
 Executable Flex exposes a small set of predictor constructors plus the
 named tools you supply. Those tools execute on the host and keep their
@@ -416,9 +429,10 @@ explicitly.
 Generated R must run in an enforced sandbox.
 [`r_code_runner()`](https://jameshwade.github.io/dsprrr/reference/r_code_runner.md)
 isolates a subprocess but is for source you already trust; do not
-disable `require_sandbox` for optimizer-authored code. Executable Flex
-is synchronous, so use the default sequential execution; specialized
-token streaming is not available.
+disable `require_sandbox` for optimizer-authored code. Each sandboxed
+call has size limits, listed in [How RLM
+works](https://jameshwade.github.io/dsprrr/articles/how-rlm-works.html#limits).
+Executable Flex runs rows one at a time and does not stream tokens.
 
 ## When Flex is the wrong tool
 
@@ -432,7 +446,5 @@ Use Flex for the unresolved middle: the outcome is measurable, several
 implementation strategies are plausible, and the choice of model calls,
 code, or tools is itself what you want to optimize.
 
-For algorithm details, see [Advanced
-Optimization](https://jameshwade.github.io/dsprrr/articles/advanced-optimization.md).
-For intentional API differences and remaining gaps, see [dsprrr vs.
-DSPy](https://jameshwade.github.io/dsprrr/articles/dspy-comparison.md).
+To compare Flex with the other optimizers, see [Choose an
+optimizer](https://jameshwade.github.io/dsprrr/articles/advanced-optimization.md).

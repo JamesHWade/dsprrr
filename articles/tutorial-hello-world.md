@@ -1,30 +1,23 @@
-# Tutorial 1: Your First LLM Call
+# Tutorial 1: Your first LLM call
 
-In this tutorial, you’ll make your first structured LLM call with
-dsprrr. By the end, you’ll be able to ask questions, get typed
-responses, and understand why signatures are powerful.
+By the end of this tutorial you can describe a task as a signature, run
+it against a language model, and get the answer back as an R value of
+the type you asked for: a string, a number, a label or `TRUE`/`FALSE`.
 
-**Time**: 10-15 minutes
+## Set up
 
-## What You’ll Build
-
-A working question-answering system that returns structured data—not
-just raw text.
-
-## Prerequisites
-
-- R installed
-- An OpenAI API key (set as `OPENAI_API_KEY` environment variable)
-- Install the packages:
+Install dsprrr from GitHub. pak installs ellmer from CRAN along with it.
 
 ``` r
 
-install.packages("pak")
+# install.packages("pak")
 pak::pak("JamesHWade/dsprrr")
-pak::pak("tidyverse/ellmer")
 ```
 
-## Step 1: Load the Packages
+The tutorials use OpenAI. Add `OPENAI_API_KEY=<your key>` to your
+`.Renviron` file and restart R;
+[`dsprrr_sitrep()`](https://jameshwade.github.io/dsprrr/reference/dsprrr_sitrep.md)
+then reports which API keys it can see.
 
 ``` r
 
@@ -32,67 +25,87 @@ library(dsprrr)
 library(ellmer)
 ```
 
-You should see no errors. If you do, check that your API key is set
-correctly.
-
-## Step 2: Create a Chat Connection
-
-Connect to OpenAI:
+dsprrr sends requests through an ellmer chat object. The tutorials use
+OpenAI’s `gpt-6-luna`:
 
 ``` r
 
-chat <- chat_openai()
+chat <- chat_openai(model = "gpt-6-luna")
 ```
 
-This creates a chat object you’ll use for all your LLM calls.
+The answers on this page were recorded with `gpt-4.1` and are replayed
+when the site is built, so `gpt-6-luna` may word them differently.
 
-## Step 3: Your First Structured Call
+Any other ellmer chat, such as
+[`chat_anthropic()`](https://ellmer.tidyverse.org/reference/chat_anthropic.html),
+works the same way.
 
-Define a typed module and run it:
+## Ask a question
+
+A signature lists a task’s inputs and outputs: `"question -> answer"`
+has one input, `question`, and one output, `answer`.
+[`module()`](https://jameshwade.github.io/dsprrr/reference/module.md)
+turns the signature into something you can run:
 
 ``` r
 
 qa <- module(signature("question -> answer"))
 run(qa, question = "What is the capital of France?", .llm = chat)
+#> $answer
+#> [1] "The capital of France is Paris."
 ```
 
-You should see `"Paris"` returned. Let’s break down what happened:
+[`run()`](https://jameshwade.github.io/dsprrr/reference/run.md) returns
+a named list with one element per output, so the reply is in `$answer`.
+This is the prompt dsprrr wrote from the signature:
 
-- `"question -> answer"` is a **signature**—it declares one input
-  (`question`) and one output (`answer`)
-- dsprrr handled all the prompt engineering for you
-- The result came back as structured data, not raw text
+``` r
 
-## Step 4: Try Different Questions
+cat(get_last_prompt()$prompt)
+#> Given the fields `question`, produce the fields `answer`.
+#> 
+#> # Input: question
+#> question: What is the capital of France?
+```
 
-The same signature works for any question:
+Along with the prompt, dsprrr sends a schema asking for an object with
+one string field, `answer`, and ellmer parses the reply into R. With
+ellmer alone you would write the prompt and the schema yourself. Because
+dsprrr builds both from the signature, it can also change the prompt for
+you, which is how later tutorials improve a module.
+
+The same module answers any question:
 
 ``` r
 
 run(qa, question = "What is 7 * 8?", .llm = chat)
+#> $answer
+#> [1] "7 multiplied by 8 is 56."
 
 run(qa, question = "Who wrote Romeo and Juliet?", .llm = chat)
+#> $answer
+#> [1] "Romeo and Juliet was written by William Shakespeare."
 ```
 
-Notice how you get clean, direct answers—no extra prose.
+The signature fixes the shape of the result, a string named `answer`,
+but not its wording: the model chose to reply in full sentences. Output
+types and instructions give you more say over the value.
 
-## Step 5: Add Output Types
+## Choose an output type
 
-So far, answers have been strings. But what if you want a number or a
-specific choice?
-
-### Getting a Number
+Add a type after an output’s name. With `number` you get a number you
+can compute with:
 
 ``` r
 
 math <- module(signature("math_problem -> result: number"))
 run(math, math_problem = "What is 15% of 200?", .llm = chat)
+#> $result
+#> [1] 30
 ```
 
-The `: number` after `result` tells dsprrr you want a numeric value, not
-a string.
-
-### Getting a Choice (Enum)
+`enum()` lists the allowed labels, and the schema sent to the model
+permits only those values:
 
 ``` r
 
@@ -100,31 +113,43 @@ sentiment <- module(
   signature("text -> sentiment: enum('positive', 'negative', 'neutral')")
 )
 run(sentiment, text = "I absolutely loved this movie!", .llm = chat)
+#> $sentiment
+#> [1] "positive"
 ```
-
-The LLM must pick from exactly those three options. Try changing the
-text to see different results:
 
 ``` r
 
 run(sentiment, text = "This was a complete waste of time.", .llm = chat)
+#> $sentiment
+#> [1] "negative"
 
 run(sentiment, text = "It was okay, I guess.", .llm = chat)
+#> $sentiment
+#> [1] "neutral"
 ```
 
-### Getting True/False
+`bool` returns `TRUE` or `FALSE`:
 
 ``` r
 
 truth <- module(signature("statement -> is_true: bool"))
 run(truth, statement = "The Earth orbits the Sun.", .llm = chat)
+#> $is_true
+#> [1] TRUE
 
 run(truth, statement = "Cats are larger than elephants.", .llm = chat)
+#> $is_true
+#> [1] FALSE
 ```
 
-## Step 6: Multiple Inputs
+An output without a type is a string. The [quick
+reference](https://jameshwade.github.io/dsprrr/articles/cheatsheet.md)
+lists the other types, such as `int` and lists.
 
-Signatures can have multiple inputs. Separate them with commas:
+## Pass several inputs
+
+Separate inputs with commas. A common pattern is to pass in text for the
+model to answer from:
 
 ``` r
 
@@ -135,9 +160,9 @@ run(
   question = "When was R created?",
   .llm = chat
 )
+#> $answer
+#> [1] "R was created in 1993."
 ```
-
-Now the LLM uses your context to answer the question:
 
 ``` r
 
@@ -147,11 +172,14 @@ run(
   question = "How much do croissants cost?",
   .llm = chat
 )
+#> $answer
+#> [1] "Croissants cost $3 each."
 ```
 
-## Step 7: Adding Instructions
+## Add instructions
 
-You can guide the LLM’s behavior with instructions:
+`instructions` replaces the default first line of the prompt (“Given the
+fields …”) with your own description of the task:
 
 ``` r
 
@@ -159,48 +187,22 @@ one_word <- module(
   signature("question -> answer", instructions = "Answer in exactly one word.")
 )
 run(one_word, question = "What color is the sky on a clear day?", .llm = chat)
+#> $answer
+#> [1] "Blue"
 
 pirate <- module(
   signature("question -> answer", instructions = "Answer like a pirate.")
 )
 run(pirate, question = "What is the capital of France?", .llm = chat)
+#> $answer
+#> [1] "Arrr, matey! The capital of France be Paris!"
 ```
 
-## What You Learned
+Passing `.llm` on every call keeps these examples explicit.
+`set_default_chat(chat)` makes a chat the default, so you can leave
+`.llm` out.
 
-In this tutorial, you:
-
-1.  Built and ran your first typed module
-2.  Used signatures to declare inputs and outputs
-3.  Added output types: `string`, `number`, `bool`, `enum()`
-4.  Combined multiple inputs
-5.  Added instructions to guide behavior
-
-## What’s Different from Raw LLM Calls?
-
-Without dsprrr, you’d write prompts like:
-
-    You are a helpful assistant. The user will ask a question.
-    Respond with just the answer, nothing else.
-    User: What is the capital of France?
-
-With dsprrr, you just declare `"question -> answer"` and the framework
-handles the rest. This becomes powerful when you need to:
-
-- Optimize prompts automatically
-- Chain multiple LLM calls together
-- Get consistent, typed outputs
-
-## Next Steps
-
-Ready to build something reusable? Continue to:
-
-- **[Tutorial 2: Building a
-  Classifier](https://jameshwade.github.io/dsprrr/articles/tutorial-build-classifier.md)**
-  — Create a module you can use repeatedly
-- **[Quick
-  Reference](https://jameshwade.github.io/dsprrr/articles/cheatsheet.md)**
-  — Look up signature syntax
-- **[The DSPy
-  Philosophy](https://jameshwade.github.io/dsprrr/articles/concepts-dspy-philosophy.md)**
-  — Understand *why* signatures work this way
+Next, [Tutorial
+2](https://jameshwade.github.io/dsprrr/articles/tutorial-build-classifier.md)
+builds a sentiment classifier and runs it on one text, a vector of texts
+and a data frame.

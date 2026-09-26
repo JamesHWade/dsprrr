@@ -1,38 +1,27 @@
-# Tutorial 6: Taking to Production
+# Tutorial 6: Save and reuse a module
 
-You’ve built and optimized a module through Tutorials 1-5. Now what? You
-need to: - Save the optimized configuration - Load it in production -
-Track what happens in deployment - Monitor for issues
-
-This tutorial shows you how.
-
-**Time**: 30-35 minutes
-
-## What You’ll Build
-
-A production-ready module with: - Persistent configuration (survives R
-restarts) - Execution traces for debugging - Validation before
-deployment
-
-## Prerequisites
-
-- Completed [Tutorial
-  5](https://jameshwade.github.io/dsprrr/articles/tutorial-optimize-your-module.md)
-- `OPENAI_API_KEY` set in your environment
+Compiling a module, as in Tutorials 4 and 5, produces demos and
+instructions that you do not want to recompute in every R session. By
+the end of this tutorial you can save a compiled module’s configuration
+to a [pins](https://pins.rstudio.com) board, restore it as a working
+module, and export the traces the module records as it runs.
 
 ``` r
 
 library(dsprrr)
 library(ellmer)
 library(pins)
-library(tibble)
 
-chat <- chat_openai()
+chat <- chat_openai(model = "gpt-6-luna")
 ```
 
-## Step 1: Create an Optimized Module
+The answers on this page were recorded with `gpt-4.1` and are replayed
+when the site is built, so `gpt-6-luna` may word them differently.
 
-Let’s start with a trained classifier:
+## Compile a module
+
+This is the sentiment classifier from Tutorial 5, compiled with
+`LabeledFewShot` on nine short reviews:
 
 ``` r
 
@@ -41,322 +30,153 @@ sig <- signature(
   instructions = "Classify the sentiment of this product review."
 )
 
-trainset <- tibble::tibble(
-  review = c(
-    "Love it!", "Hate it!", "It's okay.",
-    "Amazing!", "Terrible!", "Meh.",
-    "Best ever!", "Worst purchase!", "Fine I guess."
-  ),
-  sentiment = c(
-    "positive", "negative", "neutral",
-    "positive", "negative", "neutral",
-    "positive", "negative", "neutral"
-  )
+trainset <- tibble::tribble(
+  ~review,            ~sentiment,
+  "Love it!",         "positive",
+  "Hate it!",         "negative",
+  "It's okay.",       "neutral",
+  "Amazing!",         "positive",
+  "Terrible!",        "negative",
+  "Meh.",             "neutral",
+  "Best ever!",       "positive",
+  "Worst purchase!",  "negative",
+  "Fine I guess.",    "neutral"
 )
 
-# Optimize
-classifier <- compile(
-  program = module(sig),
-  teleprompter = LabeledFewShot(k = 3L),
-  trainset = trainset
-)
+classifier <- module(sig) |> compile(LabeledFewShot(k = 3L), trainset)
 
-# Verify it works
 run(classifier, review = "This product is fantastic!", .llm = chat)
+#> $sentiment
+#> [1] "positive"
 ```
 
-## Step 2: Save Configuration with Pins
+## Save the configuration
 
-The `pins` package provides persistent storage. Save your module
-configuration:
+[`pin_module_config()`](https://jameshwade.github.io/dsprrr/reference/pin_module_config.md)
+writes the module’s signature, demos, settings and optimization results
+to a pins board. The board here is a temporary folder, which R deletes
+when the session ends:
 
 ``` r
 
-# Create a local board (folder on disk)
-board <- board_folder(tempdir())
+board <- board_temp()
 
-# Save the module configuration
 pin_module_config(board, "sentiment-classifier", classifier)
+#> Creating new version '20260926T220302Z-59990'
+#> Writing to pin 'sentiment-classifier'
+#> ✔ Pinned program artifact: "sentiment-classifier"
+#> ℹ Root module: <PredictModule>
+#> ℹ Graph nodes: 1
+#> ℹ Compiled: TRUE
 ```
 
-Your optimized configuration—including demos, parameters, and
-instructions—is now saved.
-
-## Step 3: List Saved Modules
-
-See what’s stored:
+For real use, pick a board that outlives the session:
 
 ``` r
 
-board |> pin_list()
-
-# Get metadata
-board |> pin_meta("sentiment-classifier")
+board <- board_local() # a folder in your user data directory
+board <- board_folder("pins") # or a folder in your project
 ```
 
-## Step 4: Restore in a New Session
+Shared boards such as
+[`board_connect()`](https://pins.rstudio.com/reference/board_connect.html),
+[`board_s3()`](https://pins.rstudio.com/reference/board_s3.html) and
+[`board_gcs()`](https://pins.rstudio.com/reference/board_gcs.html) work
+the same way and let other people load your module. Each call to
+[`pin_module_config()`](https://jameshwade.github.io/dsprrr/reference/pin_module_config.md)
+with the same name saves a new version:
+`pin_versions(board, "sentiment-classifier")` lists them, and
+`pin_read(board, "sentiment-classifier", version = )` reads an older
+one.
 
-Imagine you restart R or deploy to a different machine:
+## Restore it
+
+In a new session, connect to the same board, read the pin and rebuild
+the module:
 
 ``` r
 
-# Later, in a new session...
-config <- pins::pin_read(board, "sentiment-classifier")
+config <- pin_read(board, "sentiment-classifier")
 restored <- restore_module_config(config)
+#> ✔ Restored program artifact
+#> ℹ Root module: <PredictModule>
+#> ℹ Artifact version: 6
 
-# It works immediately
+identical(restored$demos, classifier$demos)
+#> [1] TRUE
+```
+
+The chat is not part of the saved configuration, so pass `.llm` when you
+run the restored module:
+
+``` r
+
 run(restored, review = "Worst product ever!", .llm = chat)
 ```
 
-The restored module has all the optimization work preserved.
+[`restore_module_config()`](https://jameshwade.github.io/dsprrr/reference/restore_module_config.md)
+reads only the artifact format of the installed dsprrr (version 6 in the
+message above), so keep the code that compiled the module: if a dsprrr
+upgrade changes the format, compile and pin again. A module that holds R
+functions or tools also needs a `registry` when you save and restore it;
+see
+[`pin_module_config()`](https://jameshwade.github.io/dsprrr/reference/pin_module_config.md).
+To use a saved module in a targets pipeline or a Quarto report, see [Run
+dsprrr in
+pipelines](https://jameshwade.github.io/dsprrr/articles/orchestration.md).
 
-## Step 5: Version Your Modules
+## Save and inspect traces
 
-Pins automatically version your saves:
-
-``` r
-
-# Make some changes
-improved <- compile(
-  program = restored,
-  teleprompter = LabeledFewShot(k = 4L),  # Try more examples
-  trainset = trainset
-)
-
-# Save again - creates new version
-pin_module_config(board, "sentiment-classifier", improved)
-
-# List versions
-board |> pin_versions("sentiment-classifier")
-```
-
-## Step 6: Roll Back to Previous Version
-
-If a new version performs worse:
+A module records a trace for each call it makes, with token counts,
+latency, cost and model. Run the module a few times, then pin its traces
+next to the configuration:
 
 ``` r
 
-# Get specific version
-versions <- board |> pin_versions("sentiment-classifier")
-
-# Restore the first version
-if (nrow(versions) > 1) {
-  config <- pins::pin_read(board, "sentiment-classifier", version = versions$version[1])
-  original <- restore_module_config(config)
-}
-```
-
-## Step 7: Save Execution Traces
-
-Track what your module does in production:
-
-``` r
-
-# Run some predictions
 run(classifier, review = "Great product!", .llm = chat)
+#> $sentiment
+#> [1] "positive"
 run(classifier, review = "Not worth the money.", .llm = chat)
+#> $sentiment
+#> [1] "negative"
 run(classifier, review = "Does the job.", .llm = chat)
+#> $sentiment
+#> [1] "neutral"
 
-# Save traces for analysis
 pin_trace(board, "sentiment-traces", classifier)
+#> Creating new version '20260926T220304Z-5a2d5'
+#> Writing to pin 'sentiment-traces'
+#> ✔ Pinned 4 traces: "sentiment-traces"
+#> ℹ Total tokens: 941
 ```
 
-## Step 8: Analyze Traces
-
-Load and examine traces:
+[`export_traces()`](https://jameshwade.github.io/dsprrr/reference/export_traces.md)
+returns the same data as a tibble with one row per call, including the
+call made right after compiling:
 
 ``` r
 
-# Export as a tibble
-traces <- export_traces(classifier)
-traces
-
-# Summary statistics
-classifier$trace_summary()
+export_traces(classifier)
+#> # A tibble: 4 × 11
+#>     timestamp latency_ms input_tokens cached_input_tokens output_tokens
+#>         <dbl>      <dbl>        <int>               <int>         <int>
+#> 1 1790460183.       860.          101                   0             7
+#> 2 1790460184.       423.          200                   0             7
+#> 3 1790460184.       376.          271                   0             7
+#> 4 1790460185.       411.          341                   0             7
+#> # ℹ 6 more variables: total_tokens <int>, cost <dbl>, model <chr>,
+#> #   prompt_length <int>, program_artifact_id <chr>, trace_context <list>
 ```
 
-Traces include: - Input/output for each call - Token usage - Latency -
-Errors (if any)
+The tibble leaves out prompts and responses, so you can share it without
+exposing the text your module handled. Add them with
+`include_prompts = TRUE` and `include_outputs = TRUE`;
+[`pin_trace()`](https://jameshwade.github.io/dsprrr/reference/pin_trace.md)
+takes the same two arguments. `summarize_traces(classifier)` totals the
+tokens, cost and latency.
 
-## Step 9: Validate Before Deployment
-
-Use
-[`validate_workflow()`](https://jameshwade.github.io/dsprrr/reference/validate_workflow.md)
-to check everything is ready:
-
-``` r
-
-# Check module is properly configured
-validation <- validate_workflow(
-  module = classifier,
-  board = board
-)
-
-validation
-```
-
-This checks: - Module is a valid DSPrrr module - Signature has inputs
-defined - Board is accessible (if provided)
-
-## Step 10: Production Patterns
-
-Here’s a complete production workflow:
-
-``` r
-
-# === DEVELOPMENT ===
-# 1. Build and optimize
-dev_module <- module(sig)
-optimize_grid(  dev_module,
-  data = trainset,
-  metric = metric_exact_match(field = "sentiment"),
-  parameters = list(temperature = c(0, 0.3, 0.7))
-)
-
-# 2. Compile with best settings + demos
-optimized <- compile(
-  program = dev_module,
-  teleprompter = LabeledFewShot(k = 3L),
-  trainset = trainset
-)
-
-# 3. Evaluate on held-out test data (same columns as the trainset)
-testset <- tibble::tibble(
-  review = c("Exceeded expectations!", "Broke after a week.", "It's fine."),
-  sentiment = c("positive", "negative", "neutral")
-)
-evaluate(optimized, testset, metric = metric_exact_match(field = "sentiment"))
-
-# 4. Save if good enough
-prod_board <- board_s3("my-bucket")  # Or board_connect(), board_folder()
-pin_module_config(prod_board, "sentiment-v1", optimized)
-
-# === PRODUCTION ===
-# 1. Load the saved configuration
-config <- pins::pin_read(prod_board, "sentiment-v1")
-prod_module <- restore_module_config(config)
-
-# 2. Use it
-customer_review <- "Arrived quickly and works perfectly."
-result <- run(prod_module, review = customer_review, .llm = chat_openai())
-
-# 3. Periodically save traces for monitoring
-pin_trace(prod_board, "sentiment-traces", prod_module)
-```
-
-## Step 11: Different Storage Backends
-
-Pins supports multiple backends:
-
-``` r
-
-# Local folder
-board_folder("path/to/folder")
-
-# Posit Connect
-board_connect()
-
-# AWS S3
-board_s3("bucket-name")
-
-# Azure
-board_azure("container-name")
-
-# Google Cloud
-board_gcs("bucket-name")
-```
-
-Choose based on your deployment environment.
-
-## Step 12: Monitoring in Production
-
-Set up regular checks:
-
-``` r
-
-# Daily: Check trace summary (tokens, cost, errors)
-prod_module$trace_summary()
-
-# Weekly: Evaluate on a fresh sample of labeled production data
-weekly_sample <- tibble::tibble(
-  review = c("Saved me hours!", "Refund please.", "Average at best."),
-  sentiment = c("positive", "negative", "neutral")
-)
-evaluate(prod_module, weekly_sample, metric = metric_exact_match(field = "sentiment"))
-
-# Monthly: Compare to baseline
-# If accuracy drops, investigate or retrain
-```
-
-## What You Learned
-
-In this tutorial, you:
-
-1.  Saved module configurations with
-    [`pin_module_config()`](https://jameshwade.github.io/dsprrr/reference/pin_module_config.md)
-2.  Restored modules with
-    [`restore_module_config()`](https://jameshwade.github.io/dsprrr/reference/restore_module_config.md)
-3.  Used versioning for safe updates
-4.  Rolled back to previous versions
-5.  Saved and analyzed execution traces
-6.  Validated modules before deployment
-7.  Learned production workflow patterns
-
-## The Production Checklist
-
-Before deploying:
-
-Module is optimized on representative data
-
-Evaluated on held-out test data
-
-Configuration saved to persistent storage
-
-Versioning enabled for rollback
-
-Trace logging configured
-
-Monitoring plan in place
-
-## Where to Go From Here
-
-Congratulations! You’ve completed the core tutorial sequence. You now
-know how to: - Make structured LLM calls - Build reusable modules -
-Extract complex data - Improve with examples - Optimize parameters -
-Deploy to production
-
-### Advanced Tutorials
-
-Build complete applications:
-
-- **[Text Adventure
-  Game](https://jameshwade.github.io/dsprrr/articles/text-adventure.md)**
-  — Interactive AI with state management
-- **[Generate
-  llms.txt](https://jameshwade.github.io/dsprrr/articles/llms-txt.md)**
-  — Multi-stage documentation pipeline
-
-### How-To Guides
-
-Solve specific problems:
-
-- **[Build RAG
-  Pipelines](https://jameshwade.github.io/dsprrr/articles/rag-workflows.md)**
-  — Retrieval-augmented generation
-- **[Evaluate with
-  Vitals](https://jameshwade.github.io/dsprrr/articles/vitals-integration.md)**
-  — Rigorous evaluation
-- **[Production
-  Orchestration](https://jameshwade.github.io/dsprrr/articles/orchestration.md)**
-  — targets and Quarto integration
-
-### Concepts
-
-Understand the “why”:
-
-- **[The DSPy
-  Philosophy](https://jameshwade.github.io/dsprrr/articles/concepts-dspy-philosophy.md)**
-  — Programs, not prompts
-- **[How Optimization
-  Works](https://jameshwade.github.io/dsprrr/articles/concepts-optimization-theory.md)**
-  — Teleprompter theory
+That completes the tutorials; [Compile and
+optimize](https://jameshwade.github.io/dsprrr/articles/compilation-optimization.md)
+and [Choose an
+optimizer](https://jameshwade.github.io/dsprrr/articles/advanced-optimization.md)
+take optimization further.

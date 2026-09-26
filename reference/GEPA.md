@@ -1,8 +1,21 @@
-# GEPA Teleprompter
+# GEPA: reflective prompt evolution
 
-Reflective optimizer for instructions and complete Flex source
-components, using row-level failures and metric feedback to propose
-improved candidates.
+`GEPA()` improves a program's instructions by reflection. It scores a
+population of candidate programs, shows a model the rows a candidate got
+wrong (with the metric's feedback when there is any), and asks it to
+rewrite the instructions. Over several generations the best candidates
+are kept, combined and rewritten again. GEPA can also rewrite the
+complete source of a
+[`flex()`](https://jameshwade.github.io/dsprrr/reference/flex.md)
+module.
+
+Reflection uses the chat passed to
+[`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md)
+as `.llm`, the same chat that runs the program; there is no separate
+reflection model argument. Without `.llm`, no model is asked: rewritten
+instructions get the fixed sentence "Focus on the failed cases and be
+more explicit." (or "Be more explicit and accurate.") appended, and Flex
+sources stay unchanged.
 
 ## Usage
 
@@ -32,39 +45,51 @@ GEPA(
 
 - metric:
 
-  A single metric function (fallback when `metrics` is NULL).
+  A metric function, used when `metrics` is `NULL`. One of the two is
+  required.
 
 - metric_threshold:
 
-  Minimum score for an example to be considered successful.
+  Rows scoring below this value count as failures and can be shown to
+  reflection. `NULL` (the default) means 1, so any row short of a
+  perfect score counts.
 
 - max_errors:
 
-  Maximum number of errors allowed during optimization.
+  Integer; stop after this many consecutive failed evaluations when
+  [`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md)
+  gets no `control` (default `5L`).
 
 - metrics:
 
-  Named list of metric functions for evaluation.
+  Optional named list of metric functions. The first one picks the
+  failed rows shown to reflection; with `selection = "pareto"`, all of
+  them are used to rank candidates.
 
 - population_size:
 
-  Size of the population. Default is 20.
+  Integer number of candidates per generation (default `20L`, minimum
+  `2L`).
 
 - generations:
 
-  Number of generations to run. Default is 10.
+  Integer number of generations (default `10L`).
 
 - mutation_rate:
 
-  Probability of mutation. Default is 0.1.
+  Probability that a child is rewritten by reflection (default `0.1`).
 
 - crossover_rate:
 
-  Probability of crossover. Default is 0.7.
+  Probability that a child combines two parents (default `0.7`).
 
 - selection:
 
-  Selection strategy: "pareto" or "current_best".
+  `"pareto"` (the default) draws parents from candidates that win on at
+  least one validation row or lie on the Pareto front of the metrics,
+  and ranks by Pareto front when there are several metrics.
+  `"current_best"` draws from all valid candidates and ranks by the
+  first metric.
 
 - component_selector:
 
@@ -85,19 +110,22 @@ GEPA(
 
 - seed:
 
-  Random seed for reproducibility.
+  Optional whole-number random seed (default `NULL`).
 
 - log_dir:
 
-  Optional directory for trial logging.
+  Directory for a
+  [TrialLog](https://jameshwade.github.io/dsprrr/reference/TrialLog.md)
+  of the run, or `NULL` (the default).
 
 - verbose:
 
-  Whether to print progress messages.
+  Whether to print progress messages (default `TRUE`).
 
 - track_stats:
 
-  Whether to record generation statistics.
+  Whether to keep per-generation statistics in the optimization result
+  (default `TRUE`).
 
 - track_best_outputs:
 
@@ -106,96 +134,129 @@ GEPA(
 
 ## Value
 
-A `GEPA` teleprompter object.
+A `GEPA` object to pass to
+[`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md).
 
 ## Details
 
 ### Feedback metrics
 
-GEPA works best with feedback-aware metrics created via
+GEPA works best with metrics created by
 [`metric_with_feedback()`](https://jameshwade.github.io/dsprrr/reference/metric_with_feedback.md).
-When the metric returns `list(score = , feedback = )`, the textual
-feedback for failed examples is included in the reflection prompt,
-giving the reflection LLM concrete guidance on *why* an output was wrong
-— the key mechanism in the GEPA paper ("GEPA: Reflective Prompt
-Evolution Can Outperform RL", Agrawal et al., 2025). Plain numeric
-metrics still work; reflection then sees only inputs, expected, and
-predicted values.
+When the metric returns `list(score = , feedback = )`, the feedback for
+failed rows goes into the reflection prompt, so the model sees why an
+output was wrong. This is the key mechanism of the GEPA paper ("GEPA:
+Reflective Prompt Evolution Can Outperform Reinforcement Learning",
+Agrawal et al., 2025). With a plain numeric metric, reflection sees only
+the inputs, the expected values and the predictions.
+
+### How a run works
+
+The first population is the original program plus `population_size - 1`
+rewrites of it. Each generation scores every candidate with every metric
+on `valset` (or on `trainset` when no `valset` is given), so a run costs
+about `population_size * generations` full evaluations plus the
+reflection calls. Parents are picked by tournament. A child takes each
+component (an instruction or a Flex source) from one of two parents with
+probability `crossover_rate`, and is rewritten by reflection with
+probability `mutation_rate`. Reflection sees up to five rows that the
+parent failed on `trainset`. The best candidate over all generations is
+returned; the candidates, their scores and lineage are stored in
+`optimization_result(compiled)$extensions$gepa`.
 
 ### Differences from DSPy's GEPA
 
-This is an adapted implementation. It shares reflective mutation guided
-by failures and feedback, validation-example winner frontiers, component
-selection, lineage-aware merge, and Pareto selection over multiple
-metrics, but uses a fixed population/generations loop rather than DSPy's
-full budget-driven candidate search.
+This is an adapted implementation. It keeps reflective rewriting guided
+by failures and feedback, per-row winner frontiers, component selection,
+lineage-aware merges and Pareto selection over several metrics, but runs
+a fixed number of generations instead of DSPy's budget-driven search.
+Checkpoint resume, cached subsample merge acceptance and inference-time
+candidate selection are not implemented.
 
-Every mutable program is represented as a complete component candidate:
-ordinary predictor instructions and complete Flex `module_src` values
-are proposed, copied, validated, and bound transactionally. A Flex
-source is one component; dynamically constructed inner predictors are
-not optimized as separate leaves. Invalid Flex sources receive an
-auditable failure score and are never selectable. The structured source
-proposer receives task and signature context, field schemas, source
-runtime, allowed tools and primitives, row-aligned inputs, expected
-output, prediction, and metric feedback. Executable source is evaluated
-only through Flex's configured interpreter bridge during candidate
-evaluation.
+A Flex source is optimized as one component: its dynamically built inner
+predictors are not tuned separately. The source proposer sees the task
+and signature, field schemas, allowed tools and primitives, and the
+failed rows with their feedback. Proposed sources are validated before
+use; an invalid source is recorded with a failure score and can never be
+selected.
 
-Parent selection uses the union of complete candidates that win on at
-least one validation row and candidates on the multi-metric objective
-Pareto front; component selection is a separate mutation policy. When
-`valset` is supplied, `trainset` remains the discovery/reflection
-dataset and `valset` is used for aggregate selection,
-validation-instance frontiers, and retained outputs. Candidate metadata
-includes lineage, aggregate and per-row scores, discovery counts,
-winners, and optional retained best outputs. Fine-grained checkpoint
-resume, cached subsample merge acceptance, and automatic inference-time
-candidate selection are not implemented. Compiled programs record these
-distinctions under
-`optimization_result()$extensions$gepa$component_semantics`.
+## See also
+
+Other teleprompters:
+[`AutoResearch()`](https://jameshwade.github.io/dsprrr/reference/AutoResearch.md),
+[`BetterTogether()`](https://jameshwade.github.io/dsprrr/reference/BetterTogether.md),
+[`BootstrapFewShot()`](https://jameshwade.github.io/dsprrr/reference/BootstrapFewShot.md),
+[`BootstrapFewShotWithRandomSearch()`](https://jameshwade.github.io/dsprrr/reference/BootstrapFewShotWithRandomSearch.md),
+[`COPRO()`](https://jameshwade.github.io/dsprrr/reference/COPRO.md),
+[`GridSearchTeleprompter()`](https://jameshwade.github.io/dsprrr/reference/GridSearchTeleprompter.md),
+[`KNNFewShot()`](https://jameshwade.github.io/dsprrr/reference/KNNFewShot.md),
+[`LabeledFewShot()`](https://jameshwade.github.io/dsprrr/reference/LabeledFewShot.md),
+[`MIPROv2()`](https://jameshwade.github.io/dsprrr/reference/MIPROv2.md),
+[`MetaHarness()`](https://jameshwade.github.io/dsprrr/reference/MetaHarness.md),
+[`Omni()`](https://jameshwade.github.io/dsprrr/reference/Omni.md),
+[`ReAnchor()`](https://jameshwade.github.io/dsprrr/reference/ReAnchor.md),
+[`SIMBA()`](https://jameshwade.github.io/dsprrr/reference/SIMBA.md),
+[`Teleprompter()`](https://jameshwade.github.io/dsprrr/reference/Teleprompter.md),
+[`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md)
 
 ## Examples
 
 ``` r
-# A small GEPA run: 6 candidates evolved over 2 generations
+# A small run: 6 candidates over 2 generations
 tp <- GEPA(
   metric = metric_exact_match(field = "answer"),
   population_size = 6L,
   generations = 2L,
-  seed = 42
+  seed = 42L
 )
+tp
+#> 
+#> ── GEPA Teleprompter 
+#> population_size: 6
+#> generations: 2
+#> mutation_rate: 0.1
+#> crossover_rate: 0.7
+#> selection: pareto
+#> seed: 42
 
 if (FALSE) { # \dontrun{
-# Feedback-aware metrics give the reflection step concrete guidance.
-# During evaluation the metric receives the full expected row, so
-# extract the target field explicitly:
+# Feedback tells the reflection step why an answer was wrong. The metric
+# receives the run result and the whole data row.
 feedback_metric <- metric_with_feedback(
   function(prediction, expected) {
-    if (identical(as.character(prediction), expected$answer)) {
+    if (identical(prediction$answer, expected$answer)) {
       list(score = 1, feedback = "Correct.")
     } else {
       list(
         score = 0,
         feedback = paste0(
-          "Expected '",
-          expected$answer,
-          "' but got '",
-          prediction,
-          "'."
+          "Expected '", expected$answer,
+          "' but got '", prediction$answer, "'."
         )
       )
     }
   },
   field = "answer"
 )
-tp <- GEPA(metric = feedback_metric, seed = 42)
+tp <- GEPA(
+  metric = feedback_metric,
+  population_size = 6L,
+  generations = 2L,
+  seed = 42L
+)
 
 qa <- module(signature("question -> answer"))
 trainset <- data.frame(
   question = c("What is 2 + 2?", "What is the capital of France?"),
   answer = c("4", "Paris")
 )
-optimized <- compile(qa, tp, trainset)
+# `.llm` runs the program and writes the reflections
+optimized <- compile(
+  qa,
+  tp,
+  trainset,
+  .llm = ellmer::chat_openai(model = "gpt-6-luna")
+)
+optimization_result(optimized)
 } # }
 ```

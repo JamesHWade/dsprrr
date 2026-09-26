@@ -1,8 +1,8 @@
-# Check if a Signature has Chain-of-Thought
+# Test whether a signature has a reasoning field
 
-Tests whether a signature has been transformed with
+`has_reasoning()` checks whether a signature's output has a field named
+`reasoning_field`, as added by
 [`with_reasoning()`](https://jameshwade.github.io/dsprrr/reference/with_reasoning.md).
-Checks for the presence of a reasoning field in the output type.
 
 ## Usage
 
@@ -14,16 +14,25 @@ has_reasoning(sig, reasoning_field = "reasoning")
 
 - sig:
 
-  A signature object created by
+  A signature from
   [`signature()`](https://jameshwade.github.io/dsprrr/reference/signature.md).
 
 - reasoning_field:
 
-  Character. Name of reasoning field to check for.
+  Name of the field to look for.
 
 ## Value
 
-Logical. TRUE if signature has chain-of-thought reasoning.
+`TRUE` or `FALSE`. Anything other than a signature gives `FALSE`.
+
+## See also
+
+Other signatures:
+[`input()`](https://jameshwade.github.io/dsprrr/reference/input.md),
+[`signature()`](https://jameshwade.github.io/dsprrr/reference/signature.md),
+[`with_instructions()`](https://jameshwade.github.io/dsprrr/reference/with_instructions.md),
+[`with_reasoning()`](https://jameshwade.github.io/dsprrr/reference/with_reasoning.md),
+[`without_reasoning()`](https://jameshwade.github.io/dsprrr/reference/without_reasoning.md)
 
 ## Examples
 
@@ -31,10 +40,6 @@ Logical. TRUE if signature has chain-of-thought reasoning.
 sig <- signature("question -> answer")
 has_reasoning(sig)
 #> [1] FALSE
-# FALSE
-
-cot_sig <- with_reasoning(sig)
-has_reasoning(cot_sig)
+has_reasoning(with_reasoning(sig))
 #> [1] TRUE
-# TRUE
 ```

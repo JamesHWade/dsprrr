@@ -1,8 +1,9 @@
-# Wrap a Module with Assertions
+# Validate a module's outputs and retry on failure
 
-Factory function to create an assertion wrapper around any module.
-Validates outputs against assertions and retries with backtracking when
-hard assertions fail.
+`with_assertions()` wraps a module so that every output is checked
+against assertions. When a hard assertion fails, the module runs again
+with feedback that lists the failed checks, up to `max_retries` more
+times. Soft assertions (suggestions) only give a warning.
 
 ## Usage
 
@@ -21,98 +22,113 @@ with_assertions(
 
 - module:
 
-  A Module object to wrap
+  The module to wrap.
 
 - assertions:
 
-  A list of assertion rules (from
-  [`assert_output()`](https://jameshwade.github.io/dsprrr/reference/assertions.md)
-  or
-  [`suggest_output()`](https://jameshwade.github.io/dsprrr/reference/assertions.md))
-  or the result of
-  [`assertion_set()`](https://jameshwade.github.io/dsprrr/reference/assertions.md)
+  A list of assertions made with
+  [`assert_output()`](https://jameshwade.github.io/dsprrr/reference/assertions.md),
+  [`suggest_output()`](https://jameshwade.github.io/dsprrr/reference/assertions.md)
+  or the `assert_*()` helpers, or an
+  [`assertion_set()`](https://jameshwade.github.io/dsprrr/reference/assertions.md).
 
 - max_retries:
 
-  Maximum number of retry attempts (default 3)
+  Number of retries after the first attempt.
 
 - on_failure:
 
-  What to do when max retries exceeded: "error" (default) or "warn"
-  (return best attempt with warning)
+  What happens when hard assertions still fail after the last retry:
+  `"error"` (the default) raises an error; `"warn"` gives a warning and
+  returns the attempt with the fewest failed hard assertions.
 
 - feedback_template:
 
-  Template for feedback injection on retry. Uses glue syntax. Available
-  variables:
-
-  - `{failures}`: Bulleted list of hard assertion failure messages
+  A glue template for the retry feedback, where `{failures}` is the list
+  of failed assertion messages, one per line. The default says the
+  previous response did not satisfy the requirements, lists them, and
+  asks for a new response that satisfies all of them.
 
 - ...:
 
-  Additional arguments passed to the module constructor
+  Passed to the wrapper: `chat` (an ellmer Chat, which defaults to the
+  wrapped module's chat) or `config`.
 
 ## Value
 
-An AssertModule object
+A module (an R6 object of class `AssertModule`) with the same signature
+as `module`.
 
 ## Details
 
-### Assertion Types
+On a retry, the feedback is passed to the wrapped module as an extra
+input named `assertion_feedback`. A prediction module without a custom
+template adds it to the prompt as an `assertion_feedback:` line. A
+[`module_fn()`](https://jameshwade.github.io/dsprrr/reference/module_fn.md)
+function must accept `assertion_feedback` (or `...`) to be retried. Each
+attempt uses its own partition of the response cache, so retries get
+fresh responses, and each retry is another model call.
 
-- **[`assert_output()`](https://jameshwade.github.io/dsprrr/reference/assertions.md)**:
-  Hard assertion. Must pass or execution retries. Use for critical
-  constraints like length limits, required patterns, etc.
+The returned module's `get_attempts()` method lists the attempts of the
+last run with their numbers of failed hard and soft assertions (or those
+of all runs, with `all = TRUE`).
 
-- **[`suggest_output()`](https://jameshwade.github.io/dsprrr/reference/assertions.md)**:
-  Soft suggestion. Logs warning but doesn't retry. Use for style
-  preferences, optional improvements, etc.
+## See also
 
-### Backtracking Behavior
+Other assertions:
+[`assert_contains()`](https://jameshwade.github.io/dsprrr/reference/assert_contains.md),
+[`assert_custom()`](https://jameshwade.github.io/dsprrr/reference/assert_custom.md),
+[`assert_length()`](https://jameshwade.github.io/dsprrr/reference/assert_length.md),
+[`assert_matches()`](https://jameshwade.github.io/dsprrr/reference/assert_matches.md),
+[`assert_not_contains()`](https://jameshwade.github.io/dsprrr/reference/assert_not_contains.md),
+[`assert_not_empty()`](https://jameshwade.github.io/dsprrr/reference/assert_not_empty.md),
+[`assert_not_matches()`](https://jameshwade.github.io/dsprrr/reference/assert_not_matches.md),
+[`assert_one_of()`](https://jameshwade.github.io/dsprrr/reference/assert_one_of.md),
+[`assert_range()`](https://jameshwade.github.io/dsprrr/reference/assert_range.md),
+[`assertions`](https://jameshwade.github.io/dsprrr/reference/assertions.md)
 
-When hard assertions fail:
-
-1.  Feedback is generated from the failure messages
-
-2.  The module is re-run with feedback injected as `assertion_feedback`
-
-3.  This continues until assertions pass or max_retries is exceeded
-
-4.  If max_retries exceeded, behavior depends on `on_failure` parameter
-
-### Performance Considerations
-
-Each retry makes a new LLM call. Use assertions judiciously and
-consider:
-
-- Starting with max_retries = 2-3 for most use cases
-
-- Using "warn" for non-critical assertions to avoid blocking
-
-- Combining with caching to reduce costs during development
+Other composition:
+[`as_reward_fn()`](https://jameshwade.github.io/dsprrr/reference/as_reward_fn.md),
+[`best_of_n()`](https://jameshwade.github.io/dsprrr/reference/best_of_n.md),
+[`ensemble()`](https://jameshwade.github.io/dsprrr/reference/ensemble.md),
+[`module-graph`](https://jameshwade.github.io/dsprrr/reference/module-graph.md),
+[`pipeline()`](https://jameshwade.github.io/dsprrr/reference/pipeline.md),
+[`reduce_best_by_metric()`](https://jameshwade.github.io/dsprrr/reference/reduce_best_by_metric.md),
+[`reduce_first()`](https://jameshwade.github.io/dsprrr/reference/reduce_first.md),
+[`reduce_majority()`](https://jameshwade.github.io/dsprrr/reference/reduce_majority.md),
+[`reduce_weighted_vote()`](https://jameshwade.github.io/dsprrr/reference/reduce_weighted_vote.md),
+[`refine()`](https://jameshwade.github.io/dsprrr/reference/refine.md),
+[`step()`](https://jameshwade.github.io/dsprrr/reference/step.md)
 
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-# Create a QA module
 qa <- module(signature("question -> answer"))
-
-# Wrap with assertions
-validated <- with_assertions(
+checked <- with_assertions(
   qa,
   assertions = list(
-    assert_output(~ nchar(.x$answer) <= 100, "Answer must be 100 chars or less"),
-    assert_output(~ nchar(.x$answer) >= 10, "Answer must be at least 10 chars"),
-    suggest_output(~ grepl("^[A-Z]", .x$answer), "Should start with capital")
+    assert_length("answer", max = 100),
+    assert_matches("answer", "^[A-Z]", "Start with a capital letter"),
+    suggest_output(~ !grepl("!", .x$answer), "Avoid exclamation marks")
   ),
-  max_retries = 3
+  max_retries = 2L
 )
+checked
+#> 
+#> ── AssertModule ──
+#> 
+#> Wrapped module: <PredictModule>
+#> Hard assertions: 2
+#> Soft suggestions: 1
+#> Max retries: 2
+#> On failure: error
 
-# Run - will retry if assertions fail
-result <- run(validated, question = "What is the capital of France?", .llm = llm)
-
-# Check attempt history
-validated$get_attempts()
+if (FALSE) { # \dontrun{
+run(
+  checked,
+  question = "What is the capital of France?",
+  .llm = ellmer::chat_openai(model = "gpt-6-luna")
+)
+checked$get_attempts()
 } # }
 ```

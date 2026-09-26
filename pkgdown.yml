@@ -2,7 +2,6 @@ pandoc: 3.8.3
 pkgdown: 2.2.1
 pkgdown_sha: ~
 articles:
-  advanced-ellmer: advanced-ellmer.html
   advanced-modules: advanced-modules.html
   advanced-optimization: advanced-optimization.html
   articles/agentic-optimization-harnesses: agentic-optimization-harnesses.html
@@ -10,19 +9,17 @@ articles:
   chaining-modules: chaining-modules.html
   cheatsheet: cheatsheet.html
   compilation-optimization: compilation-optimization.html
-  concepts-dspy-philosophy: concepts-dspy-philosophy.html
   concepts-optimization-theory: concepts-optimization-theory.html
   concepts-signatures-modules: concepts-signatures-modules.html
   concepts-why-metrics-matter: concepts-why-metrics-matter.html
   dspy-comparison: dspy-comparison.html
   articles/flex-optimization: flex-optimization.html
-  getting-started: getting-started.html
   articles/how-rlm-works: how-rlm-works.html
   llms-txt: llms-txt.html
+  models-and-providers: models-and-providers.html
   articles/omni-meta-optimization: omni-meta-optimization.html
   orchestration: orchestration.html
   rag-workflows: rag-workflows.html
-  reasoning-models: reasoning-models.html
   text-adventure: text-adventure.html
   tidymodels-integration: tidymodels-integration.html
   troubleshooting: troubleshooting.html
@@ -33,9 +30,8 @@ articles:
   tutorial-optimize-your-module: tutorial-optimize-your-module.html
   articles/tutorial-rlm-dsprrr: tutorial-rlm-dsprrr.html
   tutorial-structured-outputs: tutorial-structured-outputs.html
-  vitals-integration: vitals-integration.html
   vitals-recipes: vitals-recipes.html
-last_built: 2026-09-26T09:47Z
+last_built: 2026-09-26T22:00Z
 urls:
   reference: https://jameshwade.github.io/dsprrr/reference
   article: https://jameshwade.github.io/dsprrr/articles

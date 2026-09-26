@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Vitals Integration Recipes • dsprrr</title>
+<title>Evaluate with vitals • dsprrr</title>
 <!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="../favicon-96x96.png">
 <link rel="icon" type="”image/svg+xml”" href="../favicon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
@@ -17,7 +17,7 @@
 <link href="../deps/Fira_Code-0.4.10/font.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Vitals Integration Recipes">
+<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Evaluate with vitals">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -36,67 +36,67 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
-<li class="nav-item"><a class="nav-link" href="../articles/getting-started.html">Get Started</a></li>
+<li class="nav-item"><a class="nav-link" href="../articles/tutorial-hello-world.html">Get started</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-tutorials" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Tutorials</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-tutorials">
-<li><h6 class="dropdown-header" data-toc-skip>Learning Path</h6></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-hello-world.html">1. Your First LLM Call</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-build-classifier.html">2. Building a Classifier</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-structured-outputs.html">3. Structured Outputs</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-improve-with-demos.html">4. Improving with Examples</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-optimize-your-module.html">5. Optimization</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-deploy-to-production.html">6. Production</a></li>
+<li><a class="dropdown-item" href="../articles/tutorial-hello-world.html">1. Your first LLM call</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-build-classifier.html">2. Build a classifier</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-structured-outputs.html">3. Extract structured data</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-improve-with-demos.html">4. Improve with examples</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-optimize-your-module.html">5. Optimize a module</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-deploy-to-production.html">6. Save and reuse a module</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Advanced Tutorials</h6></li>
-    <li><a class="dropdown-item" href="../articles/text-adventure.html">Build an AI Game Master</a></li>
-    <li><a class="dropdown-item" href="../articles/llms-txt.html">Generate Package Docs</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-rlm-dsprrr.html">Investigate a Regression with RLM</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Projects</h6></li>
+    <li><a class="dropdown-item" href="../articles/llms-txt.html">Generate an llms.txt file</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-rlm-dsprrr.html">Investigate a regression with RLM</a></li>
+    <li><a class="dropdown-item" href="../articles/text-adventure.html">Build a text adventure</a></li>
   </ul>
 </li>
 <li class="active nav-item dropdown">
-  <button class="nav-link dropdown-toggle" type="button" id="dropdown-how-to-guides" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">How-to Guides</button>
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-how-to-guides" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">How-to guides</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-how-to-guides">
-<li><a class="dropdown-item" href="../articles/troubleshooting.html">Troubleshooting</a></li>
-    <li><a class="dropdown-item" href="../articles/compilation-optimization.html">Compile &amp; Optimize</a></li>
-    <li><a class="dropdown-item" href="../articles/vitals-recipes.html">Evaluate with Vitals</a></li>
-    <li><a class="dropdown-item" href="../articles/rag-workflows.html">Build RAG Pipelines</a></li>
-    <li><a class="dropdown-item" href="../articles/chaining-modules.html">Chaining Modules</a></li>
-    <li><a class="dropdown-item" href="../articles/calibrated-decisions.html">Calibrated Decisions</a></li>
-    <li><a class="dropdown-item" href="../articles/orchestration.html">Deploy to Production</a></li>
+<li><h6 class="dropdown-header" data-toc-skip>Build</h6></li>
+    <li><a class="dropdown-item" href="../articles/advanced-modules.html">Choose a module type</a></li>
+    <li><a class="dropdown-item" href="../articles/chaining-modules.html">Chain modules into pipelines</a></li>
+    <li><a class="dropdown-item" href="../articles/rag-workflows.html">Retrieval-augmented generation</a></li>
+    <li><a class="dropdown-item" href="../articles/calibrated-decisions.html">Calibrated decisions</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Integrations</h6></li>
-    <li><a class="dropdown-item" href="../articles/vitals-integration.html">Vitals Package</a></li>
-    <li><a class="dropdown-item" href="../articles/tidymodels-integration.html">tidymodels</a></li>
-    <li><a class="dropdown-item" href="../articles/advanced-ellmer.html">Advanced ellmer</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Measure and improve</h6></li>
+    <li><a class="dropdown-item" href="../articles/compilation-optimization.html">Compile and optimize</a></li>
+    <li><a class="dropdown-item" href="../articles/advanced-optimization.html">Choose an optimizer</a></li>
+    <li><a class="dropdown-item" href="../articles/vitals-recipes.html">Evaluate with vitals</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Run</h6></li>
+    <li><a class="dropdown-item" href="../articles/models-and-providers.html">Models, providers and streaming</a></li>
+    <li><a class="dropdown-item" href="../articles/orchestration.html">Run dsprrr in pipelines</a></li>
+    <li><a class="dropdown-item" href="../articles/tidymodels-integration.html">Use dsprrr with tidymodels</a></li>
+    <li><a class="dropdown-item" href="../articles/troubleshooting.html">Troubleshooting</a></li>
   </ul>
 </li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-concepts" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Concepts</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-concepts">
-<li><a class="dropdown-item" href="../articles/concepts-dspy-philosophy.html">The DSPy Philosophy</a></li>
-    <li><a class="dropdown-item" href="../articles/dspy-comparison.html">dsprrr vs. DSPy</a></li>
-    <li><a class="dropdown-item" href="../articles/concepts-signatures-modules.html">Signatures &amp; Modules</a></li>
-    <li><a class="dropdown-item" href="../articles/concepts-optimization-theory.html">How Optimization Works</a></li>
-    <li><a class="dropdown-item" href="../articles/concepts-why-metrics-matter.html">Why Metrics Matter</a></li>
-    <li><a class="dropdown-item" href="../articles/how-rlm-works.html">How RLMs Work</a></li>
+<li><a class="dropdown-item" href="../articles/concepts-signatures-modules.html">How dsprrr works</a></li>
+    <li><a class="dropdown-item" href="../articles/concepts-why-metrics-matter.html">Metrics and evaluation</a></li>
+    <li><a class="dropdown-item" href="../articles/concepts-optimization-theory.html">How optimization works</a></li>
+    <li><a class="dropdown-item" href="../articles/dspy-comparison.html">dsprrr for DSPy users</a></li>
+    <li><a class="dropdown-item" href="../articles/how-rlm-works.html">How RLM works</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Deep Dives</h6></li>
-    <li><a class="dropdown-item" href="../articles/flex-optimization.html">Flex: Optimize the Whole Program</a></li>
-    <li><a class="dropdown-item" href="../articles/advanced-modules.html">Advanced Reasoning</a></li>
-    <li><a class="dropdown-item" href="../articles/advanced-optimization.html">Advanced Optimization</a></li>
-    <li><a class="dropdown-item" href="../articles/omni-meta-optimization.html">Composing Optimizers with Omni</a></li>
-    <li><a class="dropdown-item" href="../articles/agentic-optimization-harnesses.html">Agentic Optimization Harnesses</a></li>
-    <li><a class="dropdown-item" href="../articles/reasoning-models.html">Reasoning Models</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Experimental</h6></li>
+    <li><a class="dropdown-item" href="../articles/flex-optimization.html">Flex: optimize a whole program</a></li>
+    <li><a class="dropdown-item" href="../articles/omni-meta-optimization.html">Compose optimizers with Omni</a></li>
+    <li><a class="dropdown-item" href="../articles/agentic-optimization-harnesses.html">Agentic optimization harnesses</a></li>
   </ul>
 </li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-reference" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Reference</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-reference">
-<li><a class="dropdown-item" href="../articles/cheatsheet.html">Quick Reference</a></li>
-    <li><a class="dropdown-item" href="../reference/index.html">API Documentation</a></li>
+<li><a class="dropdown-item" href="../reference/index.html">Function reference</a></li>
+    <li><a class="dropdown-item" href="../articles/cheatsheet.html">Quick reference</a></li>
   </ul>
 </li>
+<li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul>
 <ul class="navbar-nav">
 <li class="nav-item"><form class="form-inline" role="search">
@@ -123,7 +123,7 @@
 
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
-      <img src="../logo.svg" class="logo" alt=""><h1>Vitals Integration Recipes</h1>
+      <img src="../logo.svg" class="logo" alt=""><h1>Evaluate with vitals</h1>
             
       
       <small class="dont-index">Source: <a href="https://github.com/JamesHWade/dsprrr/blob/main/vignettes/vitals-recipes.Rmd" class="external-link"><code>vignettes/vitals-recipes.Rmd</code></a></small>
@@ -132,24 +132,29 @@
 
     
     
-<p>This vignette provides practical recipes for integrating dsprrr
-modules with vitals evaluation. Each recipe is self-contained and
-demonstrates a specific pattern.</p>
+<p><a href="https://vitals.tidyverse.org" class="external-link">vitals</a> is Posit’s package
+for evaluating LLM applications: a <code>Task</code> runs a solver over
+a dataset, grades each answer with a scorer, and writes a log you can
+browse. This page shows how to evaluate a dsprrr module as a vitals
+solver, choose a scorer, read the results, and use vitals scorers as
+dsprrr metrics. The code uses <code>gpt-6-luna</code>; the outputs below
+are recorded responses from <code>gpt-4o-mini</code>, replayed when the
+site is built.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/dsprrr" class="external-link">dsprrr</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/tidyverse/vitals" class="external-link">vitals</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ellmer.tidyverse.org" class="external-link">ellmer</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://tibble.tidyverse.org/" class="external-link">tibble</a></span><span class="op">)</span></span></code></pre></div>
 <div class="section level2">
-<h2 id="recipe-1-quick-start">Recipe 1: Quick Start<a class="anchor" aria-label="anchor" href="#recipe-1-quick-start"></a>
+<h2 id="evaluate-a-module">Evaluate a module<a class="anchor" aria-label="anchor" href="#evaluate-a-module"></a>
 </h2>
-<p>The fastest way to evaluate a dsprrr module with vitals:</p>
+<p><code><a href="../reference/as_vitals_task.html">as_vitals_task()</a></code> turns a module and a data frame into a
+vitals <code>Task</code>. The data needs one column per signature input
+plus a <code>target</code> column with the expected answer:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># 1. Create a simple module</span></span>
-<span><span class="va">classifier</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"input -&gt; label: enum('positive', 'negative')"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<code class="sourceCode R"><span><span class="va">classifier</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"input -&gt; label: enum('positive', 'negative')"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># 2. Prepare test data (vitals expects 'input' and 'target' columns)</span></span>
 <span><span class="va">test_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
 <span>  input <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
 <span>    <span class="st">"I love this product!"</span>,</span>
@@ -158,32 +163,46 @@ demonstrates a specific pattern.</p>
 <span>  target <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"positive"</span>, <span class="st">"negative"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># 3. Create a vitals Task with dsprrr's helper</span></span>
 <span><span class="va">task</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/as_vitals_task.html">as_vitals_task</a></span><span class="op">(</span></span>
 <span>  module <span class="op">=</span> <span class="va">classifier</span>,</span>
 <span>  dataset <span class="op">=</span> <span class="va">test_data</span>,</span>
 <span>  scorer <span class="op">=</span> <span class="fu"><a href="https://vitals.tidyverse.org/reference/scorer_detect.html" class="external-link">detect_match</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  name <span class="op">=</span> <span class="st">"sentiment"</span>,</span>
 <span>  dir <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>  .llm <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-4o-mini"</span><span class="op">)</span></span>
+<span>  .llm <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-luna"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># 4. Run evaluation</span></span>
 <span><span class="va">task</span><span class="op">$</span><span class="fu">eval</span><span class="op">(</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># 5. View results</span></span>
-<span><span class="va">task</span><span class="op">$</span><span class="fu">get_samples</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-<p>That’s it! The <code><a href="../reference/as_vitals_task.html">as_vitals_task()</a></code> helper handles the
-integration details.</p>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Solving</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Solving <span style="color: #B2B2B2;">[1.7s]</span></span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Scoring</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Scoring <span style="color: #B2B2B2;">[80ms]</span></span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="va">task</span><span class="op">$</span><span class="fu">get_samples</span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 2 × 9</span></span></span>
+<span><span class="co">#&gt;   input            target      id result   solver_chat score scorer_metadata </span></span>
+<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>           <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;ord&gt;</span> <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>          </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> <span style="color: #949494;">&lt;tibble [1 × 1]&gt;</span> positive     1 positive <span style="color: #949494;">&lt;Chat&gt;</span>      C     <span style="color: #949494;">&lt;named list [2]&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> <span style="color: #949494;">&lt;tibble [1 × 1]&gt;</span> negative     2 negative <span style="color: #949494;">&lt;Chat&gt;</span>      C     <span style="color: #949494;">&lt;named list [2]&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># ℹ 2 more variables: scorer_explanation &lt;chr&gt;, scorer &lt;chr&gt;</span></span></span></code></pre></div>
+<p><code>$eval()</code> runs the module on every row, scores the answers
+and writes a log to <code>dir</code>; <code>vitals_view(dir)</code>
+opens the log viewer. In <code>$get_samples()</code>,
+<code>result</code> holds the module’s output. When the signature has
+one string or enum output, that is the plain value; otherwise it is all
+output fields as JSON. <code>score</code> is <code>C</code> (correct) or
+<code>I</code> (incorrect). Leave out <code>scorer</code> and you get
+<code><a href="https://vitals.tidyverse.org/reference/scorer_model.html" class="external-link">model_graded_qa()</a></code>.</p>
 </div>
 <div class="section level2">
-<h2 id="recipe-2-train-test-split-workflow">Recipe 2: Train-Test Split Workflow<a class="anchor" aria-label="anchor" href="#recipe-2-train-test-split-workflow"></a>
+<h2 id="evaluate-on-held-out-data">Evaluate on held-out data<a class="anchor" aria-label="anchor" href="#evaluate-on-held-out-data"></a>
 </h2>
-<p>A common pattern: optimize on training data, evaluate on held-out
-test data.</p>
+<p>To check a compiled module, compile on training rows and evaluate on
+rows it has not seen. <code>LabeledFewShot(k = 2L)</code> adds two
+randomly sampled training rows to the prompt as examples:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Full dataset with ground truth</span></span>
-<span><span class="va">qa_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
+<code class="sourceCode R"><span><span class="va">qa_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
 <span>  question <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
 <span>    <span class="st">"What is the capital of France?"</span>,</span>
 <span>    <span class="st">"Who wrote Romeo and Juliet?"</span>,</span>
@@ -202,70 +221,96 @@ test data.</p>
 <span>  <span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Split into train/test</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">42</span><span class="op">)</span></span>
 <span><span class="va">train_idx</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sample.html" class="external-link">sample</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">qa_data</span><span class="op">)</span>, <span class="fl">4</span><span class="op">)</span></span>
 <span><span class="va">trainset</span> <span class="op">&lt;-</span> <span class="va">qa_data</span><span class="op">[</span><span class="va">train_idx</span>, <span class="op">]</span></span>
 <span><span class="va">testset</span> <span class="op">&lt;-</span> <span class="va">qa_data</span><span class="op">[</span><span class="op">-</span><span class="va">train_idx</span>, <span class="op">]</span></span>
 <span></span>
-<span><span class="co"># Create and optimize module</span></span>
 <span><span class="va">qa_module</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Optimize with few-shot examples from training set</span></span>
 <span><span class="va">optimized</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span></span>
 <span>  <span class="va">qa_module</span>,</span>
 <span>  <span class="fu"><a href="../reference/LabeledFewShot.html">LabeledFewShot</a></span><span class="op">(</span>k <span class="op">=</span> <span class="fl">2L</span><span class="op">)</span>,</span>
 <span>  trainset <span class="op">=</span> <span class="va">trainset</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Evaluate on held-out test set</span></span>
-<span><span class="va">eval_task</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/as_vitals_task.html">as_vitals_task</a></span><span class="op">(</span></span>
+<span><span class="va">test_task</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/as_vitals_task.html">as_vitals_task</a></span><span class="op">(</span></span>
 <span>  module <span class="op">=</span> <span class="va">optimized</span>,</span>
 <span>  dataset <span class="op">=</span> <span class="va">testset</span>,</span>
 <span>  scorer <span class="op">=</span> <span class="fu"><a href="https://vitals.tidyverse.org/reference/scorer_detect.html" class="external-link">detect_match</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  name <span class="op">=</span> <span class="st">"qa-test"</span>,</span>
 <span>  dir <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>  .llm <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-4o-mini"</span><span class="op">)</span></span>
+<span>  .llm <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-luna"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">eval_task</span><span class="op">$</span><span class="fu">eval</span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="va">test_task</span><span class="op">$</span><span class="fu">eval</span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Solving</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Solving <span style="color: #B2B2B2;">[767ms]</span></span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Scoring</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Scoring <span style="color: #B2B2B2;">[60ms]</span></span></span>
+<span><span class="co">#&gt; </span></span>
 <span></span>
-<span><span class="co"># Compare performance</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Test accuracy:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">eval_task</span><span class="op">$</span><span class="fu">get_samples</span><span class="op">(</span><span class="op">)</span><span class="op">$</span><span class="va">score</span> <span class="op">==</span> <span class="st">"C"</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">test_task</span><span class="op">$</span><span class="fu">get_samples</span><span class="op">(</span><span class="op">)</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"target"</span>, <span class="st">"result"</span>, <span class="st">"score"</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 2 × 3</span></span></span>
+<span><span class="co">#&gt;   target      result              score</span></span>
+<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>       <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>               <span style="color: #949494; font-style: italic;">&lt;ord&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> Shakespeare William Shakespeare C    </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> 4           4                   C</span></span></code></pre></div>
+<p>The model answered “William Shakespeare” and still passed.
+<code><a href="https://vitals.tidyverse.org/reference/scorer_detect.html" class="external-link">detect_match()</a></code> looks for the target at the end of the
+answer by default (<code>location = "end"</code>), ignoring case, so
+“Shakespeare wrote it” would have failed. Use
+<code>location = "exact"</code>, <code>"begin"</code> or
+<code>"any"</code> when that matters.</p>
 </div>
 <div class="section level2">
-<h2 id="recipe-3-using-different-vitals-scorers">Recipe 3: Using Different Vitals Scorers<a class="anchor" aria-label="anchor" href="#recipe-3-using-different-vitals-scorers"></a>
+<h2 id="choose-a-scorer">Choose a scorer<a class="anchor" aria-label="anchor" href="#choose-a-scorer"></a>
 </h2>
-<p>Vitals provides several scorers for different use cases:</p>
-<div class="section level3">
-<h3 id="exact-match-detect_match">Exact Match (detect_match)<a class="anchor" aria-label="anchor" href="#exact-match-detect_match"></a>
-</h3>
-<p>Best for factual questions with precise answers:</p>
+<table class="table">
+<colgroup>
+<col width="33%">
+<col width="33%">
+<col width="33%">
+</colgroup>
+<thead><tr class="header">
+<th>Scorer</th>
+<th>Marks an answer correct when</th>
+<th>Good for</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><code><a href="https://vitals.tidyverse.org/reference/scorer_detect.html" class="external-link">detect_match()</a></code></td>
+<td>the target appears at the end of the answer (see
+<code>location</code>)</td>
+<td>short factual answers and labels</td>
+</tr>
+<tr class="even">
+<td><code><a href="https://vitals.tidyverse.org/reference/scorer_detect.html" class="external-link">detect_includes()</a></code></td>
+<td>the target appears anywhere in the answer</td>
+<td>a word or phrase that must be present</td>
+</tr>
+<tr class="odd">
+<td><code><a href="https://vitals.tidyverse.org/reference/scorer_detect.html" class="external-link">detect_pattern()</a></code></td>
+<td>text captured by a regular expression matches the target</td>
+<td>pulling a number or code out of longer text</td>
+</tr>
+<tr class="even">
+<td><code><a href="https://vitals.tidyverse.org/reference/scorer_model.html" class="external-link">model_graded_qa()</a></code></td>
+<td>a grader model judges that the answer meets the target</td>
+<td>open-ended answers</td>
+</tr>
+</tbody>
+</table>
+<p>The examples above use <code><a href="https://vitals.tidyverse.org/reference/scorer_detect.html" class="external-link">detect_match()</a></code>. For explanations,
+<code><a href="https://vitals.tidyverse.org/reference/scorer_model.html" class="external-link">model_graded_qa()</a></code> asks a model whether the answer meets the
+target, treated as a criterion. Without a <code>scorer_chat</code> it
+grades with a fresh copy of the solver’s Chat, so the model grades its
+own answers. <code><a href="../reference/chain_of_thought.html">chain_of_thought()</a></code> adds a
+<code>reasoning</code> output, so <code>result</code> is JSON with both
+fields and the grader sees the reasoning too:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">factual</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">task</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/as_vitals_task.html">as_vitals_task</a></span><span class="op">(</span></span>
-<span>  module <span class="op">=</span> <span class="va">factual</span>,</span>
-<span>  dataset <span class="op">=</span> <span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
-<span>    question <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"What is 5 * 7?"</span>, <span class="st">"What year did WWII end?"</span><span class="op">)</span>,</span>
-<span>    target <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"35"</span>, <span class="st">"1945"</span><span class="op">)</span></span>
-<span>  <span class="op">)</span>,</span>
-<span>  scorer <span class="op">=</span> <span class="fu"><a href="https://vitals.tidyverse.org/reference/scorer_detect.html" class="external-link">detect_match</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>  name <span class="op">=</span> <span class="st">"factual-qa"</span>,</span>
-<span>  dir <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>  .llm <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-4o-mini"</span><span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">task</span><span class="op">$</span><span class="fu">eval</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="va">task</span><span class="op">$</span><span class="fu">get_samples</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="model-graded-qa-model_graded_qa">Model-Graded QA (model_graded_qa)<a class="anchor" aria-label="anchor" href="#model-graded-qa-model_graded_qa"></a>
-</h3>
-<p>Best for open-ended questions where multiple phrasings are
-correct:</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">explainer</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"topic -&gt; explanation"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/chain_of_thought.html">chain_of_thought</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
@@ -281,17 +326,28 @@ correct:</p>
 <span>  scorer <span class="op">=</span> <span class="fu"><a href="https://vitals.tidyverse.org/reference/scorer_model.html" class="external-link">model_graded_qa</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  name <span class="op">=</span> <span class="st">"explanations"</span>,</span>
 <span>  dir <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>  .llm <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-4o-mini"</span><span class="op">)</span></span>
+<span>  .llm <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-luna"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">task</span><span class="op">$</span><span class="fu">eval</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="va">task</span><span class="op">$</span><span class="fu">get_samples</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="substring-match-detect_includes">Substring Match (detect_includes)<a class="anchor" aria-label="anchor" href="#substring-match-detect_includes"></a>
-</h3>
-<p>Best for checking if specific text appears anywhere in output:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Solving</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Solving <span style="color: #B2B2B2;">[732ms]</span></span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Scoring</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Scoring <span style="color: #B2B2B2;">[275ms]</span></span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="va">task</span><span class="op">$</span><span class="fu">get_samples</span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 2 × 10</span></span></span>
+<span><span class="co">#&gt;   input    target        id result solver_chat solver_metadata score scorer_chat</span></span>
+<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>          <span style="color: #949494; font-style: italic;">&lt;ord&gt;</span> <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>     </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> <span style="color: #949494;">&lt;tibble&gt;</span> Light sca…     1 <span style="color: #949494;">"</span>{\"r… <span style="color: #949494;">&lt;Chat&gt;</span>      <span style="color: #949494;">&lt;named list&gt;</span>    C     <span style="color: #949494;">&lt;Chat&gt;</span>     </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> <span style="color: #949494;">&lt;tibble&gt;</span> Photosynt…     2 <span style="color: #949494;">"</span>{\"r… <span style="color: #949494;">&lt;Chat&gt;</span>      <span style="color: #949494;">&lt;named list&gt;</span>    C     <span style="color: #949494;">&lt;Chat&gt;</span>     </span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># ℹ 2 more variables: scorer_metadata &lt;list&gt;, scorer &lt;chr&gt;</span></span></span></code></pre></div>
+<p><code><a href="https://vitals.tidyverse.org/reference/scorer_detect.html" class="external-link">detect_includes()</a></code> checks that the target text appears
+anywhere. It is literal: the prompt below never says which language to
+use, the model wrote Python (<code>def add_numbers</code>), and the
+first row fails because “function” is missing:</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">coder</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"task -&gt; code"</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">task</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/as_vitals_task.html">as_vitals_task</a></span><span class="op">(</span></span>
@@ -306,20 +362,32 @@ correct:</p>
 <span>  scorer <span class="op">=</span> <span class="fu"><a href="https://vitals.tidyverse.org/reference/scorer_detect.html" class="external-link">detect_includes</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  name <span class="op">=</span> <span class="st">"code-gen"</span>,</span>
 <span>  dir <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>  .llm <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-4o-mini"</span><span class="op">)</span></span>
+<span>  .llm <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-luna"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">task</span><span class="op">$</span><span class="fu">eval</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="va">task</span><span class="op">$</span><span class="fu">get_samples</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-</div>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Solving</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Solving <span style="color: #B2B2B2;">[732ms]</span></span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Scoring</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Scoring <span style="color: #B2B2B2;">[65ms]</span></span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="va">task</span><span class="op">$</span><span class="fu">get_samples</span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 2 × 9</span></span></span>
+<span><span class="co">#&gt;   input            target      id result       solver_chat score scorer_metadata</span></span>
+<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>           <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>        <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;ord&gt;</span> <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>         </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> <span style="color: #949494;">&lt;tibble [1 × 1]&gt;</span> function     1 <span style="color: #949494;">"</span>def add_nu… <span style="color: #949494;">&lt;Chat&gt;</span>      I     <span style="color: #949494;">&lt;named list&gt;</span>   </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> <span style="color: #949494;">&lt;tibble [1 × 1]&gt;</span> for          2 <span style="color: #949494;">"</span>for i in r… <span style="color: #949494;">&lt;Chat&gt;</span>      C     <span style="color: #949494;">&lt;named list&gt;</span>   </span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># ℹ 2 more variables: scorer_explanation &lt;chr&gt;, scorer &lt;chr&gt;</span></span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="recipe-4-analyzing-evaluation-results">Recipe 4: Analyzing Evaluation Results<a class="anchor" aria-label="anchor" href="#recipe-4-analyzing-evaluation-results"></a>
+<h2 id="read-the-results">Read the results<a class="anchor" aria-label="anchor" href="#read-the-results"></a>
 </h2>
-<p>After running evaluation, dig into the results:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Run an evaluation</span></span>
-<span><span class="va">sentiment</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
+<p><code>$get_samples()</code> returns one row per sample.
+<code>input</code> is a list column holding each row’s signature inputs,
+so pull fields out of it to build a readable table:</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">sentiment</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
 <span>  <span class="st">"text -&gt; sentiment: enum('positive', 'negative', 'neutral')"</span></span>
 <span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="op">)</span></span>
@@ -341,49 +409,48 @@ correct:</p>
 <span>  scorer <span class="op">=</span> <span class="fu"><a href="https://vitals.tidyverse.org/reference/scorer_detect.html" class="external-link">detect_match</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  name <span class="op">=</span> <span class="st">"sentiment-analysis"</span>,</span>
 <span>  dir <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>  .llm <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-4o-mini"</span><span class="op">)</span></span>
+<span>  .llm <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-luna"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">task</span><span class="op">$</span><span class="fu">eval</span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Solving</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Solving <span style="color: #B2B2B2;">[1.8s]</span></span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Scoring</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Scoring <span style="color: #B2B2B2;">[106ms]</span></span></span>
+<span><span class="co">#&gt; </span></span>
 <span></span>
-<span><span class="co"># Get detailed scores</span></span>
-<span><span class="va">scores</span> <span class="op">&lt;-</span> <span class="va">task</span><span class="op">$</span><span class="fu">get_samples</span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="va">samples</span> <span class="op">&lt;-</span> <span class="va">task</span><span class="op">$</span><span class="fu">get_samples</span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
+<span>  text <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span><span class="va">samples</span><span class="op">$</span><span class="va">input</span>, \<span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="va">x</span><span class="op">$</span><span class="va">text</span>, <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  target <span class="op">=</span> <span class="va">samples</span><span class="op">$</span><span class="va">target</span>,</span>
+<span>  result <span class="op">=</span> <span class="va">samples</span><span class="op">$</span><span class="va">result</span>,</span>
+<span>  score <span class="op">=</span> <span class="va">samples</span><span class="op">$</span><span class="va">score</span></span>
+<span><span class="op">)</span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 5 × 4</span></span></span>
+<span><span class="co">#&gt;   text                target   result   score</span></span>
+<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>               <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;ord&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> Best purchase ever! positive positive C    </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> Complete garbage    negative negative C    </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> It's okay I guess   neutral  neutral  C    </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span> Amazing quality!    positive positive C    </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">5</span> Never buying again  negative negative C</span></span>
 <span></span>
-<span><span class="co"># Find failures</span></span>
-<span><span class="va">failures</span> <span class="op">&lt;-</span> <span class="va">scores</span><span class="op">[</span><span class="va">scores</span><span class="op">$</span><span class="va">score</span> <span class="op">==</span> <span class="st">"I"</span>, <span class="op">]</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Failed on"</span>, <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">failures</span><span class="op">)</span>, <span class="st">"of"</span>, <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">scores</span><span class="op">)</span>, <span class="st">"examples\n"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Examine what went wrong</span></span>
-<span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">failures</span><span class="op">)</span> <span class="op">&gt;</span> <span class="fl">0</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"\nFailure analysis:\n"</span><span class="op">)</span></span>
-<span>  <span class="kw">for</span> <span class="op">(</span><span class="va">i</span> <span class="kw">in</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">failures</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>    <span class="co"># Input is now a nested tibble with the signature's input columns</span></span>
-<span>    <span class="va">input_text</span> <span class="op">&lt;-</span> <span class="va">failures</span><span class="op">$</span><span class="va">input</span><span class="op">[[</span><span class="va">i</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="va">text</span></span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Input:"</span>, <span class="va">input_text</span>, <span class="st">"\n"</span><span class="op">)</span></span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Expected:"</span>, <span class="va">failures</span><span class="op">$</span><span class="va">target</span><span class="op">[</span><span class="va">i</span><span class="op">]</span>, <span class="st">"\n"</span><span class="op">)</span></span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Got:"</span>, <span class="va">failures</span><span class="op">$</span><span class="va">result</span><span class="op">[</span><span class="va">i</span><span class="op">]</span>, <span class="st">"\n\n"</span><span class="op">)</span></span>
-<span>  <span class="op">}</span></span>
-<span><span class="op">}</span></span>
-<span></span>
-<span><span class="co"># Calculate accuracy</span></span>
-<span><span class="va">accuracy</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">scores</span><span class="op">$</span><span class="va">score</span> <span class="op">==</span> <span class="st">"C"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Overall accuracy:"</span>, <span class="fu">scales</span><span class="fu">::</span><span class="fu"><a href="https://scales.r-lib.org/reference/percent_format.html" class="external-link">percent</a></span><span class="op">(</span><span class="va">accuracy</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">samples</span><span class="op">$</span><span class="va">score</span> <span class="op">==</span> <span class="st">"C"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] 1</span></span></code></pre></div>
+<p>Filter on <code>score == "I"</code> to list the failures.</p>
 </div>
 <div class="section level2">
-<h2 id="recipe-5-comparing-module-variants">Recipe 5: Comparing Module Variants<a class="anchor" aria-label="anchor" href="#recipe-5-comparing-module-variants"></a>
+<h2 id="compare-two-modules">Compare two modules<a class="anchor" aria-label="anchor" href="#compare-two-modules"></a>
 </h2>
-<p>Test different module configurations side-by-side:</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Same signature, different approaches</span></span>
-<span><span class="va">sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Variant 1: Basic prediction</span></span>
+<p>Run the same data through each variant and compare the share of
+correct answers. Here a plain module and a chain-of-thought module
+answer two word problems, graded by <code><a href="https://vitals.tidyverse.org/reference/scorer_model.html" class="external-link">model_graded_qa()</a></code>:</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span><span class="op">)</span></span>
 <span><span class="va">basic</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Variant 2: Chain-of-thought reasoning</span></span>
 <span><span class="va">cot</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/chain_of_thought.html">chain_of_thought</a></span><span class="op">(</span><span class="va">sig</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Test dataset</span></span>
 <span><span class="va">test_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
 <span>  question <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
 <span>    <span class="st">"If a train travels 60 mph for 2 hours, how far does it go?"</span>,</span>
@@ -392,9 +459,8 @@ correct:</p>
 <span>  target <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"120 miles"</span>, <span class="st">"12"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">llm</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-4o-mini"</span><span class="op">)</span></span>
+<span><span class="va">llm</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-luna"</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Evaluate both</span></span>
 <span><span class="va">results</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="kw">for</span> <span class="op">(</span><span class="va">name</span> <span class="kw">in</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"basic"</span>, <span class="st">"cot"</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">mod</span> <span class="op">&lt;-</span> <span class="kw">if</span> <span class="op">(</span><span class="va">name</span> <span class="op">==</span> <span class="st">"basic"</span><span class="op">)</span> <span class="va">basic</span> <span class="kw">else</span> <span class="va">cot</span></span>
@@ -411,22 +477,43 @@ correct:</p>
 <span></span>
 <span>  <span class="va">results</span><span class="op">[[</span><span class="va">name</span><span class="op">]</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">task</span><span class="op">$</span><span class="fu">get_samples</span><span class="op">(</span><span class="op">)</span><span class="op">$</span><span class="va">score</span> <span class="op">==</span> <span class="st">"C"</span><span class="op">)</span></span>
 <span><span class="op">}</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Solving</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Solving <span style="color: #B2B2B2;">[729ms]</span></span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Scoring</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Scoring <span style="color: #B2B2B2;">[218ms]</span></span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Solving</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Solving <span style="color: #B2B2B2;">[742ms]</span></span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Scoring</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Scoring <span style="color: #B2B2B2;">[255ms]</span></span></span>
+<span><span class="co">#&gt; </span></span>
 <span></span>
-<span><span class="co"># Compare</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Basic accuracy:"</span>, <span class="fu">scales</span><span class="fu">::</span><span class="fu"><a href="https://scales.r-lib.org/reference/percent_format.html" class="external-link">percent</a></span><span class="op">(</span><span class="va">results</span><span class="op">$</span><span class="va">basic</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"CoT accuracy:"</span>, <span class="fu">scales</span><span class="fu">::</span><span class="fu"><a href="https://scales.r-lib.org/reference/percent_format.html" class="external-link">percent</a></span><span class="op">(</span><span class="va">results</span><span class="op">$</span><span class="va">cot</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span>variant <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">results</span><span class="op">)</span>, accuracy <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/unlist.html" class="external-link">unlist</a></span><span class="op">(</span><span class="va">results</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 2 × 2</span></span></span>
+<span><span class="co">#&gt;   variant accuracy</span></span>
+<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> basic          1</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> cot            1</span></span></code></pre></div>
+<p>Both variants get both problems right, so two questions can’t
+separate them. Use enough rows that a difference would show.</p>
 </div>
 <div class="section level2">
-<h2 id="recipe-6-multiple-epochs-for-confidence">Recipe 6: Multiple Epochs for Confidence<a class="anchor" aria-label="anchor" href="#recipe-6-multiple-epochs-for-confidence"></a>
+<h2 id="repeat-samples-with-epochs">Repeat samples with epochs<a class="anchor" aria-label="anchor" href="#repeat-samples-with-epochs"></a>
 </h2>
-<p>Run multiple evaluation passes for more reliable metrics:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<p>A model can answer the same prompt differently from run to run.
+<code>epochs</code> repeats every row so you can see how stable the
+scores are. Pass <code>.cache = FALSE</code> (forwarded to
+<code><a href="../reference/run_dataset.html">run_dataset()</a></code>) so each repeat makes a new request; with
+dsprrr’s response cache on, the repeats would replay the first
+answer:</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">classifier</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
 <span>  <span class="st">"text -&gt; category: enum('tech', 'sports', 'politics')"</span></span>
 <span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Small dataset - need multiple epochs for confidence</span></span>
 <span><span class="va">test_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
 <span>  text <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
 <span>    <span class="st">"New iPhone released today"</span>,</span>
@@ -436,7 +523,6 @@ correct:</p>
 <span>  target <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"tech"</span>, <span class="st">"sports"</span>, <span class="st">"politics"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Run 3 epochs (each example evaluated 3 times)</span></span>
 <span><span class="va">task</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/as_vitals_task.html">as_vitals_task</a></span><span class="op">(</span></span>
 <span>  module <span class="op">=</span> <span class="va">classifier</span>,</span>
 <span>  dataset <span class="op">=</span> <span class="va">test_data</span>,</span>
@@ -444,108 +530,94 @@ correct:</p>
 <span>  name <span class="op">=</span> <span class="st">"news-classification"</span>,</span>
 <span>  epochs <span class="op">=</span> <span class="fl">3L</span>,</span>
 <span>  dir <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>  .llm <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-4o-mini"</span><span class="op">)</span>,</span>
-<span>  .cache <span class="op">=</span> <span class="cn">FALSE</span>  <span class="co"># Disable cache so each epoch gets fresh responses</span></span>
+<span>  .llm <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-luna"</span><span class="op">)</span>,</span>
+<span>  .cache <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">task</span><span class="op">$</span><span class="fu">eval</span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Solving</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Solving <span style="color: #B2B2B2;">[2.9s]</span></span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Scoring</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Scoring <span style="color: #B2B2B2;">[167ms]</span></span></span>
+<span><span class="co">#&gt; </span></span>
 <span></span>
-<span><span class="co"># Aggregate scores across epochs</span></span>
 <span><span class="va">scores</span> <span class="op">&lt;-</span> <span class="va">task</span><span class="op">$</span><span class="fu">get_samples</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span></span>
-<span>  <span class="st">"Total evaluations:"</span>,</span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">scores</span><span class="op">)</span>,</span>
-<span>  <span class="st">"(3 epochs x"</span>,</span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">test_data</span><span class="op">)</span>,</span>
-<span>  <span class="st">"examples)\n"</span></span>
-<span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Overall accuracy:"</span>, <span class="fu">scales</span><span class="fu">::</span><span class="fu"><a href="https://scales.r-lib.org/reference/percent_format.html" class="external-link">percent</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">scores</span><span class="op">$</span><span class="va">score</span> <span class="op">==</span> <span class="st">"C"</span><span class="op">)</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">scores</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] 9</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">table</a></span><span class="op">(</span><span class="va">scores</span><span class="op">$</span><span class="va">target</span>, <span class="va">scores</span><span class="op">$</span><span class="va">score</span><span class="op">)</span></span>
+<span><span class="co">#&gt;           </span></span>
+<span><span class="co">#&gt;            I C</span></span>
+<span><span class="co">#&gt;   politics 0 3</span></span>
+<span><span class="co">#&gt;   sports   0 3</span></span>
+<span><span class="co">#&gt;   tech     0 3</span></span></code></pre></div>
+<p>Three rows times three epochs gives nine samples, and each headline
+got the same label every time.</p>
+<p>For larger datasets, add
+<code>.concurrency = concurrency_control(backend = "ellmer", max_active = 4L)</code>
+to <code><a href="../reference/as_vitals_task.html">as_vitals_task()</a></code> to run rows in parallel. Concurrent
+rows skip dsprrr’s response cache.</p>
 </div>
 <div class="section level2">
-<h2 id="recipe-7-custom-evaluation-pipeline">Recipe 7: Custom Evaluation Pipeline<a class="anchor" aria-label="anchor" href="#recipe-7-custom-evaluation-pipeline"></a>
+<h2 id="build-the-task-yourself">Build the Task yourself<a class="anchor" aria-label="anchor" href="#build-the-task-yourself"></a>
 </h2>
-<p>For complex evaluation logic, build a custom pipeline:</p>
+<p><code><a href="../reference/as_vitals_solver.html">as_vitals_solver()</a></code> wraps a module as a vitals solver,
+for when you want to call <code>Task$new()</code> directly. A module
+whose only input is named <code>input</code> reads vitals’
+<code>input</code> column as is; for other or multiple inputs, use
+<code><a href="../reference/as_vitals_task.html">as_vitals_task()</a></code>, which packs them into that column for
+you.</p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">triage</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"input -&gt; priority: enum('low', 'medium', 'high')"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">tickets</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
+<span>  input <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Checkout fails for every customer"</span>, <span class="st">"Typo on the About page"</span><span class="op">)</span>,</span>
+<span>  target <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"high"</span>, <span class="st">"low"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">task</span> <span class="op">&lt;-</span> <span class="va"><a href="https://vitals.tidyverse.org/reference/Task.html" class="external-link">Task</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span></span>
+<span>  dataset <span class="op">=</span> <span class="va">tickets</span>,</span>
+<span>  solver <span class="op">=</span> <span class="fu"><a href="../reference/as_vitals_solver.html">as_vitals_solver</a></span><span class="op">(</span><span class="va">triage</span>, .llm <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-luna"</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  scorer <span class="op">=</span> <span class="fu"><a href="https://vitals.tidyverse.org/reference/scorer_detect.html" class="external-link">detect_match</a></span><span class="op">(</span>location <span class="op">=</span> <span class="st">"exact"</span><span class="op">)</span>,</span>
+<span>  dir <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">task</span><span class="op">$</span><span class="fu">eval</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="use-vitals-scorers-as-dsprrr-metrics">Use vitals scorers as dsprrr metrics<a class="anchor" aria-label="anchor" href="#use-vitals-scorers-as-dsprrr-metrics"></a>
+</h2>
+<p><code><a href="../reference/vitals_metrics.html">metric_detect_match()</a></code>,
+<code><a href="../reference/vitals_metrics.html">metric_detect_includes()</a></code> and
+<code><a href="../reference/vitals_metrics.html">metric_detect_pattern()</a></code> wrap the matching vitals scorers as
+dsprrr metrics, so <code><a href="../reference/evaluate.html">evaluate()</a></code>, <code><a href="../reference/optimize_grid.html">optimize_grid()</a></code>
+and <code><a href="../reference/compile.html">compile()</a></code> can use them. They take the expected answer
+from the data’s <code>target</code> column, return 1 or 0, and work with
+modules that have a single output field:</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Custom evaluation function</span></span>
-<span><span class="va">evaluate_module</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">module</span>, <span class="va">dataset</span>, <span class="va">llm</span>, <span class="va">scorer</span> <span class="op">=</span> <span class="fu"><a href="https://vitals.tidyverse.org/reference/scorer_detect.html" class="external-link">detect_match</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="co"># Run predictions</span></span>
-<span>  <span class="va">predictions</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
-<span>    <span class="va">module</span>,</span>
-<span>    <span class="op">!</span><span class="op">!</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">as.list</a></span><span class="op">(</span><span class="va">dataset</span><span class="op">[</span>, <span class="op">-</span><span class="fu"><a href="https://rdrr.io/r/base/which.html" class="external-link">which</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">dataset</span><span class="op">)</span> <span class="op">==</span> <span class="st">"target"</span><span class="op">)</span><span class="op">]</span><span class="op">)</span>,</span>
-<span>    .llm <span class="op">=</span> <span class="va">llm</span></span>
-<span>  <span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">ends_with_target</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/vitals_metrics.html">metric_detect_match</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="va">exact_target</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/vitals_metrics.html">metric_detect_match</a></span><span class="op">(</span>location <span class="op">=</span> <span class="st">"exact"</span><span class="op">)</span></span>
+<span><span class="va">row</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span>question <span class="op">=</span> <span class="st">"Who wrote Hamlet?"</span>, target <span class="op">=</span> <span class="st">"Shakespeare"</span><span class="op">)</span></span>
 <span></span>
-<span>  <span class="co"># Combine with targets</span></span>
-<span>  <span class="va">results</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
-<span>    input <span class="op">=</span> <span class="va">dataset</span><span class="op">$</span><span class="va">input</span>,</span>
-<span>    target <span class="op">=</span> <span class="va">dataset</span><span class="op">$</span><span class="va">target</span>,</span>
-<span>    prediction <span class="op">=</span> <span class="va">predictions</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span> <span class="co"># First output column</span></span>
-<span>  <span class="op">)</span></span>
-<span></span>
-<span>  <span class="co"># Score</span></span>
-<span>  <span class="va">results</span><span class="op">$</span><span class="va">correct</span> <span class="op">&lt;-</span> <span class="va">results</span><span class="op">$</span><span class="va">prediction</span> <span class="op">==</span> <span class="va">results</span><span class="op">$</span><span class="va">target</span></span>
-<span></span>
-<span>  <span class="co"># Summary</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    accuracy <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">results</span><span class="op">$</span><span class="va">correct</span><span class="op">)</span>,</span>
-<span>    n <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">results</span><span class="op">)</span>,</span>
-<span>    failures <span class="op">=</span> <span class="va">results</span><span class="op">[</span><span class="op">!</span><span class="va">results</span><span class="op">$</span><span class="va">correct</span>, <span class="op">]</span>,</span>
-<span>    all <span class="op">=</span> <span class="va">results</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">}</span></span>
-<span></span>
-<span><span class="co"># Use it</span></span>
-<span><span class="va">results</span> <span class="op">&lt;-</span> <span class="fu">evaluate_module</span><span class="op">(</span></span>
-<span>  module <span class="op">=</span> <span class="va">sentiment_module</span>,</span>
-<span>  dataset <span class="op">=</span> <span class="va">test_data</span>,</span>
-<span>  llm <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Accuracy:"</span>, <span class="fu">scales</span><span class="fu">::</span><span class="fu"><a href="https://scales.r-lib.org/reference/percent_format.html" class="external-link">percent</a></span><span class="op">(</span><span class="va">results</span><span class="op">$</span><span class="va">accuracy</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Failures:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">results</span><span class="op">$</span><span class="va">failures</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level2">
-<h2 id="summary">Summary<a class="anchor" aria-label="anchor" href="#summary"></a>
-</h2>
-<p>These recipes cover the most common integration patterns:</p>
-<table class="table">
-<thead><tr class="header">
-<th>Recipe</th>
-<th>Use When</th>
-</tr></thead>
-<tbody>
-<tr class="odd">
-<td>Quick Start</td>
-<td>Getting started, simple evaluation</td>
-</tr>
-<tr class="even">
-<td>Train-Test Split</td>
-<td>Validating optimization results</td>
-</tr>
-<tr class="odd">
-<td>Different Scorers</td>
-<td>Matching scorer to task type</td>
-</tr>
-<tr class="even">
-<td>Analyzing Results</td>
-<td>Understanding failures</td>
-</tr>
-<tr class="odd">
-<td>Comparing Variants</td>
-<td>A/B testing modules</td>
-</tr>
-<tr class="even">
-<td>Multiple Epochs</td>
-<td>Small datasets, need confidence</td>
-</tr>
-<tr class="odd">
-<td>Custom Pipeline</td>
-<td>Complex evaluation logic</td>
-</tr>
-</tbody>
-</table>
-<p>For more details on the underlying APIs, see
-<code><a href="../articles/vitals-integration.html">vignette("vitals-integration")</a></code>.</p>
+<span><span class="fu">ends_with_target</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>answer <span class="op">=</span> <span class="st">"William Shakespeare"</span><span class="op">)</span>, <span class="va">row</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] 1</span></span>
+<span><span class="fu">exact_target</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>answer <span class="op">=</span> <span class="st">"William Shakespeare"</span><span class="op">)</span>, <span class="va">row</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] 0</span></span></code></pre></div>
+<p>In an evaluation, pass the metric like any other:</p>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span></span>
+<span>  <span class="va">qa_module</span>,</span>
+<span>  <span class="va">testset</span>,</span>
+<span>  metric <span class="op">=</span> <span class="fu"><a href="../reference/vitals_metrics.html">metric_detect_match</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-luna"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p><code><a href="../reference/as_dsprrr_metric.html">as_dsprrr_metric()</a></code> adapts other vitals-style scorers the
+same way. <code><a href="../reference/vitals_metrics.html">metric_model_graded_qa()</a></code> and
+<code><a href="../reference/vitals_metrics.html">metric_model_graded_fact()</a></code> exist too, but they currently
+show the grader the prediction as R list syntax and no question unless
+the data has an <code>input</code> column; for model grading, use
+<code><a href="https://vitals.tidyverse.org/reference/scorer_model.html" class="external-link">model_graded_qa()</a></code> in a vitals Task as shown above. For how
+metrics drive optimization, see <a href="concepts-why-metrics-matter.html">Metrics and evaluation</a>.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

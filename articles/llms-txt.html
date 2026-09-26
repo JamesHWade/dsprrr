@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Generating llms.txt for R Packages • dsprrr</title>
+<title>Generate an llms.txt file • dsprrr</title>
 <!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="../favicon-96x96.png">
 <link rel="icon" type="”image/svg+xml”" href="../favicon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
@@ -17,7 +17,7 @@
 <link href="../deps/Fira_Code-0.4.10/font.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Generating llms.txt for R Packages">
+<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Generate an llms.txt file">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -36,67 +36,67 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
-<li class="nav-item"><a class="nav-link" href="../articles/getting-started.html">Get Started</a></li>
+<li class="nav-item"><a class="nav-link" href="../articles/tutorial-hello-world.html">Get started</a></li>
 <li class="active nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-tutorials" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Tutorials</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-tutorials">
-<li><h6 class="dropdown-header" data-toc-skip>Learning Path</h6></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-hello-world.html">1. Your First LLM Call</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-build-classifier.html">2. Building a Classifier</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-structured-outputs.html">3. Structured Outputs</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-improve-with-demos.html">4. Improving with Examples</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-optimize-your-module.html">5. Optimization</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-deploy-to-production.html">6. Production</a></li>
+<li><a class="dropdown-item" href="../articles/tutorial-hello-world.html">1. Your first LLM call</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-build-classifier.html">2. Build a classifier</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-structured-outputs.html">3. Extract structured data</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-improve-with-demos.html">4. Improve with examples</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-optimize-your-module.html">5. Optimize a module</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-deploy-to-production.html">6. Save and reuse a module</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Advanced Tutorials</h6></li>
-    <li><a class="dropdown-item" href="../articles/text-adventure.html">Build an AI Game Master</a></li>
-    <li><a class="dropdown-item" href="../articles/llms-txt.html">Generate Package Docs</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-rlm-dsprrr.html">Investigate a Regression with RLM</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Projects</h6></li>
+    <li><a class="dropdown-item" href="../articles/llms-txt.html">Generate an llms.txt file</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-rlm-dsprrr.html">Investigate a regression with RLM</a></li>
+    <li><a class="dropdown-item" href="../articles/text-adventure.html">Build a text adventure</a></li>
   </ul>
 </li>
 <li class="nav-item dropdown">
-  <button class="nav-link dropdown-toggle" type="button" id="dropdown-how-to-guides" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">How-to Guides</button>
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-how-to-guides" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">How-to guides</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-how-to-guides">
-<li><a class="dropdown-item" href="../articles/troubleshooting.html">Troubleshooting</a></li>
-    <li><a class="dropdown-item" href="../articles/compilation-optimization.html">Compile &amp; Optimize</a></li>
-    <li><a class="dropdown-item" href="../articles/vitals-recipes.html">Evaluate with Vitals</a></li>
-    <li><a class="dropdown-item" href="../articles/rag-workflows.html">Build RAG Pipelines</a></li>
-    <li><a class="dropdown-item" href="../articles/chaining-modules.html">Chaining Modules</a></li>
-    <li><a class="dropdown-item" href="../articles/calibrated-decisions.html">Calibrated Decisions</a></li>
-    <li><a class="dropdown-item" href="../articles/orchestration.html">Deploy to Production</a></li>
+<li><h6 class="dropdown-header" data-toc-skip>Build</h6></li>
+    <li><a class="dropdown-item" href="../articles/advanced-modules.html">Choose a module type</a></li>
+    <li><a class="dropdown-item" href="../articles/chaining-modules.html">Chain modules into pipelines</a></li>
+    <li><a class="dropdown-item" href="../articles/rag-workflows.html">Retrieval-augmented generation</a></li>
+    <li><a class="dropdown-item" href="../articles/calibrated-decisions.html">Calibrated decisions</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Integrations</h6></li>
-    <li><a class="dropdown-item" href="../articles/vitals-integration.html">Vitals Package</a></li>
-    <li><a class="dropdown-item" href="../articles/tidymodels-integration.html">tidymodels</a></li>
-    <li><a class="dropdown-item" href="../articles/advanced-ellmer.html">Advanced ellmer</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Measure and improve</h6></li>
+    <li><a class="dropdown-item" href="../articles/compilation-optimization.html">Compile and optimize</a></li>
+    <li><a class="dropdown-item" href="../articles/advanced-optimization.html">Choose an optimizer</a></li>
+    <li><a class="dropdown-item" href="../articles/vitals-recipes.html">Evaluate with vitals</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Run</h6></li>
+    <li><a class="dropdown-item" href="../articles/models-and-providers.html">Models, providers and streaming</a></li>
+    <li><a class="dropdown-item" href="../articles/orchestration.html">Run dsprrr in pipelines</a></li>
+    <li><a class="dropdown-item" href="../articles/tidymodels-integration.html">Use dsprrr with tidymodels</a></li>
+    <li><a class="dropdown-item" href="../articles/troubleshooting.html">Troubleshooting</a></li>
   </ul>
 </li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-concepts" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Concepts</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-concepts">
-<li><a class="dropdown-item" href="../articles/concepts-dspy-philosophy.html">The DSPy Philosophy</a></li>
-    <li><a class="dropdown-item" href="../articles/dspy-comparison.html">dsprrr vs. DSPy</a></li>
-    <li><a class="dropdown-item" href="../articles/concepts-signatures-modules.html">Signatures &amp; Modules</a></li>
-    <li><a class="dropdown-item" href="../articles/concepts-optimization-theory.html">How Optimization Works</a></li>
-    <li><a class="dropdown-item" href="../articles/concepts-why-metrics-matter.html">Why Metrics Matter</a></li>
-    <li><a class="dropdown-item" href="../articles/how-rlm-works.html">How RLMs Work</a></li>
+<li><a class="dropdown-item" href="../articles/concepts-signatures-modules.html">How dsprrr works</a></li>
+    <li><a class="dropdown-item" href="../articles/concepts-why-metrics-matter.html">Metrics and evaluation</a></li>
+    <li><a class="dropdown-item" href="../articles/concepts-optimization-theory.html">How optimization works</a></li>
+    <li><a class="dropdown-item" href="../articles/dspy-comparison.html">dsprrr for DSPy users</a></li>
+    <li><a class="dropdown-item" href="../articles/how-rlm-works.html">How RLM works</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Deep Dives</h6></li>
-    <li><a class="dropdown-item" href="../articles/flex-optimization.html">Flex: Optimize the Whole Program</a></li>
-    <li><a class="dropdown-item" href="../articles/advanced-modules.html">Advanced Reasoning</a></li>
-    <li><a class="dropdown-item" href="../articles/advanced-optimization.html">Advanced Optimization</a></li>
-    <li><a class="dropdown-item" href="../articles/omni-meta-optimization.html">Composing Optimizers with Omni</a></li>
-    <li><a class="dropdown-item" href="../articles/agentic-optimization-harnesses.html">Agentic Optimization Harnesses</a></li>
-    <li><a class="dropdown-item" href="../articles/reasoning-models.html">Reasoning Models</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Experimental</h6></li>
+    <li><a class="dropdown-item" href="../articles/flex-optimization.html">Flex: optimize a whole program</a></li>
+    <li><a class="dropdown-item" href="../articles/omni-meta-optimization.html">Compose optimizers with Omni</a></li>
+    <li><a class="dropdown-item" href="../articles/agentic-optimization-harnesses.html">Agentic optimization harnesses</a></li>
   </ul>
 </li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-reference" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Reference</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-reference">
-<li><a class="dropdown-item" href="../articles/cheatsheet.html">Quick Reference</a></li>
-    <li><a class="dropdown-item" href="../reference/index.html">API Documentation</a></li>
+<li><a class="dropdown-item" href="../reference/index.html">Function reference</a></li>
+    <li><a class="dropdown-item" href="../articles/cheatsheet.html">Quick reference</a></li>
   </ul>
 </li>
+<li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul>
 <ul class="navbar-nav">
 <li class="nav-item"><form class="form-inline" role="search">
@@ -123,7 +123,7 @@
 
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
-      <img src="../logo.svg" class="logo" alt=""><h1>Generating llms.txt for R Packages</h1>
+      <img src="../logo.svg" class="logo" alt=""><h1>Generate an llms.txt file</h1>
             
       
       <small class="dont-index">Source: <a href="https://github.com/JamesHWade/dsprrr/blob/main/vignettes/llms-txt.Rmd" class="external-link"><code>vignettes/llms-txt.Rmd</code></a></small>
@@ -132,140 +132,112 @@
 
     
     
-<p><a href="https://llmstxt.org/" class="external-link">llms.txt</a> is a proposed standard
-for AI-friendly documentation. This tutorial builds a dsprrr pipeline to
-automatically generate <code>llms.txt</code> files for R packages.</p>
-<p><em>This tutorial is adapted from the <a href="https://dspy.ai/tutorials/llms_txt_generation/" class="external-link">DSPy llms.txt
-tutorial</a> by the DSPy team.</em></p>
-<div class="section level2">
-<h2 id="why-this-matters-beyond-llms-txt">Why This Matters Beyond llms.txt<a class="anchor" aria-label="anchor" href="#why-this-matters-beyond-llms-txt"></a>
-</h2>
-<p>The multi-stage pipeline you’ll build here is a blueprint for many
-real-world AI workflows:</p>
-<ul>
-<li><p><strong>API documentation generation</strong>: The same
-pattern—gather metadata, analyze structure, generate prose—applies to
-any documentation task. Replace R packages with REST APIs, GraphQL
-schemas, or database tables.</p></li>
-<li><p><strong>Code review automation</strong>: Each stage (understand
-purpose → analyze structure → identify issues) maps directly to how a
-code review agent works. The typed S7 results ensure review findings
-don’t get lost between stages.</p></li>
-<li><p><strong>Migration guide creation</strong>: When upgrading
-dependencies or refactoring APIs, you need the same capabilities:
-understand what exists, identify patterns, generate actionable
-guidance.</p></li>
-<li><p><strong>Knowledge base construction</strong>: The pipeline
-extracts structured knowledge from unstructured sources. Swap packages
-for internal wikis, Slack channels, or support tickets.</p></li>
-</ul>
-<p>The key insight is <strong>staged analysis with typed
-handoffs</strong>. Each LLM call has a focused job. S7 classes ensure
-intermediate results are validated before the next stage sees them. This
-is more reliable than asking one prompt to do everything.</p>
-<p>We’ll start with plain lists and functions, then show how S7 adds
-structure for larger projects.</p>
-</div>
-<div class="section level2">
-<h2 id="what-youll-build">What You’ll Build<a class="anchor" aria-label="anchor" href="#what-youll-build"></a>
-</h2>
-<p>A multi-stage analysis pipeline that:</p>
-<ol style="list-style-type: decimal">
-<li>Gathers package metadata (DESCRIPTION, README, exports)</li>
-<li>Analyzes purpose and key concepts</li>
-<li>Analyzes code structure</li>
-<li>Generates usage examples</li>
-<li>Produces formatted <code>llms.txt</code>
-</li>
-</ol>
+<p><a href="https://llmstxt.org/" class="external-link">llms.txt</a> is a proposed Markdown
+file at the root of a website that tells language models what the site
+is for and where to look. This project builds a dsprrr program that
+writes one for an R package, runs the code examples it produces, and
+turns that check into a metric you can optimize the program against. It
+is adapted from the <a href="https://dspy.ai/tutorials/llms_txt_generation/" class="external-link">DSPy llms.txt
+tutorial</a>.</p>
+<p>If your package has a pkgdown site, you already have an llms.txt.
+Since pkgdown 2.2.0, <code><a href="https://pkgdown.r-lib.org/reference/build_site.html" class="external-link">pkgdown::build_site()</a></code> writes one that
+joins your home page with the reference and article indexes, and adds a
+Markdown copy of every page. That file lists everything on your site. It
+can’t tell a model which functions a newcomer needs or which mistakes
+people make. This project writes that shorter, curated summary, and
+because a program writes it, you can measure it and improve it.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/dsprrr" class="external-link">dsprrr</a></span><span class="op">)</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ellmer.tidyverse.org" class="external-link">ellmer</a></span><span class="op">)</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://cli.r-lib.org" class="external-link">cli</a></span><span class="op">)</span></span></code></pre></div>
-</div>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ellmer.tidyverse.org" class="external-link">ellmer</a></span><span class="op">)</span></span></code></pre></div>
 <div class="section level2">
-<h2 id="part-1-the-simple-approach">Part 1: The Simple Approach<a class="anchor" aria-label="anchor" href="#part-1-the-simple-approach"></a>
+<h2 id="gather-the-facts">Gather the facts<a class="anchor" aria-label="anchor" href="#gather-the-facts"></a>
 </h2>
-<p>For a quick script or personal use, plain lists work fine.</p>
-<div class="section level3">
-<h3 id="gather-package-info">Gather Package Info<a class="anchor" aria-label="anchor" href="#gather-package-info"></a>
-</h3>
+<p>Everything the model sees comes from files R can read without a
+model: the DESCRIPTION, the README, the file names in <code>R/</code>,
+and the exports in <code>NAMESPACE</code>.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">gather_package_info</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">pkg_path</span> <span class="op">=</span> <span class="st">"."</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="co"># Read DESCRIPTION</span></span>
-<span>  <span class="va">desc_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">pkg_path</span>, <span class="st">"DESCRIPTION"</span><span class="op">)</span></span>
-<span>  <span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.exists</a></span><span class="op">(</span><span class="va">desc_path</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>    <span class="fu"><a href="https://cli.r-lib.org/reference/cli_abort.html" class="external-link">cli_abort</a></span><span class="op">(</span><span class="st">"No DESCRIPTION file found at {.path {pkg_path}}"</span><span class="op">)</span></span>
+<span>  <span class="va">path</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">...</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">pkg_path</span>, <span class="va">...</span><span class="op">)</span></span>
+<span>  <span class="va">file_lines</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">file</span><span class="op">)</span> <span class="op">{</span></span>
+<span>    <span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.exists</a></span><span class="op">(</span><span class="fu">path</span><span class="op">(</span><span class="va">file</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="kw"><a href="https://rdrr.io/r/base/function.html" class="external-link">return</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/readLines.html" class="external-link">readLines</a></span><span class="op">(</span><span class="fu">path</span><span class="op">(</span><span class="va">file</span><span class="op">)</span>, warn <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
 <span>  <span class="op">}</span></span>
-<span></span>
-<span>  <span class="va">desc</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/dcf.html" class="external-link">read.dcf</a></span><span class="op">(</span><span class="va">desc_path</span><span class="op">)</span></span>
-<span></span>
-<span>  <span class="co"># Parse dependencies</span></span>
-<span>  <span class="va">imports</span> <span class="op">&lt;-</span> <span class="va">desc</span><span class="op">[</span><span class="fl">1</span>, <span class="st">"Imports"</span><span class="op">]</span> <span class="op"><a href="https://rdrr.io/r/base/Control.html" class="external-link">%||%</a></span> <span class="st">""</span></span>
-<span>  <span class="va">deps</span> <span class="op">&lt;-</span> <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nchar.html" class="external-link">nzchar</a></span><span class="op">(</span><span class="va">imports</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/trimws.html" class="external-link">trimws</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/strsplit.html" class="external-link">strsplit</a></span><span class="op">(</span><span class="va">imports</span>, <span class="st">","</span><span class="op">)</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span>
-<span>  <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span></span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="op">)</span></span>
+<span>  <span class="va">desc</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/dcf.html" class="external-link">read.dcf</a></span><span class="op">(</span><span class="fu">path</span><span class="op">(</span><span class="st">"DESCRIPTION"</span><span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="co"># read.dcf() only returns the fields a package actually has</span></span>
+<span>  <span class="va">field</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">name</span><span class="op">)</span> <span class="op">{</span></span>
+<span>    <span class="kw">if</span> <span class="op">(</span><span class="va">name</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">desc</span><span class="op">)</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/unname.html" class="external-link">unname</a></span><span class="op">(</span><span class="va">desc</span><span class="op">[</span><span class="fl">1</span>, <span class="va">name</span><span class="op">]</span><span class="op">)</span> <span class="kw">else</span> <span class="st">""</span></span>
 <span>  <span class="op">}</span></span>
+<span>  <span class="va">exports</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grep</a></span><span class="op">(</span><span class="st">"^export\\("</span>, <span class="fu">file_lines</span><span class="op">(</span><span class="st">"NAMESPACE"</span><span class="op">)</span>, value <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span></span>
-<span>  <span class="co"># Read README</span></span>
-<span>  <span class="va">readme_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">pkg_path</span>, <span class="st">"README.md"</span><span class="op">)</span></span>
-<span>  <span class="va">readme</span> <span class="op">&lt;-</span> <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.exists</a></span><span class="op">(</span><span class="va">readme_path</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/readLines.html" class="external-link">readLines</a></span><span class="op">(</span><span class="va">readme_path</span>, warn <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span>, collapse <span class="op">=</span> <span class="st">"\n"</span><span class="op">)</span></span>
-<span>  <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span></span>
-<span>    <span class="st">""</span></span>
-<span>  <span class="op">}</span></span>
-<span></span>
-<span>  <span class="co"># Get R files</span></span>
-<span>  <span class="va">r_dir</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">pkg_path</span>, <span class="st">"R"</span><span class="op">)</span></span>
-<span>  <span class="va">r_files</span> <span class="op">&lt;-</span> <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/files2.html" class="external-link">dir.exists</a></span><span class="op">(</span><span class="va">r_dir</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/list.files.html" class="external-link">list.files</a></span><span class="op">(</span><span class="va">r_dir</span>, pattern <span class="op">=</span> <span class="st">"\\.R$"</span>, ignore.case <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
-<span>  <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span></span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="op">)</span></span>
-<span>  <span class="op">}</span></span>
-<span></span>
-<span>  <span class="co"># Get exports from NAMESPACE</span></span>
-<span>  <span class="va">ns_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">pkg_path</span>, <span class="st">"NAMESPACE"</span><span class="op">)</span></span>
-<span>  <span class="va">exports</span> <span class="op">&lt;-</span> <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.exists</a></span><span class="op">(</span><span class="va">ns_path</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>    <span class="va">ns_lines</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/readLines.html" class="external-link">readLines</a></span><span class="op">(</span><span class="va">ns_path</span>, warn <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
-<span>    <span class="va">export_lines</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grep</a></span><span class="op">(</span><span class="st">"^export\\("</span>, <span class="va">ns_lines</span>, value <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">gsub</a></span><span class="op">(</span><span class="st">"export\\((.+)\\)"</span>, <span class="st">"\\1"</span>, <span class="va">export_lines</span><span class="op">)</span></span>
-<span>  <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span></span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="op">)</span></span>
-<span>  <span class="op">}</span></span>
-<span></span>
-<span>  <span class="co"># Check for vignettes</span></span>
-<span>  <span class="va">vignette_dir</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">pkg_path</span>, <span class="st">"vignettes"</span><span class="op">)</span></span>
-<span>  <span class="va">has_vignettes</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/files2.html" class="external-link">dir.exists</a></span><span class="op">(</span><span class="va">vignette_dir</span><span class="op">)</span> <span class="op">&amp;&amp;</span></span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.files.html" class="external-link">list.files</a></span><span class="op">(</span><span class="va">vignette_dir</span>, pattern <span class="op">=</span> <span class="st">"\\.(Rmd|qmd)$"</span><span class="op">)</span><span class="op">)</span> <span class="op">&gt;</span> <span class="fl">0</span></span>
-<span></span>
-<span>  <span class="co"># Return a simple list</span></span>
-<span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    name <span class="op">=</span> <span class="va">desc</span><span class="op">[</span><span class="fl">1</span>, <span class="st">"Package"</span><span class="op">]</span>,</span>
-<span>    title <span class="op">=</span> <span class="va">desc</span><span class="op">[</span><span class="fl">1</span>, <span class="st">"Title"</span><span class="op">]</span> <span class="op"><a href="https://rdrr.io/r/base/Control.html" class="external-link">%||%</a></span> <span class="st">""</span>,</span>
-<span>    description <span class="op">=</span> <span class="va">desc</span><span class="op">[</span><span class="fl">1</span>, <span class="st">"Description"</span><span class="op">]</span> <span class="op"><a href="https://rdrr.io/r/base/Control.html" class="external-link">%||%</a></span> <span class="st">""</span>,</span>
-<span>    readme <span class="op">=</span> <span class="va">readme</span>,</span>
-<span>    r_files <span class="op">=</span> <span class="va">r_files</span>,</span>
-<span>    exports <span class="op">=</span> <span class="va">exports</span>,</span>
-<span>    dependencies <span class="op">=</span> <span class="va">deps</span>,</span>
-<span>    has_vignettes <span class="op">=</span> <span class="va">has_vignettes</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    name <span class="op">=</span> <span class="fu">field</span><span class="op">(</span><span class="st">"Package"</span><span class="op">)</span>,</span>
+<span>    title <span class="op">=</span> <span class="fu">field</span><span class="op">(</span><span class="st">"Title"</span><span class="op">)</span>,</span>
+<span>    description <span class="op">=</span> <span class="fu">field</span><span class="op">(</span><span class="st">"Description"</span><span class="op">)</span>,</span>
+<span>    readme <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="fu">file_lines</span><span class="op">(</span><span class="st">"README.md"</span><span class="op">)</span>, collapse <span class="op">=</span> <span class="st">"\n"</span><span class="op">)</span>,</span>
+<span>    r_files <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.files.html" class="external-link">list.files</a></span><span class="op">(</span><span class="fu">path</span><span class="op">(</span><span class="st">"R"</span><span class="op">)</span>, pattern <span class="op">=</span> <span class="st">"\\.R$"</span>, ignore.case <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>,</span>
+<span>    exports <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">gsub</a></span><span class="op">(</span><span class="st">"export\\((.+)\\)"</span>, <span class="st">"\\1"</span>, <span class="va">exports</span><span class="op">)</span>,</span>
+<span>    dependencies <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/trimws.html" class="external-link">trimws</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/strsplit.html" class="external-link">strsplit</a></span><span class="op">(</span><span class="fu">field</span><span class="op">(</span><span class="st">"Imports"</span><span class="op">)</span>, <span class="st">","</span><span class="op">)</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">)</span>,</span>
+<span>    has_vignettes <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.files.html" class="external-link">list.files</a></span><span class="op">(</span><span class="fu">path</span><span class="op">(</span><span class="st">"vignettes"</span><span class="op">)</span>, <span class="st">"\\.(Rmd|qmd)$"</span><span class="op">)</span><span class="op">)</span> <span class="op">&gt;</span> <span class="fl">0</span></span>
 <span>  <span class="op">)</span></span>
-<span><span class="op">}</span></span></code></pre></div>
+<span><span class="op">}</span></span>
+<span></span>
+<span><span class="co"># "." from the package root, ".." from the vignettes folder</span></span>
+<span><span class="va">pkg_root</span> <span class="op">&lt;-</span> <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.exists</a></span><span class="op">(</span><span class="st">"DESCRIPTION"</span><span class="op">)</span><span class="op">)</span> <span class="st">"."</span> <span class="kw">else</span> <span class="st">".."</span></span>
+<span><span class="va">info</span> <span class="op">&lt;-</span> <span class="fu">gather_package_info</span><span class="op">(</span><span class="va">pkg_root</span><span class="op">)</span></span>
+<span><span class="va">info</span><span class="op">$</span><span class="va">title</span></span>
+<span><span class="co">#&gt; [1] "Declarative Self-Improving Language Programs"</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/lengths.html" class="external-link">lengths</a></span><span class="op">(</span><span class="va">info</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"r_files"</span>, <span class="st">"exports"</span>, <span class="st">"dependencies"</span><span class="op">)</span><span class="op">]</span><span class="op">)</span></span>
+<span><span class="co">#&gt;      r_files      exports dependencies </span></span>
+<span><span class="co">#&gt;           72          169           18</span></span></code></pre></div>
 </div>
-<div class="section level3">
-<h3 id="define-signatures">Define Signatures<a class="anchor" aria-label="anchor" href="#define-signatures"></a>
-</h3>
-<p>Here’s where dsprrr comes in—each analysis stage has a clear
-contract. Signatures define <em>what</em> each stage needs and
-<em>what</em> it produces. This separation matters: when a stage fails
-or produces poor output, you know exactly where to look.</p>
-<p>Notice how we use <code><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_object()</a></code> and
-<code><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_array()</a></code> to define structured outputs. The LLM returns
-JSON matching this schema, which we can then pass reliably to the next
-stage:</p>
+<div class="section level2">
+<h2 id="four-stages">Four stages<a class="anchor" aria-label="anchor" href="#four-stages"></a>
+</h2>
+<p>The generator makes four calls, each with its own signature:</p>
+<table class="table">
+<colgroup>
+<col width="25%">
+<col width="25%">
+<col width="25%">
+<col width="25%">
+</colgroup>
+<thead><tr class="header">
+<th>Stage</th>
+<th>Module</th>
+<th>Reads</th>
+<th>Writes</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td>Purpose</td>
+<td><code><a href="../reference/chain_of_thought.html">chain_of_thought()</a></code></td>
+<td>title, description, README excerpt, exports</td>
+<td>purpose, key concepts, audience, prerequisites</td>
+</tr>
+<tr class="even">
+<td>Structure</td>
+<td><code><a href="../reference/chain_of_thought.html">chain_of_thought()</a></code></td>
+<td>file names, exports, dependencies</td>
+<td>organization, main files, entry points, patterns</td>
+</tr>
+<tr class="odd">
+<td>Examples</td>
+<td><code><a href="../reference/chain_of_thought.html">chain_of_thought()</a></code></td>
+<td>purpose, entry points, key concepts</td>
+<td>a basic and an intermediate example, gotchas</td>
+</tr>
+<tr class="even">
+<td>Write</td>
+<td><code><a href="../reference/module.html">module()</a></code></td>
+<td>all of the above</td>
+<td>the llms.txt text</td>
+</tr>
+</tbody>
+</table>
+<p>The output types are ellmer types, so each stage returns fields the
+next one can use without parsing prose:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Stage 1: Analyze purpose</span></span>
-<span><span class="va">analyze_purpose_sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
+<code class="sourceCode R"><span><span class="va">analyze_purpose_sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
 <span>  inputs <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"pkg_name"</span>, description <span class="op">=</span> <span class="st">"Package name"</span><span class="op">)</span>,</span>
 <span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"title"</span>, description <span class="op">=</span> <span class="st">"Package title from DESCRIPTION"</span><span class="op">)</span>,</span>
@@ -289,7 +261,6 @@ stage:</p>
 <span><span class="st">Be precise and technical. Focus on what makes it unique."</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Stage 2: Analyze structure</span></span>
 <span><span class="va">analyze_structure_sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
 <span>  inputs <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"pkg_name"</span>, description <span class="op">=</span> <span class="st">"Package name"</span><span class="op">)</span>,</span>
@@ -314,7 +285,6 @@ stage:</p>
 <span><span class="st">Identify important files and entry points."</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Stage 3: Generate examples</span></span>
 <span><span class="va">generate_examples_sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
 <span>  inputs <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"pkg_name"</span>, description <span class="op">=</span> <span class="st">"Package name"</span><span class="op">)</span>,</span>
@@ -331,7 +301,6 @@ stage:</p>
 <span><span class="st">Examples must be syntactically valid R."</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Stage 4: Generate final llms.txt</span></span>
 <span><span class="va">generate_llmstxt_sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
 <span>  inputs <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"pkg_name"</span>, description <span class="op">=</span> <span class="st">"Package name"</span><span class="op">)</span>,</span>
@@ -351,625 +320,363 @@ stage:</p>
 <span><span class="st">Code Organization, Entry Points, Watch Out For.</span></span>
 <span><span class="st">Keep it concise - this is reference documentation for AI systems."</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="create-modules">Create Modules<a class="anchor" aria-label="anchor" href="#create-modules"></a>
-</h3>
-<p>Each module wraps a signature. We use <code><a href="../reference/chain_of_thought.html">chain_of_thought()</a></code>
-for the analysis stages—this asks the LLM to show its work, which
-improves accuracy for complex analysis tasks. The final
-<code>llmstxt</code> stage just needs to synthesize; no reasoning
-required.</p>
+<p>The three analysis stages use <code><a href="../reference/chain_of_thought.html">chain_of_thought()</a></code>, which
+adds a <code>reasoning</code> output and asks the model to think before
+it answers. The writer only formats, so it is a plain
+<code><a href="../reference/module.html">module()</a></code>. Printing a module shows exactly what it will ask
+for:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">create_modules</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">llm</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    purpose <span class="op">=</span> <span class="fu"><a href="../reference/chain_of_thought.html">chain_of_thought</a></span><span class="op">(</span><span class="va">analyze_purpose_sig</span><span class="op">)</span>,</span>
-<span>    structure <span class="op">=</span> <span class="fu"><a href="../reference/chain_of_thought.html">chain_of_thought</a></span><span class="op">(</span><span class="va">analyze_structure_sig</span><span class="op">)</span>,</span>
-<span>    examples <span class="op">=</span> <span class="fu"><a href="../reference/chain_of_thought.html">chain_of_thought</a></span><span class="op">(</span><span class="va">generate_examples_sig</span><span class="op">)</span>,</span>
-<span>    llmstxt <span class="op">=</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">generate_llmstxt_sig</span><span class="op">)</span>,</span>
-<span>    llm <span class="op">=</span> <span class="va">llm</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">}</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="va">purpose_mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/chain_of_thought.html">chain_of_thought</a></span><span class="op">(</span><span class="va">analyze_purpose_sig</span><span class="op">)</span></span>
+<span><span class="va">structure_mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/chain_of_thought.html">chain_of_thought</a></span><span class="op">(</span><span class="va">analyze_structure_sig</span><span class="op">)</span></span>
+<span><span class="va">examples_mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/chain_of_thought.html">chain_of_thought</a></span><span class="op">(</span><span class="va">generate_examples_sig</span><span class="op">)</span></span>
+<span><span class="va">writer_mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">generate_llmstxt_sig</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">examples_mod</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ── <span style="font-weight: bold;">PredictModule</span> ──</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ── Signature</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ── <span style="font-weight: bold;">Signature</span> ──</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ── Inputs</span></span>
+<span><span class="co">#&gt; • <span style="color: #00BB00;">pkg_name</span>: <span style="color: #0000BB;">"string"</span> - Package name</span></span>
+<span><span class="co">#&gt; • <span style="color: #00BB00;">purpose</span>: <span style="color: #0000BB;">"string"</span> - What the package does</span></span>
+<span><span class="co">#&gt; • <span style="color: #00BB00;">entry_points</span>: <span style="color: #0000BB;">"string"</span> - Main functions</span></span>
+<span><span class="co">#&gt; • <span style="color: #00BB00;">key_concepts</span>: <span style="color: #0000BB;">"string"</span> - Core concepts as JSON</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ── Output</span></span>
+<span><span class="co">#&gt; Type: <span style="color: #0000BB;">"object(reasoning: string, basic: string, intermediate: string, gotchas:</span></span></span>
+<span><span class="co">#&gt; <span style="color: #0000BB;">array(string))"</span></span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ── Instructions</span></span>
+<span><span class="co">#&gt; Generate realistic R code examples. Examples must be syntactically valid R.</span></span>
+<span><span class="co">#&gt; Think through your reasoning step by step before providing the answer.</span></span></code></pre></div>
 </div>
-<div class="section level3">
-<h3 id="run-the-pipeline">Run the Pipeline<a class="anchor" aria-label="anchor" href="#run-the-pipeline"></a>
-</h3>
-<p>The pipeline chains stages together. Each stage’s output feeds the
-next. This is where the structured signatures pay off—we can confidently
-pass <code>purpose$key_concepts</code> to the examples stage because we
-know its shape.</p>
+<div class="section level2">
+<h2 id="run-it">Run it<a class="anchor" aria-label="anchor" href="#run-it"></a>
+</h2>
+<p><code>analyze_package()</code> passes each stage’s fields to the
+next. <code><a href="../reference/run.html">run()</a></code> treats an input longer than one as a batch, one
+call per element, so vectors and tables are collapsed to single strings
+on the way:</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">analyze_package</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">pkg_path</span> <span class="op">=</span> <span class="st">"."</span>, <span class="va">llm</span> <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="fu"><a href="https://cli.r-lib.org/reference/cli_h1.html" class="external-link">cli_h1</a></span><span class="op">(</span><span class="st">"Analyzing package"</span><span class="op">)</span></span>
-<span></span>
-<span>  <span class="va">modules</span> <span class="op">&lt;-</span> <span class="fu">create_modules</span><span class="op">(</span><span class="va">llm</span><span class="op">)</span></span>
-<span>  <span class="va">pkg_info</span> <span class="op">&lt;-</span> <span class="fu">gather_package_info</span><span class="op">(</span><span class="va">pkg_path</span><span class="op">)</span></span>
-<span></span>
-<span>  <span class="fu"><a href="https://cli.r-lib.org/reference/cli_alert.html" class="external-link">cli_alert_success</a></span><span class="op">(</span><span class="st">"Gathered metadata for {.pkg {pkg_info$name}}"</span><span class="op">)</span></span>
-<span></span>
-<span>  <span class="co"># Stage 1: Purpose</span></span>
-<span>  <span class="fu"><a href="https://cli.r-lib.org/reference/cli_alert.html" class="external-link">cli_alert_info</a></span><span class="op">(</span><span class="st">"Analyzing purpose..."</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">analyze_package</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">info</span>, <span class="va">llm</span> <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-luna"</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="co"># One chat for all four stages, so later stages also see earlier turns.</span></span>
 <span>  <span class="va">purpose</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
-<span>    <span class="va">modules</span><span class="op">$</span><span class="va">purpose</span>,</span>
-<span>    pkg_name <span class="op">=</span> <span class="va">pkg_info</span><span class="op">$</span><span class="va">name</span>,</span>
-<span>    title <span class="op">=</span> <span class="va">pkg_info</span><span class="op">$</span><span class="va">title</span>,</span>
-<span>    description_text <span class="op">=</span> <span class="va">pkg_info</span><span class="op">$</span><span class="va">description</span>,</span>
-<span>    readme_excerpt <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/substr.html" class="external-link">substr</a></span><span class="op">(</span><span class="va">pkg_info</span><span class="op">$</span><span class="va">readme</span>, <span class="fl">1</span>, <span class="fl">2000</span><span class="op">)</span>,</span>
-<span>    exported_functions <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">pkg_info</span><span class="op">$</span><span class="va">exports</span>, collapse <span class="op">=</span> <span class="st">", "</span><span class="op">)</span>,</span>
-<span>    .llm <span class="op">=</span> <span class="va">modules</span><span class="op">$</span><span class="va">llm</span></span>
+<span>    <span class="va">purpose_mod</span>,</span>
+<span>    pkg_name <span class="op">=</span> <span class="va">info</span><span class="op">$</span><span class="va">name</span>,</span>
+<span>    title <span class="op">=</span> <span class="va">info</span><span class="op">$</span><span class="va">title</span>,</span>
+<span>    description_text <span class="op">=</span> <span class="va">info</span><span class="op">$</span><span class="va">description</span>,</span>
+<span>    readme_excerpt <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/substr.html" class="external-link">substr</a></span><span class="op">(</span><span class="va">info</span><span class="op">$</span><span class="va">readme</span>, <span class="fl">1</span>, <span class="fl">2000</span><span class="op">)</span>,</span>
+<span>    exported_functions <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">info</span><span class="op">$</span><span class="va">exports</span>, collapse <span class="op">=</span> <span class="st">", "</span><span class="op">)</span>,</span>
+<span>    .llm <span class="op">=</span> <span class="va">llm</span></span>
 <span>  <span class="op">)</span></span>
-<span></span>
-<span>  <span class="co"># Stage 2: Structure</span></span>
-<span>  <span class="fu"><a href="https://cli.r-lib.org/reference/cli_alert.html" class="external-link">cli_alert_info</a></span><span class="op">(</span><span class="st">"Analyzing structure..."</span><span class="op">)</span></span>
 <span>  <span class="va">structure</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
-<span>    <span class="va">modules</span><span class="op">$</span><span class="va">structure</span>,</span>
-<span>    pkg_name <span class="op">=</span> <span class="va">pkg_info</span><span class="op">$</span><span class="va">name</span>,</span>
-<span>    r_files <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">pkg_info</span><span class="op">$</span><span class="va">r_files</span>, collapse <span class="op">=</span> <span class="st">", "</span><span class="op">)</span>,</span>
-<span>    exports <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">pkg_info</span><span class="op">$</span><span class="va">exports</span>, collapse <span class="op">=</span> <span class="st">", "</span><span class="op">)</span>,</span>
-<span>    has_vignettes <span class="op">=</span> <span class="va">pkg_info</span><span class="op">$</span><span class="va">has_vignettes</span>,</span>
-<span>    dependencies <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">pkg_info</span><span class="op">$</span><span class="va">dependencies</span>, collapse <span class="op">=</span> <span class="st">", "</span><span class="op">)</span>,</span>
-<span>    .llm <span class="op">=</span> <span class="va">modules</span><span class="op">$</span><span class="va">llm</span></span>
+<span>    <span class="va">structure_mod</span>,</span>
+<span>    pkg_name <span class="op">=</span> <span class="va">info</span><span class="op">$</span><span class="va">name</span>,</span>
+<span>    r_files <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">info</span><span class="op">$</span><span class="va">r_files</span>, collapse <span class="op">=</span> <span class="st">", "</span><span class="op">)</span>,</span>
+<span>    exports <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">info</span><span class="op">$</span><span class="va">exports</span>, collapse <span class="op">=</span> <span class="st">", "</span><span class="op">)</span>,</span>
+<span>    has_vignettes <span class="op">=</span> <span class="va">info</span><span class="op">$</span><span class="va">has_vignettes</span>,</span>
+<span>    dependencies <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">info</span><span class="op">$</span><span class="va">dependencies</span>, collapse <span class="op">=</span> <span class="st">", "</span><span class="op">)</span>,</span>
+<span>    .llm <span class="op">=</span> <span class="va">llm</span></span>
 <span>  <span class="op">)</span></span>
+<span>  <span class="va">key_concepts</span> <span class="op">&lt;-</span> <span class="fu">jsonlite</span><span class="fu">::</span><span class="fu"><a href="https://jeroen.r-universe.dev/jsonlite/reference/fromJSON.html" class="external-link">toJSON</a></span><span class="op">(</span><span class="va">purpose</span><span class="op">$</span><span class="va">key_concepts</span>, auto_unbox <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span>  <span class="va">entry_points</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">structure</span><span class="op">$</span><span class="va">entry_points</span>, collapse <span class="op">=</span> <span class="st">", "</span><span class="op">)</span></span>
 <span></span>
-<span>  <span class="co"># Stage 3: Examples</span></span>
-<span>  <span class="fu"><a href="https://cli.r-lib.org/reference/cli_alert.html" class="external-link">cli_alert_info</a></span><span class="op">(</span><span class="st">"Generating examples..."</span><span class="op">)</span></span>
 <span>  <span class="va">examples</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
-<span>    <span class="va">modules</span><span class="op">$</span><span class="va">examples</span>,</span>
-<span>    pkg_name <span class="op">=</span> <span class="va">pkg_info</span><span class="op">$</span><span class="va">name</span>,</span>
+<span>    <span class="va">examples_mod</span>,</span>
+<span>    pkg_name <span class="op">=</span> <span class="va">info</span><span class="op">$</span><span class="va">name</span>,</span>
 <span>    purpose <span class="op">=</span> <span class="va">purpose</span><span class="op">$</span><span class="va">purpose</span>,</span>
-<span>    entry_points <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">structure</span><span class="op">$</span><span class="va">entry_points</span>, collapse <span class="op">=</span> <span class="st">", "</span><span class="op">)</span>,</span>
-<span>    key_concepts <span class="op">=</span> <span class="fu">jsonlite</span><span class="fu">::</span><span class="fu"><a href="https://jeroen.r-universe.dev/jsonlite/reference/fromJSON.html" class="external-link">toJSON</a></span><span class="op">(</span><span class="va">purpose</span><span class="op">$</span><span class="va">key_concepts</span>, auto_unbox <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>,</span>
-<span>    .llm <span class="op">=</span> <span class="va">modules</span><span class="op">$</span><span class="va">llm</span></span>
+<span>    entry_points <span class="op">=</span> <span class="va">entry_points</span>,</span>
+<span>    key_concepts <span class="op">=</span> <span class="va">key_concepts</span>,</span>
+<span>    .llm <span class="op">=</span> <span class="va">llm</span></span>
 <span>  <span class="op">)</span></span>
-<span></span>
-<span>  <span class="co"># Stage 4: Final output</span></span>
-<span>  <span class="fu"><a href="https://cli.r-lib.org/reference/cli_alert.html" class="external-link">cli_alert_info</a></span><span class="op">(</span><span class="st">"Generating llms.txt..."</span><span class="op">)</span></span>
-<span>  <span class="va">llmstxt</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
-<span>    <span class="va">modules</span><span class="op">$</span><span class="va">llmstxt</span>,</span>
-<span>    pkg_name <span class="op">=</span> <span class="va">pkg_info</span><span class="op">$</span><span class="va">name</span>,</span>
+<span>  <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
+<span>    <span class="va">writer_mod</span>,</span>
+<span>    pkg_name <span class="op">=</span> <span class="va">info</span><span class="op">$</span><span class="va">name</span>,</span>
 <span>    purpose <span class="op">=</span> <span class="va">purpose</span><span class="op">$</span><span class="va">purpose</span>,</span>
 <span>    target_audience <span class="op">=</span> <span class="va">purpose</span><span class="op">$</span><span class="va">target_audience</span>,</span>
-<span>    key_concepts_json <span class="op">=</span> <span class="fu">jsonlite</span><span class="fu">::</span><span class="fu"><a href="https://jeroen.r-universe.dev/jsonlite/reference/fromJSON.html" class="external-link">toJSON</a></span><span class="op">(</span><span class="va">purpose</span><span class="op">$</span><span class="va">key_concepts</span>, auto_unbox <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>,</span>
+<span>    key_concepts_json <span class="op">=</span> <span class="va">key_concepts</span>,</span>
 <span>    organization <span class="op">=</span> <span class="va">structure</span><span class="op">$</span><span class="va">organization</span>,</span>
-<span>    entry_points <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">structure</span><span class="op">$</span><span class="va">entry_points</span>, collapse <span class="op">=</span> <span class="st">", "</span><span class="op">)</span>,</span>
+<span>    entry_points <span class="op">=</span> <span class="va">entry_points</span>,</span>
 <span>    main_files_json <span class="op">=</span> <span class="fu">jsonlite</span><span class="fu">::</span><span class="fu"><a href="https://jeroen.r-universe.dev/jsonlite/reference/fromJSON.html" class="external-link">toJSON</a></span><span class="op">(</span><span class="va">structure</span><span class="op">$</span><span class="va">main_files</span>, auto_unbox <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>,</span>
 <span>    basic_example <span class="op">=</span> <span class="va">examples</span><span class="op">$</span><span class="va">basic</span>,</span>
 <span>    intermediate_example <span class="op">=</span> <span class="va">examples</span><span class="op">$</span><span class="va">intermediate</span>,</span>
 <span>    gotchas <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">examples</span><span class="op">$</span><span class="va">gotchas</span>, collapse <span class="op">=</span> <span class="st">"; "</span><span class="op">)</span>,</span>
-<span>    .llm <span class="op">=</span> <span class="va">modules</span><span class="op">$</span><span class="va">llm</span></span>
-<span>  <span class="op">)</span></span>
-<span></span>
-<span>  <span class="fu"><a href="https://cli.r-lib.org/reference/cli_alert.html" class="external-link">cli_alert_success</a></span><span class="op">(</span><span class="st">"Done!"</span><span class="op">)</span></span>
-<span></span>
-<span>  <span class="co"># Return everything as a simple list</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    pkg_info <span class="op">=</span> <span class="va">pkg_info</span>,</span>
-<span>    purpose <span class="op">=</span> <span class="va">purpose</span>,</span>
-<span>    structure <span class="op">=</span> <span class="va">structure</span>,</span>
-<span>    examples <span class="op">=</span> <span class="va">examples</span>,</span>
-<span>    llmstxt <span class="op">=</span> <span class="va">llmstxt</span></span>
+<span>    .llm <span class="op">=</span> <span class="va">llm</span></span>
 <span>  <span class="op">)</span></span>
 <span><span class="op">}</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="use-it">Use It<a class="anchor" aria-label="anchor" href="#use-it"></a>
-</h3>
+<p>The writer’s output type is a bare <code><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string()</a></code>, so
+<code><a href="../reference/run.html">run()</a></code> returns the text itself. Here is the file gpt-4.1
+wrote for dsprrr when this article was recorded, in January 2026; the
+code now uses gpt-6-luna, whose file will read differently:</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Find package root (works from vignettes/ or project root)</span></span>
-<span><span class="va">pkg_root</span> <span class="op">&lt;-</span> <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.exists</a></span><span class="op">(</span><span class="st">"DESCRIPTION"</span><span class="op">)</span><span class="op">)</span> <span class="st">"."</span> <span class="kw">else</span> <span class="st">".."</span></span>
-<span></span>
-<span><span class="co"># Analyze and print</span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu">analyze_package</span><span class="op">(</span><span class="va">pkg_root</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">llmstxt</span><span class="op">)</span></span></code></pre></div>
-<p><strong>This works.</strong> For a one-off script, you’re done.</p>
-<hr>
-</div>
+<code class="sourceCode R"><span><span class="va">llms_txt</span> <span class="op">&lt;-</span> <span class="fu">analyze_package</span><span class="op">(</span><span class="va">info</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="va">llms_txt</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">#&gt; # dsprrr</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Declarative, test-driven, and data-optimizable workflows for LLM-based applications in R, based on the DSPy framework.</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ## Key Concepts</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; - **Declarative Signatures:** Compact notation specifying LLM inputs/outputs for clarity and validation.</span></span>
+<span><span class="co">#&gt; - **Automated Prompt Optimization:** Systematically improve prompts and modules based on empirical data.</span></span>
+<span><span class="co">#&gt; - **Composable LLM Modules:** Modular workflow components for assembly and reuse.</span></span>
+<span><span class="co">#&gt; - **Integrated Tracing and Debugging:** Logging, analysis, and error tracing of LLM workflows.</span></span>
+<span><span class="co">#&gt; - **Tidyverse Integration:** Seamless use with tidyverse data science pipelines.</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ## Quick Start</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ```r</span></span>
+<span><span class="co">#&gt; library(dsprrr)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; # Define a simple signature: question -&gt; answer</span></span>
+<span><span class="co">#&gt; sig &lt;- signature("question -&gt; answer")</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; # Create a module (LLM-driven Q&amp;A)</span></span>
+<span><span class="co">#&gt; qa_mod &lt;- module(signature = sig)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; # Run a simple LLM prediction (mock input)</span></span>
+<span><span class="co">#&gt; result &lt;- run(qa_mod, question = "What is the capital of France?")</span></span>
+<span><span class="co">#&gt; print(result)</span></span>
+<span><span class="co">#&gt; ```</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ## Common Workflow</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ```r</span></span>
+<span><span class="co">#&gt; library(dsprrr)</span></span>
+<span><span class="co">#&gt; library(tibble)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; # Define signature</span></span>
+<span><span class="co">#&gt; dir_sig &lt;- signature("document -&gt; sentiment")</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; # Create a classification module</span></span>
+<span><span class="co">#&gt; sentiment_mod &lt;- module(signature = dir_sig, task = "Classify sentiment of the document.")</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; # Training data (labeled examples)</span></span>
+<span><span class="co">#&gt; labeled_data &lt;- tibble(</span></span>
+<span><span class="co">#&gt;   document = c("I love R!", "This is terrible...", "It's fine, I guess."),</span></span>
+<span><span class="co">#&gt;   sentiment = c("positive", "negative", "neutral")</span></span>
+<span><span class="co">#&gt; )</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; # Compile the module (optional for optimization)</span></span>
+<span><span class="co">#&gt; compiled_mod &lt;- compile(sentiment_mod)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; # Optimize LLM module using examples</span></span>
+<span><span class="co">#&gt; grid_search &lt;- optimize_grid(compiled_mod, trainset = labeled_data)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; # Evaluate on new data</span></span>
+<span><span class="co">#&gt; test_data &lt;- tibble(document = c("Amazing!", "Awful!"), sentiment = c("positive", "negative"))</span></span>
+<span><span class="co">#&gt; results &lt;- evaluate(grid_search$best_config, dataset = test_data)</span></span>
+<span><span class="co">#&gt; print(results)</span></span>
+<span><span class="co">#&gt; ```</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ## Code Organization</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; The codebase is organized in modular units:</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; - **signature.R:** Handles declarative signature specification and validation.</span></span>
+<span><span class="co">#&gt; - **module-base.R:** Implements composable LLM workflow logic.</span></span>
+<span><span class="co">#&gt; - **optimize.R:** Contains routines for data-driven LLM prompt/program optimization.</span></span>
+<span><span class="co">#&gt; - **run.R:** Entry points for workflow orchestration and execution.</span></span>
+<span><span class="co">#&gt; - **compile.R:** Transforms module workflows into optimized executables.</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ## Entry Points</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; - `signature`: Define LLM input/output contracts.</span></span>
+<span><span class="co">#&gt; - `module`: Construct modular LLM operators.</span></span>
+<span><span class="co">#&gt; - `compile`: Prepare modules/workflows for execution or optimization.</span></span>
+<span><span class="co">#&gt; - `run`: Execute LLM workflow on input data.</span></span>
+<span><span class="co">#&gt; - `optimize_grid`: Automate configuration search/optimization with labeled data.</span></span>
+<span><span class="co">#&gt; - `evaluate`: Assess LLM/module performance against ground truth.</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ## Watch Out For</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; - Always define signatures first; modules depend on them.</span></span>
+<span><span class="co">#&gt; - Optimization/evaluation requires labeled datasets; without them, data-driven features are disabled.</span></span>
+<span><span class="co">#&gt; - Use dsprrr (not ellmer) for systematic optimization, test-driven workflows, and trace/debug capabilities.</span></span></code></pre>
 </div>
 <div class="section level2">
-<h2 id="part-2-adding-structure-with-s7">Part 2: Adding Structure with S7<a class="anchor" aria-label="anchor" href="#part-2-adding-structure-with-s7"></a>
+<h2 id="check-the-examples">Check the examples<a class="anchor" aria-label="anchor" href="#check-the-examples"></a>
 </h2>
-<p>The simple approach works for scripts. But as pipelines grow—more
-stages, more developers, production use—plain lists show their
-limits:</p>
-<ul>
-<li>
-<strong>No validation</strong>: What if a stage returns
-<code>NULL</code> for a required field? You won’t find out until three
-stages later when something breaks mysteriously.</li>
-<li>
-<strong>No documentation</strong>: What fields does each result
-have? You’ll need to trace through the code.</li>
-<li>
-<strong>Hard to compose</strong>: Passing results between stages is
-error-prone. Typos in field names silently return
-<code>NULL</code>.</li>
-</ul>
-<p>S7 gives you typed containers that catch these problems at
-construction time:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://rconsortium.github.io/S7/" class="external-link">S7</a></span><span class="op">)</span></span></code></pre></div>
-<div class="section level3">
-<h3 id="s7-classes-for-results">S7 Classes for Results<a class="anchor" aria-label="anchor" href="#s7-classes-for-results"></a>
-</h3>
+<p>The prose is plausible. The Common Workflow code is not:
+<code><a href="../reference/module.html">module()</a></code> has no <code>task</code> argument,
+<code><a href="../reference/compile.html">compile()</a></code> needs a teleprompter,
+<code><a href="../reference/optimize_grid.html">optimize_grid()</a></code> has no <code>trainset</code> argument, and
+<code><a href="../reference/evaluate.html">evaluate()</a></code> takes <code>data</code>, not
+<code>dataset</code>. Look back at the printed
+<code>examples_mod</code>: the examples stage gets function names and a
+purpose statement, but no argument lists, so the model guesses them.</p>
+<p>Reading every generated example for mistakes like these doesn’t
+scale. Running them does. <code>run_block()</code> evaluates one code
+block in a fresh R process, in a temporary directory and without API
+keys, so model-written code stays away from your session and your
+credentials:</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Package metadata</span></span>
-<span><span class="va">PackageInfo</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rconsortium.github.io/S7/reference/new_class.html" class="external-link">new_class</a></span><span class="op">(</span><span class="st">"PackageInfo"</span>,</span>
-<span>  properties <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    name <span class="op">=</span> <span class="va">class_character</span>,</span>
-<span>    title <span class="op">=</span> <span class="va">class_character</span>,</span>
-<span>    description <span class="op">=</span> <span class="va">class_character</span>,</span>
-<span>    readme <span class="op">=</span> <span class="fu"><a href="https://rconsortium.github.io/S7/reference/new_property.html" class="external-link">new_property</a></span><span class="op">(</span><span class="va">class_character</span>, default <span class="op">=</span> <span class="st">""</span><span class="op">)</span>,</span>
-<span>    r_files <span class="op">=</span> <span class="fu"><a href="https://rconsortium.github.io/S7/reference/new_property.html" class="external-link">new_property</a></span><span class="op">(</span><span class="va">class_character</span>, default <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span>,</span>
-<span>    exports <span class="op">=</span> <span class="fu"><a href="https://rconsortium.github.io/S7/reference/new_property.html" class="external-link">new_property</a></span><span class="op">(</span><span class="va">class_character</span>, default <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span>,</span>
-<span>    dependencies <span class="op">=</span> <span class="fu"><a href="https://rconsortium.github.io/S7/reference/new_property.html" class="external-link">new_property</a></span><span class="op">(</span><span class="va">class_character</span>, default <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span>,</span>
-<span>    has_vignettes <span class="op">=</span> <span class="fu"><a href="https://rconsortium.github.io/S7/reference/new_property.html" class="external-link">new_property</a></span><span class="op">(</span><span class="va">class_logical</span>, default <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Purpose analysis result</span></span>
-<span><span class="va">PurposeAnalysis</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rconsortium.github.io/S7/reference/new_class.html" class="external-link">new_class</a></span><span class="op">(</span><span class="st">"PurposeAnalysis"</span>,</span>
-<span>  properties <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    purpose <span class="op">=</span> <span class="va">class_character</span>,</span>
-<span>    key_concepts <span class="op">=</span> <span class="va">class_list</span>,</span>
-<span>    target_audience <span class="op">=</span> <span class="va">class_character</span>,</span>
-<span>    prerequisites <span class="op">=</span> <span class="fu"><a href="https://rconsortium.github.io/S7/reference/new_property.html" class="external-link">new_property</a></span><span class="op">(</span><span class="va">class_character</span>, default <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Structure analysis result</span></span>
-<span><span class="va">StructureAnalysis</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rconsortium.github.io/S7/reference/new_class.html" class="external-link">new_class</a></span><span class="op">(</span><span class="st">"StructureAnalysis"</span>,</span>
-<span>  properties <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    organization <span class="op">=</span> <span class="va">class_character</span>,</span>
-<span>    main_files <span class="op">=</span> <span class="va">class_list</span>,</span>
-<span>    entry_points <span class="op">=</span> <span class="va">class_character</span>,</span>
-<span>    patterns <span class="op">=</span> <span class="va">class_character</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Generated examples</span></span>
-<span><span class="va">Examples</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rconsortium.github.io/S7/reference/new_class.html" class="external-link">new_class</a></span><span class="op">(</span><span class="st">"Examples"</span>,</span>
-<span>  properties <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    basic <span class="op">=</span> <span class="va">class_character</span>,</span>
-<span>    intermediate <span class="op">=</span> <span class="va">class_character</span>,</span>
-<span>    gotchas <span class="op">=</span> <span class="fu"><a href="https://rconsortium.github.io/S7/reference/new_property.html" class="external-link">new_property</a></span><span class="op">(</span><span class="va">class_character</span>, default <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Complete analysis</span></span>
-<span><span class="va">AnalysisResult</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rconsortium.github.io/S7/reference/new_class.html" class="external-link">new_class</a></span><span class="op">(</span><span class="st">"AnalysisResult"</span>,</span>
-<span>  properties <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    pkg_info <span class="op">=</span> <span class="va">PackageInfo</span>,</span>
-<span>    purpose <span class="op">=</span> <span class="va">PurposeAnalysis</span>,</span>
-<span>    structure <span class="op">=</span> <span class="va">StructureAnalysis</span>,</span>
-<span>    examples <span class="op">=</span> <span class="va">Examples</span>,</span>
-<span>    llmstxt <span class="op">=</span> <span class="fu"><a href="https://rconsortium.github.io/S7/reference/new_property.html" class="external-link">new_property</a></span><span class="op">(</span><span class="va">class_character</span>, default <span class="op">=</span> <span class="st">""</span><span class="op">)</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p>Now you get:</p>
-<ul>
-<li>
-<strong>Type checking</strong>: Can’t create a
-<code>PurposeAnalysis</code> without a <code>purpose</code>
-</li>
-<li>
-<strong>Documentation</strong>: Class definitions show what fields
-exist</li>
-<li>
-<strong>IDE support</strong>: Autocomplete works with <code>@</code>
-slots</li>
-</ul>
-</div>
-<div class="section level3">
-<h3 id="print-methods">Print Methods<a class="anchor" aria-label="anchor" href="#print-methods"></a>
-</h3>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rconsortium.github.io/S7/reference/method.html" class="external-link">method</a></span><span class="op">(</span><span class="va">print</span>, <span class="va">PackageInfo</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="fu"><a href="https://cli.r-lib.org/reference/cli_h1.html" class="external-link">cli_h3</a></span><span class="op">(</span><span class="st">"Package: {x@name}"</span><span class="op">)</span></span>
-<span>  <span class="fu"><a href="https://cli.r-lib.org/reference/cli_text.html" class="external-link">cli_text</a></span><span class="op">(</span><span class="st">"{x@title}"</span><span class="op">)</span></span>
-<span>  <span class="fu"><a href="https://cli.r-lib.org/reference/cli_text.html" class="external-link">cli_text</a></span><span class="op">(</span><span class="st">"{length(x@exports)} exports, {length(x@r_files)} R files"</span><span class="op">)</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/invisible.html" class="external-link">invisible</a></span><span class="op">(</span><span class="va">x</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">code_blocks</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">md</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">blocks</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/regmatches.html" class="external-link">regmatches</a></span><span class="op">(</span><span class="va">md</span>, <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">gregexpr</a></span><span class="op">(</span><span class="st">"(?s)```r\\n.*?\\n```"</span>, <span class="va">md</span>, perl <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">gsub</a></span><span class="op">(</span><span class="st">"^```r\\n|\\n```$"</span>, <span class="st">""</span>, <span class="va">blocks</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span>
 <span><span class="op">}</span></span>
 <span></span>
-<span><span class="fu"><a href="https://rconsortium.github.io/S7/reference/method.html" class="external-link">method</a></span><span class="op">(</span><span class="va">print</span>, <span class="va">AnalysisResult</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="fu"><a href="https://cli.r-lib.org/reference/cli_h1.html" class="external-link">cli_h2</a></span><span class="op">(</span><span class="st">"Analysis: {x@pkg_info@name}"</span><span class="op">)</span></span>
-<span>  <span class="fu"><a href="https://cli.r-lib.org/reference/cli_text.html" class="external-link">cli_text</a></span><span class="op">(</span><span class="st">"{.strong Purpose:} {x@purpose@purpose}"</span><span class="op">)</span></span>
-<span>  <span class="fu"><a href="https://cli.r-lib.org/reference/cli_text.html" class="external-link">cli_text</a></span><span class="op">(</span><span class="st">"{.strong Audience:} {x@purpose@target_audience}"</span><span class="op">)</span></span>
-<span>  <span class="fu"><a href="https://cli.r-lib.org/reference/cli_text.html" class="external-link">cli_text</a></span><span class="op">(</span><span class="st">"{.strong Entry points:} {.val {x@structure@entry_points}}"</span><span class="op">)</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/invisible.html" class="external-link">invisible</a></span><span class="op">(</span><span class="va">x</span><span class="op">)</span></span>
-<span><span class="op">}</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="updated-gather-function">Updated Gather Function<a class="anchor" aria-label="anchor" href="#updated-gather-function"></a>
-</h3>
+<span><span class="va">run_block</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">code</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="fu">callr</span><span class="fu">::</span><span class="fu"><a href="https://callr.r-lib.org/reference/r.html" class="external-link">r</a></span><span class="op">(</span></span>
+<span>    <span class="kw">function</span><span class="op">(</span><span class="va">code</span><span class="op">)</span> <span class="op">{</span></span>
+<span>      <span class="fu"><a href="https://rdrr.io/r/base/getwd.html" class="external-link">setwd</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
+<span>      <span class="kw"><a href="https://rdrr.io/r/base/conditions.html" class="external-link">tryCatch</a></span><span class="op">(</span></span>
+<span>        <span class="op">{</span></span>
+<span>          <span class="fu"><a href="https://rdrr.io/r/base/eval.html" class="external-link">eval</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/parse.html" class="external-link">parse</a></span><span class="op">(</span>text <span class="op">=</span> <span class="va">code</span><span class="op">)</span>, envir <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/environment.html" class="external-link">new.env</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
+<span>          <span class="cn">NA_character_</span></span>
+<span>        <span class="op">}</span>,</span>
+<span>        error <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">e</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">gsub</a></span><span class="op">(</span><span class="st">"\\s+"</span>, <span class="st">" "</span>, <span class="fu">rlang</span><span class="fu">::</span><span class="fu"><a href="https://rlang.r-lib.org/reference/cnd_message.html" class="external-link">cnd_header</a></span><span class="op">(</span><span class="va">e</span><span class="op">)</span><span class="op">)</span></span>
+<span>      <span class="op">)</span></span>
+<span>    <span class="op">}</span>,</span>
+<span>    args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>code <span class="op">=</span> <span class="va">code</span><span class="op">)</span>,</span>
+<span>    env <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>OPENAI_API_KEY <span class="op">=</span> <span class="st">""</span>, ANTHROPIC_API_KEY <span class="op">=</span> <span class="st">""</span>, GOOGLE_API_KEY <span class="op">=</span> <span class="st">""</span><span class="op">)</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">}</span></span>
+<span></span>
+<span><span class="co"># One entry per code block: NA if it ran, otherwise the error</span></span>
+<span><span class="va">example_problems</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">md</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">problems</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span><span class="fu">code_blocks</span><span class="op">(</span><span class="va">md</span><span class="op">)</span>, <span class="va">run_block</span>, <span class="st">""</span>, USE.NAMES <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+<span>  <span class="co"># Stopping at the model call counts as running: there is no chat here.</span></span>
+<span>  <span class="va">problems</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grepl</a></span><span class="op">(</span><span class="st">"^No default Chat"</span>, <span class="va">problems</span><span class="op">)</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="cn">NA</span></span>
+<span>  <span class="va">problems</span></span>
+<span><span class="op">}</span></span>
+<span></span>
+<span><span class="fu">example_problems</span><span class="op">(</span><span class="va">llms_txt</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">#&gt; [1] NA                                                                          </span></span>
+<span><span class="co">#&gt; [2] "`module()` creates standard prediction modules and does not accept `task`."</span></span></code></pre>
+<p>The Quick Start runs as far as <code><a href="../reference/run.html">run()</a></code>, which is as far as
+it can get without a model. The Common Workflow stops at its first
+mistake.</p>
+<p>One sample says little, so here is a second run of the same
+program:</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">gather_package_info</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">pkg_path</span> <span class="op">=</span> <span class="st">"."</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="va">desc_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">pkg_path</span>, <span class="st">"DESCRIPTION"</span><span class="op">)</span></span>
-<span>  <span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.exists</a></span><span class="op">(</span><span class="va">desc_path</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>    <span class="fu"><a href="https://cli.r-lib.org/reference/cli_abort.html" class="external-link">cli_abort</a></span><span class="op">(</span><span class="st">"No DESCRIPTION file found at {.path {pkg_path}}"</span><span class="op">)</span></span>
-<span>  <span class="op">}</span></span>
-<span></span>
-<span>  <span class="va">desc</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/dcf.html" class="external-link">read.dcf</a></span><span class="op">(</span><span class="va">desc_path</span><span class="op">)</span></span>
-<span></span>
-<span>  <span class="va">imports</span> <span class="op">&lt;-</span> <span class="va">desc</span><span class="op">[</span><span class="fl">1</span>, <span class="st">"Imports"</span><span class="op">]</span> <span class="op"><a href="https://rdrr.io/r/base/Control.html" class="external-link">%||%</a></span> <span class="st">""</span></span>
-<span>  <span class="va">deps</span> <span class="op">&lt;-</span> <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nchar.html" class="external-link">nzchar</a></span><span class="op">(</span><span class="va">imports</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/trimws.html" class="external-link">trimws</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/strsplit.html" class="external-link">strsplit</a></span><span class="op">(</span><span class="va">imports</span>, <span class="st">","</span><span class="op">)</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span>
-<span>  <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span></span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="op">)</span></span>
-<span>  <span class="op">}</span></span>
-<span></span>
-<span>  <span class="va">readme_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">pkg_path</span>, <span class="st">"README.md"</span><span class="op">)</span></span>
-<span>  <span class="va">readme</span> <span class="op">&lt;-</span> <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.exists</a></span><span class="op">(</span><span class="va">readme_path</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/readLines.html" class="external-link">readLines</a></span><span class="op">(</span><span class="va">readme_path</span>, warn <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span>, collapse <span class="op">=</span> <span class="st">"\n"</span><span class="op">)</span></span>
-<span>  <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span></span>
-<span>    <span class="st">""</span></span>
-<span>  <span class="op">}</span></span>
-<span></span>
-<span>  <span class="va">r_dir</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">pkg_path</span>, <span class="st">"R"</span><span class="op">)</span></span>
-<span>  <span class="va">r_files</span> <span class="op">&lt;-</span> <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/files2.html" class="external-link">dir.exists</a></span><span class="op">(</span><span class="va">r_dir</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/list.files.html" class="external-link">list.files</a></span><span class="op">(</span><span class="va">r_dir</span>, pattern <span class="op">=</span> <span class="st">"\\.R$"</span>, ignore.case <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
-<span>  <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span></span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="op">)</span></span>
-<span>  <span class="op">}</span></span>
-<span></span>
-<span>  <span class="va">ns_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">pkg_path</span>, <span class="st">"NAMESPACE"</span><span class="op">)</span></span>
-<span>  <span class="va">exports</span> <span class="op">&lt;-</span> <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.exists</a></span><span class="op">(</span><span class="va">ns_path</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>    <span class="va">ns_lines</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/readLines.html" class="external-link">readLines</a></span><span class="op">(</span><span class="va">ns_path</span>, warn <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
-<span>    <span class="va">export_lines</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grep</a></span><span class="op">(</span><span class="st">"^export\\("</span>, <span class="va">ns_lines</span>, value <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">gsub</a></span><span class="op">(</span><span class="st">"export\\((.+)\\)"</span>, <span class="st">"\\1"</span>, <span class="va">export_lines</span><span class="op">)</span></span>
-<span>  <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span></span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="op">)</span></span>
-<span>  <span class="op">}</span></span>
-<span></span>
-<span>  <span class="va">vignette_dir</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">pkg_path</span>, <span class="st">"vignettes"</span><span class="op">)</span></span>
-<span>  <span class="va">has_vignettes</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/files2.html" class="external-link">dir.exists</a></span><span class="op">(</span><span class="va">vignette_dir</span><span class="op">)</span> <span class="op">&amp;&amp;</span></span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.files.html" class="external-link">list.files</a></span><span class="op">(</span><span class="va">vignette_dir</span>, pattern <span class="op">=</span> <span class="st">"\\.(Rmd|qmd)$"</span><span class="op">)</span><span class="op">)</span> <span class="op">&gt;</span> <span class="fl">0</span></span>
-<span></span>
-<span>  <span class="co"># Return S7 object instead of list</span></span>
-<span>  <span class="fu">PackageInfo</span><span class="op">(</span></span>
-<span>    name <span class="op">=</span> <span class="va">desc</span><span class="op">[</span><span class="fl">1</span>, <span class="st">"Package"</span><span class="op">]</span>,</span>
-<span>    title <span class="op">=</span> <span class="va">desc</span><span class="op">[</span><span class="fl">1</span>, <span class="st">"Title"</span><span class="op">]</span> <span class="op"><a href="https://rdrr.io/r/base/Control.html" class="external-link">%||%</a></span> <span class="st">""</span>,</span>
-<span>    description <span class="op">=</span> <span class="va">desc</span><span class="op">[</span><span class="fl">1</span>, <span class="st">"Description"</span><span class="op">]</span> <span class="op"><a href="https://rdrr.io/r/base/Control.html" class="external-link">%||%</a></span> <span class="st">""</span>,</span>
-<span>    readme <span class="op">=</span> <span class="va">readme</span>,</span>
-<span>    r_files <span class="op">=</span> <span class="va">r_files</span>,</span>
-<span>    exports <span class="op">=</span> <span class="va">exports</span>,</span>
-<span>    dependencies <span class="op">=</span> <span class="va">deps</span>,</span>
-<span>    has_vignettes <span class="op">=</span> <span class="va">has_vignettes</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">}</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="va">second_run</span> <span class="op">&lt;-</span> <span class="fu">analyze_package</span><span class="op">(</span><span class="va">info</span><span class="op">)</span></span>
+<span><span class="fu">example_problems</span><span class="op">(</span><span class="va">second_run</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] NA                                                 </span></span>
+<span><span class="co">#&gt; [2] "Missing required inputs: \033[32mquestion\033[39m"</span></span></code></pre></div>
+<p>Different text, same kind of failure: this time the intermediate
+example passes a whole tibble to <code><a href="../reference/run.html">run()</a></code>
+(<code>run(qa_mod, test_data)</code>), which expects named inputs.
+Rerunning until an example happens to work is not a fix. The program
+needs to show the model how the functions are called, and you need a
+score that tells you whether the change worked.</p>
 </div>
-<div class="section level3">
-<h3 id="stage-functions">Stage Functions<a class="anchor" aria-label="anchor" href="#stage-functions"></a>
-</h3>
-<p>Each stage returns a typed S7 object. This is the key improvement
-over the simple approach: if the LLM returns incomplete data (missing
-<code>purpose</code>, for example), the <code>PurposeAnalysis()</code>
-constructor fails immediately with a clear error. No silent
-<code>NULL</code> propagation:</p>
+<div class="section level2">
+<h2 id="make-it-one-program">Make it one program<a class="anchor" aria-label="anchor" href="#make-it-one-program"></a>
+</h2>
+<p><code>analyze_package()</code> is ordinary R wrapped around four
+modules, so dsprrr can’t evaluate or compile it as a whole. A
+<code><a href="../reference/pipeline.html">pipeline()</a></code> can be: it runs like a module,
+<code><a href="../reference/evaluate.html">evaluate()</a></code> scores it on a dataset, and
+<code><a href="../reference/BootstrapFewShot.html">BootstrapFewShot()</a></code> compiles all of its steps together.
+Pipelines are linear, though. Each step receives only the previous
+step’s outputs, plus fixed values passed to <code><a href="../reference/step.html">step()</a></code> (see <a href="chaining-modules.html">Chain modules into pipelines</a>).</p>
+<p>So the redesign has two steps. The first reads the facts and writes
+notes, including a quick start, and it now also gets every exported
+function with its arguments. The second turns the notes into
+Markdown:</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">analyze_purpose</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">pkg_info</span>, <span class="va">modules</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="fu"><a href="https://cli.r-lib.org/reference/cli_alert.html" class="external-link">cli_alert_info</a></span><span class="op">(</span><span class="st">"Analyzing purpose and concepts..."</span><span class="op">)</span></span>
-<span></span>
-<span>  <span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
-<span>    <span class="va">modules</span><span class="op">$</span><span class="va">purpose</span>,</span>
-<span>    pkg_name <span class="op">=</span> <span class="va">pkg_info</span><span class="op">@</span><span class="va">name</span>,</span>
-<span>    title <span class="op">=</span> <span class="va">pkg_info</span><span class="op">@</span><span class="va">title</span>,</span>
-<span>    description_text <span class="op">=</span> <span class="va">pkg_info</span><span class="op">@</span><span class="va">description</span>,</span>
-<span>    readme_excerpt <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/substr.html" class="external-link">substr</a></span><span class="op">(</span><span class="va">pkg_info</span><span class="op">@</span><span class="va">readme</span>, <span class="fl">1</span>, <span class="fl">2000</span><span class="op">)</span>,</span>
-<span>    exported_functions <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">pkg_info</span><span class="op">@</span><span class="va">exports</span>, collapse <span class="op">=</span> <span class="st">", "</span><span class="op">)</span>,</span>
-<span>    .llm <span class="op">=</span> <span class="va">modules</span><span class="op">$</span><span class="va">llm</span></span>
-<span>  <span class="op">)</span></span>
-<span></span>
-<span>  <span class="fu">PurposeAnalysis</span><span class="op">(</span></span>
-<span>    purpose <span class="op">=</span> <span class="va">result</span><span class="op">$</span><span class="va">purpose</span>,</span>
-<span>    key_concepts <span class="op">=</span> <span class="va">result</span><span class="op">$</span><span class="va">key_concepts</span>,</span>
-<span>    target_audience <span class="op">=</span> <span class="va">result</span><span class="op">$</span><span class="va">target_audience</span>,</span>
-<span>    prerequisites <span class="op">=</span> <span class="va">result</span><span class="op">$</span><span class="va">prerequisites</span> <span class="op"><a href="https://rdrr.io/r/base/Control.html" class="external-link">%||%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="op">)</span></span>
-<span>  <span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">usage_lines</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">pkg</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">ns</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/ns-internal.html" class="external-link">asNamespace</a></span><span class="op">(</span><span class="va">pkg</span><span class="op">)</span></span>
+<span>  <span class="va">fns</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/funprog.html" class="external-link">Filter</a></span><span class="op">(</span>\<span class="op">(</span><span class="va">f</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/is.function.html" class="external-link">is.function</a></span><span class="op">(</span><span class="va">ns</span><span class="op">[[</span><span class="va">f</span><span class="op">]</span><span class="op">]</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/sort.html" class="external-link">sort</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/ns-reflect.html" class="external-link">getNamespaceExports</a></span><span class="op">(</span><span class="va">pkg</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span><span class="va">fns</span>, \<span class="op">(</span><span class="va">f</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="va">f</span>, <span class="st">"("</span>, <span class="fu"><a href="https://rdrr.io/r/base/toString.html" class="external-link">toString</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/formals.html" class="external-link">formals</a></span><span class="op">(</span><span class="va">ns</span><span class="op">[[</span><span class="va">f</span><span class="op">]</span><span class="op">]</span><span class="op">)</span><span class="op">)</span><span class="op">)</span>, <span class="st">")"</span><span class="op">)</span>, <span class="st">""</span><span class="op">)</span></span>
 <span><span class="op">}</span></span>
 <span></span>
-<span><span class="va">analyze_structure</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">pkg_info</span>, <span class="va">modules</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="fu"><a href="https://cli.r-lib.org/reference/cli_alert.html" class="external-link">cli_alert_info</a></span><span class="op">(</span><span class="st">"Analyzing code structure..."</span><span class="op">)</span></span>
+<span><span class="va">notes</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/chain_of_thought.html">chain_of_thought</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
+<span>  inputs <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"pkg_name"</span>, description <span class="op">=</span> <span class="st">"Package name"</span><span class="op">)</span>,</span>
+<span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"description_text"</span>, description <span class="op">=</span> <span class="st">"Description from DESCRIPTION"</span><span class="op">)</span>,</span>
+<span>    <span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"usage"</span>, description <span class="op">=</span> <span class="st">"Exported functions and their arguments"</span><span class="op">)</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  output_type <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_object</a></span><span class="op">(</span></span>
+<span>    purpose <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span><span class="st">"One sentence: what problem does this solve?"</span><span class="op">)</span>,</span>
+<span>    key_concepts <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_array</a></span><span class="op">(</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"3-5 core concepts"</span><span class="op">)</span>,</span>
+<span>    quick_start <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span><span class="st">"5-10 lines of R that run as written"</span><span class="op">)</span>,</span>
+<span>    gotchas <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_array</a></span><span class="op">(</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"1-3 common mistakes"</span><span class="op">)</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  instructions <span class="op">=</span> <span class="st">"Summarize this R package for other language models.</span></span>
+<span><span class="st">Call only functions listed in `usage`, with the arguments listed there."</span></span>
+<span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
-<span>  <span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
-<span>    <span class="va">modules</span><span class="op">$</span><span class="va">structure</span>,</span>
-<span>    pkg_name <span class="op">=</span> <span class="va">pkg_info</span><span class="op">@</span><span class="va">name</span>,</span>
-<span>    r_files <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">pkg_info</span><span class="op">@</span><span class="va">r_files</span>, collapse <span class="op">=</span> <span class="st">", "</span><span class="op">)</span>,</span>
-<span>    exports <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">pkg_info</span><span class="op">@</span><span class="va">exports</span>, collapse <span class="op">=</span> <span class="st">", "</span><span class="op">)</span>,</span>
-<span>    has_vignettes <span class="op">=</span> <span class="va">pkg_info</span><span class="op">@</span><span class="va">has_vignettes</span>,</span>
-<span>    dependencies <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">pkg_info</span><span class="op">@</span><span class="va">dependencies</span>, collapse <span class="op">=</span> <span class="st">", "</span><span class="op">)</span>,</span>
-<span>    .llm <span class="op">=</span> <span class="va">modules</span><span class="op">$</span><span class="va">llm</span></span>
-<span>  <span class="op">)</span></span>
+<span><span class="va">write_up</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
+<span>  <span class="st">"purpose, key_concepts, quick_start, gotchas -&gt; llms_txt"</span>,</span>
+<span>  instructions <span class="op">=</span> <span class="st">"Write the body of an llms.txt file in Markdown:</span></span>
+<span><span class="st">a one-paragraph summary, then Key Concepts, Quick Start (the code unchanged,</span></span>
+<span><span class="st">in an R code block) and Watch Out For."</span></span>
+<span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
-<span>  <span class="fu">StructureAnalysis</span><span class="op">(</span></span>
-<span>    organization <span class="op">=</span> <span class="va">result</span><span class="op">$</span><span class="va">organization</span>,</span>
-<span>    main_files <span class="op">=</span> <span class="va">result</span><span class="op">$</span><span class="va">main_files</span>,</span>
-<span>    entry_points <span class="op">=</span> <span class="va">result</span><span class="op">$</span><span class="va">entry_points</span>,</span>
-<span>    patterns <span class="op">=</span> <span class="va">result</span><span class="op">$</span><span class="va">patterns</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">}</span></span>
-<span></span>
-<span><span class="va">generate_examples</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">pkg_info</span>, <span class="va">purpose</span>, <span class="va">structure</span>, <span class="va">modules</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="fu"><a href="https://cli.r-lib.org/reference/cli_alert.html" class="external-link">cli_alert_info</a></span><span class="op">(</span><span class="st">"Generating usage examples..."</span><span class="op">)</span></span>
-<span></span>
-<span>  <span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
-<span>    <span class="va">modules</span><span class="op">$</span><span class="va">examples</span>,</span>
-<span>    pkg_name <span class="op">=</span> <span class="va">pkg_info</span><span class="op">@</span><span class="va">name</span>,</span>
-<span>    purpose <span class="op">=</span> <span class="va">purpose</span><span class="op">@</span><span class="va">purpose</span>,</span>
-<span>    entry_points <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">structure</span><span class="op">@</span><span class="va">entry_points</span>, collapse <span class="op">=</span> <span class="st">", "</span><span class="op">)</span>,</span>
-<span>    key_concepts <span class="op">=</span> <span class="fu">jsonlite</span><span class="fu">::</span><span class="fu"><a href="https://jeroen.r-universe.dev/jsonlite/reference/fromJSON.html" class="external-link">toJSON</a></span><span class="op">(</span><span class="va">purpose</span><span class="op">@</span><span class="va">key_concepts</span>, auto_unbox <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>,</span>
-<span>    .llm <span class="op">=</span> <span class="va">modules</span><span class="op">$</span><span class="va">llm</span></span>
-<span>  <span class="op">)</span></span>
-<span></span>
-<span>  <span class="fu">Examples</span><span class="op">(</span></span>
-<span>    basic <span class="op">=</span> <span class="va">result</span><span class="op">$</span><span class="va">basic</span>,</span>
-<span>    intermediate <span class="op">=</span> <span class="va">result</span><span class="op">$</span><span class="va">intermediate</span>,</span>
-<span>    gotchas <span class="op">=</span> <span class="va">result</span><span class="op">$</span><span class="va">gotchas</span> <span class="op"><a href="https://rdrr.io/r/base/Control.html" class="external-link">%||%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="op">)</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">}</span></span>
-<span></span>
-<span><span class="va">generate_llmstxt</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">pkg_info</span>, <span class="va">purpose</span>, <span class="va">structure</span>, <span class="va">examples</span>, <span class="va">modules</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="fu"><a href="https://cli.r-lib.org/reference/cli_alert.html" class="external-link">cli_alert_info</a></span><span class="op">(</span><span class="st">"Generating llms.txt..."</span><span class="op">)</span></span>
-<span></span>
-<span>  <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
-<span>    <span class="va">modules</span><span class="op">$</span><span class="va">llmstxt</span>,</span>
-<span>    pkg_name <span class="op">=</span> <span class="va">pkg_info</span><span class="op">@</span><span class="va">name</span>,</span>
-<span>    purpose <span class="op">=</span> <span class="va">purpose</span><span class="op">@</span><span class="va">purpose</span>,</span>
-<span>    target_audience <span class="op">=</span> <span class="va">purpose</span><span class="op">@</span><span class="va">target_audience</span>,</span>
-<span>    key_concepts_json <span class="op">=</span> <span class="fu">jsonlite</span><span class="fu">::</span><span class="fu"><a href="https://jeroen.r-universe.dev/jsonlite/reference/fromJSON.html" class="external-link">toJSON</a></span><span class="op">(</span><span class="va">purpose</span><span class="op">@</span><span class="va">key_concepts</span>, auto_unbox <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>,</span>
-<span>    organization <span class="op">=</span> <span class="va">structure</span><span class="op">@</span><span class="va">organization</span>,</span>
-<span>    entry_points <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">structure</span><span class="op">@</span><span class="va">entry_points</span>, collapse <span class="op">=</span> <span class="st">", "</span><span class="op">)</span>,</span>
-<span>    main_files_json <span class="op">=</span> <span class="fu">jsonlite</span><span class="fu">::</span><span class="fu"><a href="https://jeroen.r-universe.dev/jsonlite/reference/fromJSON.html" class="external-link">toJSON</a></span><span class="op">(</span><span class="va">structure</span><span class="op">@</span><span class="va">main_files</span>, auto_unbox <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>,</span>
-<span>    basic_example <span class="op">=</span> <span class="va">examples</span><span class="op">@</span><span class="va">basic</span>,</span>
-<span>    intermediate_example <span class="op">=</span> <span class="va">examples</span><span class="op">@</span><span class="va">intermediate</span>,</span>
-<span>    gotchas <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">examples</span><span class="op">@</span><span class="va">gotchas</span>, collapse <span class="op">=</span> <span class="st">"; "</span><span class="op">)</span>,</span>
-<span>    .llm <span class="op">=</span> <span class="va">modules</span><span class="op">$</span><span class="va">llm</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">}</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="main-function">Main Function<a class="anchor" aria-label="anchor" href="#main-function"></a>
-</h3>
+<span><span class="co"># select drops the reasoning field before it reaches the writer</span></span>
+<span><span class="va">llms_program</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pipeline.html">pipeline</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="../reference/step.html">step</a></span><span class="op">(</span><span class="va">notes</span>, select <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"purpose"</span>, <span class="st">"key_concepts"</span>, <span class="st">"quick_start"</span>, <span class="st">"gotchas"</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  <span class="va">write_up</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>The package name stops at the first step, so R adds the heading:</p>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">analyze_package</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">pkg_path</span> <span class="op">=</span> <span class="st">"."</span>, <span class="va">llm</span> <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="fu"><a href="https://cli.r-lib.org/reference/cli_h1.html" class="external-link">cli_h1</a></span><span class="op">(</span><span class="st">"Analyzing package"</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">llm</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-luna"</span><span class="op">)</span></span>
 <span></span>
-<span>  <span class="va">modules</span> <span class="op">&lt;-</span> <span class="fu">create_modules</span><span class="op">(</span><span class="va">llm</span><span class="op">)</span></span>
-<span></span>
-<span>  <span class="co"># Gather info (returns PackageInfo)</span></span>
-<span>  <span class="va">pkg_info</span> <span class="op">&lt;-</span> <span class="fu">gather_package_info</span><span class="op">(</span><span class="va">pkg_path</span><span class="op">)</span></span>
-<span>  <span class="fu"><a href="https://cli.r-lib.org/reference/cli_alert.html" class="external-link">cli_alert_success</a></span><span class="op">(</span><span class="st">"Gathered metadata for {.pkg {pkg_info@name}}"</span><span class="op">)</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">pkg_info</span><span class="op">)</span></span>
-<span></span>
-<span>  <span class="co"># Run pipeline stages (each returns typed result)</span></span>
-<span>  <span class="va">purpose</span> <span class="op">&lt;-</span> <span class="fu">analyze_purpose</span><span class="op">(</span><span class="va">pkg_info</span>, <span class="va">modules</span><span class="op">)</span></span>
-<span>  <span class="va">structure</span> <span class="op">&lt;-</span> <span class="fu">analyze_structure</span><span class="op">(</span><span class="va">pkg_info</span>, <span class="va">modules</span><span class="op">)</span></span>
-<span>  <span class="va">examples</span> <span class="op">&lt;-</span> <span class="fu">generate_examples</span><span class="op">(</span><span class="va">pkg_info</span>, <span class="va">purpose</span>, <span class="va">structure</span>, <span class="va">modules</span><span class="op">)</span></span>
-<span>  <span class="va">llmstxt</span> <span class="op">&lt;-</span> <span class="fu">generate_llmstxt</span><span class="op">(</span><span class="va">pkg_info</span>, <span class="va">purpose</span>, <span class="va">structure</span>, <span class="va">examples</span>, <span class="va">modules</span><span class="op">)</span></span>
-<span></span>
-<span>  <span class="fu"><a href="https://cli.r-lib.org/reference/cli_alert.html" class="external-link">cli_alert_success</a></span><span class="op">(</span><span class="st">"Done!"</span><span class="op">)</span></span>
-<span></span>
-<span>  <span class="co"># Return typed result</span></span>
-<span>  <span class="fu">AnalysisResult</span><span class="op">(</span></span>
-<span>    pkg_info <span class="op">=</span> <span class="va">pkg_info</span>,</span>
-<span>    purpose <span class="op">=</span> <span class="va">purpose</span>,</span>
-<span>    structure <span class="op">=</span> <span class="va">structure</span>,</span>
-<span>    examples <span class="op">=</span> <span class="va">examples</span>,</span>
-<span>    llmstxt <span class="op">=</span> <span class="va">llmstxt</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">}</span></span></code></pre></div>
+<span><span class="va">out</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
+<span>  <span class="va">llms_program</span>,</span>
+<span>  pkg_name <span class="op">=</span> <span class="st">"dsprrr"</span>,</span>
+<span>  description_text <span class="op">=</span> <span class="va">info</span><span class="op">$</span><span class="va">description</span>,</span>
+<span>  usage <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="fu">usage_lines</span><span class="op">(</span><span class="st">"dsprrr"</span><span class="op">)</span>, collapse <span class="op">=</span> <span class="st">"\n"</span><span class="op">)</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="va">llm</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/writeLines.html" class="external-link">writeLines</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"# dsprrr"</span>, <span class="st">""</span>, <span class="va">out</span><span class="op">$</span><span class="va">llms_txt</span><span class="op">)</span>, <span class="st">"llms-summary.txt"</span><span class="op">)</span></span></code></pre></div>
+<p>To publish the result with a pkgdown site, put it in
+<code>pkgdown/assets/</code>, whose files are copied to the site root.
+Keep a name other than <code>llms.txt</code>, or pkgdown’s own file will
+replace it.</p>
 </div>
-<div class="section level3">
-<h3 id="convenience-functions">Convenience Functions<a class="anchor" aria-label="anchor" href="#convenience-functions"></a>
-</h3>
-<p>Finally, we wrap everything in user-friendly functions. These hide
-the complexity while preserving access to the full
-<code>AnalysisResult</code> for users who need it:</p>
+<div class="section level2">
+<h2 id="measure-it-and-improve-it">Measure it and improve it<a class="anchor" aria-label="anchor" href="#measure-it-and-improve-it"></a>
+</h2>
+<p>The share of code blocks that run is a metric. It needs no reference
+answer, so a training set is just a few packages described the same
+way:</p>
 <div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">generate_llmstxt_file</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">pkg_path</span> <span class="op">=</span> <span class="st">"."</span>, <span class="va">output</span> <span class="op">=</span> <span class="cn">NULL</span>, <span class="va">llm</span> <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="va">result</span> <span class="op">&lt;-</span> <span class="fu">analyze_package</span><span class="op">(</span><span class="va">pkg_path</span>, <span class="va">llm</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">package_facts</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">pkg</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
+<span>    pkg_name <span class="op">=</span> <span class="va">pkg</span>,</span>
+<span>    description_text <span class="op">=</span> <span class="fu">utils</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/utils/packageDescription.html" class="external-link">packageDescription</a></span><span class="op">(</span><span class="va">pkg</span><span class="op">)</span><span class="op">$</span><span class="va">Description</span>,</span>
+<span>    usage <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="fu">usage_lines</span><span class="op">(</span><span class="va">pkg</span><span class="op">)</span>, collapse <span class="op">=</span> <span class="st">"\n"</span><span class="op">)</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">}</span></span>
+<span><span class="va">packages</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/do.call.html" class="external-link">do.call</a></span><span class="op">(</span><span class="va">rbind</span>, <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"glue"</span>, <span class="st">"jsonlite"</span>, <span class="st">"withr"</span><span class="op">)</span>, <span class="va">package_facts</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
-<span>  <span class="va">output</span> <span class="op">&lt;-</span> <span class="va">output</span> <span class="op"><a href="https://rdrr.io/r/base/Control.html" class="external-link">%||%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">pkg_path</span>, <span class="st">"llms.txt"</span><span class="op">)</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/writeLines.html" class="external-link">writeLines</a></span><span class="op">(</span><span class="va">result</span><span class="op">@</span><span class="va">llmstxt</span>, <span class="va">output</span><span class="op">)</span></span>
-<span>  <span class="fu"><a href="https://cli.r-lib.org/reference/cli_alert.html" class="external-link">cli_alert_success</a></span><span class="op">(</span><span class="st">"Wrote {.file {output}}"</span><span class="op">)</span></span>
-<span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/invisible.html" class="external-link">invisible</a></span><span class="op">(</span><span class="va">result</span><span class="op">)</span></span>
+<span><span class="va">examples_run</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">prediction</span>, <span class="va">expected</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">problems</span> <span class="op">&lt;-</span> <span class="fu">example_problems</span><span class="op">(</span><span class="va">prediction</span><span class="op">$</span><span class="va">llms_txt</span><span class="op">)</span></span>
+<span>  <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">problems</span><span class="op">)</span> <span class="op">==</span> <span class="fl">0</span><span class="op">)</span> <span class="fl">0</span> <span class="kw">else</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/NA.html" class="external-link">is.na</a></span><span class="op">(</span><span class="va">problems</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">}</span></span>
 <span></span>
-<span><span class="va">preview_llmstxt</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">pkg_path</span> <span class="op">=</span> <span class="st">"."</span>, <span class="va">llm</span> <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="va">result</span> <span class="op">&lt;-</span> <span class="fu">analyze_package</span><span class="op">(</span><span class="va">pkg_path</span>, <span class="va">llm</span><span class="op">)</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="va">result</span><span class="op">@</span><span class="va">llmstxt</span><span class="op">)</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/invisible.html" class="external-link">invisible</a></span><span class="op">(</span><span class="va">result</span><span class="op">)</span></span>
-<span><span class="op">}</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="running-it">Running It<a class="anchor" aria-label="anchor" href="#running-it"></a>
-</h3>
+<span><span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span><span class="va">llms_program</span>, <span class="va">packages</span>, metric <span class="op">=</span> <span class="va">examples_run</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span><span class="op">$</span><span class="va">mean_score</span></span></code></pre></div>
+<p><code><a href="../reference/compile.html">compile()</a></code> can then improve the program without anyone
+editing a prompt. <code><a href="../reference/BootstrapFewShot.html">BootstrapFewShot()</a></code> runs the pipeline on
+each package, keeps the runs whose examples all ran
+(<code>metric_threshold = 1</code>), and adds their notes and write-ups
+to both steps as demonstrations. It warns that <code>packages</code> has
+no output column, which is expected here because the metric doesn’t
+compare against one:</p>
 <div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Find package root (works from vignettes/ or project root)</span></span>
-<span><span class="va">pkg_root</span> <span class="op">&lt;-</span> <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.exists</a></span><span class="op">(</span><span class="st">"DESCRIPTION"</span><span class="op">)</span><span class="op">)</span> <span class="st">"."</span> <span class="kw">else</span> <span class="st">".."</span></span>
-<span></span>
-<span><span class="co"># Analyze current package</span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu">analyze_package</span><span class="op">(</span><span class="va">pkg_root</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># View the analysis (uses print method)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">result</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># See the generated llms.txt</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="va">result</span><span class="op">@</span><span class="va">llmstxt</span><span class="op">)</span></span></code></pre></div>
-</div>
-</div>
-<div class="section level2">
-<h2 id="example-output">Example Output<a class="anchor" aria-label="anchor" href="#example-output"></a>
-</h2>
-<p>Running on dsprrr produces:</p>
-<div class="sourceCode" id="cb15"><pre class="sourceCode markdown"><code class="sourceCode markdown"><span id="cb15-1"><a href="#cb15-1" tabindex="-1"></a><span class="fu"># dsprrr</span></span>
-<span id="cb15-2"><a href="#cb15-2" tabindex="-1"></a></span>
-<span id="cb15-3"><a href="#cb15-3" tabindex="-1"></a><span class="at">&gt; DSPy-style LLM programming for R: signatures define I/O, modules</span></span>
-<span id="cb15-4"><a href="#cb15-4" tabindex="-1"></a><span class="at">&gt; encapsulate prompts, optimizers improve them automatically.</span></span>
-<span id="cb15-5"><a href="#cb15-5" tabindex="-1"></a></span>
-<span id="cb15-6"><a href="#cb15-6" tabindex="-1"></a>Data scientists and ML engineers building production LLM applications</span>
-<span id="cb15-7"><a href="#cb15-7" tabindex="-1"></a>who want systematic prompt optimization rather than manual tuning.</span>
-<span id="cb15-8"><a href="#cb15-8" tabindex="-1"></a></span>
-<span id="cb15-9"><a href="#cb15-9" tabindex="-1"></a><span class="fu">## Key Concepts</span></span>
-<span id="cb15-10"><a href="#cb15-10" tabindex="-1"></a></span>
-<span id="cb15-11"><a href="#cb15-11" tabindex="-1"></a><span class="ss">- </span>**Signature**: Declarative specification of module inputs and outputs</span>
-<span id="cb15-12"><a href="#cb15-12" tabindex="-1"></a>  using arrow notation (<span class="in">`question -&gt; answer`</span>) or explicit types.</span>
-<span id="cb15-13"><a href="#cb15-13" tabindex="-1"></a><span class="ss">- </span>**Module**: Reusable, stateful wrapper around an LLM call with</span>
-<span id="cb15-14"><a href="#cb15-14" tabindex="-1"></a>  configuration and optimization state.</span>
-<span id="cb15-15"><a href="#cb15-15" tabindex="-1"></a><span class="ss">- </span>**Teleprompter**: Optimization strategy that compiles modules by</span>
-<span id="cb15-16"><a href="#cb15-16" tabindex="-1"></a>  adding few-shot examples or refining instructions.</span>
-<span id="cb15-17"><a href="#cb15-17" tabindex="-1"></a><span class="ss">- </span>**Trace**: Record of module execution for debugging and analysis.</span>
-<span id="cb15-18"><a href="#cb15-18" tabindex="-1"></a></span>
-<span id="cb15-19"><a href="#cb15-19" tabindex="-1"></a><span class="fu">## Quick Start</span></span>
-<span id="cb15-20"><a href="#cb15-20" tabindex="-1"></a></span>
-<span id="cb15-21"><a href="#cb15-21" tabindex="-1"></a><span class="in">```r</span></span>
-<span id="cb15-22"><a href="#cb15-22" tabindex="-1"></a><span class="fu">library</span>(dsprrr)</span>
-<span id="cb15-23"><a href="#cb15-23" tabindex="-1"></a><span class="fu">library</span>(ellmer)</span>
-<span id="cb15-24"><a href="#cb15-24" tabindex="-1"></a></span>
-<span id="cb15-25"><a href="#cb15-25" tabindex="-1"></a>mod <span class="ot">&lt;-</span> <span class="fu">signature</span>(<span class="st">"question -&gt; answer"</span>) <span class="sc">|&gt;</span> <span class="fu">module</span>()</span>
-<span id="cb15-26"><a href="#cb15-26" tabindex="-1"></a><span class="fu">run</span>(mod, <span class="at">question =</span> <span class="st">"What is R?"</span>, <span class="at">.llm =</span> <span class="fu">chat_openai</span>())</span></code></pre></div>
-</div>
-<div class="section level2">
-<h2 id="common-workflow">Common Workflow<a class="anchor" aria-label="anchor" href="#common-workflow"></a>
-</h2>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"context, question -&gt; answer"</span>,</span>
-<span>                 instructions <span class="op">=</span> <span class="st">"Answer based only on context."</span><span class="op">)</span></span>
-<span><span class="va">mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">trainset</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
-<span>  context <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"R is for statistics."</span>, <span class="st">"Python is general-purpose."</span><span class="op">)</span>,</span>
-<span>  question <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"What is R for?"</span>, <span class="st">"Describe Python."</span><span class="op">)</span>,</span>
-<span>  answer <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Statistics"</span>, <span class="st">"General-purpose programming"</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">tuned</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span></span>
+<span>  <span class="va">llms_program</span>,</span>
+<span>  <span class="fu"><a href="../reference/BootstrapFewShot.html">BootstrapFewShot</a></span><span class="op">(</span></span>
+<span>    metric <span class="op">=</span> <span class="va">examples_run</span>,</span>
+<span>    metric_threshold <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>    max_bootstrapped_demos <span class="op">=</span> <span class="fl">2L</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  <span class="va">packages</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="va">llm</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">optimized</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">mod</span>, <span class="fu"><a href="../reference/LabeledFewShot.html">LabeledFewShot</a></span><span class="op">(</span>k <span class="op">=</span> <span class="fl">2</span><span class="op">)</span>, trainset <span class="op">=</span> <span class="va">trainset</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span><span class="va">optimized</span>, <span class="va">testset</span>, metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level2">
-<h2 id="code-organization">Code Organization<a class="anchor" aria-label="anchor" href="#code-organization"></a>
-</h2>
-<p>Core abstractions in signature.R (S7) and module-base.R (R6). Module
-variants in separate files. Optimization in teleprompter.R.</p>
-<div class="section level3">
-<h3 id="important-files">Important Files<a class="anchor" aria-label="anchor" href="#important-files"></a>
-</h3>
-<ul>
-<li>
-<strong>signature.R</strong>: S7 Signature class with string
-parser</li>
-<li>
-<strong>module-base.R</strong>: R6 Module base class</li>
-<li>
-<strong>module-predict.R</strong>: PredictModule for text
-generation</li>
-<li>
-<strong>teleprompter.R</strong>: LabeledFewShot, GEPA, MIPROv2</li>
-<li>
-<strong>run.R</strong>: run() and run_dataset() generics</li>
-</ul>
-</div>
-</div>
-<div class="section level2">
-<h2 id="entry-points">Entry Points<a class="anchor" aria-label="anchor" href="#entry-points"></a>
-</h2>
-<ul>
-<li>
-<code><a href="../reference/signature.html">signature()</a></code>: Define input/output contract</li>
-<li>
-<code><a href="../reference/module.html">module()</a></code>: Create module from signature</li>
-<li>
-<code><a href="../reference/run.html">run()</a></code>: Execute module with inputs</li>
-<li>
-<code><a href="../reference/compile.html">compile()</a></code>: Optimize with teleprompter</li>
-</ul>
-</div>
-<div class="section level2">
-<h2 id="watch-out-for">Watch Out For<a class="anchor" aria-label="anchor" href="#watch-out-for"></a>
-</h2>
-<ul>
-<li>Modules are stateful—clone before modifying shared instances</li>
-<li>
-<code><a href="../reference/run.html">run()</a></code> requires <code>.llm</code> unless you’ve called
-<code><a href="../reference/set_default_chat.html">set_default_chat()</a></code>
-</li>
-<li>Complex outputs need <code><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_object()</a></code> from ellmer ```</li>
-</ul>
-</div>
-<div class="section level2">
-<h2 id="when-to-use-which">When to Use Which<a class="anchor" aria-label="anchor" href="#when-to-use-which"></a>
-</h2>
-<table class="table">
-<thead><tr class="header">
-<th>Approach</th>
-<th>Use When</th>
-</tr></thead>
-<tbody>
-<tr class="odd">
-<td><strong>Plain lists</strong></td>
-<td>One-off scripts, quick prototypes</td>
-</tr>
-<tr class="even">
-<td><strong>S7 classes</strong></td>
-<td>Reusable pipelines, packages, need validation</td>
-</tr>
-</tbody>
-</table>
-</div>
-<div class="section level2">
-<h2 id="adapting-this-pattern">Adapting This Pattern<a class="anchor" aria-label="anchor" href="#adapting-this-pattern"></a>
-</h2>
-<p>The staged pipeline pattern adapts to many documentation and analysis
-tasks:</p>
-<table style="width:100%;" class="table">
-<colgroup>
-<col width="21%">
-<col width="24%">
-<col width="29%">
-<col width="24%">
-</colgroup>
-<thead><tr class="header">
-<th>Application</th>
-<th>Gather Stage</th>
-<th>Analysis Stages</th>
-<th>Output Stage</th>
-</tr></thead>
-<tbody>
-<tr class="odd">
-<td><strong>API docs</strong></td>
-<td>Parse OpenAPI spec</td>
-<td>Analyze endpoints, group by resource</td>
-<td>Generate markdown reference</td>
-</tr>
-<tr class="even">
-<td><strong>Changelogs</strong></td>
-<td>Parse git commits, issues</td>
-<td>Categorize changes, identify breaking</td>
-<td>Generate release notes</td>
-</tr>
-<tr class="odd">
-<td><strong>Code review</strong></td>
-<td>Diff files, parse AST</td>
-<td>Check style, find bugs, assess complexity</td>
-<td>Generate review comments</td>
-</tr>
-<tr class="even">
-<td><strong>Test generation</strong></td>
-<td>Parse function signatures</td>
-<td>Identify edge cases, dependencies</td>
-<td>Generate test cases</td>
-</tr>
-<tr class="odd">
-<td><strong>Migration guides</strong></td>
-<td>Diff API versions</td>
-<td>Identify breaking changes, patterns</td>
-<td>Generate upgrade steps</td>
-</tr>
-</tbody>
-</table>
-<p>The key is the same: define clear signatures for each stage, use
-structured outputs to pass data between stages, and let S7 classes
-enforce the contracts.</p>
+<span><span class="va">dsprrr_facts</span> <span class="op">&lt;-</span> <span class="fu">package_facts</span><span class="op">(</span><span class="st">"dsprrr"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span><span class="va">tuned</span>, <span class="va">dsprrr_facts</span>, metric <span class="op">=</span> <span class="va">examples_run</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span><span class="op">$</span><span class="va">mean_score</span></span></code></pre></div>
+<p><code><a href="../reference/compile.html">compile()</a></code> returns a new program and leaves
+<code>llms_program</code> unchanged, so you can score both on packages
+that were not in the training set before choosing. <a href="compilation-optimization.html">Compile and optimize</a> covers the
+other optimizers and how to choose between them.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

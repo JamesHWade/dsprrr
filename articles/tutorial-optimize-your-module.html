@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Tutorial 5: Finding the Best Configuration • dsprrr</title>
+<title>Tutorial 5: Optimize a module • dsprrr</title>
 <!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="../favicon-96x96.png">
 <link rel="icon" type="”image/svg+xml”" href="../favicon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
@@ -17,7 +17,7 @@
 <link href="../deps/Fira_Code-0.4.10/font.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Tutorial 5: Finding the Best Configuration">
+<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Tutorial 5: Optimize a module">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -36,67 +36,67 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
-<li class="nav-item"><a class="nav-link" href="../articles/getting-started.html">Get Started</a></li>
+<li class="nav-item"><a class="nav-link" href="../articles/tutorial-hello-world.html">Get started</a></li>
 <li class="active nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-tutorials" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Tutorials</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-tutorials">
-<li><h6 class="dropdown-header" data-toc-skip>Learning Path</h6></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-hello-world.html">1. Your First LLM Call</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-build-classifier.html">2. Building a Classifier</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-structured-outputs.html">3. Structured Outputs</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-improve-with-demos.html">4. Improving with Examples</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-optimize-your-module.html">5. Optimization</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-deploy-to-production.html">6. Production</a></li>
+<li><a class="dropdown-item" href="../articles/tutorial-hello-world.html">1. Your first LLM call</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-build-classifier.html">2. Build a classifier</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-structured-outputs.html">3. Extract structured data</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-improve-with-demos.html">4. Improve with examples</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-optimize-your-module.html">5. Optimize a module</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-deploy-to-production.html">6. Save and reuse a module</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Advanced Tutorials</h6></li>
-    <li><a class="dropdown-item" href="../articles/text-adventure.html">Build an AI Game Master</a></li>
-    <li><a class="dropdown-item" href="../articles/llms-txt.html">Generate Package Docs</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-rlm-dsprrr.html">Investigate a Regression with RLM</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Projects</h6></li>
+    <li><a class="dropdown-item" href="../articles/llms-txt.html">Generate an llms.txt file</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-rlm-dsprrr.html">Investigate a regression with RLM</a></li>
+    <li><a class="dropdown-item" href="../articles/text-adventure.html">Build a text adventure</a></li>
   </ul>
 </li>
 <li class="nav-item dropdown">
-  <button class="nav-link dropdown-toggle" type="button" id="dropdown-how-to-guides" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">How-to Guides</button>
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-how-to-guides" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">How-to guides</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-how-to-guides">
-<li><a class="dropdown-item" href="../articles/troubleshooting.html">Troubleshooting</a></li>
-    <li><a class="dropdown-item" href="../articles/compilation-optimization.html">Compile &amp; Optimize</a></li>
-    <li><a class="dropdown-item" href="../articles/vitals-recipes.html">Evaluate with Vitals</a></li>
-    <li><a class="dropdown-item" href="../articles/rag-workflows.html">Build RAG Pipelines</a></li>
-    <li><a class="dropdown-item" href="../articles/chaining-modules.html">Chaining Modules</a></li>
-    <li><a class="dropdown-item" href="../articles/calibrated-decisions.html">Calibrated Decisions</a></li>
-    <li><a class="dropdown-item" href="../articles/orchestration.html">Deploy to Production</a></li>
+<li><h6 class="dropdown-header" data-toc-skip>Build</h6></li>
+    <li><a class="dropdown-item" href="../articles/advanced-modules.html">Choose a module type</a></li>
+    <li><a class="dropdown-item" href="../articles/chaining-modules.html">Chain modules into pipelines</a></li>
+    <li><a class="dropdown-item" href="../articles/rag-workflows.html">Retrieval-augmented generation</a></li>
+    <li><a class="dropdown-item" href="../articles/calibrated-decisions.html">Calibrated decisions</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Integrations</h6></li>
-    <li><a class="dropdown-item" href="../articles/vitals-integration.html">Vitals Package</a></li>
-    <li><a class="dropdown-item" href="../articles/tidymodels-integration.html">tidymodels</a></li>
-    <li><a class="dropdown-item" href="../articles/advanced-ellmer.html">Advanced ellmer</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Measure and improve</h6></li>
+    <li><a class="dropdown-item" href="../articles/compilation-optimization.html">Compile and optimize</a></li>
+    <li><a class="dropdown-item" href="../articles/advanced-optimization.html">Choose an optimizer</a></li>
+    <li><a class="dropdown-item" href="../articles/vitals-recipes.html">Evaluate with vitals</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Run</h6></li>
+    <li><a class="dropdown-item" href="../articles/models-and-providers.html">Models, providers and streaming</a></li>
+    <li><a class="dropdown-item" href="../articles/orchestration.html">Run dsprrr in pipelines</a></li>
+    <li><a class="dropdown-item" href="../articles/tidymodels-integration.html">Use dsprrr with tidymodels</a></li>
+    <li><a class="dropdown-item" href="../articles/troubleshooting.html">Troubleshooting</a></li>
   </ul>
 </li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-concepts" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Concepts</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-concepts">
-<li><a class="dropdown-item" href="../articles/concepts-dspy-philosophy.html">The DSPy Philosophy</a></li>
-    <li><a class="dropdown-item" href="../articles/dspy-comparison.html">dsprrr vs. DSPy</a></li>
-    <li><a class="dropdown-item" href="../articles/concepts-signatures-modules.html">Signatures &amp; Modules</a></li>
-    <li><a class="dropdown-item" href="../articles/concepts-optimization-theory.html">How Optimization Works</a></li>
-    <li><a class="dropdown-item" href="../articles/concepts-why-metrics-matter.html">Why Metrics Matter</a></li>
-    <li><a class="dropdown-item" href="../articles/how-rlm-works.html">How RLMs Work</a></li>
+<li><a class="dropdown-item" href="../articles/concepts-signatures-modules.html">How dsprrr works</a></li>
+    <li><a class="dropdown-item" href="../articles/concepts-why-metrics-matter.html">Metrics and evaluation</a></li>
+    <li><a class="dropdown-item" href="../articles/concepts-optimization-theory.html">How optimization works</a></li>
+    <li><a class="dropdown-item" href="../articles/dspy-comparison.html">dsprrr for DSPy users</a></li>
+    <li><a class="dropdown-item" href="../articles/how-rlm-works.html">How RLM works</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Deep Dives</h6></li>
-    <li><a class="dropdown-item" href="../articles/flex-optimization.html">Flex: Optimize the Whole Program</a></li>
-    <li><a class="dropdown-item" href="../articles/advanced-modules.html">Advanced Reasoning</a></li>
-    <li><a class="dropdown-item" href="../articles/advanced-optimization.html">Advanced Optimization</a></li>
-    <li><a class="dropdown-item" href="../articles/omni-meta-optimization.html">Composing Optimizers with Omni</a></li>
-    <li><a class="dropdown-item" href="../articles/agentic-optimization-harnesses.html">Agentic Optimization Harnesses</a></li>
-    <li><a class="dropdown-item" href="../articles/reasoning-models.html">Reasoning Models</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Experimental</h6></li>
+    <li><a class="dropdown-item" href="../articles/flex-optimization.html">Flex: optimize a whole program</a></li>
+    <li><a class="dropdown-item" href="../articles/omni-meta-optimization.html">Compose optimizers with Omni</a></li>
+    <li><a class="dropdown-item" href="../articles/agentic-optimization-harnesses.html">Agentic optimization harnesses</a></li>
   </ul>
 </li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-reference" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Reference</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-reference">
-<li><a class="dropdown-item" href="../articles/cheatsheet.html">Quick Reference</a></li>
-    <li><a class="dropdown-item" href="../reference/index.html">API Documentation</a></li>
+<li><a class="dropdown-item" href="../reference/index.html">Function reference</a></li>
+    <li><a class="dropdown-item" href="../articles/cheatsheet.html">Quick reference</a></li>
   </ul>
 </li>
+<li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul>
 <ul class="navbar-nav">
 <li class="nav-item"><form class="form-inline" role="search">
@@ -123,7 +123,7 @@
 
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
-      <img src="../logo.svg" class="logo" alt=""><h1>Tutorial 5: Finding the Best Configuration</h1>
+      <img src="../logo.svg" class="logo" alt=""><h1>Tutorial 5: Optimize a module</h1>
             
       
       <small class="dont-index">Source: <a href="https://github.com/JamesHWade/dsprrr/blob/main/vignettes/tutorial-optimize-your-module.Rmd" class="external-link"><code>vignettes/tutorial-optimize-your-module.Rmd</code></a></small>
@@ -132,220 +132,64 @@
 
     
     
-<p>In <a href="tutorial-improve-with-demos.html">Tutorial 4</a>, you
-improved your module with examples. But there are many other knobs to
-tune: temperature, instructions, prompt templates. How do you find the
-best combination?</p>
-<p>The answer: <strong>let dsprrr search for you</strong>.</p>
-<p>We return to a sentiment classifier—this time for product reviews—so
-you can see how much headroom parameter tuning adds on top of few-shot
-demos. This is also the module you’ll take to production in <a href="tutorial-deploy-to-production.html">Tutorial 6</a>.</p>
-<p><strong>Time</strong>: 30-35 minutes</p>
-<div class="section level2">
-<h2 id="what-youll-build">What You’ll Build<a class="anchor" aria-label="anchor" href="#what-youll-build"></a>
-</h2>
-<p>An optimized module that automatically finds the best configuration
-through grid search.</p>
-</div>
-<div class="section level2">
-<h2 id="prerequisites">Prerequisites<a class="anchor" aria-label="anchor" href="#prerequisites"></a>
-</h2>
-<ul>
-<li>Completed <a href="tutorial-improve-with-demos.html">Tutorial
-4</a>
-</li>
-<li>
-<code>OPENAI_API_KEY</code> set in your environment</li>
-</ul>
+<p><a href="tutorial-improve-with-demos.html">Tutorial 4</a> compared
+versions of a module by hand. dsprrr can run that comparison for you:
+give it candidate configurations, labeled data and a metric, and it
+scores every candidate and keeps the best. By the end of this tutorial
+you can search instruction variants with <code><a href="../reference/optimize_grid.html">optimize_grid()</a></code>,
+search instructions and demos together with
+<code>GridSearchTeleprompter</code>, and check the result on reviews the
+search never saw.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/dsprrr" class="external-link">dsprrr</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ellmer.tidyverse.org" class="external-link">ellmer</a></span><span class="op">)</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://tibble.tidyverse.org/" class="external-link">tibble</a></span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">chat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-5-mini"</span><span class="op">)</span></span></code></pre></div>
-</div>
+<span><span class="va">chat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-luna"</span><span class="op">)</span></span></code></pre></div>
+<p>The answers on this page were recorded with <code>gpt-5-mini</code>
+and are replayed when the site is built, so <code>gpt-6-luna</code> may
+word them differently.</p>
 <div class="section level2">
-<h2 id="step-1-set-up-the-problem">Step 1: Set Up the Problem<a class="anchor" aria-label="anchor" href="#step-1-set-up-the-problem"></a>
+<h2 id="a-classifier-and-two-datasets">A classifier and two datasets<a class="anchor" aria-label="anchor" href="#a-classifier-and-two-datasets"></a>
 </h2>
-<p>Let’s build a sentiment analyzer and optimize it:</p>
+<p>The task is product-review sentiment:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
 <span>  <span class="st">"review -&gt; sentiment: enum('positive', 'negative', 'neutral')"</span>,</span>
 <span>  instructions <span class="op">=</span> <span class="st">"Classify the sentiment of this product review."</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">classifier</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span><span class="op">)</span></span></code></pre></div>
-<p>Create training and test data:</p>
+<span><span class="op">)</span></span></code></pre></div>
+<p>The search scores candidates on <code>trainset</code>.
+<code>testset</code> stays out of the search, so the final check
+measures how the chosen configuration handles new reviews rather than
+how well it fits the training ones:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Training data for optimization</span></span>
-<span><span class="va">trainset</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
-<span>  review <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
-<span>    <span class="st">"Absolutely love this product! Best purchase ever."</span>,</span>
-<span>    <span class="st">"Complete waste of money. Broke after one day."</span>,</span>
-<span>    <span class="st">"It's okay. Does what it says."</span>,</span>
-<span>    <span class="st">"Exceeded all my expectations!"</span>,</span>
-<span>    <span class="st">"Terrible quality. Very disappointed."</span>,</span>
-<span>    <span class="st">"Nothing special, but it works."</span>,</span>
-<span>    <span class="st">"Amazing! Would buy again."</span>,</span>
-<span>    <span class="st">"Don't bother. Total junk."</span>,</span>
-<span>    <span class="st">"Decent for the price."</span>,</span>
-<span>    <span class="st">"Fantastic quality and fast shipping!"</span></span>
-<span>  <span class="op">)</span>,</span>
-<span>  sentiment <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
-<span>    <span class="st">"positive"</span>, <span class="st">"negative"</span>, <span class="st">"neutral"</span>,</span>
-<span>    <span class="st">"positive"</span>, <span class="st">"negative"</span>, <span class="st">"neutral"</span>,</span>
-<span>    <span class="st">"positive"</span>, <span class="st">"negative"</span>, <span class="st">"neutral"</span>,</span>
-<span>    <span class="st">"positive"</span></span>
-<span>  <span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">trainset</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tribble.html" class="external-link">tribble</a></span><span class="op">(</span></span>
+<span>  <span class="op">~</span><span class="va">review</span>,                                              <span class="op">~</span><span class="va">sentiment</span>,</span>
+<span>  <span class="st">"Absolutely love this product! Best purchase ever."</span>,  <span class="st">"positive"</span>,</span>
+<span>  <span class="st">"Complete waste of money. Broke after one day."</span>,      <span class="st">"negative"</span>,</span>
+<span>  <span class="st">"It's okay. Does what it says."</span>,                      <span class="st">"neutral"</span>,</span>
+<span>  <span class="st">"Exceeded all my expectations!"</span>,                      <span class="st">"positive"</span>,</span>
+<span>  <span class="st">"Terrible quality. Very disappointed."</span>,               <span class="st">"negative"</span>,</span>
+<span>  <span class="st">"Nothing special, but it works."</span>,                     <span class="st">"neutral"</span>,</span>
+<span>  <span class="st">"Amazing! Would buy again."</span>,                          <span class="st">"positive"</span>,</span>
+<span>  <span class="st">"Don't bother. Total junk."</span>,                          <span class="st">"negative"</span>,</span>
+<span>  <span class="st">"Decent for the price."</span>,                              <span class="st">"neutral"</span>,</span>
+<span>  <span class="st">"Fantastic quality and fast shipping!"</span>,               <span class="st">"positive"</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Held-out test data (never used for optimization)</span></span>
-<span><span class="va">testset</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
-<span>  review <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
-<span>    <span class="st">"Great value for money!"</span>,</span>
-<span>    <span class="st">"Stopped working after a week."</span>,</span>
-<span>    <span class="st">"Average product, average price."</span>,</span>
-<span>    <span class="st">"Couldn't be happier with this purchase!"</span></span>
-<span>  <span class="op">)</span>,</span>
-<span>  sentiment <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"positive"</span>, <span class="st">"negative"</span>, <span class="st">"neutral"</span>, <span class="st">"positive"</span><span class="op">)</span></span>
+<span><span class="va">testset</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tribble.html" class="external-link">tribble</a></span><span class="op">(</span></span>
+<span>  <span class="op">~</span><span class="va">review</span>,                                     <span class="op">~</span><span class="va">sentiment</span>,</span>
+<span>  <span class="st">"Great value for money!"</span>,                    <span class="st">"positive"</span>,</span>
+<span>  <span class="st">"Stopped working after a week."</span>,             <span class="st">"negative"</span>,</span>
+<span>  <span class="st">"Average product, average price."</span>,           <span class="st">"neutral"</span>,</span>
+<span>  <span class="st">"Couldn't be happier with this purchase!"</span>,   <span class="st">"positive"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="step-2-grid-search-over-temperature">Step 2: Grid Search Over Temperature<a class="anchor" aria-label="anchor" href="#step-2-grid-search-over-temperature"></a>
+<h2 id="measure-the-baseline">Measure the baseline<a class="anchor" aria-label="anchor" href="#measure-the-baseline"></a>
 </h2>
-<p>Temperature controls randomness. Lower = more deterministic, higher =
-more creative. Let’s find the best value:</p>
+<p>Score the module as it is before searching, so you have a number to
+beat:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/optimize_grid.html">optimize_grid</a></span><span class="op">(</span>  <span class="va">classifier</span>,</span>
-<span>  data <span class="op">=</span> <span class="va">trainset</span>,</span>
-<span>  metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"sentiment"</span><span class="op">)</span>,</span>
-<span>  parameters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    temperature <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.0</span>, <span class="fl">0.3</span>, <span class="fl">0.7</span>, <span class="fl">1.0</span><span class="op">)</span></span>
-<span>  <span class="op">)</span>,</span>
-<span>  .llm <span class="op">=</span> <span class="va">chat</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level2">
-<h2 id="step-3-view-optimization-results">Step 3: View Optimization Results<a class="anchor" aria-label="anchor" href="#step-3-view-optimization-results"></a>
-</h2>
-<p>See what happened:</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># All trials</span></span>
-<span><span class="fu"><a href="../reference/module_trials.html">module_trials</a></span><span class="op">(</span><span class="va">classifier</span><span class="op">)</span></span></code></pre></div>
-<p>Get the summary:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Metrics summary</span></span>
-<span><span class="fu"><a href="../reference/module_metrics.html">module_metrics</a></span><span class="op">(</span><span class="va">classifier</span><span class="op">)</span></span></code></pre></div>
-<p>Check the best configuration:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Best score achieved</span></span>
-<span><span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">classifier</span><span class="op">)</span><span class="op">$</span><span class="va">best_score</span></span>
-<span></span>
-<span><span class="co"># Best parameters</span></span>
-<span><span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">classifier</span><span class="op">)</span><span class="op">$</span><span class="va">best_params</span></span></code></pre></div>
-</div>
-<div class="section level2">
-<h2 id="step-4-the-module-remembers">Step 4: The Module Remembers<a class="anchor" aria-label="anchor" href="#step-4-the-module-remembers"></a>
-</h2>
-<p>After optimization, the module automatically uses the best
-configuration:</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># This uses the best temperature found</span></span>
-<span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">classifier</span>, review <span class="op">=</span> <span class="st">"This product changed my life!"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level2">
-<h2 id="step-5-grid-search-over-instructions">Step 5: Grid Search Over Instructions<a class="anchor" aria-label="anchor" href="#step-5-grid-search-over-instructions"></a>
-</h2>
-<p>Instructions matter a lot. Let’s test different phrasings:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Reset to try different parameters</span></span>
-<span><span class="va">classifier2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu"><a href="../reference/optimize_grid.html">optimize_grid</a></span><span class="op">(</span>  <span class="va">classifier2</span>,</span>
-<span>  data <span class="op">=</span> <span class="va">trainset</span>,</span>
-<span>  metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"sentiment"</span><span class="op">)</span>,</span>
-<span>  parameters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    instructions_suffix <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
-<span>      <span class="st">""</span>,</span>
-<span>      <span class="st">" Be brief."</span>,</span>
-<span>      <span class="st">" Consider the overall tone."</span>,</span>
-<span>      <span class="st">" Focus on the customer's satisfaction level."</span></span>
-<span>    <span class="op">)</span></span>
-<span>  <span class="op">)</span>,</span>
-<span>  .llm <span class="op">=</span> <span class="va">chat</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu"><a href="../reference/module_trials.html">module_trials</a></span><span class="op">(</span><span class="va">classifier2</span><span class="op">)</span></span></code></pre></div>
-<p>The <code>instructions_suffix</code> is appended to your base
-instructions.</p>
-</div>
-<div class="section level2">
-<h2 id="step-6-multi-parameter-grid-search">Step 6: Multi-Parameter Grid Search<a class="anchor" aria-label="anchor" href="#step-6-multi-parameter-grid-search"></a>
-</h2>
-<p>Search over multiple parameters at once:</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">classifier3</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu"><a href="../reference/optimize_grid.html">optimize_grid</a></span><span class="op">(</span>  <span class="va">classifier3</span>,</span>
-<span>  data <span class="op">=</span> <span class="va">trainset</span>,</span>
-<span>  metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"sentiment"</span><span class="op">)</span>,</span>
-<span>  parameters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    temperature <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.0</span>, <span class="fl">0.5</span><span class="op">)</span>,</span>
-<span>    instructions_suffix <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">""</span>, <span class="st">" Be decisive."</span><span class="op">)</span></span>
-<span>  <span class="op">)</span>,</span>
-<span>  .llm <span class="op">=</span> <span class="va">chat</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu"><a href="../reference/module_trials.html">module_trials</a></span><span class="op">(</span><span class="va">classifier3</span><span class="op">)</span></span></code></pre></div>
-<p>This tests all combinations: 2 temperatures × 2 instruction variants
-= 4 total configurations.</p>
-</div>
-<div class="section level2">
-<h2 id="step-7-using-gridsearchteleprompter">Step 7: Using GridSearchTeleprompter<a class="anchor" aria-label="anchor" href="#step-7-using-gridsearchteleprompter"></a>
-</h2>
-<p>For more control, use <code>GridSearchTeleprompter</code> with
-explicit variants:</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">variants</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
-<span>  id <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"concise"</span>, <span class="st">"analytical"</span>, <span class="st">"empathetic"</span><span class="op">)</span>,</span>
-<span>  instructions_suffix <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
-<span>    <span class="st">" Respond with just the sentiment."</span>,</span>
-<span>    <span class="st">" Analyze the language carefully before deciding."</span>,</span>
-<span>    <span class="st">" Consider how the customer is feeling."</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">teleprompter</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/GridSearchTeleprompter.html">GridSearchTeleprompter</a></span><span class="op">(</span></span>
-<span>  variants <span class="op">=</span> <span class="va">variants</span>,</span>
-<span>  metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"sentiment"</span><span class="op">)</span>,</span>
-<span>  k <span class="op">=</span> <span class="fl">2L</span>  <span class="co"># Number of few-shot examples to include</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">optimized</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span></span>
-<span>  program <span class="op">=</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span><span class="op">)</span>,</span>
-<span>  teleprompter <span class="op">=</span> <span class="va">teleprompter</span>,</span>
-<span>  trainset <span class="op">=</span> <span class="va">trainset</span>,</span>
-<span>  .llm <span class="op">=</span> <span class="va">chat</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p>This combines instruction optimization with few-shot example
-selection.</p>
-</div>
-<div class="section level2">
-<h2 id="step-8-evaluate-on-held-out-test-data">Step 8: Evaluate on Held-Out Test Data<a class="anchor" aria-label="anchor" href="#step-8-evaluate-on-held-out-test-data"></a>
-</h2>
-<p>Always test on data the optimizer never saw:</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Evaluate the optimized module on test data</span></span>
-<span><span class="va">test_results</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span></span>
-<span>  <span class="va">optimized</span>,</span>
-<span>  <span class="va">testset</span>,</span>
-<span>  metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"sentiment"</span><span class="op">)</span>,</span>
-<span>  .llm <span class="op">=</span> <span class="va">chat</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">test_results</span></span></code></pre></div>
-<p>Compare to baseline:</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">baseline</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">baseline_results</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span></span>
@@ -355,122 +199,151 @@ selection.</p>
 <span>  .llm <span class="op">=</span> <span class="va">chat</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Baseline test accuracy:"</span>, <span class="fu">scales</span><span class="fu">::</span><span class="fu"><a href="https://scales.r-lib.org/reference/percent_format.html" class="external-link">percent</a></span><span class="op">(</span><span class="va">baseline_results</span><span class="op">$</span><span class="va">mean_score</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Optimized test accuracy:"</span>, <span class="fu">scales</span><span class="fu">::</span><span class="fu"><a href="https://scales.r-lib.org/reference/percent_format.html" class="external-link">percent</a></span><span class="op">(</span><span class="va">test_results</span><span class="op">$</span><span class="va">mean_score</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">baseline_results</span><span class="op">$</span><span class="va">mean_score</span></span>
+<span><span class="co">#&gt; [1] 1</span></span>
+<span><span class="va">baseline_results</span><span class="op">$</span><span class="va">scores</span></span>
+<span><span class="co">#&gt; [1] 1 1 1 1</span></span></code></pre></div>
+<p>In the recorded run, gpt-5-mini labels all four test reviews
+correctly, so here a search can at best match the baseline. Four reviews
+are too few to rank configurations anyway: each is worth 25 percentage
+points, and one changed answer can reverse a comparison. The datasets in
+this tutorial are small to keep it cheap; when the choice matters, test
+on dozens to hundreds of labeled rows.</p>
 </div>
 <div class="section level2">
-<h2 id="step-9-different-metrics-for-different-tasks">Step 9: Different Metrics for Different Tasks<a class="anchor" aria-label="anchor" href="#step-9-different-metrics-for-different-tasks"></a>
+<h2 id="search-instruction-variants">Search instruction variants<a class="anchor" aria-label="anchor" href="#search-instruction-variants"></a>
 </h2>
-<p>Not all tasks use exact match. dsprrr provides several metrics:</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># For text generation - token overlap</span></span>
-<span><span class="fu"><a href="../reference/metric_f1.html">metric_f1</a></span><span class="op">(</span><span class="op">)</span></span>
+<p><code><a href="../reference/optimize_grid.html">optimize_grid()</a></code> runs every candidate on
+<code>data</code>, scores it with <code>metric</code>, and leaves the
+module set to the best candidate. <code>parameters</code> lists the
+values to try. Each <code>instructions_suffix</code> is appended to the
+signature’s instructions, so this grid compares the original
+instructions with two longer versions:</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">classifier</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Check if output contains a string</span></span>
-<span><span class="fu"><a href="../reference/metric_contains.html">metric_contains</a></span><span class="op">(</span><span class="st">"error"</span>, ignore_case <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/optimize_grid.html">optimize_grid</a></span><span class="op">(</span></span>
+<span>  <span class="va">classifier</span>,</span>
+<span>  data <span class="op">=</span> <span class="va">trainset</span>,</span>
+<span>  metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"sentiment"</span><span class="op">)</span>,</span>
+<span>  parameters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    instructions_suffix <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>      <span class="st">""</span>,</span>
+<span>      <span class="st">"Consider the overall tone."</span>,</span>
+<span>      <span class="st">"Focus on how satisfied the customer is."</span></span>
+<span>    <span class="op">)</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="va">chat</span></span>
+<span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Custom logic</span></span>
-<span><span class="fu"><a href="../reference/metric_custom.html">metric_custom</a></span><span class="op">(</span><span class="kw">function</span><span class="op">(</span><span class="va">prediction</span>, <span class="va">expected</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="co"># Return TRUE/FALSE or 0-1 score</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/nchar.html" class="external-link">nchar</a></span><span class="op">(</span><span class="va">prediction</span><span class="op">)</span> <span class="op">&lt;</span> <span class="fl">100</span></span>
-<span><span class="op">}</span>, name <span class="op">=</span> <span class="st">"concise"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Threshold wrapper</span></span>
-<span><span class="fu"><a href="../reference/metric_threshold.html">metric_threshold</a></span><span class="op">(</span><span class="fu"><a href="../reference/metric_f1.html">metric_f1</a></span><span class="op">(</span><span class="op">)</span>, threshold <span class="op">=</span> <span class="fl">0.8</span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level2">
-<h2 id="step-10-tracking-costs">Step 10: Tracking Costs<a class="anchor" aria-label="anchor" href="#step-10-tracking-costs"></a>
-</h2>
-<p>Optimization uses LLM calls. Track the cost:</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># After optimization</span></span>
-<span><span class="va">classifier</span><span class="op">$</span><span class="fu">trace_summary</span><span class="op">(</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Total session cost</span></span>
-<span><span class="fu"><a href="../reference/session_cost.html">session_cost</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level2">
-<h2 id="what-you-learned">What You Learned<a class="anchor" aria-label="anchor" href="#what-you-learned"></a>
-</h2>
-<p>In this tutorial, you:</p>
-<ol style="list-style-type: decimal">
-<li>Used <code><a href="../reference/optimize_grid.html">optimize_grid()</a></code> to search over parameters</li>
-<li>Viewed results with <code><a href="../reference/module_trials.html">module_trials()</a></code> and
-<code><a href="../reference/module_metrics.html">module_metrics()</a></code>
-</li>
-<li>Searched over temperature and instructions</li>
-<li>Combined parameters in multi-dimensional grids</li>
-<li>Used <code>GridSearchTeleprompter</code> for instruction + demo
-optimization</li>
-<li>Evaluated on held-out test data</li>
-<li>Explored different metrics</li>
-<li>Tracked optimization costs</li>
-</ol>
-</div>
-<div class="section level2">
-<h2 id="the-optimization-mindset">The Optimization Mindset<a class="anchor" aria-label="anchor" href="#the-optimization-mindset"></a>
-</h2>
-<p>Key principles:</p>
-<ol style="list-style-type: decimal">
-<li>
-<strong>Measure first</strong>: Know your baseline before
-optimizing</li>
-<li>
-<strong>Use held-out data</strong>: Never test on training data</li>
-<li>
-<strong>Start simple</strong>: Try temperature before complex
-instruction variants</li>
-<li>
-<strong>Watch costs</strong>: Grid search multiplies LLM calls</li>
-<li>
-<strong>Diminishing returns</strong>: Often 80% of improvement comes
-from first optimization</li>
-</ol>
-</div>
-<div class="section level2">
-<h2 id="when-to-use-each-approach">When to Use Each Approach<a class="anchor" aria-label="anchor" href="#when-to-use-each-approach"></a>
-</h2>
+<span><span class="fu"><a href="../reference/module_trials.html">module_trials</a></span><span class="op">(</span><span class="va">classifier</span><span class="op">)</span></span></code></pre></div>
+<p>Each candidate runs on all ten training reviews, 30 calls in total.
+<code><a href="../reference/optimize_grid.html">optimize_grid()</a></code> changes <code>classifier</code> in place.
+<code><a href="../reference/module_trials.html">module_trials()</a></code> returns a one-row summary with the best
+score, the best parameters and a <code>trials</code> list-column;
+<code>optimization_result(classifier)$trials</code> has one row per
+candidate, with its score and cost.</p>
+<p>When <code>parameters</code> names several settings,
+<code><a href="../reference/optimize_grid.html">optimize_grid()</a></code> tries every combination, so the number of
+calls is the product of the numbers of values, times the number of rows.
+Settings you can search for a Predict module include:</p>
 <table class="table">
+<colgroup>
+<col width="50%">
+<col width="50%">
+</colgroup>
 <thead><tr class="header">
-<th>Approach</th>
-<th>Best For</th>
+<th>Setting</th>
+<th>What it changes</th>
 </tr></thead>
 <tbody>
 <tr class="odd">
-<td><code><a href="../reference/optimize_grid.html">optimize_grid()</a></code></td>
-<td>Quick parameter sweeps</td>
+<td><code>instructions</code></td>
+<td>Replaces the signature’s instructions.</td>
 </tr>
 <tr class="even">
-<td><code>LabeledFewShot</code></td>
-<td>Adding examples from data</td>
+<td><code>instructions_suffix</code></td>
+<td>Appends text to the signature’s instructions.</td>
 </tr>
 <tr class="odd">
-<td><code>GridSearchTeleprompter</code></td>
-<td>Instruction + example optimization</td>
+<td><code>template</code></td>
+<td>The glue string that lays out the inputs, such as
+<code>"Review: {review}"</code>.</td>
 </tr>
 <tr class="even">
-<td>Manual tuning</td>
-<td>Initial exploration</td>
+<td><code>reasoning_effort</code></td>
+<td>How much a reasoning model such as gpt-6-luna thinks before
+answering (<code>"none"</code> to <code>"max"</code>).</td>
+</tr>
+<tr class="odd">
+<td>
+<code>temperature</code>, <code>top_p</code>
+</td>
+<td>Sampling settings sent to the model. gpt-6-luna accepts them only
+with <code>reasoning_effort = "none"</code>.</td>
 </tr>
 </tbody>
 </table>
 </div>
 <div class="section level2">
-<h2 id="next-steps">Next Steps<a class="anchor" aria-label="anchor" href="#next-steps"></a>
+<h2 id="search-instructions-and-demos-together">Search instructions and demos together<a class="anchor" aria-label="anchor" href="#search-instructions-and-demos-together"></a>
 </h2>
-<p>Your module is optimized. Now how do you save it and deploy it?
-Continue to:</p>
-<ul>
-<li>
-<strong><a href="tutorial-deploy-to-production.html">Tutorial 6:
-Taking to Production</a></strong> — Save and deploy modules</li>
-<li>
-<strong><a href="cheatsheet.html">Quick Reference</a></strong> — All
-teleprompters and parameters</li>
-<li>
-<strong><a href="concepts-optimization-theory.html">How Optimization
-Works</a></strong> — Theory behind the search</li>
-</ul>
+<p><code>GridSearchTeleprompter</code> combines an instruction search
+with the demos of Tutorial 4: it attaches <code>k</code> demos sampled
+from the training data, scores each instruction variant with those demos
+in place, and keeps the best variant. Like other teleprompters it works
+through <code><a href="../reference/compile.html">compile()</a></code>, which returns a new module and leaves
+the one you pass in unchanged:</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">variants</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
+<span>  id <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"concise"</span>, <span class="st">"analytical"</span>, <span class="st">"empathetic"</span><span class="op">)</span>,</span>
+<span>  instructions_suffix <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>    <span class="st">"Respond with just the sentiment."</span>,</span>
+<span>    <span class="st">"Analyze the language carefully before deciding."</span>,</span>
+<span>    <span class="st">"Consider how the customer is feeling."</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">tp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/GridSearchTeleprompter.html">GridSearchTeleprompter</a></span><span class="op">(</span></span>
+<span>  variants <span class="op">=</span> <span class="va">variants</span>,</span>
+<span>  metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"sentiment"</span><span class="op">)</span>,</span>
+<span>  k <span class="op">=</span> <span class="fl">2L</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">2026</span><span class="op">)</span></span>
+<span><span class="va">optimized</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span><span class="op">)</span>, <span class="va">tp</span>, <span class="va">trainset</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">optimized</span><span class="op">)</span><span class="op">$</span><span class="va">best_params</span><span class="op">$</span><span class="va">id</span></span></code></pre></div>
+<p>Unless you pass <code>valset</code> to <code><a href="../reference/compile.html">compile()</a></code>,
+<code>GridSearchTeleprompter</code> scores the variants on a random 20%
+of <code>trainset</code> (two reviews here) and draws the demos from the
+rest. <code><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed()</a></code> makes that split repeatable. Two reviews
+cannot tell three variants apart, so give it a larger
+<code>valset</code> when you have the data.</p>
+</div>
+<div class="section level2">
+<h2 id="check-the-result-on-the-test-set">Check the result on the test set<a class="anchor" aria-label="anchor" href="#check-the-result-on-the-test-set"></a>
+</h2>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">test_results</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span></span>
+<span>  <span class="va">optimized</span>,</span>
+<span>  <span class="va">testset</span>,</span>
+<span>  metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"sentiment"</span><span class="op">)</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="va">chat</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">test_results</span><span class="op">$</span><span class="va">mean_score</span></span></code></pre></div>
+<p>Compare <code>test_results$mean_score</code> with
+<code>baseline_results$mean_score</code>. A configuration that wins on
+the training reviews but not on the test set has fitted those particular
+reviews rather than the task.</p>
+<p>Each candidate costs a full pass over its data: the instruction grid
+above makes 30 calls and the teleprompter 6. The <code>total_cost</code>
+column of <code>optimization_result(classifier)$trials</code> records
+what each candidate cost.</p>
+<p>Next, <a href="tutorial-deploy-to-production.html">Tutorial 6</a>
+saves a compiled module so that a later session can use it without
+repeating the search.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

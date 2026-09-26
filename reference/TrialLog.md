@@ -1,25 +1,48 @@
-# Trial Log
+# Record optimization trials in memory or on disk
 
-R6 class for managing a collection of trials with optional persistence.
-Existing JSONL records are loaded when `log_dir` already contains a log.
-New trials are appended one record at a time; matching trial IDs are
-idempotent, while conflicting records with the same ID are rejected. The
-`trials.jsonl` journal is authoritative. `metadata.json`, `README.md`,
-and `best_program.rds` are independently refreshed, best-effort derived
-views; they may lag after an interruption and are rebuilt by a later
-successful save. On Unix, a pre-existing private log directory must be
-owned by the effective user with exactly mode `0700`, and every
-pre-existing log file must have exactly mode `0600`; special mode bits
-are rejected. Every existing ancestor must be owned by root or the
-effective user, including sticky shared parents. Before initialization
-or a save to another directory locks, reads, or mutates storage, dsprrr
-preflights every known target: the lock, journal, metadata, summary, and
-best-program artifact. Unsafe paths are rejected without repair or
-reads. Directories and files created for the current operation are
-enforced as owner-only. Non-symbolic regular files remain required.
-Windows uses the account's filesystem ACLs, which base R cannot verify
-as owner-only, and fails closed if stable device and file identifiers
-are unavailable.
+A `TrialLog` collects the trial records of an optimizer run (see
+[`create_trial()`](https://jameshwade.github.io/dsprrr/reference/create_trial.md)).
+Without `log_dir` it lives in memory. With `log_dir` it writes every
+trial to a JSON Lines journal, `trials.jsonl`, as it is added, so a long
+run can be inspected or resumed later with
+[`load_trial_log()`](https://jameshwade.github.io/dsprrr/reference/load_trial_log.md).
+Optimizers create one when you give them a `log_dir`.
+
+## Details
+
+A log directory holds `trials.jsonl`, the authoritative journal, and
+three derived files that are refreshed after each change:
+`metadata.json`, `README.md` (a readable summary) and `best_program.rds`
+(the best trial's program, when recorded). The derived files can lag
+behind after an interruption; the next successful save rebuilds them.
+Existing records in `log_dir` are loaded when the log is created. Adding
+a trial whose ID is already present is a no-op when the records match
+and an error when they differ.
+
+### File permissions
+
+Logs are private to the current user. On Unix, an existing log directory
+must be owned by the effective user with mode `0700`, existing log files
+must have mode `0600` without special bits, and every existing parent
+directory must be owned by root or the effective user. Paths that break
+these rules, and symbolic links, are rejected without being read or
+repaired. New directories and files are created owner-only. On Windows,
+where base R cannot verify owner-only access, the account's filesystem
+ACLs apply, and logging fails if stable file identifiers are
+unavailable.
+
+## See also
+
+Other optimizer building blocks:
+[`complete_trial()`](https://jameshwade.github.io/dsprrr/reference/complete_trial.md),
+[`create_trial()`](https://jameshwade.github.io/dsprrr/reference/create_trial.md),
+[`eval_program()`](https://jameshwade.github.io/dsprrr/reference/eval_program.md),
+[`load_trial_log()`](https://jameshwade.github.io/dsprrr/reference/load_trial_log.md),
+[`optimizer_control()`](https://jameshwade.github.io/dsprrr/reference/optimizer_control.md),
+[`read_trials_jsonl()`](https://jameshwade.github.io/dsprrr/reference/read_trials_jsonl.md),
+[`sample_dataset()`](https://jameshwade.github.io/dsprrr/reference/sample_dataset.md),
+[`split_dataset()`](https://jameshwade.github.io/dsprrr/reference/split_dataset.md),
+[`write_trials_jsonl()`](https://jameshwade.github.io/dsprrr/reference/write_trials_jsonl.md)
 
 ## Public fields
 
@@ -220,3 +243,31 @@ The objects of this class are cloneable with this method.
 - `deep`:
 
   Whether to make a deep clone.
+
+## Examples
+
+``` r
+log <- TrialLog$new("my-search")
+log$add_trial(create_trial("my-search", params = list(k = 2L)))
+log$add_trial(create_trial("my-search", params = list(k = 4L)))
+log$n_trials()
+#> [1] 2
+log$as_tibble()[, c("trial_id", "status", "mean_score")]
+#> # A tibble: 2 × 3
+#>   trial_id                     status  mean_score
+#>   <chr>                        <chr>        <dbl>
+#> 1 trial_20260926_220021_ncnyz0 pending         NA
+#> 2 trial_20260926_220021_e01i28 pending         NA
+
+# Persist to a directory and load it again
+dir <- file.path(tempdir(), "trial-log-example")
+saved <- TrialLog$new("my-search", log_dir = dir)
+saved$add_trial(create_trial("my-search", params = list(k = 2L)))
+list.files(dir)
+#> [1] "README.md"     "metadata.json" "trials.jsonl" 
+load_trial_log(dir)
+#> 
+#> ── Trial Log: my-search 
+#> Trials: 1 (0 completed, 0 failed)
+#> Log Dir: /tmp/Rtmp9ba7jM/trial-log-example
+```

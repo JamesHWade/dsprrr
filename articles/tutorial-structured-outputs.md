@@ -1,29 +1,11 @@
-# Tutorial 3: Extracting Structured Data
+# Tutorial 3: Extract structured data
 
-In [Tutorial
-2](https://jameshwade.github.io/dsprrr/articles/tutorial-build-classifier.md),
-you built a classifier that returns a single value. But real extraction
-tasks need multiple fields: names *and* dates, sentiment *and*
-confidence, entities *and* relationships.
-
-In this tutorial, you’ll extract complex, structured data from text.
-We’re switching the running example from sentiment labels to news
-articles and emails because extraction is where multi-field outputs
-shine—but the workflow you learned in Tutorial 2 (signature → module →
-run) stays exactly the same. Only the output type grows richer.
-
-**Time**: 25-30 minutes
-
-## What You’ll Build
-
-An entity extractor that pulls structured information from news articles
-and emails.
-
-## Prerequisites
-
-- Completed [Tutorial
-  2](https://jameshwade.github.io/dsprrr/articles/tutorial-build-classifier.md)
-- `OPENAI_API_KEY` set in your environment
+The classifier in [Tutorial
+2](https://jameshwade.github.io/dsprrr/articles/tutorial-build-classifier.md)
+returns one label per text. Extraction needs more: a headline and a
+sentiment, the people named in an article, the sender and action items
+of an email. By the end of this tutorial you can declare outputs like
+these and get them back as R lists and tibbles with a fixed shape.
 
 ``` r
 
@@ -31,13 +13,16 @@ library(dsprrr)
 library(ellmer)
 library(tibble)
 
-chat <- chat_openai()
+chat <- chat_openai(model = "gpt-6-luna")
 ```
 
-## Step 1: Multiple Output Fields
+The answers on this page were recorded with `gpt-4.1` and are replayed
+when the site is built, so `gpt-6-luna` may word them differently.
 
-So far you’ve seen single outputs like `-> answer` or `-> sentiment`.
-Add more outputs with commas:
+## Return several fields
+
+Separate outputs with commas. An output without a type, like `sentiment`
+here, is a string:
 
 ``` r
 
@@ -46,22 +31,29 @@ sig <- signature("text -> sentiment, confidence: number")
 extractor <- module(sig)
 
 run(extractor, text = "This product is absolutely fantastic!", .llm = chat)
+#> $sentiment
+#> [1] "positive"
+#> 
+#> $confidence
+#> [1] 0.98
 ```
-
-You get back both `sentiment` and `confidence` in a structured result.
-
-Try another:
 
 ``` r
 
 run(extractor, text = "It was okay, nothing special.", .llm = chat)
+#> $sentiment
+#> [1] "neutral"
+#> 
+#> $confidence
+#> [1] 0.85
 ```
 
-Notice the confidence is lower for ambiguous text.
+`confidence` is the model’s own estimate, not a calibrated probability,
+so treat it as a rough signal.
 
-## Step 2: Typed Multiple Outputs
+## Give each field a type
 
-Add types to each output field:
+The types from Tutorial 1 work on every field:
 
 ``` r
 
@@ -77,14 +69,22 @@ result <- run(
   .llm = chat
 )
 
-result
+str(result)
+#> List of 3
+#>  $ sentiment: chr "positive"
+#>  $ stars    : int 4
+#>  $ summary  : chr "Powerful and easy-to-clean blender, but a bit loud."
 ```
 
-You get sentiment, a star rating, *and* a summary—all typed correctly.
+[`str()`](https://rdrr.io/r/utils/str.html) shows the R types: `stars`
+is an integer and the other two fields are character strings.
 
-## Step 3: Complex Structures with `type_object()`
+## Describe fields with `type_object()`
 
-For nested or complex data, use ellmer’s type system directly:
+The string notation cannot describe an output. For that, and for nested
+records, build the output from ellmer types.
+[`type_object()`](https://ellmer.tidyverse.org/reference/type_boolean.html)
+takes one argument per field:
 
 ``` r
 
@@ -103,8 +103,6 @@ sig <- signature(
 article_analyzer <- module(sig)
 ```
 
-Test it with a news snippet:
-
 ``` r
 
 article <- "
@@ -115,13 +113,40 @@ approach that captures more of the light spectrum. Researchers expect
 commercial applications within 3-5 years.
 "
 
-run(article_analyzer, article = article, .llm = chat)
+analysis <- run(article_analyzer, article = article, .llm = chat)
+analysis
+#> $headline
+#> [1] "MIT Scientists Achieve Breakthrough in Solar Panel Efficiency"
+#> 
+#> $sentiment
+#> [1] "positive"
+#> 
+#> $word_count
+#> [1] 54
 ```
 
-## Step 4: Arrays of Values
+The headline and sentiment are reasonable. The word count is not;
+compare it with a count done in R:
 
-Extract lists of items with
-[`type_array()`](https://ellmer.tidyverse.org/reference/type_boolean.html):
+``` r
+
+c(
+  model = analysis$word_count,
+  actual = lengths(strsplit(trimws(article), "\\s+"))
+)
+#>  model actual 
+#>     54     48
+```
+
+Language models estimate counts rather than compute them. Compute
+anything countable in R, and ask the model for judgment calls like the
+headline.
+
+## Extract lists with `type_array()`
+
+[`type_array()`](https://ellmer.tidyverse.org/reference/type_boolean.html)
+holds any number of values of one type. An array of strings arrives in R
+as a character vector:
 
 ``` r
 
@@ -140,8 +165,6 @@ sig <- signature(
 entity_extractor <- module(sig)
 ```
 
-Test with a news article:
-
 ``` r
 
 news <- "
@@ -154,21 +177,22 @@ and Commerce Secretary Gina Raimondo.
 
 result <- run(entity_extractor, text = news, .llm = chat)
 result
+#> $people
+#> [1] "Tim Cook"        "President Biden" "Janet Yellen"    "Gina Raimondo"  
+#> 
+#> $organizations
+#> [1] "Apple"       "White House" "Treasury"    "Commerce"   
+#> 
+#> $locations
+#> [1] "United States"
 ```
 
-Access the arrays directly:
+The model decides what counts as a person or an organization. If you
+want names without titles, say so in the field’s description.
 
-``` r
+## Nest objects
 
-result$people
-result$organizations
-```
-
-## Step 5: Nested Objects
-
-For hierarchical data, nest
-[`type_object()`](https://ellmer.tidyverse.org/reference/type_boolean.html)
-calls:
+A field can itself be an object. The result is a nested list:
 
 ``` r
 
@@ -192,8 +216,6 @@ sig <- signature(
 email_parser <- module(sig)
 ```
 
-Test with an email:
-
 ``` r
 
 email <- "
@@ -214,21 +236,28 @@ Sarah
 "
 
 result <- run(email_parser, email = email, .llm = chat)
-result
+str(result)
+#> List of 5
+#>  $ sender           :List of 2
+#>   ..$ name : chr "Sarah Johnson"
+#>   ..$ email: chr "sarah.johnson@techcorp.com"
+#>  $ subject          : chr "Q4 Budget Review - Action Required"
+#>  $ priority         : chr "urgent"
+#>  $ action_items     : chr [1:4] "Review the attached Q4 budget proposal by Friday" "Confirm department allocations" "Identify any cost-saving opportunities" "Submit final numbers to finance"
+#>  $ requires_response: logi TRUE
 ```
 
-Access nested fields:
+Reach nested fields with `$`:
 
 ``` r
 
 result$sender$name
-result$action_items
-result$priority
+#> [1] "Sarah Johnson"
 ```
 
-## Step 6: Building an Email Triage System
+## Triage a batch of emails
 
-Let’s combine what you’ve learned into a practical system:
+The same approach works on a data frame. This signature triages emails:
 
 ``` r
 
@@ -254,7 +283,11 @@ sig <- signature(
 triage <- module(sig)
 ```
 
-Process a batch of emails:
+As in Tutorial 2,
+[`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md)
+returns a `result` list-column of named lists. Turn each record into a
+one-row tibble and bind them to get one row per email and a typed column
+per field:
 
 ``` r
 
@@ -268,67 +301,49 @@ emails <- tibble(
 )
 
 results <- run_dataset(triage, emails, .llm = chat)
-results
+
+results$result |>
+  purrr::map(as_tibble) |>
+  purrr::list_rbind()
+#> # A tibble: 3 × 4
+#>   category summary                            action_required suggested_response
+#>   <chr>    <chr>                              <lgl>           <chr>             
+#> 1 meeting  Meeting scheduled for tomorrow at… TRUE            reply_now         
+#> 2 fyi      Office closure on Monday due to t… FALSE           archive           
+#> 3 urgent   Server is down and immediate assi… TRUE            reply_now
 ```
 
-## Step 7: Handling Optional Fields
+## Allow missing values
 
-Some fields might not always be present. Make them nullable:
+Some fields are not always there. Mark them with `required = FALSE`: the
+schema then allows the model to return null for that field, and a null
+arrives in R as `NULL`.
 
 ``` r
 
 sig <- signature(
   inputs = list(
-    input("text", description = "Text that may mention a date")
+    input("text", description = "Text that may mention an event")
   ),
   output_type = type_object(
-    has_date = type_boolean(),
-    date = type_string("Date in YYYY-MM-DD format, or null if no date mentioned"),
-    confidence = type_number()
+    event = type_string("What is planned"),
+    date = type_string("Date in YYYY-MM-DD format", required = FALSE)
   ),
-  instructions = "Extract date information if present. Set date to empty string if no date."
+  instructions = "Extract the event and its date. Use null if no date is given."
 )
 
-date_extractor <- module(sig)
+event_extractor <- module(sig)
 
-run(date_extractor, text = "Let's meet next Tuesday", .llm = chat)
-run(date_extractor, text = "Great weather today!", .llm = chat)
+run(event_extractor, text = "The contract renews on 1 March 2027.", .llm = chat)
+
+coffee <- run(event_extractor, text = "We should get coffee sometime.", .llm = chat)
+is.null(coffee$date)
 ```
 
-## What You Learned
+When the model leaves the date out, `coffee$date` is `NULL`, so test for
+it with [`is.null()`](https://rdrr.io/r/base/NULL.html) before using it.
 
-In this tutorial, you:
-
-1.  Extracted multiple output fields with comma notation
-2.  Added types to each field
-3.  Built complex structures with
-    [`type_object()`](https://ellmer.tidyverse.org/reference/type_boolean.html)
-4.  Extracted lists with
-    [`type_array()`](https://ellmer.tidyverse.org/reference/type_boolean.html)
-5.  Created nested/hierarchical outputs
-6.  Built a practical email triage system
-7.  Handled optional fields
-
-## The Structure Advantage
-
-Structured extraction is powerful because:
-
-- **Guaranteed types**: Numbers come back as numbers, not strings
-- **Predictable shape**: Your downstream code knows exactly what to
-  expect
-- **Validation**: The LLM must conform to your schema
-- **Composability**: Results plug directly into R data structures
-
-## Next Steps
-
-Your extractor works, but can it be improved? Continue to:
-
-- **[Tutorial 4: Improving with
-  Examples](https://jameshwade.github.io/dsprrr/articles/tutorial-improve-with-demos.md)**
-  — Add demonstrations to improve accuracy
-- **[Quick
-  Reference](https://jameshwade.github.io/dsprrr/articles/cheatsheet.md)**
-  — All output types at a glance
-- **[How Optimization
-  Works](https://jameshwade.github.io/dsprrr/articles/concepts-optimization-theory.md)**
-  — Why examples improve LLM performance
+Next, [Tutorial
+4](https://jameshwade.github.io/dsprrr/articles/tutorial-improve-with-demos.md)
+measures how often a module is right and improves it by adding worked
+examples to the prompt.

@@ -1,569 +1,243 @@
-# Production Workflows with dsprrr
+# Run dsprrr in pipelines
 
-## Introduction
-
-Building LLM applications in development is one thing; running them
-reliably in production is another. This vignette covers dsprrr’s
-orchestration features that help you:
-
-- **Persist** module configurations and traces across sessions
-- **Orchestrate** complex pipelines with targets
-- **Report** on experiments with Quarto
-- **Validate** workflows before expensive LLM operations
-
-These features integrate with the broader R ecosystem:
-
-- **pins** for versioned artifact storage
-- **targets** for reproducible pipelines
-- **Quarto** for rich reporting
-
-## The Challenge of Production LLM Workflows
-
-LLM applications present unique challenges for production deployment:
-
-1.  **Configuration Drift**: Optimized prompts and parameters can be
-    lost between sessions
-2.  **Cost Tracking**: LLM API calls are expensive and need monitoring
-3.  **Reproducibility**: Results should be reproducible for debugging
-    and auditing
-4.  **Collaboration**: Team members need to share optimized modules
-
-dsprrr’s orchestration helpers address these challenges by providing a
-structured approach to persisting and sharing LLM workflow artifacts.
-
-## Persisting Module Configurations with pins
-
-The **pins** package provides a simple way to store and version R
-objects. dsprrr integrates with pins to save module configurations,
-making it easy to:
-
-- Share optimized modules across projects
-- Version control your LLM configurations
-- Restore modules in new sessions without re-optimization
-
-### Setting Up a Pins Board
-
-First, create a pins board. You can use local storage, cloud providers
-(S3, Azure, GCS), or Posit Connect:
-
-``` r
-
-library(pins)
-
-# Local board for development
-board <- board_folder("pins", versioned = TRUE)
-
-# Cloud boards for production
-# board <- board_s3("my-bucket/dsprrr-pins")
-# board <- board_connect()  # Posit Connect
-```
-
-### Pinning a Module Configuration
-
-After optimizing a module, save its configuration:
+This page is about running dsprrr outside an interactive session. It
+shows how to start a [targets](https://docs.ropensci.org/targets/)
+pipeline and a Quarto report from dsprrr’s templates, check inputs with
+[`validate_workflow()`](https://jameshwade.github.io/dsprrr/reference/validate_workflow.md),
+keep evaluation results in a pins board, and control concurrency and
+cost in batch runs. Saving and restoring the module itself is covered in
+[Tutorial 6: Save and reuse a
+module](https://jameshwade.github.io/dsprrr/articles/tutorial-deploy-to-production.md).
 
 ``` r
 
 library(dsprrr)
-library(ellmer)
-
-# Create and optimize a module
-mod <- signature("text -> sentiment: enum('positive', 'negative', 'neutral')") |>
-  module()
-
-# Run optimization (in practice, with real data)
-# optimize_grid(mod, data = train_data, metric = metric_exact_match(), .llm = llm)
-
-# Pin the configuration
-pin_module_config(
-  board = board,
-  name = "sentiment-classifier-v1",
-  module = mod,
-  description = "Production sentiment classifier, optimized on customer feedback"
-)
 ```
 
-The pinned configuration includes:
+## Start from the templates
 
-- **Whole program graph**: Nested modules and shared module identity
-- **Signature and configuration**: Exact input/output schemas,
-  templates, and demos
-- **Curated optimization state**: Best parameters, scores, trial counts,
-  and provenance (not raw trial or execution history)
-- **Metadata and integrity**: Package/R requirements, format version,
-  and payload digest
-
-Functions, tools, retrievers, runners, interpreter factories, and other
-runtime objects are not captured implicitly. Supply a named `registry`
-to persist stable IDs and pass the same registry to
-[`restore_module_config()`](https://jameshwade.github.io/dsprrr/reference/restore_module_config.md).
-Arbitrary embedded runtime values require `trusted = TRUE` both when
-writing and restoring. Version 6 records exactly one of `runner` or
-`interpreter_factory` for each code-executing module without invoking a
-factory while writing or restoring the artifact. It preserves Flex
-source/runtime limits and registry-backed tools, and stores the
-graph-visible RLM `generate_action` and `extract` children with their
-tuned state.
-
-Restoration accepts only the current version 6 closed schema. Manifests
-with any other format version are rejected before module construction.
-The stored signature remains authoritative. To change a signature,
-update the source program and write a new artifact.
-
-### Restoring a Module
-
-In a new session or different project, restore the module:
+[`use_dsprrr_template()`](https://jameshwade.github.io/dsprrr/reference/use_dsprrr_template.md)
+copies a targets pipeline (`"targets"`), a Quarto report (`"quarto"`) or
+both (`"all"`) into a folder. Existing files are kept unless
+`overwrite = TRUE`.
 
 ``` r
 
-# Read the pinned configuration
-config <- pin_read(board, "sentiment-classifier-v1")
-
-# Restore the module
-mod <- restore_module_config(config)
-
-# Use immediately - no re-optimization needed!
-result <- run(mod, text = "Great product!", .llm = llm)
+use_dsprrr_template("all", path = "sentiment-pipeline")
+#> Created: sentiment-pipeline/_targets.R
+#> Created: sentiment-pipeline/report.qmd
 ```
 
-### Versioning and Rollback
+`_targets.R` is a complete sentiment-classification pipeline. Replace
+the example data and module with your own; the other targets wire them
+together:
 
-Pins automatically versions your configurations:
+| Target | What it does |
+|----|----|
+| `train_data`, `test_data` | Six training and three test reviews with a `target` column |
+| `module_definition` | A sentiment module with instructions and a template |
+| `llm_client` | The Chat, rebuilt on every run (see below) |
+| `optimized_module` | A copy of the module tuned by [`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md) over `temperature` |
+| `evaluation_results` | [`evaluate()`](https://jameshwade.github.io/dsprrr/reference/evaluate.md) on the test data |
+| `pins_board`, `pinned_config`, `pinned_evaluation` | A versioned `pins::board_folder("pins")` holding the optimized module and the evaluation |
+| `pinned_traces` | Meant to pin traces; it writes nothing for now, because the stored module has no recorded traces |
+| `summary_stats`, `summary_json` | A summary list, also written to `outputs/summary.json` |
+
+`llm_client` calls Claude Sonnet 4.5 through
+[`ellmer::chat_anthropic()`](https://ellmer.tidyverse.org/reference/chat_anthropic.html).
+Set the `DSPRRR_MODEL` environment variable for another Claude model.
+For any other Chat, set a factory near the top of `_targets.R`; it
+receives the model name:
 
 ``` r
 
-# List versions
-pin_versions(board, "sentiment-classifier-v1")
-
-# Read a specific version
-old_config <- pin_read(board, "sentiment-classifier-v1", version = "20240115T120000Z")
-old_mod <- restore_module_config(old_config)
-```
-
-## Saving Execution Traces
-
-Traces capture detailed information about LLM calls: timing, token
-usage, prompts, and outputs. Pinning traces enables:
-
-- Cost analysis across experiments
-- Performance debugging
-- Audit trails for compliance
-
-### Pinning Traces
-
-After running predictions, save the traces:
-
-``` r
-
-# Run some predictions
-results <- run(mod, text = test_texts, .llm = llm, .progress = TRUE)
-
-# Pin traces with full details
-pin_trace(
-  board = board,
-  name = "experiment-2024-01-traces",
-  module = mod,
-  include_prompts = TRUE,
-  include_outputs = TRUE,
-  description = "Production test run"
-)
-```
-
-### Analyzing Traces
-
-Load pinned traces for analysis:
-
-``` r
-
-library(dplyr)
-library(ggplot2)
-
-# Load trace data
-trace_data <- pin_read(board, "experiment-2024-01-traces")
-
-# Access the traces tibble
-traces_df <- trace_data$traces
-
-# Analyze token usage
-traces_df |>
-  summarize(
-    total_tokens = sum(total_tokens),
-    avg_latency = mean(latency_ms),
-    total_cost = sum(cost, na.rm = TRUE)
-  )
-
-# Plot latency over time
-ggplot(traces_df, aes(x = timestamp, y = latency_ms)) +
-  geom_line() +
-  geom_smooth(method = "loess") +
-  labs(title = "Request Latency Over Time", y = "Latency (ms)")
-```
-
-## Saving Evaluation Results
-
-Evaluation results from
-[`evaluate()`](https://jameshwade.github.io/dsprrr/reference/evaluate.md)
-or vitals Tasks can be pinned for tracking model performance over time:
-
-``` r
-
-# Run evaluation
-eval_result <- evaluate(
-  mod,
-  data = test_data,
-  metric = metric_exact_match(),
-  .llm = llm
-)
-
-# Pin the results
-pin_vitals_log(
-  board = board,
-  name = "sentiment-eval-2024-01",
-  eval_result = eval_result,
-  module = mod,
-  description = "Monthly evaluation on customer feedback test set"
-)
-```
-
-### Tracking Performance Over Time
-
-Compare evaluations across time:
-
-``` r
-
-# Load multiple evaluation results
-eval_jan <- pin_read(board, "sentiment-eval-2024-01")
-eval_feb <- pin_read(board, "sentiment-eval-2024-02")
-
-# Compare scores
-tibble(
-  month = c("January", "February"),
-  accuracy = c(eval_jan$mean_score, eval_feb$mean_score),
-  n_samples = c(eval_jan$n_evaluated, eval_feb$n_evaluated)
-)
-```
-
-## Orchestrating Pipelines with targets
-
-For complex workflows, the **targets** package provides a powerful
-framework for:
-
-- Dependency tracking and caching
-- Parallel execution
-- Reproducible pipelines
-
-### Using the targets Template
-
-dsprrr provides a ready-to-use targets template:
-
-``` r
-
-# Copy the template to your project
-use_dsprrr_template("targets")
-
-# This creates _targets.R with a complete pipeline
-```
-
-### Anatomy of the Pipeline
-
-The template includes these stages:
-
-``` r
-
-# 1. Data Preparation
-tar_target(train_data, load_training_data())
-tar_target(test_data, load_test_data())
-
-# 2. Module Definition
-tar_target(module_definition, {
-  signature("text -> sentiment") |>
-    module()
-})
-
-# 3. Optimization
-tar_target(optimized_module, {
-  mod <- module_definition$clone(deep = TRUE)
-  optimize_grid(mod, data = train_data, ...)
-  mod
-})
-
-# 4. Evaluation
-tar_target(evaluation_results, {
-  evaluate(optimized_module, data = test_data, ...)
-})
-
-# 5. Persistence
-tar_target(pinned_config, {
-  pin_module_config(board, "model", optimized_module)
+options(dsprrr.targets.llm_factory = function(model) {
+  ellmer::chat_openai(model = "gpt-6-luna")
 })
 ```
 
-### Running the Pipeline
-
-Execute your pipeline with targets:
+From the pipeline’s folder, run it and read results with targets:
 
 ``` r
 
 library(targets)
-
-# Run the full pipeline
 tar_make()
-
-# Visualize dependencies
-tar_visnetwork()
-
-# Read specific targets
-eval_results <- tar_read(evaluation_results)
+tar_read(evaluation_results)
 ```
 
-### Incremental Updates
+On later runs targets rebuilds `llm_client`, sees the same Chat, and
+skips every target whose code and inputs haven’t changed: edit the test
+data and only the evaluation and what depends on it run again. Because
+`llm_client` is always rebuilt,
+[`tar_outdated()`](https://docs.ropensci.org/targets/reference/tar_outdated.html)
+lists everything downstream of it even when
+[`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html)
+would skip those targets.
 
-targets caches results and only reruns what’s changed:
+## Render the report
+
+`report.qmd` reads pins from the board named by its `pins_board_path`
+parameter. Its `module_name`, `eval_name` and `traces_name` parameters
+default to the pin names the pipeline writes. After
+[`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html),
+render it with the Quarto CLI, overriding parameters with `-P`:
+
+``` bash
+quarto render report.qmd -P eval_name:sentiment-eval-results
+```
+
+Treat the report as a starting point. It needs R 4.4 or later (it uses
+`%||%` without loading rlang), and its evaluation section (mean score,
+score distribution, predictions) is the part that works today. The
+module section expects an older pin layout and prints empty fields, and
+the trace sections stay empty while `pinned_traces` writes nothing. To
+render the report as part of the pipeline, uncomment the `tar_quarto()`
+target (from tarchetypes) at the end of `_targets.R`.
+
+## Check inputs before a run
+
+[`validate_workflow()`](https://jameshwade.github.io/dsprrr/reference/validate_workflow.md)
+makes no LLM calls. It checks that `module` is a dsprrr module with at
+least one input, that `data` has a column for every signature input, and
+that `board` is a pins board. It prints a summary and invisibly returns
+a list with `valid` and the individual `checks`:
 
 ``` r
 
-# Modify only the test data
-# targets will skip optimization and only rerun evaluation
-
-tar_outdated()  # See what will rerun
-tar_make()      # Only evaluation runs
-```
-
-## Generating Reports with Quarto
-
-Quarto documents provide rich, reproducible reports. dsprrr’s template
-generates professional experiment reports:
-
-``` r
-
-# Copy the Quarto template
-use_dsprrr_template("quarto")
-
-# This creates report.qmd
-```
-
-### Customizing the Report
-
-The template reads from your pins board and generates:
-
-- Module configuration summary
-- Evaluation metrics and visualizations
-- Trace analysis (latency, tokens, costs)
-- Reproducibility information
-
-Configure the report parameters in the YAML header:
-
-``` yaml
-params:
-  pins_board_path: "pins"
-  module_name: "sentiment-classifier"
-  eval_name: "sentiment-eval-results"
-  traces_name: "sentiment-eval-traces"
-```
-
-### Rendering the Report
-
-Render your report:
-
-``` r
-
-# From R
-quarto::quarto_render("report.qmd")
-
-# From terminal
-# quarto render report.qmd
-```
-
-### Integrating with targets
-
-Add report rendering to your targets pipeline:
-
-``` r
-
-tar_quarto(
-  report,
-  path = "report.qmd",
-  quiet = FALSE
+classify <- module(
+  signature("text -> sentiment: enum('positive', 'negative', 'neutral')")
 )
-```
-
-## Validating Workflows
-
-Before running expensive LLM operations, validate your workflow:
-
-``` r
-
-# Check that everything is configured correctly
-validate_workflow(
-  module = mod,
-  data = test_data,
-  board = board
+reviews <- tibble::tibble(
+  text = c("Great value", "Arrived broken", "It's a chair"),
+  sentiment = c("positive", "negative", "neutral")
 )
+board <- pins::board_folder("sentiment-pipeline/pins", versioned = TRUE)
 
-# Output:
-# -- Workflow Validation --------------------------------
-# v module: Module type: PredictModule
-# v signature: 1 input(s) defined
-# v dataset: 100 rows, 1 required columns present
-# v board: Board type: pins_board_folder
-# v Workflow validation passed
+validate_workflow(classify, data = reviews, board = board)
+#> 
+#> ── Workflow Validation ──
+#> 
+#> ✔ module: Module type: PredictModule
+#> ✔ signature: 1 input(s) defined
+#> ✔ data: 3 rows, 1 required columns present
+#> ✔ board: Board type: pins_board_folder
+#> ✔ Workflow validation passed
 ```
 
-This catches common issues:
-
-- Missing required columns in datasets
-- Invalid module configurations
-- Inaccessible pins boards
-
-## Complete Production Workflow
-
-Here’s a complete example bringing everything together:
+A missing column fails the check:
 
 ``` r
 
-library(dsprrr)
-library(ellmer)
-library(pins)
-library(targets)
+check <- validate_workflow(classify, data = tibble::tibble(review = "Great"))
+#> 
+#> ── Workflow Validation ──
+#> 
+#> ✔ module: Module type: PredictModule
+#> ✔ signature: 1 input(s) defined
+#> ✖ data: Missing columns: text
+#> ✖ Workflow validation failed
+check$valid
+#> [1] FALSE
+```
 
-# ---- Setup ----
-board <- board_folder("pins", versioned = TRUE)
-llm <- chat_claude()
+It does not look at column types, the Chat or API keys, and it does not
+read or write the board. Stop a script early with
+`if (!check$valid) stop("Workflow validation failed")`.
 
-# ---- Define Module ----
-mod <- signature(
-  "feedback -> sentiment: enum('positive', 'negative', 'neutral'), issues: array(string)",
-  instructions = "Analyze customer feedback. Identify sentiment and extract specific issues mentioned."
-) |>
-  module()
+## Keep evaluation results
 
-# ---- Optimize ----
-train_data <- read_csv("data/train.csv")
+[`pin_vitals_log()`](https://jameshwade.github.io/dsprrr/reference/pin_vitals_log.md)
+stores an
+[`evaluate()`](https://jameshwade.github.io/dsprrr/reference/evaluate.md)
+result (mean score, per-row scores, predictions) with basic module
+information. Despite the name, it doesn’t accept a vitals `Task`; vitals
+writes its own logs (see [Evaluate with
+vitals](https://jameshwade.github.io/dsprrr/articles/vitals-recipes.md)).
 
-optimize_grid(
-  mod,
-  data = train_data,
+``` r
+
+result <- evaluate(
+  classify,
+  reviews,
   metric = metric_exact_match(field = "sentiment"),
-  parameters = list(temperature = c(0, 0.3, 0.7)),
-  .llm = llm
+  .llm = ellmer::chat_openai(model = "gpt-6-luna")
 )
+pin_vitals_log(board, "sentiment-eval", result, module = classify)
 
-# ---- Validate ----
-test_data <- read_csv("data/test.csv")
-validate_workflow(mod, data = test_data, board = board)
-
-# ---- Evaluate ----
-eval_result <- evaluate(
-  mod,
-  data = test_data,
-  metric = metric_exact_match(field = "sentiment"),
-  .llm = llm
-)
-
-# ---- Persist ----
-pin_module_config(board, "feedback-analyzer-v2", mod)
-pin_trace(board, "feedback-eval-traces", mod, include_prompts = TRUE)
-pin_vitals_log(board, "feedback-eval-v2", eval_result, module = mod)
-
-# ---- Report ----
-use_dsprrr_template("quarto")
-quarto::quarto_render("report.qmd")
+pins::pin_versions(board, "sentiment-eval")
+pins::pin_read(board, "sentiment-eval")$mean_score
 ```
 
-## Best Practices
+Each write to a versioned board adds a version; pass an id from
+`pin_versions()` to `pin_read(version = )` to read an older one. For
+shared storage, use another pins board, such as
+`pins::board_s3("my-bucket", prefix = "dsprrr/")` or
+[`pins::board_connect()`](https://pins.rstudio.com/reference/board_connect.html).
 
-### 1. Version Your Configurations
+## Control concurrency and cost
 
-Always use versioned pins boards:
+Batch calls run one row at a time unless you pass a
+[`concurrency_control()`](https://jameshwade.github.io/dsprrr/reference/concurrency_control.md)
+to `.concurrency` in
+[`run()`](https://jameshwade.github.io/dsprrr/reference/run.md),
+[`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md),
+[`evaluate()`](https://jameshwade.github.io/dsprrr/reference/evaluate.md)
+or
+[`as_vitals_task()`](https://jameshwade.github.io/dsprrr/reference/as_vitals_task.md):
 
 ``` r
 
-board <- board_folder("pins", versioned = TRUE)
+control <- concurrency_control(backend = "ellmer", max_active = 8L, max_errors = 5L)
+control
+#> <dsprrr_concurrency_control>
+#> Backend: ellmer
+#> Maximum active: 8
+#> Task timeout: unlimited
+#> Total timeout: unlimited
+#> Maximum errors: 5
+#> Cancel active work: TRUE
 ```
 
-This enables rollback and audit trails.
-
-### 2. Include Descriptive Metadata
-
-Add descriptions to your pins:
-
-``` r
-
-pin_module_config(
-  board, "classifier-v1", mod,
-  description = "Trained on Q1 2024 data, optimized for precision"
-)
-```
-
-### 3. Separate Development and Production
-
-Use different boards for different environments:
-
-``` r
-
-dev_board <- board_folder("pins-dev")
-prod_board <- board_s3("prod-bucket/dsprrr-pins")
-```
-
-### 4. Validate Before Running
-
-Always validate workflows, especially in production:
-
-``` r
-
-validation <- validate_workflow(mod, data = dataset, board = board)
-if (!validation$valid) {
-  stop("Workflow validation failed")
-}
-```
-
-### 5. Track Costs
-
-Monitor token usage and costs via traces:
-
-``` r
-
-traces <- pin_read(board, "latest-traces")
-total_cost <- sum(traces$traces$cost, na.rm = TRUE)
-cli::cli_alert_info("Total API cost: ${total_cost}")
-```
-
-## Integration with vitals
-
-dsprrr’s orchestration integrates seamlessly with the vitals package for
-rigorous LLM evaluation. See
-[`vignette("vitals-integration")`](https://jameshwade.github.io/dsprrr/articles/vitals-integration.md)
-for details on:
-
-- Converting dsprrr modules to vitals solvers
-- Using vitals scorers in dsprrr metrics
-- Combining vitals Tasks with dsprrr optimization
-
-## Next Steps
-
-- **Getting Started**:
-  [`vignette("getting-started")`](https://jameshwade.github.io/dsprrr/articles/getting-started.md)
-  for dsprrr basics
-- **Optimization**:
-  [`vignette("compilation-optimization")`](https://jameshwade.github.io/dsprrr/articles/compilation-optimization.md)
-  for tuning modules
-- **Vitals**:
-  [`vignette("vitals-integration")`](https://jameshwade.github.io/dsprrr/articles/vitals-integration.md)
-  for evaluation workflows
-
-## Summary
-
-dsprrr’s orchestration features enable production-ready LLM workflows:
-
-| Feature | Purpose | Package |
+| Backend | How rows run | Limits |
 |----|----|----|
-| [`pin_module_config()`](https://jameshwade.github.io/dsprrr/reference/pin_module_config.md) | Save/share optimized modules | pins |
-| [`pin_trace()`](https://jameshwade.github.io/dsprrr/reference/pin_trace.md) | Persist execution traces | pins |
-| [`pin_vitals_log()`](https://jameshwade.github.io/dsprrr/reference/pin_vitals_log.md) | Store evaluation results | pins |
-| `use_dsprrr_template("targets")` | Pipeline orchestration | targets |
-| `use_dsprrr_template("quarto")` | Experiment reporting | Quarto |
-| [`validate_workflow()`](https://jameshwade.github.io/dsprrr/reference/validate_workflow.md) | Pre-flight checks | dsprrr |
+| `"sequential"` (default) | One at a time | Reuses cached responses |
+| `"ellmer"` | Concurrently in this R session, through [`ellmer::parallel_chat_structured()`](https://ellmer.tidyverse.org/reference/parallel_chat.html) | No finite timeouts; skips the response cache |
+| `"mirai"` | In background R processes | The only backend for `task_timeout` and `total_timeout`; the Chat must come from the module or the default, not `.llm`; skips the response cache |
+| `"auto"` | Mirai when a timeout is set; otherwise sequential for `max_active = 1`, else ellmer when the Chat supports it, then mirai, then sequential |  |
 
-These tools integrate dsprrr into the broader R ecosystem, making it
-easy to build reliable, reproducible, and collaborative LLM
-applications.
+`max_errors` stops scheduling new rows after that many failures, and
+`cancel` decides whether running mirai tasks are stopped at a limit. In
+structured results, each row’s metadata records the backend that ran it.
+
+``` r
+
+results <- run(
+  classify,
+  text = reviews$text,
+  .llm = ellmer::chat_openai(model = "gpt-6-luna"),
+  .concurrency = control,
+  .return_format = "structured"
+)
+
+get_cost(results)$total # dollars for this batch
+summarize_traces(classify) # tokens, cost and latency recorded on this module
+```
+
+[`get_cost()`](https://jameshwade.github.io/dsprrr/reference/accessors.md)
+reads structured
+[`run()`](https://jameshwade.github.io/dsprrr/reference/run.md) results
+and
+[`evaluate()`](https://jameshwade.github.io/dsprrr/reference/evaluate.md)
+results; an unknown price stays `NA` rather than counting as free.
+[`session_cost()`](https://jameshwade.github.io/dsprrr/reference/session_cost.md)
+sums dsprrr’s prompt history, which keeps the last 100 calls (raise the
+limit with `options(dsprrr.prompt_history_max = )`). Calls made on the
+ellmer backend currently enter that history without tokens or cost, so
+its totals read `NA` after such a batch. To keep a module’s call
+records, `pin_trace(board, name, module)` pins them; add
+`include_prompts = TRUE` and `include_outputs = TRUE` to keep the text
+as well.
+
+For the settings that apply to each Chat, such as timeouts and retries,
+see [Models, providers and
+streaming](https://jameshwade.github.io/dsprrr/articles/models-and-providers.md).

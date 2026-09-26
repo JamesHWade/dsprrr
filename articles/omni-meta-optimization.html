@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Composing Optimizers with Omni • dsprrr</title>
+<title>Compose optimizers with Omni • dsprrr</title>
 <!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="../favicon-96x96.png">
 <link rel="icon" type="”image/svg+xml”" href="../favicon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
@@ -17,7 +17,7 @@
 <link href="../deps/Fira_Code-0.4.10/font.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Composing Optimizers with Omni">
+<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Compose optimizers with Omni">
 <meta name="description" content="Explore several dsprrr teleprompters from one seed, compare them fairly, and continue from the strongest candidate.
 ">
 <meta property="og:description" content="Explore several dsprrr teleprompters from one seed, compare them fairly, and continue from the strongest candidate.
@@ -41,67 +41,67 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
-<li class="nav-item"><a class="nav-link" href="../articles/getting-started.html">Get Started</a></li>
+<li class="nav-item"><a class="nav-link" href="../articles/tutorial-hello-world.html">Get started</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-tutorials" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Tutorials</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-tutorials">
-<li><h6 class="dropdown-header" data-toc-skip>Learning Path</h6></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-hello-world.html">1. Your First LLM Call</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-build-classifier.html">2. Building a Classifier</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-structured-outputs.html">3. Structured Outputs</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-improve-with-demos.html">4. Improving with Examples</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-optimize-your-module.html">5. Optimization</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-deploy-to-production.html">6. Production</a></li>
+<li><a class="dropdown-item" href="../articles/tutorial-hello-world.html">1. Your first LLM call</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-build-classifier.html">2. Build a classifier</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-structured-outputs.html">3. Extract structured data</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-improve-with-demos.html">4. Improve with examples</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-optimize-your-module.html">5. Optimize a module</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-deploy-to-production.html">6. Save and reuse a module</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Advanced Tutorials</h6></li>
-    <li><a class="dropdown-item" href="../articles/text-adventure.html">Build an AI Game Master</a></li>
-    <li><a class="dropdown-item" href="../articles/llms-txt.html">Generate Package Docs</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial-rlm-dsprrr.html">Investigate a Regression with RLM</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Projects</h6></li>
+    <li><a class="dropdown-item" href="../articles/llms-txt.html">Generate an llms.txt file</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial-rlm-dsprrr.html">Investigate a regression with RLM</a></li>
+    <li><a class="dropdown-item" href="../articles/text-adventure.html">Build a text adventure</a></li>
   </ul>
 </li>
 <li class="nav-item dropdown">
-  <button class="nav-link dropdown-toggle" type="button" id="dropdown-how-to-guides" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">How-to Guides</button>
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-how-to-guides" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">How-to guides</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-how-to-guides">
-<li><a class="dropdown-item" href="../articles/troubleshooting.html">Troubleshooting</a></li>
-    <li><a class="dropdown-item" href="../articles/compilation-optimization.html">Compile &amp; Optimize</a></li>
-    <li><a class="dropdown-item" href="../articles/vitals-recipes.html">Evaluate with Vitals</a></li>
-    <li><a class="dropdown-item" href="../articles/rag-workflows.html">Build RAG Pipelines</a></li>
-    <li><a class="dropdown-item" href="../articles/chaining-modules.html">Chaining Modules</a></li>
-    <li><a class="dropdown-item" href="../articles/calibrated-decisions.html">Calibrated Decisions</a></li>
-    <li><a class="dropdown-item" href="../articles/orchestration.html">Deploy to Production</a></li>
+<li><h6 class="dropdown-header" data-toc-skip>Build</h6></li>
+    <li><a class="dropdown-item" href="../articles/advanced-modules.html">Choose a module type</a></li>
+    <li><a class="dropdown-item" href="../articles/chaining-modules.html">Chain modules into pipelines</a></li>
+    <li><a class="dropdown-item" href="../articles/rag-workflows.html">Retrieval-augmented generation</a></li>
+    <li><a class="dropdown-item" href="../articles/calibrated-decisions.html">Calibrated decisions</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Integrations</h6></li>
-    <li><a class="dropdown-item" href="../articles/vitals-integration.html">Vitals Package</a></li>
-    <li><a class="dropdown-item" href="../articles/tidymodels-integration.html">tidymodels</a></li>
-    <li><a class="dropdown-item" href="../articles/advanced-ellmer.html">Advanced ellmer</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Measure and improve</h6></li>
+    <li><a class="dropdown-item" href="../articles/compilation-optimization.html">Compile and optimize</a></li>
+    <li><a class="dropdown-item" href="../articles/advanced-optimization.html">Choose an optimizer</a></li>
+    <li><a class="dropdown-item" href="../articles/vitals-recipes.html">Evaluate with vitals</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Run</h6></li>
+    <li><a class="dropdown-item" href="../articles/models-and-providers.html">Models, providers and streaming</a></li>
+    <li><a class="dropdown-item" href="../articles/orchestration.html">Run dsprrr in pipelines</a></li>
+    <li><a class="dropdown-item" href="../articles/tidymodels-integration.html">Use dsprrr with tidymodels</a></li>
+    <li><a class="dropdown-item" href="../articles/troubleshooting.html">Troubleshooting</a></li>
   </ul>
 </li>
 <li class="active nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-concepts" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Concepts</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-concepts">
-<li><a class="dropdown-item" href="../articles/concepts-dspy-philosophy.html">The DSPy Philosophy</a></li>
-    <li><a class="dropdown-item" href="../articles/dspy-comparison.html">dsprrr vs. DSPy</a></li>
-    <li><a class="dropdown-item" href="../articles/concepts-signatures-modules.html">Signatures &amp; Modules</a></li>
-    <li><a class="dropdown-item" href="../articles/concepts-optimization-theory.html">How Optimization Works</a></li>
-    <li><a class="dropdown-item" href="../articles/concepts-why-metrics-matter.html">Why Metrics Matter</a></li>
-    <li><a class="dropdown-item" href="../articles/how-rlm-works.html">How RLMs Work</a></li>
+<li><a class="dropdown-item" href="../articles/concepts-signatures-modules.html">How dsprrr works</a></li>
+    <li><a class="dropdown-item" href="../articles/concepts-why-metrics-matter.html">Metrics and evaluation</a></li>
+    <li><a class="dropdown-item" href="../articles/concepts-optimization-theory.html">How optimization works</a></li>
+    <li><a class="dropdown-item" href="../articles/dspy-comparison.html">dsprrr for DSPy users</a></li>
+    <li><a class="dropdown-item" href="../articles/how-rlm-works.html">How RLM works</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Deep Dives</h6></li>
-    <li><a class="dropdown-item" href="../articles/flex-optimization.html">Flex: Optimize the Whole Program</a></li>
-    <li><a class="dropdown-item" href="../articles/advanced-modules.html">Advanced Reasoning</a></li>
-    <li><a class="dropdown-item" href="../articles/advanced-optimization.html">Advanced Optimization</a></li>
-    <li><a class="dropdown-item" href="../articles/omni-meta-optimization.html">Composing Optimizers with Omni</a></li>
-    <li><a class="dropdown-item" href="../articles/agentic-optimization-harnesses.html">Agentic Optimization Harnesses</a></li>
-    <li><a class="dropdown-item" href="../articles/reasoning-models.html">Reasoning Models</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Experimental</h6></li>
+    <li><a class="dropdown-item" href="../articles/flex-optimization.html">Flex: optimize a whole program</a></li>
+    <li><a class="dropdown-item" href="../articles/omni-meta-optimization.html">Compose optimizers with Omni</a></li>
+    <li><a class="dropdown-item" href="../articles/agentic-optimization-harnesses.html">Agentic optimization harnesses</a></li>
   </ul>
 </li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-reference" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Reference</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-reference">
-<li><a class="dropdown-item" href="../articles/cheatsheet.html">Quick Reference</a></li>
-    <li><a class="dropdown-item" href="../reference/index.html">API Documentation</a></li>
+<li><a class="dropdown-item" href="../reference/index.html">Function reference</a></li>
+    <li><a class="dropdown-item" href="../articles/cheatsheet.html">Quick reference</a></li>
   </ul>
 </li>
+<li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul>
 <ul class="navbar-nav">
 <li class="nav-item"><form class="form-inline" role="search">
@@ -128,7 +128,7 @@
 
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
-      <img src="../logo.svg" class="logo" alt=""><h1>Composing Optimizers with Omni</h1>
+      <img src="../logo.svg" class="logo" alt=""><h1>Compose optimizers with Omni</h1>
             
       
       <small class="dont-index">Source: <a href="https://github.com/JamesHWade/dsprrr/blob/main/vignettes/articles/omni-meta-optimization.Rmd" class="external-link"><code>vignettes/articles/omni-meta-optimization.Rmd</code></a></small>
@@ -139,23 +139,23 @@
     
 <p>No optimizer wins on every task. Demo selection may be the decisive
 lever for one module, while instruction search or reflective mutation
-wins for another. <code><a href="../reference/Omni.html">Omni()</a></code> treats that uncertainty as part of
-the optimization problem: it runs several teleprompters from the same
-seed program, compares every result with one validation metric, and
-gives a fresh continuation optimizer the strongest candidate.</p>
-<p>This design is inspired by the <a href="https://gepa-ai.github.io/gepa/blog/2026/07/22/optimize-anything-omni/" class="external-link"><code>omni</code>
-meta-optimizer</a> from the open-source <a href="https://github.com/gepa-ai/gepa" class="external-link">GEPA project</a>. The GEPA team
-showed that different optimization engines plateau on different
-Frontier-CS tasks, and that exploring several engines before continuing
-from the best result can outperform any one engine under a matched
-budget.</p>
-<p>dsprrr adapts that composition pattern to <code>Module</code> objects
-and <code>Teleprompter</code>s. It is not a port of GEPA’s
-arbitrary-text engine API, and the published Frontier-CS result should
-not be assumed to transfer to an R module or a different evaluation
-budget. Benchmark the composition on your own task.</p>
+wins for another. <code><a href="../reference/Omni.html">Omni()</a></code> runs several teleprompters from
+the same seed program, scores every result with one validation metric,
+and hands the strongest candidate to a fresh continuation optimizer.
+This page shows how to configure it, budget it fairly, and read what it
+did.</p>
+<p>The design follows the <a href="https://gepa-ai.github.io/gepa/blog/2026/07/22/optimize-anything-omni/" class="external-link"><code>omni</code>
+meta-optimizer</a> from the open-source <a href="https://github.com/gepa-ai/gepa" class="external-link">GEPA project</a>. On Frontier-CS
+tasks, the GEPA team found that no single engine won every task, that
+each engine plateaus after its early gains, and that exploring with
+several engines before continuing from the best result beat every single
+engine under a matched budget.</p>
+<p>dsprrr adapts that composition pattern to modules and teleprompters.
+It is not a port of GEPA’s engine API, and the Frontier-CS result should
+not be assumed to transfer to an R module or a different budget.
+Benchmark the composition on your own task.</p>
 <div class="section level2">
-<h2 id="the-optimization-shape">The Optimization Shape<a class="anchor" aria-label="anchor" href="#the-optimization-shape"></a>
+<h2 id="how-omni-runs">How Omni runs<a class="anchor" aria-label="anchor" href="#how-omni-runs"></a>
 </h2>
 <p>For explorers <code>A</code>, <code>B</code>, and <code>C</code>,
 Omni performs this sequence:</p>
@@ -168,30 +168,38 @@ seed program + baseline -+-&gt; explorer B --+-&gt; shared validation -&gt; winn
                                                                   |
                                                                   v
                                                  shared validation + best</code></pre>
-<p>There are three important contracts:</p>
+<p>Three rules make the comparison fair:</p>
 <ol style="list-style-type: decimal">
 <li>Every explorer receives an independent copy of the same seed
 program.</li>
-<li>The seed and all successful optimizer outputs are re-scored with the
-same metric and validation rows.</li>
-<li>The seed remains eligible through final selection, so a regressing
-explorer or continuation step cannot replace a better candidate on that
-comparison set.</li>
+<li>The seed and every successful optimizer output are re-scored with
+the same metric on the same validation rows.</li>
+<li>The seed stays eligible through final selection, so a regressing
+explorer or continuation step cannot replace a better candidate.</li>
 </ol>
-<p>The continuation optimizer is a fresh teleprompter object run from
-the exploration winner. It does not resume an explorer’s internal search
-state.</p>
+<p>The continuation runs its teleprompter from the exploration winner.
+It does not resume an explorer’s internal search state.</p>
 </div>
 <div class="section level2">
-<h2 id="a-complete-configuration">A Complete Configuration<a class="anchor" aria-label="anchor" href="#a-complete-configuration"></a>
+<h2 id="configure-omni">Configure Omni<a class="anchor" aria-label="anchor" href="#configure-omni"></a>
 </h2>
-<p>Start with optimizers that search in meaningfully different ways. The
-example below combines demo search, coordinate instruction search, and
-reflective evolution before continuing with a new GEPA run.</p>
+<p>The examples assume a module, a chat, and your labeled data in
+<code>examples</code>, a data frame with <code>question</code> and
+<code>answer</code> columns:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/dsprrr" class="external-link">dsprrr</a></span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">metric</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"answer"</span><span class="op">)</span></span>
+<span><span class="va">qa_module</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">llm</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-luna"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">split</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/split_dataset.html">split_dataset</a></span><span class="op">(</span><span class="va">examples</span>, prop <span class="op">=</span> <span class="fl">0.8</span>, seed <span class="op">=</span> <span class="fl">42L</span><span class="op">)</span></span>
+<span><span class="va">trainset</span> <span class="op">&lt;-</span> <span class="va">split</span><span class="op">$</span><span class="va">train</span></span>
+<span><span class="va">valset</span> <span class="op">&lt;-</span> <span class="va">split</span><span class="op">$</span><span class="va">val</span></span></code></pre></div>
+<p>Start with optimizers that search in different ways. This
+configuration combines demo search, instruction search, and reflective
+evolution, then continues with SIMBA:</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">metric</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"answer"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">omni</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/Omni.html">Omni</a></span><span class="op">(</span></span>
 <span>  metric <span class="op">=</span> <span class="va">metric</span>,</span>
@@ -211,11 +219,7 @@ reflective evolution before continuing with a new GEPA run.</p>
 <span>      generations <span class="op">=</span> <span class="fl">3L</span></span>
 <span>    <span class="op">)</span></span>
 <span>  <span class="op">)</span>,</span>
-<span>  continuation <span class="op">=</span> <span class="fu"><a href="../reference/GEPA.html">GEPA</a></span><span class="op">(</span></span>
-<span>    metric <span class="op">=</span> <span class="va">metric</span>,</span>
-<span>    population_size <span class="op">=</span> <span class="fl">8L</span>,</span>
-<span>    generations <span class="op">=</span> <span class="fl">3L</span></span>
-<span>  <span class="op">)</span>,</span>
+<span>  continuation <span class="op">=</span> <span class="fu"><a href="../reference/SIMBA.html">SIMBA</a></span><span class="op">(</span>metric <span class="op">=</span> <span class="va">metric</span><span class="op">)</span>,</span>
 <span>  seed <span class="op">=</span> <span class="fl">42L</span></span>
 <span><span class="op">)</span></span>
 <span></span>
@@ -226,13 +230,21 @@ reflective evolution before continuing with a new GEPA run.</p>
 <span>  valset <span class="op">=</span> <span class="va">valset</span>,</span>
 <span>  .llm <span class="op">=</span> <span class="va">llm</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p>Explorer names are part of the result provenance, so use short names
-that describe the strategy rather than its position in the list.</p>
-<p>If an optimizer needs arguments at compile time, pass them by
-explorer name. Arguments cannot replace Omni’s core
-<code>program</code>, <code>trainset</code>, <code>valset</code>, or
-<code>.llm</code> inputs.</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<p>Explorer names are part of the result, so name each one after its
+strategy rather than its position in the list.</p>
+<p>Choose a continuation that can edit an already compiled program,
+because unless the seed wins, the continuation starts from an explorer’s
+output. <code><a href="../reference/COPRO.html">COPRO()</a></code>, <code><a href="../reference/SIMBA.html">SIMBA()</a></code> and
+<code><a href="../reference/BootstrapFewShotWithRandomSearch.html">BootstrapFewShotWithRandomSearch()</a></code> can.
+<code><a href="../reference/GEPA.html">GEPA()</a></code>, <code><a href="../reference/AutoResearch.html">AutoResearch()</a></code> and
+<code><a href="../reference/MetaHarness.html">MetaHarness()</a></code> leave compiled modules alone: as a
+continuation, GEPA returns the winner unchanged and the two harnesses
+fail, in which case Omni keeps the exploration winner. Use those three
+as explorers.</p>
+<p>To pass compile-time arguments to one optimizer, name it. These
+arguments cannot replace Omni’s own <code>program</code>,
+<code>trainset</code>, <code>valset</code> or <code>.llm</code>:</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span></span>
 <span>  <span class="va">qa_module</span>,</span>
 <span>  <span class="va">omni</span>,</span>
@@ -249,37 +261,28 @@ explorer name. Arguments cannot replace Omni’s core
 <span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="use-an-explicit-validation-set">Use an Explicit Validation Set<a class="anchor" aria-label="anchor" href="#use-an-explicit-validation-set"></a>
+<h2 id="use-an-explicit-validation-set">Use an explicit validation set<a class="anchor" aria-label="anchor" href="#use-an-explicit-validation-set"></a>
 </h2>
-<p>Omni can split <code>trainset</code> automatically with
-<code>valset_ratio</code>, but an explicit validation set makes
-comparisons easier to reproduce and audit:</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">split</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/split_dataset.html">split_dataset</a></span><span class="op">(</span><span class="va">examples</span>, prop <span class="op">=</span> <span class="fl">0.8</span>, seed <span class="op">=</span> <span class="fl">42L</span><span class="op">)</span></span>
-<span><span class="va">trainset</span> <span class="op">&lt;-</span> <span class="va">split</span><span class="op">$</span><span class="va">train</span></span>
-<span><span class="va">valset</span> <span class="op">&lt;-</span> <span class="va">split</span><span class="op">$</span><span class="va">val</span></span></code></pre></div>
-<p>All explorers train on <code>trainset</code>; Omni uses
+<p>Without <code>valset</code>, Omni holds out a fraction of
+<code>trainset</code> (<code>valset_ratio</code>, default 0.1). An
+explicit validation set, as above, makes comparisons easier to reproduce
+and audit. All explorers train on <code>trainset</code>; Omni uses
 <code>valset</code> to choose the exploration winner and the final
-program. Keep a third, untouched test set for the final estimate if you
-will try several Omni configurations. Repeatedly choosing explorers
+program. If you will try several Omni configurations, keep a third,
+untouched test set for the final estimate: choosing explorers repeatedly
 against the same validation rows can overfit the choice itself.</p>
 </div>
 <div class="section level2">
-<h2 id="budget-the-comparison-pass">Budget the Comparison Pass<a class="anchor" aria-label="anchor" href="#budget-the-comparison-pass"></a>
+<h2 id="budget-the-comparison">Budget the comparison<a class="anchor" aria-label="anchor" href="#budget-the-comparison"></a>
 </h2>
-<p><code><a href="../reference/Omni.html">Omni()</a></code> does not impose one universal budget because
-dsprrr teleprompters expose different native controls. Give explorers
-comparable budgets before constructing Omni, then account for its shared
-comparison work separately.</p>
-<p>With <code>k</code> successful explorers, the common scoring pass
-performs up to <code>k + 2</code> full validation evaluations:</p>
-<ul>
-<li>one for the original seed;</li>
-<li>one for each successful explorer;</li>
-<li>one for the continuation result.</li>
-</ul>
-<p>Those evaluations are additional to work performed inside each
-optimizer. For a fair benchmark, record at least:</p>
+<p><code><a href="../reference/Omni.html">Omni()</a></code> does not impose one budget, because dsprrr
+teleprompters expose different native controls. Give explorers
+comparable budgets when you construct them, then count Omni’s own
+scoring separately. With <code>k</code> successful explorers, Omni runs
+up to <code>k + 2</code> full validation evaluations: one for the seed,
+one per explorer, and one for the continuation result. They come on top
+of the work inside each optimizer.</p>
+<p>For a fair benchmark, record at least:</p>
 <table class="table">
 <colgroup>
 <col width="50%">
@@ -312,38 +315,42 @@ optimizer. For a fair benchmark, record at least:</p>
 </tr>
 </tbody>
 </table>
-<p>Compare each explorer standalone against the same explorer inside
-Omni. A strong result is not merely “Omni won”; it shows whether
-diversity plus continuation improved the best standalone candidate at a
-similar total budget.</p>
+<p>Compare each explorer run on its own against the same explorer inside
+Omni. A convincing result shows that diversity plus continuation beat
+the best standalone candidate at a similar total budget, not merely that
+Omni won.</p>
 </div>
 <div class="section level2">
-<h2 id="inspect-candidate-provenance">Inspect Candidate Provenance<a class="anchor" aria-label="anchor" href="#inspect-candidate-provenance"></a>
+<h2 id="inspect-the-candidates">Inspect the candidates<a class="anchor" aria-label="anchor" href="#inspect-the-candidates"></a>
 </h2>
-<p>The selected module stores a row for the baseline, every explorer,
-and the continuation:</p>
+<p>The result stores one row for the baseline, each explorer, and the
+continuation:</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">candidates</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">compiled</span><span class="op">)</span><span class="op">$</span><span class="va">extensions</span><span class="op">$</span><span class="va">omni</span><span class="op">$</span><span class="va">candidate_programs</span></span>
-<span><span class="va">candidates</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"phase"</span>, <span class="st">"optimizer"</span>, <span class="st">"score"</span>, <span class="st">"selected"</span>, <span class="st">"error"</span><span class="op">)</span><span class="op">]</span></span></code></pre></div>
-<p>The <code>program</code> list-column contains a copy of each
-successful candidate for deeper inspection:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">winner</span> <span class="op">&lt;-</span> <span class="va">candidates</span><span class="op">$</span><span class="va">program_config</span><span class="op">[[</span><span class="fu"><a href="https://rdrr.io/r/base/which.html" class="external-link">which</a></span><span class="op">(</span><span class="va">candidates</span><span class="op">$</span><span class="va">selected</span><span class="op">)</span><span class="op">]</span><span class="op">]</span></span>
-<span><span class="va">winner</span></span>
+<code class="sourceCode R"><span><span class="va">omni_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">compiled</span><span class="op">)</span><span class="op">$</span><span class="va">extensions</span><span class="op">$</span><span class="va">omni</span></span>
 <span></span>
-<span><span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">compiled</span><span class="op">)</span><span class="op">$</span><span class="va">extensions</span><span class="op">$</span><span class="va">omni</span><span class="op">$</span><span class="va">exploration_winner</span></span>
-<span><span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">compiled</span><span class="op">)</span><span class="op">$</span><span class="va">extensions</span><span class="op">$</span><span class="va">omni</span><span class="op">$</span><span class="va">best_phase</span></span>
-<span><span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">compiled</span><span class="op">)</span><span class="op">$</span><span class="va">extensions</span><span class="op">$</span><span class="va">omni</span><span class="op">$</span><span class="va">best_optimizer</span></span></code></pre></div>
-<p>An explorer failure is recorded in <code>error</code> and does not
-stop the other branches. If continuation fails, Omni returns the best
-exploration candidate. The <code>flag_compilation_error_occurred</code>
-field makes either case visible without discarding a usable result.</p>
+<span><span class="va">candidates</span> <span class="op">&lt;-</span> <span class="va">omni_result</span><span class="op">$</span><span class="va">candidate_programs</span></span>
+<span><span class="va">candidates</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"phase"</span>, <span class="st">"optimizer"</span>, <span class="st">"score"</span>, <span class="st">"selected"</span>, <span class="st">"error"</span><span class="op">)</span><span class="op">]</span></span></code></pre></div>
+<p>The <code>program_config</code> list-column holds each candidate
+module’s <code>config</code> list, or <code>NULL</code> for a branch
+that failed. The selected program is <code>compiled</code> itself.</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">candidates</span><span class="op">$</span><span class="va">program_config</span><span class="op">[[</span><span class="fu"><a href="https://rdrr.io/r/base/which.html" class="external-link">which</a></span><span class="op">(</span><span class="va">candidates</span><span class="op">$</span><span class="va">selected</span><span class="op">)</span><span class="op">]</span><span class="op">]</span></span>
+<span></span>
+<span><span class="va">omni_result</span><span class="op">$</span><span class="va">exploration_winner</span></span>
+<span><span class="va">omni_result</span><span class="op">$</span><span class="va">best_phase</span></span>
+<span><span class="va">omni_result</span><span class="op">$</span><span class="va">best_optimizer</span></span>
+<span><span class="va">omni_result</span><span class="op">$</span><span class="va">flag_compilation_error_occurred</span></span></code></pre></div>
+<p>A failed explorer is recorded in <code>error</code> and does not stop
+the other branches. If the continuation fails, Omni returns the best
+exploration candidate. <code>flag_compilation_error_occurred</code> is
+<code>TRUE</code> when any branch failed, so a usable result never hides
+a failure.</p>
 </div>
 <div class="section level2">
-<h2 id="parallel-exploration">Parallel Exploration<a class="anchor" aria-label="anchor" href="#parallel-exploration"></a>
+<h2 id="parallel-exploration">Parallel exploration<a class="anchor" aria-label="anchor" href="#parallel-exploration"></a>
 </h2>
 <p>Set <code>parallel = TRUE</code> when branch runtime dominates and
-the provider can handle the added concurrency:</p>
+the provider can take the added concurrency:</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">omni_parallel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/Omni.html">Omni</a></span><span class="op">(</span></span>
 <span>  metric <span class="op">=</span> <span class="va">metric</span>,</span>
@@ -361,21 +368,25 @@ the provider can handle the added concurrency:</p>
 <span>  valset <span class="op">=</span> <span class="va">valset</span>,</span>
 <span>  .llm <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p>Live ellmer chat objects are not serialized to mirai workers.
-Parallel exploration therefore requires <code>.llm = NULL</code> and a
-worker-visible <code>OPENAI_API_KEY</code>,
-<code>ANTHROPIC_API_KEY</code>, or <code>GOOGLE_API_KEY</code>. A chat
-configured only with <code><a href="../reference/set_default_chat.html">set_default_chat()</a></code> in the main R
-session is not available inside workers.</p>
+<p>Chat objects are not sent to mirai workers, so parallel exploration
+requires <code>.llm = NULL</code> and an <code>OPENAI_API_KEY</code>,
+<code>ANTHROPIC_API_KEY</code> or <code>GOOGLE_API_KEY</code> that the
+workers can see. Each worker builds its own chat: the provider’s default
+model for the first key it finds, in that order. Workers ignore
+<code><a href="../reference/get_default_chat.html">set_default_chat()</a></code>, <code><a href="../reference/dsp_configure.html">dsp_configure()</a></code>,
+<code><a href="../reference/with_lm.html">with_lm()</a></code> and the program’s own chat. The baseline, the
+scoring of every candidate, and the continuation run in your session and
+do use them. Unless both resolve to the same provider and model,
+explorers are optimized for one model and judged on another; use
+<code>parallel = FALSE</code> unless you know they match.</p>
 <p>Parallel execution reduces wall-clock time, not evaluation cost.
-Provider rate limits and simultaneous request caps may make fewer
-workers faster in practice.</p>
+Provider rate limits may make fewer workers faster in practice.</p>
 </div>
 <div class="section level2">
-<h2 id="choosing-explorers">Choosing Explorers<a class="anchor" aria-label="anchor" href="#choosing-explorers"></a>
+<h2 id="choose-explorers">Choose explorers<a class="anchor" aria-label="anchor" href="#choose-explorers"></a>
 </h2>
-<p>Favor complementary search behavior over several minor variations of
-the same teleprompter:</p>
+<p>Favor search behaviors that complement each other over several
+variations of one teleprompter:</p>
 <table class="table">
 <colgroup>
 <col width="50%">
@@ -403,18 +414,17 @@ the same teleprompter:</p>
 <td><code>GEPA</code></td>
 </tr>
 <tr class="odd">
-<td>Tune a known, finite parameter grid</td>
+<td>Try a fixed set of instruction or template variants</td>
 <td><code>GridSearchTeleprompter</code></td>
 </tr>
 </tbody>
 </table>
-<p>Two or three deliberately different explorers are usually a better
-first experiment than a large portfolio. Add another branch only when it
-represents a plausible search behavior that the current set does not
-cover.</p>
+<p>Two or three different explorers are a better first experiment than a
+large portfolio. Add a branch only when it represents a plausible search
+behavior the current set does not cover.</p>
 </div>
 <div class="section level2">
-<h2 id="where-dsprrr-differs-from-gepa-omni">Where dsprrr Differs from GEPA Omni<a class="anchor" aria-label="anchor" href="#where-dsprrr-differs-from-gepa-omni"></a>
+<h2 id="how-dsprrrs-omni-differs-from-gepas">How dsprrr’s Omni differs from GEPA’s<a class="anchor" aria-label="anchor" href="#how-dsprrrs-omni-differs-from-gepas"></a>
 </h2>
 <table class="table">
 <colgroup>
@@ -434,12 +444,12 @@ cover.</p>
 </tr>
 <tr class="even">
 <td>Ships GEPA, AutoResearch, and Meta-Harness engines</td>
-<td>Ships <code><a href="../reference/GEPA.html">GEPA()</a></code>, <code><a href="../reference/AutoResearch.html">AutoResearch()</a></code>, and
-<code><a href="../reference/MetaHarness.html">MetaHarness()</a></code> as composable dsprrr teleprompters</td>
+<td>Provides <code><a href="../reference/GEPA.html">GEPA()</a></code>, <code><a href="../reference/AutoResearch.html">AutoResearch()</a></code>, and
+<code><a href="../reference/MetaHarness.html">MetaHarness()</a></code> as teleprompters, best used as explorers</td>
 </tr>
 <tr class="odd">
 <td>Terrarium enforces a shared task, server, and budget contract</td>
-<td>Users align heterogeneous teleprompter budgets</td>
+<td>You align the budgets of different teleprompters</td>
 </tr>
 <tr class="even">
 <td>Published Frontier-CS results use a matched $20 budget</td>
@@ -447,14 +457,15 @@ cover.</p>
 </tr>
 <tr class="odd">
 <td>Continues the best artifact with a selected engine</td>
-<td>Compiles a fresh continuation teleprompter from the winning
-module</td>
+<td>Compiles a continuation teleprompter from the winning module</td>
 </tr>
 </tbody>
 </table>
 <p>The shared idea is optimizer diversity: when search strategies fail
 in different ways, the strongest partial result can give a fresh
-optimizer a better starting point than the original seed.</p>
+optimizer a better starting point than the original seed. To run the
+agentic teleprompters as explorers, see <a href="agentic-optimization-harnesses.html">Agentic optimization
+harnesses</a>.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

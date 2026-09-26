@@ -1,11 +1,10 @@
-# AutoResearch Teleprompter
+# AutoResearch: let an agent run optimization experiments
 
-Runs a persistent research agent that owns an explicit
-hypothesize-sandbox-evaluate-keep-or-revert loop. The agent can branch
-from any prior candidate, inspect structured per-example feedback,
-request sandboxed R experiments, and decide when to finish. dsprrr
-retains control of budgets, evaluation, checkpointing, and final
-best-candidate selection.
+`AutoResearch()` hands the search to a research agent. In a loop, the
+agent forms a hypothesis, may test ideas in sandboxed R code, proposes
+an edit to the program, and sees how the edit scores; it keeps or
+reverts edits and decides when to stop. dsprrr keeps control of budgets,
+evaluation, checkpoints and the choice of the final program.
 
 ## Usage
 
@@ -31,111 +30,149 @@ AutoResearch(
 
 - metric:
 
-  Metric used to evaluate candidates.
+  A metric function (required) used to evaluate candidates.
 
 - metric_threshold:
 
-  Optional success threshold inherited from
-  [Teleprompter](https://jameshwade.github.io/dsprrr/reference/Teleprompter.md).
+  Accepted for consistency with the other optimizers (see
+  [`Teleprompter()`](https://jameshwade.github.io/dsprrr/reference/Teleprompter.md));
+  not used.
 
 - max_errors:
 
-  Consecutive optimizer error budget.
+  Integer; stop after this many consecutive failed evaluations when
+  [`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md)
+  gets no `control` (default `5L`).
 
 - max_iterations:
 
-  Maximum evaluated experiments after the baseline.
+  Integer maximum number of evaluated experiments after the baseline
+  (default `20L`).
 
 - patience:
 
-  Stop after this many evaluated experiments without improvement.
+  Integer; stop after this many evaluated experiments without
+  improvement (default `6L`).
 
 - target_score:
 
-  Optional score at which optimization stops.
+  Optional score at which the search stops.
 
 - max_context_examples:
 
-  Maximum training examples exposed to the research agent.
+  Integer maximum number of training rows shown to the agent (default
+  `20L`).
 
 - max_feedback_examples:
 
-  Maximum failed examples returned after each evaluation.
+  Integer maximum number of failed rows returned after each evaluation
+  (default `8L`).
 
 - max_agent_steps:
 
-  Maximum consecutive sandbox or invalid actions before the harness
-  requires evaluation progress.
+  Integer maximum number of consecutive sandbox or invalid actions
+  before the agent must submit a candidate (default `4L`).
 
 - sandbox:
 
-  Whether an OS-sandboxed runner is required. Defaults to TRUE.
+  If `TRUE` (the default),
+  [`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md)
+  requires a `runner` that advertises an OS sandbox. If `FALSE`, the
+  agent cannot run code and `runner` is ignored.
 
 - seed:
 
-  Optional random seed.
+  Optional whole-number random seed.
 
 - log_dir:
 
-  Optional directory for a durable
-  [TrialLog](https://jameshwade.github.io/dsprrr/reference/TrialLog.md).
+  Directory for a durable
+  [TrialLog](https://jameshwade.github.io/dsprrr/reference/TrialLog.md),
+  or `NULL` (the default).
 
 - verbose:
 
-  Whether to report progress.
+  Whether to report progress (default `TRUE`).
 
 ## Value
 
-An `AutoResearch` teleprompter.
+An `AutoResearch` object to pass to
+[`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md).
 
 ## Details
 
 `AutoResearch()` is inspired by Andrej Karpathy's
 [`autoresearch`](https://github.com/karpathy/autoresearch) and the
 AutoResearch engine in the [GEPA optimize-anything
-project](https://github.com/gepa-ai/gepa). This is an R-native
-implementation for dsprrr `Module` graphs, not a port of either
-command-line harness.
+project](https://github.com/gepa-ai/gepa). It is an R implementation for
+dsprrr programs, not a port of either command-line tool.
 
-Candidates are complete, validated snapshots of every optimizable leaf
-module. A single experiment can therefore change instructions and
-templates across multiple pipeline components jointly. Candidate
-evaluation always runs in the host process through dsprrr's optimizer
-ledger. Only exploratory R code is sent to `runner`; with the default
-`sandbox = TRUE`, `runner` must advertise an operating-system sandbox
-such as
-[`mcp_repl_runner()`](https://jameshwade.github.io/dsprrr/reference/mcp_repl_runner.md).
+A candidate is a validated snapshot of every optimizable module in the
+program, so one experiment can change instructions and templates across
+several pipeline steps at once. The agent can branch from any earlier
+candidate and sees per-example feedback. Candidates are always evaluated
+in the host R process. Only the agent's exploratory R code goes to
+`runner`, which must advertise an operating-system sandbox, such as
+[`mcp_repl_runner()`](https://jameshwade.github.io/dsprrr/reference/mcp_repl_runner.md),
+unless `sandbox = FALSE`.
 
 ## Compilation arguments
 
-In addition to the standard
+Besides the standard
 [`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md)
-arguments, this teleprompter accepts `.agent_llm` for the research
-agent, `runner` for sandboxed analysis, `control` for optimizer budgets
-and checkpointing, and `objective` for multi-objective selection. Named
-arguments in `...`, such as `.cache`, are forwarded to candidate
-evaluation.
+arguments, this optimizer accepts `.agent_llm` (the agent's Chat;
+defaults to `.llm`), `runner` (for sandboxed analysis), `control` (an
+[`optimizer_control()`](https://jameshwade.github.io/dsprrr/reference/optimizer_control.md)
+object for budgets and checkpoints) and `objective` (a text description
+of what to optimize for). Other named arguments, such as `.cache`, are
+passed to candidate evaluation.
+
+## See also
+
+Other teleprompters:
+[`BetterTogether()`](https://jameshwade.github.io/dsprrr/reference/BetterTogether.md),
+[`BootstrapFewShot()`](https://jameshwade.github.io/dsprrr/reference/BootstrapFewShot.md),
+[`BootstrapFewShotWithRandomSearch()`](https://jameshwade.github.io/dsprrr/reference/BootstrapFewShotWithRandomSearch.md),
+[`COPRO()`](https://jameshwade.github.io/dsprrr/reference/COPRO.md),
+[`GEPA()`](https://jameshwade.github.io/dsprrr/reference/GEPA.md),
+[`GridSearchTeleprompter()`](https://jameshwade.github.io/dsprrr/reference/GridSearchTeleprompter.md),
+[`KNNFewShot()`](https://jameshwade.github.io/dsprrr/reference/KNNFewShot.md),
+[`LabeledFewShot()`](https://jameshwade.github.io/dsprrr/reference/LabeledFewShot.md),
+[`MIPROv2()`](https://jameshwade.github.io/dsprrr/reference/MIPROv2.md),
+[`MetaHarness()`](https://jameshwade.github.io/dsprrr/reference/MetaHarness.md),
+[`Omni()`](https://jameshwade.github.io/dsprrr/reference/Omni.md),
+[`ReAnchor()`](https://jameshwade.github.io/dsprrr/reference/ReAnchor.md),
+[`SIMBA()`](https://jameshwade.github.io/dsprrr/reference/SIMBA.md),
+[`Teleprompter()`](https://jameshwade.github.io/dsprrr/reference/Teleprompter.md),
+[`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md)
 
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
 research <- AutoResearch(
   metric = metric_exact_match(field = "answer"),
   max_iterations = 12L
 )
+research
+#> 
+#> ── AutoResearch Teleprompter 
+#> Max experiments: 12
+#> Patience: 6
+#> OS sandbox required: TRUE
+
+if (FALSE) { # \dontrun{
 compiled <- compile(
   program,
   research,
   trainset,
   valset = valset,
-  .llm = task_chat,
-  .agent_llm = research_chat,
+  .llm = ellmer::chat_openai(model = "gpt-6-luna"),
+  .agent_llm = ellmer::chat_anthropic(model = "claude-sonnet-4-5"),
   runner = mcp_repl_runner(),
   control = optimizer_control(
     max_trials = 13L,
     max_cost = 5,
-    checkpoint_path = "autoresearch.rds"
+    checkpoint_path = file.path(tempdir(), "autoresearch.rds")
   )
 )
 } # }
