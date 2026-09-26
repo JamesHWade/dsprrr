@@ -434,7 +434,6 @@ reference:
     contents:
     - ragnar_tool
     - create_search_tool
-    - print.ragnar_tool
 
   - title: tidymodels Integration
     desc: Use LLM modules as parsnip model engines with dials parameters
