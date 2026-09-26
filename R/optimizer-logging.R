@@ -2512,6 +2512,3 @@ print_trial <- function(x, ...) {
 
   invisible(x)
 }
-
-# Register S7 print method
-S7::method(print, Trial) <- print_trial

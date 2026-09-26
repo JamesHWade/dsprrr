@@ -5,11 +5,28 @@
   registerS3method("print", "dsprrr_batch_result", print.dsprrr_batch_result)
   registerS3method("print", "dsprrr_trace_summary", print.dsprrr_trace_summary)
 
-  # Register S7 methods for Signature (still S7)
+  # Print methods for S7 classes are registered here rather than at top level:
+  # `S7::method(print, X) <- f` assigns `print` in the calling environment, and
+  # a `print` binding in the namespace sends every S3method(print, ...) entry
+  # to the namespace's own methods table, where base::print() never looks.
   S7::method(print, Signature) <- print_signature
-
-  # Register print method for MIPROv2
   S7::method(print, MIPROv2) <- print_miprov2
+  S7::method(print, Assertion) <- print_assertion
+  S7::method(print, AssertionSet) <- print_assertion_set
+  S7::method(print, EvalResult) <- print_eval_result
+  S7::method(print, Trial) <- print_trial
+  S7::method(print, BetterTogether) <- print_better_together
+  S7::method(
+    print,
+    BootstrapFewShotWithRandomSearch
+  ) <- print_bootstrap_few_shot_random_search
+  S7::method(print, BootstrapFewShot) <- print_bootstrap_few_shot
+  S7::method(print, COPRO) <- print_copro
+  S7::method(print, GEPA) <- print_gepa
+  S7::method(print, AutoResearch) <- print_auto_research
+  S7::method(print, MetaHarness) <- print_meta_harness
+  S7::method(print, Omni) <- print_omni
+  S7::method(print, SIMBA) <- print_simba
 
   # Register compile methods for teleprompters (still S7)
   S7::method(

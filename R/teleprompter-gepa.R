@@ -691,5 +691,3 @@ print_gepa <- function(x, ...) {
 
   invisible(x)
 }
-
-S7::method(print, GEPA) <- print_gepa

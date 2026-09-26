@@ -1935,6 +1935,3 @@ print_meta_harness <- function(x, ...) {
   cli::cli_text("{.field OS sandbox required}: {x@sandbox}")
   invisible(x)
 }
-
-S7::method(print, AutoResearch) <- print_auto_research
-S7::method(print, MetaHarness) <- print_meta_harness

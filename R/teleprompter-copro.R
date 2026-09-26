@@ -864,6 +864,3 @@ print_copro <- function(x, ...) {
 
   invisible(x)
 }
-
-# Register S7 print method
-S7::method(print, COPRO) <- print_copro

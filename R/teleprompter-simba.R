@@ -758,5 +758,3 @@ print_simba <- function(x, ...) {
 
   invisible(x)
 }
-
-S7::method(print, SIMBA) <- print_simba

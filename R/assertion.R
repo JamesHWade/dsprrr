@@ -70,7 +70,7 @@ Assertion <- S7::new_class(
 
 #' Print method for Assertion
 #' @noRd
-S7::method(print, Assertion) <- function(x, ...) {
+print_assertion <- function(x, ...) {
   type_label <- if (x@type == "assert") "Hard Assertion" else "Soft Suggestion"
   field_info <- if (is.null(x@field)) {
     "any field"
@@ -109,7 +109,7 @@ AssertionSet <- S7::new_class(
 
 #' Print method for AssertionSet
 #' @noRd
-S7::method(print, AssertionSet) <- function(x, ...) {
+print_assertion_set <- function(x, ...) {
   n_assert <- sum(vapply(
     x@assertions,
     function(a) a@type == "assert",

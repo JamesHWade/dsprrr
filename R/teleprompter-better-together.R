@@ -660,5 +660,3 @@ print_better_together <- function(x, ...) {
   cli::cli_text("{.field Optimizers}: {.field {names(optimizers)}}")
   invisible(x)
 }
-
-S7::method(print, BetterTogether) <- print_better_together

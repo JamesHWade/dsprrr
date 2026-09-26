@@ -819,5 +819,3 @@ print_omni <- function(x, ...) {
   cli::cli_text("{.field Parallel exploration}: {x@parallel}")
   invisible(x)
 }
-
-S7::method(print, Omni) <- print_omni

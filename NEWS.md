@@ -265,6 +265,13 @@ First development changelog. dsprrr is experimental; the API may change.
   with `ragnar_store_create(embed = )`, `markdown_chunk()`, and
   `ragnar_store_insert()`.
 
+* Print methods work in the installed package. Top-level
+  `S7::method(print, ...) <-` calls created a `print` binding in the
+  namespace, which sent every `S3method(print, ...)` registration to the
+  wrong methods table, so evaluation results, cache statistics, prompt
+  inspections, costs and optimizer objects printed as raw lists. The S7 print
+  methods are now registered in `.onLoad()`.
+
 * `dsp_configure()` applies `temperature` to the chat (through
   `ellmer::params()`) instead of only recording it, and honors `model` and
   `api_key` when it detects the provider from environment variables.

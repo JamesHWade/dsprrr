@@ -800,7 +800,3 @@ print_bootstrap_few_shot_random_search <- function(x, ...) {
 
   invisible(x)
 }
-
-# Register S7 print method
-S7::method(print, BootstrapFewShotWithRandomSearch) <-
-  print_bootstrap_few_shot_random_search

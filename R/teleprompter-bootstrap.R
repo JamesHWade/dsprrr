@@ -1529,6 +1529,3 @@ print_bootstrap_few_shot <- function(x, ...) {
 
   invisible(x)
 }
-
-# Register S7 print method
-S7::method(print, BootstrapFewShot) <- print_bootstrap_few_shot

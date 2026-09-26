@@ -422,3 +422,9 @@ test_that("dataset runtime-name validation does not force arguments", {
   expect_identical(forced, FALSE)
   expect_no_error(run_dataset(mod, empty, .cache = FALSE))
 })
+
+test_that("the namespace does not mask base::print", {
+  # A `print` binding in the namespace sends S3method(print, ...) registrations
+  # to the namespace's own methods table, so installed objects print as lists.
+  expect_false(exists("print", envir = asNamespace("dsprrr"), inherits = FALSE))
+})
