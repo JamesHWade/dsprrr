@@ -114,6 +114,13 @@ AssertModule <- R6::R6Class(
     },
 
     #' @description
+    #' Inputs the wrapped module fills in itself.
+    #' @return A character vector.
+    supplied_inputs = function() {
+      self$module$supplied_inputs()
+    },
+
+    #' @description
     #' Execute the module with assertion validation and backtracking
     #'
     #' @param batch Named list or data frame of inputs

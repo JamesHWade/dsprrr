@@ -62,3 +62,31 @@ test_that("run_dataset() and evaluate() need no column for supplied inputs", {
   )
   expect_equal(scores$mean_score, 1)
 })
+
+test_that("assertion and ensemble wrappers inherit supplied inputs", {
+  local_reset_cache()
+  llm <- new_test_chat(chat_structured = function(...) list(answer = "Paris"))
+  make_rag <- function() {
+    rag_module(
+      "question, relevant_context -> answer",
+      retriever = function(query, k) "Paris is the capital of France."
+    )
+  }
+
+  checked <- with_assertions(
+    make_rag(),
+    assertions = list(assert_not_empty("answer"))
+  )
+  expect_equal(checked$supplied_inputs(), "relevant_context")
+  expect_equal(
+    run(checked, question = "Capital?", .llm = llm, .cache = FALSE)$answer,
+    "Paris"
+  )
+
+  voters <- ensemble(list(make_rag(), make_rag()), reduce_fn = reduce_first())
+  expect_equal(voters$supplied_inputs(), "relevant_context")
+  expect_equal(
+    run(voters, question = "Capital?", .llm = llm, .cache = FALSE)$answer,
+    "Paris"
+  )
+})

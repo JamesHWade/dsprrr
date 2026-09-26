@@ -188,6 +188,13 @@ EnsembleModule <- R6::R6Class(
     },
 
     #' @description
+    #' Inputs every member fills in itself.
+    #' @return A character vector.
+    supplied_inputs = function() {
+      Reduce(intersect, lapply(self$modules, function(m) m$supplied_inputs()))
+    },
+
+    #' @description
     #' Execute all modules and combine their outputs
     #'
     #' @param batch Named list or data frame of inputs

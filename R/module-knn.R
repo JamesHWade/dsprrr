@@ -103,6 +103,13 @@ KNNFewShotModule <- R6::R6Class(
     },
 
     #' @description
+    #' Inputs the wrapped module fills in itself.
+    #' @return A character vector.
+    supplied_inputs = function() {
+      self$module$supplied_inputs()
+    },
+
+    #' @description
     #' Execute with dynamically selected demos
     #'
     #' @param batch Named list or data frame of inputs
