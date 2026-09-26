@@ -1,11 +1,8 @@
 ---
-title: "How Prompt Optimization Works"
-output:
-  rmarkdown::html_vignette:
-    includes:
-      in_header: mermaid.html
+title: "How optimization works"
+output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{How Prompt Optimization Works}
+  %\VignetteIndexEntry{How optimization works}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -19,512 +16,160 @@ knitr::opts_chunk$set(
 )
 ```
 
-This article explains how dsprrr optimizes prompts and bounded program
-structure automatically. Understanding the theory helps you choose the right
-optimizer and configure it effectively.
+An optimizer takes a module, labeled examples and usually a metric, and
+searches for a version of the module that scores higher. This page explains
+what that search can change, how the metric and the data splits steer it, why
+the winning score overstates the result, and where the model calls go. For
+the code, see [Compile and optimize](compilation-optimization.html) and
+[Choose an optimizer](advanced-optimization.html).
 
-## The Optimization Problem
+## What the search can change
 
-When you build an LLM application, you're implicitly defining an optimization problem:
+A module's interface stays fixed: the signature's input and output fields and
+their types. Optimizers change what the module holds as data, mostly the demos
+and the instructions, and each has its own way of producing candidates:
 
-**Given**:
-- A task specification (signature)
-- Training examples with expected outputs
-- An evaluation metric
+| What changes | Where candidates come from | Optimizers |
+|---|---|---|
+| Demos | Labeled rows, copied as they are | `LabeledFewShot`, `GridSearchTeleprompter`, `SIMBA`, `MIPROv2` |
+| Demos | The module's own outputs that passed the metric | `BootstrapFewShot`, `BootstrapFewShotWithRandomSearch`, `MIPROv2` |
+| Demos | Training rows retrieved for each input by similarity | `KNNFewShot` |
+| Instructions or templates | Variants that you write | `GridSearchTeleprompter`, `optimize_grid()` |
+| Instructions | A model rewriting them after reading failed rows | `COPRO`, `GEPA`, `SIMBA` (as appended rules) |
+| Instructions | A data summary and fixed tips appended | `MIPROv2` |
+| Decision thresholds and weights | Probabilities recorded in one extra pass | `ReAnchor` |
+| Request settings, such as temperature | A grid that you define | `optimize_grid()` |
+| The program's source | A model rewriting it | `GEPA` on `flex()` modules, `AutoResearch()`, `MetaHarness()` |
 
-**Find**:
-- The program configuration that maximizes metric performance
+The three kinds of demos behave differently. Labeled demos show the answers
+you wrote, but each takes its output from a single column, so a demo for a
+three-field output shows one field. Bootstrapped demos show the module's
+complete output, including fields your data does not label, such as a
+`chain_of_thought()` reasoning field or the intermediate steps of a pipeline.
+They passed the metric, which is not the same as being right: if the metric
+checks one field, the others can be wrong. Retrieved demos change with every
+input, so there is no fixed prompt to inspect.
 
-Traditional prompt engineering solves this by hand: you write prompts, test
-them, and tweak them. Most dsprrr optimizers automate that prompt search;
-experimental Flex lets GEPA optimize how the module executes, including
-predictor structure and, in executable mode, R logic and selected tools.
+Instructions are the other main lever, and the right wording depends on the
+model. A rewrite that helps one model can hurt another, which is why a search
+run on a cheaper model should be confirmed on the model you will use.
 
-## What Gets Optimized
+Two targets go beyond the prompt text. `ReAnchor` changes numbers that are
+never sent to the model: the threshold that turns a probability into `TRUE`, or the
+weights that pick an option. It records probabilities once and fits the
+numbers without further calls. At the other end, GEPA can treat a whole
+`flex()` program as one candidate and rewrite its source; see
+[Flex: optimize a whole program](flex-optimization.html).
 
-LLM performance depends on several factors that can be tuned:
+Request settings, such as `temperature`, are searched only by
+`optimize_grid()`. Reasoning models, such as the gpt-5 and o-series models,
+ignore `temperature`, so do not sweep it with them.
 
-### 1. Instructions
+## How the metric steers the search
 
-The system prompt or task description:
+Each candidate ends up as one number: the metric's mean over some rows. The
+optimizer sees nothing else, which has three consequences.
 
-```{r}
-# Original
-sig <- signature(
- "text -> sentiment",
- instructions = "Classify the sentiment."
-)
+The search improves only what the metric measures. In
+[Compile and optimize](compilation-optimization.html), a search scored on the
+category alone produced a module that got every category right and two of
+three priorities wrong.
 
-# Variant 1
-sig_detailed <- signature(
- "text -> sentiment",
- instructions = "Analyze the emotional tone. Consider word choice, context, and implicit meanings."
-)
+Ties are common. A pass/fail metric on a few rows gives many candidates the
+same score, and optimizers keep the candidate they saw first, usually the
+unchanged module or the first variant. A graded metric, such as `metric_f1()`
+or a custom metric that gives partial credit, separates candidates better.
 
-# Variant 2
-sig_concise <- signature(
- "text -> sentiment",
- instructions = "positive, negative, or neutral?"
-)
-```
+The metric can say more than a number. A metric built with
+`metric_with_feedback()` also returns a sentence about each failure, and GEPA
+passes those sentences to the model that rewrites the instructions.
+`metric_with_trace()` lets a metric score the steps a program took, not just
+its final output. [Metrics and evaluation](concepts-why-metrics-matter.html)
+covers how to choose and test a metric.
 
-Different instructions can dramatically affect performance. The right wording depends on the model, the task, and the data distribution.
+## Training, validation and test rows
 
-### 2. Demonstrations (Few-Shot Examples)
+Optimizers use labeled rows for two jobs. The training rows are material:
+demos are copied or bootstrapped from them, and COPRO, SIMBA and GEPA show
+the model some of the training rows the module got wrong. The validation rows
+are the yardstick that ranks candidates. A third set, the test rows, is
+scored once at the end and never shown to an optimizer.
+[Metrics and evaluation](concepts-why-metrics-matter.html) shows how to split
+one table three ways with `split_dataset()`.
 
-Examples shown to the model before the actual input:
+When you pass no `valset`, optimizers fall back in different ways:
 
-```{r}
-# No demos
-mod$demos <- list()
+| Optimizer | Without `valset` |
+|---|---|
+| `GridSearchTeleprompter` | Scores on a random fifth of `trainset` and takes demos from the rest |
+| `BootstrapFewShotWithRandomSearch` | Stops with an error: `valset` is required |
+| `BetterTogether`, `Omni` | Hold out 10% of `trainset` |
+| `COPRO`, `MIPROv2`, `SIMBA`, `GEPA` | Score candidates on `trainset` itself |
+| `ReAnchor` | Checks fitted settings on folds of `trainset`; `valset` is only reported |
+| `LabeledFewShot`, `KNNFewShot`, `BootstrapFewShot` | Do not rank candidates |
 
-# With demos
-mod$demos <- list(
- list(inputs = list(text = "I love this!"), output = "positive"),
- list(inputs = list(text = "This is terrible."), output = "negative"),
- list(inputs = list(text = "It's okay."), output = "neutral")
-)
-```
+Scoring on `trainset` rewards candidates that suit the training rows, which
+is exactly what demos copied from those rows do. The gain then shrinks, or
+disappears, on new inputs.
 
-More demos aren't always better. The *right* demos matter more than the *number* of demos. Demos that are:
-- Too similar may not generalize
-- Too different may confuse the model
-- Poorly formatted may teach bad patterns
+## Why the winning score is too high
 
-### 3. Temperature and Other Parameters
-
-Model generation parameters:
-
-```{r}
-mod$config$temperature <- 0      # Deterministic
-mod$config$temperature <- 0.7    # Some randomness
-mod$config$temperature <- 1.0    # More creative
-```
-
-Lower temperature is typically better for classification tasks. Higher temperature helps with generation tasks where diversity matters.
-
-### 4. Prompt Structure
-
-How inputs are formatted and combined:
-
-```{r}
-# Template 1: Simple
-mod$template <- "{input}"
-
-# Template 2: Structured
-mod$template <- "Input: {input}\n\nProvide your analysis:"
-
-# Template 3: Role-based
-mod$template <- "You are an expert analyst. Given: {input}\n\nYour assessment:"
-```
-
-## The Search Space
-
-The combination of all tunable parameters forms a **search space**. For a simple classifier:
-
-| Parameter | Possible Values | Count |
-|-----------|----------------|-------|
-| Instructions | 5 variants | 5 |
-| Temperature | 0, 0.3, 0.7 | 3 |
-| Demo count | 0, 2, 4, 8 | 4 |
-| Demo selection | Random, diverse, similar | 3 |
-
-Total configurations: 5 × 3 × 4 × 3 = **180 combinations**
-
-Evaluating each on a 100-example dataset means 18,000 LLM calls. This is why smart search strategies matter.
-
-## Teleprompters: The Optimization Strategies
-
-dsprrr calls its optimizers **teleprompters** (from DSPy). Each teleprompter implements a different search strategy.
-
-### LabeledFewShot: The Simplest Approach
-
-Just add k examples from your training set as demonstrations:
+Picking the best of several noisy scores favors the candidate that got lucky
+on the validation rows. Suppose every candidate has the same true accuracy,
+70%, and each is scored on the same 20 validation rows. The expected score of
+the winner still grows with the number of candidates compared:
 
 ```{r}
-tp <- LabeledFewShot(k = 4L)
-compiled <- compile(mod, tp, trainset)
-```
-
-**How it works**:
-
-1. Sample k examples from training data
-2. Format as demonstrations
-3. Add to module
-
-**When to use**:
-- Quick baseline
-- When you have high-quality labeled data
-- When the task is straightforward
-
-**Limitations**:
-- Doesn't optimize demo selection
-- Doesn't tune other parameters
-- May pick suboptimal examples
-
-### BootstrapFewShot: Self-Improving Demonstrations
-
-Uses the model to generate demonstrations, keeping only successful ones:
-
-```{r}
-tp <- BootstrapFewShot(
- metric = metric_exact_match(),
- max_bootstrapped_demos = 4L,
- max_labeled_demos = 8L
-)
-compiled <- compile(mod, tp, trainset)
-```
-
-**How it works**:
-
-1. Start with labeled examples as initial demos
-2. Run teacher model on remaining training examples
-3. Score each prediction with your metric
-4. Keep predictions that score above threshold as new demos
-5. Optionally repeat for multiple rounds
-
-**Why this works**:
-The model generates outputs in its own "voice". Demonstrations that match the model's natural output style are more effective than human-written examples.
-
-**When to use**:
-- When you have a reliable metric
-- When labeled examples don't transfer well
-- When you want the model to learn its own format
-
-### GridSearchTeleprompter: Systematic Exploration
-
-Tests every combination of instruction and template variants:
-
-```{r}
-variants <- tibble::tibble(
- id = c("concise", "detailed", "structured"),
- instructions = c(
-   "Classify sentiment briefly.",
-   "Analyze the emotional tone considering context and nuance.",
-   "Task: Sentiment classification\nOutput: positive, negative, or neutral"
- )
-)
-
-tp <- GridSearchTeleprompter(
- metric = metric_exact_match(),
- variants = variants
-)
-compiled <- compile(mod, tp, trainset)
-```
-
-**How it works**:
-
-1. Define a grid of parameter configurations
-2. Evaluate each on a validation set
-3. Select the best-performing configuration
-
-**When to use**:
-- When you have specific hypotheses to test
-- When the search space is small
-- When you need interpretable results
-
-**Limitations**:
-- Scales poorly with parameters
-- May miss optimal combinations not in grid
-
-### BootstrapFewShotWithRandomSearch: Combined Strategy
-
-Combines demo bootstrapping with parameter search:
-
-```{r}
-tp <- BootstrapFewShotWithRandomSearch(
- metric = metric_exact_match(),
- num_candidate_programs = 8L,
- max_bootstrapped_demos = 4L
-)
-compiled <- compile(mod, tp, trainset)
-```
-
-**How it works**:
-
-1. Generate multiple demo configurations via bootstrapping
-2. Create candidate programs with different demo subsets
-3. Evaluate all candidates
-4. Return the best performer
-
-**When to use**:
-- When BootstrapFewShot alone isn't enough
-- When you want to explore demo combinations
-- When you have compute budget for more trials
-
-### SIMBA: Embedding-Based Selection
-
-Uses semantic similarity to select diverse, representative demos:
-
-```{r}
-tp <- SIMBA(
- metric = metric_exact_match(),
- max_demos = 4L,
- embed_fn = embed_openai()
-)
-compiled <- compile(mod, tp, trainset)
-```
-
-**How it works**:
-
-1. Embed all training examples
-2. Cluster by semantic similarity
-3. Select diverse representatives from clusters
-4. Use as demonstrations
-
-**Why this works**:
-Coverage matters more than quantity. A diverse set of demos shows the model the range of possible inputs and appropriate outputs.
-
-**When to use**:
-- When you have many training examples
-- When examples vary significantly
-- When you want coverage over the input space
-
-### KNNFewShot: Dynamic Demo Selection
-
-Selects demos based on similarity to each test input:
-
-```{r}
-tp <- KNNFewShot(
- metric = metric_exact_match(),
- k = 3L,
- embed_fn = embed_openai()
-)
-compiled <- compile(mod, tp, trainset)
-```
-
-**How it works**:
-
-1. At compile time: embed all training examples
-2. At runtime: find k nearest neighbors to the input
-3. Use those neighbors as demonstrations
-
-**Why this works**:
-Relevant examples are more helpful than random ones. If the input is about sports, sports-related demos are more useful than cooking demos.
-
-**When to use**:
-- When inputs span diverse domains
-- When context-specific demos help
-- When you can afford embedding costs at inference
-
-### COPRO: Instruction Optimization
-
-Generates and refines instructions using the LLM itself:
-
-```{r}
-tp <- COPRO(
- metric = metric_exact_match(),
- breadth = 5L,
- depth = 3L
-)
-compiled <- compile(mod, tp, trainset)
-```
-
-**How it works**:
-
-1. Generate breadth instruction candidates
-2. Evaluate each on training data
-3. Take top performers, ask LLM to improve them
-4. Repeat for depth iterations
-
-**Why this works**:
-LLMs are good at understanding what makes instructions effective. They can propose refinements humans wouldn't think of.
-
-**When to use**:
-- When instructions matter more than demos
-- When you have compute budget for exploration
-- When you want automatically-generated instructions
-
-### MIPROv2: Multi-Parameter Optimization
-
-Jointly optimizes instructions and demonstrations:
-
-```{r}
-tp <- MIPROv2(
- metric = metric_exact_match(),
- num_candidates = 10L,
- init_temperature = 1.4
-)
-compiled <- compile(mod, tp, trainset)
-```
-
-Uses Bayesian optimization to jointly search instruction and demo combinations. The most general-purpose optimizer when you have compute budget for state-of-the-art results.
-
-### GEPA: Reflective Prompt Evolution
-
-Uses metric feedback to propose instruction mutations and Pareto selection to
-retain candidates that are useful across objectives:
-
-```{r}
-tp <- GEPA(
- metric = metric_exact_match(),
- population_size = 20L,
- generations = 10L
-)
-compiled <- compile(mod, tp, trainset)
-```
-
-GEPA reflects on failed examples, proposes revised instructions, evaluates
-them, and keeps a Pareto frontier across metrics. For ordinary modules this is
-reflective prompt evolution: optional crossover combines instruction text.
-When a program contains Flex leaves, GEPA can instead select complete
-`module_src` values atomically; it never splices source text. GEPA is useful
-when feedback is informative and you can afford repeated evaluation. See
-[Flex: Optimize the Whole Program](flex-optimization.html) when the
-implementation itself should be part of the search.
-
-### AutoResearch and Meta-Harness: Agentic Program Search
-
-These harnesses use an LLM as an experiment proposer while dsprrr retains the
-trusted evaluator, budget ledger, and accepted program state.
-`AutoResearch()` gives one persistent agent ownership of the experiment loop;
-`MetaHarness()` evaluates bounded batches from fresh proposer sessions and
-maintains a scored frontier. Both can edit several module-graph components in
-one candidate and require OS-sandboxed code execution by default.
-
-## Choosing an Optimizer
-
-Use this decision tree:
-
-```mermaid
-flowchart TB
-  Start["Choose an optimizer"]
-  Start -->|Quick baseline| Labeled["LabeledFewShot"]
-  Start -->|Reliable metric, want better demos| Bootstrap["BootstrapFewShot"]
-  Start -->|Specific instruction variants to test| Grid["GridSearchTeleprompter"]
-  Start -->|Best results with compute budget| MIPRO["MIPROv2 or BootstrapFewShotWithRandomSearch"]
-  Start -->|Diverse inputs, need adaptive demos| KNN["KNNFewShot"]
-  Start -->|Explore creatively| GEPA["GEPA"]
-  Start -->|Search a multi-module program with an agent| Harness["AutoResearch or MetaHarness"]
-```
-
-## The Evaluation Loop
-
-All optimizers share a common evaluation pattern:
-
-```{r}
-# Pseudocode for optimizer loop
-for (candidate in candidates) {
- # 1. Create candidate module
- mod_candidate <- copy_module(base_module)
- mod_candidate <- apply_config(mod_candidate, candidate)
-
- # 2. Evaluate on validation set
- result <- evaluate(mod_candidate, valset, metric)
-
- # 3. Track score
- scores[[candidate$id]] <- result$mean_score
-
- # 4. Update best if improved
- if (result$mean_score > best_score) {
-   best_score <- result$mean_score
-   best_candidate <- candidate
- }
+#| eval: true
+set.seed(1)
+winner_score <- function(n_candidates, n_rows = 20, accuracy = 0.7) {
+  max(rbinom(n_candidates, n_rows, accuracy) / n_rows)
 }
 
-# 5. Apply best configuration
-final_module <- apply_config(base_module, best_candidate)
-```
-
-This loop is the core of all optimization. Different teleprompters differ in how they generate candidates.
-
-## Practical Considerations
-
-### Data Requirements
-
-| Optimizer | Min Training Examples | Recommended |
-|-----------|----------------------|-------------|
-| LabeledFewShot | k (usually 4) | 20+ |
-| BootstrapFewShot | 10 | 50+ |
-| GridSearch | 20 | 50+ |
-| MIPROv2 | 30 | 100+ |
-
-More data generally helps, but with diminishing returns after ~100 examples.
-
-### Compute Costs
-
-Optimization requires many LLM calls. Rough estimates per optimizer:
-
-| Optimizer | LLM Calls (100 examples) |
-|-----------|-------------------------|
-| LabeledFewShot | 0 (no evaluation) |
-| BootstrapFewShot | 100-200 |
-| GridSearch | variants × examples |
-| MIPROv2 | 500-2000 |
-| GEPA | population × generations × examples |
-| AutoResearch | baseline + agent-selected experiments |
-| MetaHarness | baseline + iterations × candidates per iteration |
-
-Use cheaper models during optimization, then evaluate final config on your target model.
-
-### Validation Strategy
-
-Split your data:
-
-- **Training set**: Used to generate demos
-- **Validation set**: Used to evaluate candidates during optimization
-- **Test set**: Used to evaluate final model (never touched during optimization)
-
-```{r}
-# Good practice
-set.seed(42)
-n <- nrow(data)
-train_idx <- sample(n, 0.6 * n)
-val_idx <- sample(setdiff(1:n, train_idx), 0.2 * n)
-test_idx <- setdiff(1:n, c(train_idx, val_idx))
-
-trainset <- data[train_idx, ]
-valset <- data[val_idx, ]
-testset <- data[test_idx, ]
-
-# Optimize
-compiled <- compile(mod, tp, trainset, valset = valset)
-
-# Final evaluation
-evaluate(compiled, testset, metric)
-```
-
-### Reproducibility
-
-Use seeds for reproducible optimization:
-
-```{r}
-tp <- BootstrapFewShot(
- metric = metric_exact_match(),
- seed = 42L
+n_candidates <- c(1, 5, 20, 100)
+expected_winner <- vapply(
+  n_candidates,
+  function(k) mean(replicate(5000, winner_score(k))),
+  numeric(1)
 )
+data.frame(n_candidates, expected_winner = round(expected_winner, 2))
 ```
 
-## Why Optimization Works
+None of these candidates is better than the others, yet the best of 20 looks
+far better than 70%. Optimizers that compare many candidates on the same rows,
+such as `MIPROv2`, `GEPA` and `BootstrapFewShotWithRandomSearch`, report this
+inflated number as `best_score`. More validation rows shrink the effect, and a
+score on test rows that no step has seen removes it. The same holds for your
+own comparisons: if you try ten optimizers and keep the best, score the winner
+again on fresh rows.
 
-Prompt optimization works because:
+Two other effects push in the same direction. Training rows reach the prompt,
+as demos, as examples shown to the rewriting model, and in `SIMBA`'s fallback
+rules, so duplicates or near-duplicates between the splits inflate every
+score. Keep the splits disjoint. And a test set that you score after every
+change slowly turns into a validation set; score it once per decision.
 
-1. **LLMs are sensitive**: Small prompt changes cause big output changes. This creates a navigable landscape where search can find improvements.
+## Where the model calls go
 
-2. **Metrics provide signal**: Evaluation scores guide the search toward better configurations. Without metrics, you're optimizing blind.
+Almost all the calls in a search are spent scoring: the number of candidates
+times the rows each is scored on. Proposing candidates adds comparatively
+little, one call per rewrite. With 200 training rows and 50 validation rows,
+the scoring calls come to roughly:
 
-3. **The search space is structured**: Good prompts share characteristics. Optimization exploits this structure.
+| Optimizer and settings | Scoring calls |
+|---|---|
+| `GridSearchTeleprompter` with 4 variants | 4 × 50 = 200 |
+| `BootstrapFewShotWithRandomSearch`, default 16 candidates | 16 × 50 = 800, plus bootstrapping |
+| `MIPROv2` with `auto = "light"` | 16 batches of 5 plus 4 passes over 50 = 280, plus bootstrapping |
+| `COPRO` with the defaults, `breadth = 10L` and `depth = 3L` | Up to 30 × 50 = 1,500, plus 50 for the baseline and at least 200 to find failures |
+| `GEPA` with the defaults, 20 candidates for 10 generations | 20 × 10 × (50 + 200) = 50,000 |
 
-4. **Transfer happens**: Prompts optimized on training data often generalize to test data. The improvements aren't just memorization.
+GEPA's defaults suit large budgets; the example in
+[Choose an optimizer](advanced-optimization.html) uses a population of 6 for 4
+generations. That page gives a cost formula for each optimizer.
 
-## Connection to Machine Learning
-
-Prompt optimization parallels traditional ML:
-
-| ML Concept | Prompt Optimization |
-|------------|---------------------|
-| Model parameters | Prompt text, demos |
-| Training data | Labeled examples |
-| Loss function | Metric (negated) |
-| Gradient descent | Teleprompter search |
-| Hyperparameters | Temperature, demo count |
-| Validation | Held-out evaluation |
-
-The key difference: in ML, we update model weights. In prompt optimization, we update the text we send to the model. The model itself stays fixed.
-
-## Further Reading
-
-- **[Tutorial: Optimize Your Module](tutorial-optimize-your-module.html)** - Hands-on optimization
-- **[Understanding Signatures & Modules](concepts-signatures-modules.html)** - Core abstractions
-- **[Why Metrics Matter](concepts-why-metrics-matter.html)** - Choosing the right metric
-- **[DSPy Paper](https://arxiv.org/abs/2310.03714)** - Academic foundations
+There are three ways to spend less. Score fewer candidates or fewer rows,
+accepting noisier comparisons. Run the search on a cheaper model and confirm
+the winner on the one you will deploy. Or, with the optimizers that support
+it, cap the search with `optimizer_control()`, which stops at a limit on
+calls, tokens, cost or time and returns the best module found so far.
