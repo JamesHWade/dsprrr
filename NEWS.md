@@ -265,6 +265,10 @@ First development changelog. dsprrr is experimental; the API may change.
   with `ragnar_store_create(embed = )`, `markdown_chunk()`, and
   `ragnar_store_insert()`.
 
+* `dsp_configure()` applies `temperature` to the chat (through
+  `ellmer::params()`) instead of only recording it, and honors `model` and
+  `api_key` when it detects the provider from environment variables.
+
 * `optimize_grid()`'s `instructions_suffix` parameter appends to the module's
   instructions instead of replacing them.
 

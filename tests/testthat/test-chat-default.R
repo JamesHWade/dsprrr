@@ -519,3 +519,46 @@ test_that("ellmer compatibility matches DESCRIPTION", {
     expect_identical(dsprrr:::check_ellmer_version("not-a-version"), FALSE)
   )
 })
+
+test_dsp_configure_env <- function(.env = parent.frame()) {
+  withr::local_envvar(
+    OPENAI_API_KEY = "",
+    ANTHROPIC_API_KEY = "",
+    GOOGLE_API_KEY = "",
+    .local_envir = .env
+  )
+  withr::local_options(
+    dsprrr.default_chat = NULL,
+    dsprrr.quiet = TRUE,
+    .local_envir = .env
+  )
+  clear_default_chat()
+  withr::defer(clear_default_chat(), envir = .env)
+  withr::defer(.dsprrr_env$config <- NULL, envir = .env)
+}
+
+test_that("dsp_configure applies model and temperature to the chat", {
+  test_dsp_configure_env()
+  withr::local_envvar(OPENAI_API_KEY = "test-key")
+
+  chat <- dsp_configure(
+    provider = "openai",
+    model = "gpt-4.1-mini",
+    temperature = 0.2
+  )
+
+  expect_equal(chat$get_model(), "gpt-4.1-mini")
+  expect_equal(ellmer_chat_model(chat)@params$temperature, 0.2)
+  expect_identical(get_default_chat(), chat)
+})
+
+test_that("dsp_configure applies arguments when detecting the provider", {
+  test_dsp_configure_env()
+  withr::local_envvar(ANTHROPIC_API_KEY = "test-key")
+
+  chat <- dsp_configure(model = "claude-haiku-4-5", temperature = 0)
+
+  expect_equal(chat$get_model(), "claude-haiku-4-5")
+  expect_equal(ellmer_chat_model(chat)@params$temperature, 0)
+  expect_equal(.dsprrr_env$config$provider, "anthropic")
+})

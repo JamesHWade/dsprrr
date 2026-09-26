@@ -257,6 +257,20 @@ set_default_chat <- function(chat) {
 #' @return An ellmer Chat object, or `NULL` if no API keys are found.
 #'
 #' @noRd
+#' Provider whose API key is set in the environment
+#'
+#' Checks OpenAI, Anthropic, then Google, matching `auto_detect_chat()`.
+#' @noRd
+detect_env_provider <- function() {
+  keys <- c(
+    openai = "OPENAI_API_KEY",
+    anthropic = "ANTHROPIC_API_KEY",
+    google = "GOOGLE_API_KEY"
+  )
+  found <- names(keys)[nzchar(Sys.getenv(keys))]
+  if (length(found) == 0) NULL else found[[1]]
+}
+
 auto_detect_chat <- function() {
   # Check for OpenAI
   if (nzchar(Sys.getenv("OPENAI_API_KEY"))) {
@@ -483,15 +497,19 @@ local_lm <- function(lm, .env = parent.frame()) {
 #' used by modules when no explicit Chat is provided.
 #'
 #' @param provider Character string specifying the provider. One of:
-#'   `"openai"`, `"anthropic"`, `"google"`. If `NULL` (default), auto-detects
-#'   from environment variables.
+#'   `"openai"`, `"anthropic"`, `"google"`. If `NULL` (default), uses the
+#'   first provider whose API key is set: `OPENAI_API_KEY`,
+#'   `ANTHROPIC_API_KEY`, then `GOOGLE_API_KEY`.
 #' @param model Character string specifying the model name. If `NULL`,
 #'   uses the provider's default model.
 #' @param api_key Character string with the API key. If `NULL`, reads from
 #'   the appropriate environment variable.
-#' @param temperature Numeric value for temperature (0-2). Default is `NULL`
-#'   (use provider default).
-#' @param ... Additional arguments passed to the ellmer chat constructor.
+#' @param temperature Sampling temperature, applied through
+#'   `ellmer::params(temperature = )`. Default `NULL` uses the provider
+#'   default. Reasoning models ignore it.
+#' @param ... Additional arguments passed to the ellmer chat constructor
+#'   ([ellmer::chat_openai()], [ellmer::chat_anthropic()] or
+#'   [ellmer::chat_google_gemini()]), such as `params` or `system_prompt`.
 #'
 #' @return Invisibly returns the configured Chat object.
 #'
@@ -502,11 +520,10 @@ local_lm <- function(lm, .env = parent.frame()) {
 #' dsp_configure()
 #'
 #' # Configure with specific provider and model
-#' dsp_configure(provider = "openai", model = "gpt-4o-mini")
+#' dsp_configure(provider = "openai", model = "gpt-4.1-mini")
 #'
 #' # Configure with temperature
-#' dsp_configure(provider = "anthropic", model = "claude-3-5-sonnet-latest",
-#'               temperature = 0.7)
+#' dsp_configure(provider = "anthropic", temperature = 0.7)
 #'
 #' # Now run() uses this configuration
 #' run(module(signature("question -> answer")), question = "What is 2+2?")
@@ -518,46 +535,44 @@ dsp_configure <- function(
   temperature = NULL,
   ...
 ) {
-  # Build chat based on provider
   if (is.null(provider)) {
-    # Auto-detect from environment
-    chat <- auto_detect_chat()
-    if (is.null(chat)) {
+    provider <- detect_env_provider()
+    if (is.null(provider)) {
       cli::cli_abort(c(
         "Could not auto-detect provider",
         "i" = "Set an API key environment variable or specify {.arg provider}"
       ))
     }
-  } else {
-    # Validate provider
-    provider <- tolower(provider)
-    valid_providers <- c("openai", "anthropic", "google")
-    if (!provider %in% valid_providers) {
-      cli::cli_abort(c(
-        "Unknown provider: {.val {provider}}",
-        "i" = "Valid providers: {.val {valid_providers}}"
-      ))
-    }
-
-    # Build args for chat constructor
-    chat_args <- list(...)
-
-    if (!is.null(model)) {
-      chat_args$model <- model
-    }
-
-    if (!is.null(api_key)) {
-      chat_args$api_key <- api_key
-    }
-
-    # Create chat based on provider
-    chat <- switch(
-      provider,
-      "openai" = do.call(ellmer::chat_openai, chat_args),
-      "anthropic" = do.call(ellmer::chat_claude, chat_args),
-      "google" = do.call(ellmer::chat_google_gemini, chat_args)
-    )
   }
+
+  provider <- tolower(provider)
+  valid_providers <- c("openai", "anthropic", "google")
+  if (!provider %in% valid_providers) {
+    cli::cli_abort(c(
+      "Unknown provider: {.val {provider}}",
+      "i" = "Valid providers: {.val {valid_providers}}"
+    ))
+  }
+
+  # Build args for the ellmer chat constructor
+  chat_args <- list(...)
+  if (!is.null(model)) {
+    chat_args$model <- model
+  }
+  if (!is.null(api_key)) {
+    chat_args$api_key <- api_key
+  }
+  if (!is.null(temperature)) {
+    chat_args$params <- chat_args$params %||% ellmer::params()
+    chat_args$params$temperature <- temperature
+  }
+
+  chat <- switch(
+    provider,
+    "openai" = do.call(ellmer::chat_openai, chat_args),
+    "anthropic" = do.call(ellmer::chat_anthropic, chat_args),
+    "google" = do.call(ellmer::chat_google_gemini, chat_args)
+  )
 
   # Store configuration metadata
   .dsprrr_env$config <- list(

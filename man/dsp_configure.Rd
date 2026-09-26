@@ -14,8 +14,9 @@ dsp_configure(
 }
 \arguments{
 \item{provider}{Character string specifying the provider. One of:
-\code{"openai"}, \code{"anthropic"}, \code{"google"}. If \code{NULL} (default), auto-detects
-from environment variables.}
+\code{"openai"}, \code{"anthropic"}, \code{"google"}. If \code{NULL} (default), uses the
+first provider whose API key is set: \code{OPENAI_API_KEY},
+\code{ANTHROPIC_API_KEY}, then \code{GOOGLE_API_KEY}.}
 
 \item{model}{Character string specifying the model name. If \code{NULL},
 uses the provider's default model.}
@@ -23,10 +24,13 @@ uses the provider's default model.}
 \item{api_key}{Character string with the API key. If \code{NULL}, reads from
 the appropriate environment variable.}
 
-\item{temperature}{Numeric value for temperature (0-2). Default is \code{NULL}
-(use provider default).}
+\item{temperature}{Sampling temperature, applied through
+\code{ellmer::params(temperature = )}. Default \code{NULL} uses the provider
+default. Reasoning models ignore it.}
 
-\item{...}{Additional arguments passed to the ellmer chat constructor.}
+\item{...}{Additional arguments passed to the ellmer chat constructor
+(\code{\link[ellmer:chat_openai]{ellmer::chat_openai()}}, \code{\link[ellmer:chat_anthropic]{ellmer::chat_anthropic()}} or
+\code{\link[ellmer:chat_google_gemini]{ellmer::chat_google_gemini()}}), such as \code{params} or \code{system_prompt}.}
 }
 \value{
 Invisibly returns the configured Chat object.
@@ -42,11 +46,10 @@ used by modules when no explicit Chat is provided.
 dsp_configure()
 
 # Configure with specific provider and model
-dsp_configure(provider = "openai", model = "gpt-4o-mini")
+dsp_configure(provider = "openai", model = "gpt-4.1-mini")
 
 # Configure with temperature
-dsp_configure(provider = "anthropic", model = "claude-3-5-sonnet-latest",
-              temperature = 0.7)
+dsp_configure(provider = "anthropic", temperature = 0.7)
 
 # Now run() uses this configuration
 run(module(signature("question -> answer")), question = "What is 2+2?")
