@@ -564,18 +564,15 @@ decision_evidence_type <- function(decision) {
     lapply(labels, function(label) ellmer::type_number()),
     labels
   )
-  probabilities <- do.call(
-    ellmer::type_object,
-    c(
-      list(
-        .description = if (identical(decision$kind, "score")) {
-          "Probability of each level index; the probabilities sum to 1."
-        } else {
-          "Probability of each option; the probabilities sum to 1."
-        }
-      ),
-      probability_fields
-    )
+  # Build the object from an explicit property list: enum values such as
+  # `.description` must stay probability properties, not factory arguments.
+  probabilities <- ellmer::TypeObject(
+    properties = probability_fields,
+    description = if (identical(decision$kind, "score")) {
+      "Probability of each level index; the probabilities sum to 1."
+    } else {
+      "Probability of each option; the probabilities sum to 1."
+    }
   )
   ellmer::type_object(
     .description = description,

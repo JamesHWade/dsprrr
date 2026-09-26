@@ -398,3 +398,36 @@ test_that("optional decision outputs stay optional", {
     class = "dsprrr_decision_evidence_error"
   )
 })
+
+test_that("choice options may match type_object() argument names", {
+  sig <- signature(
+    inputs = list(input("text")),
+    output_type = ellmer::type_object(
+      pick = ellmer::type_enum(
+        c(".description", ".required", "plain"),
+        "Which option?"
+      )
+    )
+  )
+  mod <- with_decisions(module(sig), pick = decision_choice())
+  request_type <- decision_request_type(
+    mod$signature@output_type,
+    module_decisions(mod)
+  )
+  expect_identical(
+    names(request_type@properties$pick@properties$probabilities@properties),
+    c(".description", ".required", "plain")
+  )
+
+  mock <- new_decision_chat(function(input, field, field_type) {
+    list(
+      probabilities = list(
+        `.description` = 0.7,
+        `.required` = 0.2,
+        plain = 0.1
+      ),
+      confidence = 0.8
+    )
+  })
+  expect_identical(run(mod, text = "x", .llm = mock$chat)$pick, ".description")
+})
