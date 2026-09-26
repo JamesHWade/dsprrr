@@ -284,3 +284,28 @@ test_that("optimize_grid keeps runtime evaluations out of durable trials", {
   restored <- restore_module_config(artifact)
   expect_equal(optimization_result(restored), optimization_result(mod))
 })
+
+test_that("instructions_suffix appends to the base instructions without stacking", {
+  mod <- module(signature("text -> label", instructions = "Classify the text."))
+
+  first <- mod$copy(deep = TRUE)
+  first$apply_optimization_params(list(instructions_suffix = "Be brief."))
+  expect_identical(first$signature@instructions, "Classify the text. Be brief.")
+
+  # A later search appends to the original instructions, not the last result.
+  first$apply_optimization_params(list(instructions_suffix = "Be precise."))
+  expect_identical(
+    first$signature@instructions,
+    "Classify the text. Be precise."
+  )
+
+  # An explicit instructions value replaces them and resets the base.
+  first$apply_optimization_params(list(instructions = "Label it."))
+  expect_identical(first$signature@instructions, "Label it.")
+  first$apply_optimization_params(list(instructions_suffix = "Be brief."))
+  expect_identical(first$signature@instructions, "Label it. Be brief.")
+
+  # A suffix alone never replaces the instructions through partial matching.
+  mod$apply_optimization_params(list(instructions_suffix = "Short."))
+  expect_identical(mod$signature@instructions, "Classify the text. Short.")
+})
