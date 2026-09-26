@@ -1,36 +1,34 @@
-#' Create an input specification for a Signature
+#' Describe one signature input
 #'
 #' @description
-#' Create an input specification using an ellmer type or a canonical type label.
+#' `input()` describes one input field for the explicit form of
+#' [signature()]: its name, its type and an optional description.
 #'
-#' @param name Character string naming the input
-#' @param type An ellmer type object, one of `"string"`, `"number"`,
-#'   `"integer"`, `"boolean"`, `"array"`, or `"object"`, or `NULL` to use
-#'   a string type.
-#' @param description Optional description of the input. When `type` is a
-#'   canonical label or `NULL`, this description is passed to the ellmer type.
-#' @param ... Additional metadata for the input
+#' @param name The field name. Callers pass the value under this name, as in
+#'   `run(mod, review = "...")`.
+#' @param type An ellmer type, one of the labels `"string"`, `"number"`,
+#'   `"integer"`, `"boolean"`, `"array"` (an array of strings) or `"object"`,
+#'   or `NULL` for a string.
+#' @param description Optional description. Unless the module has its own
+#'   template, it is written above the value in the prompt, as
+#'   `# description`. With a label or `NULL` `type`, it also becomes the
+#'   ellmer type's description.
+#' @param ... Extra fields stored in the specification.
 #'
-#' @return A list with class "dsprrr_input" containing the input specification
+#' @return A list of class `dsprrr_input` with elements `name`, `type` (an
+#'   ellmer type) and `description`.
 #'
+#' @family signatures
 #' @examples
-#' # Using ellmer types (recommended for consistency with outputs)
-#' input("text", ellmer::type_string())
-#' input("age", ellmer::type_number())
-#' input("active", ellmer::type_boolean())
+#' review <- input("review", description = "A customer review")
+#' stars <- input("stars", "integer")
+#' tags <- input("tags", ellmer::type_array(ellmer::type_string()))
 #'
-#' # Using canonical labels
-#' input("text", "string")
-#' input("count", "integer")
-#' input("score", "number")
-#'
-#' # Type optional (defaults to string)
-#' input("name")
-#' input("name", description = "User's name")
-#'
-#' # With ellmer types for structured data
-#' input("tags", ellmer::type_array(ellmer::type_string()))
-#' input("status", ellmer::type_enum(c("pending", "active", "done")))
+#' # Inputs make up the explicit form of a signature
+#' signature(
+#'   inputs = list(review, stars, tags),
+#'   output_type = ellmer::type_object(summary = ellmer::type_string())
+#' )
 #'
 #' @export
 input <- function(name, type = NULL, description = NULL, ...) {

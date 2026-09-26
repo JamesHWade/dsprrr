@@ -2,7 +2,7 @@
 % Please edit documentation in R/module-wrapper.R
 \name{best_of_n}
 \alias{best_of_n}
-\title{Create a BestOfN Wrapper Module}
+\title{Run a module up to N times and keep the best result}
 \usage{
 best_of_n(
   module,
@@ -14,47 +14,84 @@ best_of_n(
 )
 }
 \arguments{
-\item{module}{A Module object to wrap}
+\item{module}{The module to wrap.}
 
-\item{N}{Maximum number of attempts (default 3)}
+\item{N}{Maximum number of attempts.}
 
-\item{reward_fn}{Reward function with signature \verb{function(prediction, inputs)},
-returning a score between 0 and 1. Use \code{as_reward_fn()} to convert a metric.
-If NULL, uses a default that returns 1.0 for all valid predictions.}
+\item{reward_fn}{A function called as \code{reward_fn(prediction, inputs)},
+where \code{prediction} is the attempt's output (a named list) and \code{inputs}
+are the inputs given to \code{\link[=run]{run()}}. It returns a score, usually between 0
+and 1; logical values become 0 or 1. The default gives 1 to every
+prediction, so with the default \code{threshold} the first attempt that
+succeeds is returned and \code{N} only limits retries after errors.
+\code{\link[=as_reward_fn]{as_reward_fn()}} turns a metric into a reward function.}
 
-\item{threshold}{Score threshold for early stopping (default 1.0)}
+\item{threshold}{Score at which to stop early. Default 1.}
 
-\item{fail_count}{Maximum consecutive failures before erroring (default N)}
+\item{fail_count}{Number of consecutive failed attempts after which to
+give up with an error. Defaults to \code{N}.}
 
-\item{...}{Additional arguments passed to the module constructor}
+\item{...}{Passed to the wrapper: \code{chat} (an ellmer Chat, which defaults
+to the wrapped module's chat) or \code{config}.}
 }
 \value{
-A BestOfNModule object
+A module (an R6 object of class \code{BestOfNModule}) with the same
+signature as \code{module}.
 }
 \description{
-Factory function to create a BestOfN wrapper around any module.
-Runs the module N times and returns the best result according to
-a reward function.
+\code{best_of_n()} wraps a module so that each \code{\link[=run]{run()}} calls it up to \code{N} times,
+scores every prediction with \code{reward_fn}, and returns the best one. It
+stops early as soon as a prediction scores at least \code{threshold}.
+}
+\details{
+Each attempt uses its own partition of the response cache, so attempts
+get fresh responses even when caching is on. A failed attempt gives a
+warning and is skipped. If a reward function errors or returns \code{NA}, that
+attempt cannot be chosen; if no attempt has a score, the first successful
+prediction is returned.
+
+The returned module has a \code{get_attempts()} method that lists the attempts
+of the last run (or of all runs, with \code{all = TRUE}) with their scores.
+With \code{.return_format = "structured"}, the metadata also records
+\code{n_attempts}, \code{best_score}, \code{all_scores} and \code{early_stopped}.
 }
 \examples{
-# Create a basic QA module
-qa <- module(signature("question -> answer"))
-
-# Wrap it with best-of-3 selection
-wrapper <- best_of_n(qa, N = 3)
-
-# With a custom reward function
-one_word_reward <- function(pred, inputs) {
-  words <- strsplit(as.character(pred$answer), "\\\\s+")[[1]]
-  if (length(words) == 1) 1.0 else 0.0
+# An offline stand-in for a model that phrases its answer differently
+# each time
+answerer <- module_fn(
+  "question -> answer",
+  function(question) sample(c("Paris", "It is Paris", "The capital is Paris"), 1)
+)
+one_word <- function(prediction, inputs) {
+  length(strsplit(prediction$answer, " ")[[1]]) == 1
 }
-wrapper <- best_of_n(qa, N = 5, reward_fn = one_word_reward)
 
-# Using a metric-based reward function
-wrapper <- best_of_n(
-  qa,
-  N = 3,
-  reward_fn = as_reward_fn(metric_exact_match(field = "answer")),
-  threshold = 1.0
+set.seed(5)
+best <- best_of_n(answerer, N = 5L, reward_fn = one_word)
+run(best, question = "What is the capital of France?")
+best$get_attempts()
+
+\dontrun{
+qa <- module(signature("question -> answer"))
+concise <- best_of_n(qa, N = 3L, reward_fn = one_word)
+run(
+  concise,
+  question = "What is the capital of France?",
+  .llm = ellmer::chat_openai(model = "gpt-6-luna")
 )
 }
+}
+\seealso{
+Other composition:
+\code{\link[=as_reward_fn]{as_reward_fn()}},
+\code{\link[=ensemble]{ensemble()}},
+\code{\link[=pipeline]{pipeline()}},
+\code{\link[=reduce_best_by_metric]{reduce_best_by_metric()}},
+\code{\link[=reduce_first]{reduce_first()}},
+\code{\link[=reduce_majority]{reduce_majority()}},
+\code{\link[=reduce_weighted_vote]{reduce_weighted_vote()}},
+\code{\link[=refine]{refine()}},
+\code{\link[=step]{step()}},
+\code{\link[=with_assertions]{with_assertions()}}
+}
+\concept{composition}

@@ -2,32 +2,53 @@
 % Please edit documentation in R/metrics.R
 \name{metric_contains}
 \alias{metric_contains}
-\title{Create a Contains Metric}
+\title{Metric that checks for a pattern in the output}
 \usage{
 metric_contains(pattern, field = NULL, ignore_case = FALSE, fixed = TRUE)
 }
 \arguments{
-\item{pattern}{The pattern to search for (can be a regex)}
+\item{pattern}{The text to look for; a regular expression when
+\code{fixed = FALSE}.}
 
-\item{field}{Optional field name to extract from structured outputs}
+\item{field}{The output field to search. Give it for outputs with more than
+one field; with \code{NULL}, the whole prediction is searched.}
 
-\item{ignore_case}{Logical, whether to ignore case}
+\item{ignore_case}{If \code{TRUE}, ignore case.}
 
-\item{fixed}{Logical, whether pattern is a fixed string (not regex)}
+\item{fixed}{If \code{TRUE} (the default), match \code{pattern} as plain text.}
 }
 \value{
-A function with signature function(prediction, expected) -> logical
+A function \verb{function(prediction, expected = NULL)} returning
+\code{TRUE} or \code{FALSE}. \code{field} is stored in its \code{"field"} attribute.
 }
 \description{
-Creates a metric function that checks if the prediction contains
-a specific substring or pattern.
+\code{metric_contains()} makes a metric that is \code{TRUE} when the prediction
+contains \code{pattern}. The pattern is fixed when you create the metric: the
+metric ignores its \code{expected} argument, so every row is checked for the
+same pattern. To compare against a column of the data, use
+\code{\link[=metric_exact_match]{metric_exact_match()}}, \code{\link[=metric_f1]{metric_f1()}} or a custom metric.
 }
 \examples{
-# Check for substring
-metric <- metric_contains("positive", ignore_case = TRUE)
-metric("The result is POSITIVE", NULL)  # TRUE
+cites_source <- metric_contains("[source]", field = "answer")
+cites_source(list(answer = "Paris [source]"))
+cites_source(list(answer = "Paris"))
 
-# Regex pattern
-metric <- metric_contains("\\\\d+", fixed = FALSE)
-metric("The answer is 42", NULL)  # TRUE
+# The expected value is ignored
+cites_source(list(answer = "Paris [source]"), data.frame(answer = "Lyon"))
+
+# A regular expression
+has_number <- metric_contains("[0-9]+", field = "answer", fixed = FALSE)
+has_number(list(answer = "The answer is 42"))
 }
+\seealso{
+Other metrics:
+\code{\link[=evaluate]{evaluate()}},
+\code{\link[=metric_custom]{metric_custom()}},
+\code{\link[=metric_exact_match]{metric_exact_match()}},
+\code{\link[=metric_f1]{metric_f1()}},
+\code{\link[=metric_field_match]{metric_field_match()}},
+\code{\link[=metric_threshold]{metric_threshold()}},
+\code{\link[=metric_with_feedback]{metric_with_feedback()}},
+\code{\link[=metric_with_trace]{metric_with_trace()}}
+}
+\concept{metrics}

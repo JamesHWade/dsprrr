@@ -2,41 +2,45 @@
 % Please edit documentation in R/module-base.R
 \name{predict.Module}
 \alias{predict.Module}
-\title{Predict Method for Modules (tidymodels-style)}
+\title{Predict with a module on new data}
 \usage{
 \method{predict}{Module}(object, new_data, .llm = NULL, ...)
 }
 \arguments{
-\item{object}{A dsprrr Module object}
+\item{object}{A module, such as one created with \code{\link[=module]{module()}}.}
 
-\item{new_data}{A data frame or tibble with columns matching the module's
-signature inputs}
+\item{new_data}{A data frame with one column per signature input.}
 
-\item{.llm}{Optional ellmer Chat object. When supplied, it takes precedence
-over the Chat stored on \code{object} and the package default.}
+\item{.llm}{An ellmer Chat to use instead of the one stored on \code{object} or
+the default chat.}
 
-\item{...}{Additional arguments passed to \code{run_dataset()}}
+\item{...}{Passed to \code{\link[=run_dataset]{run_dataset()}}, for example \code{.return_format},
+\code{.concurrency} or \code{.cache}.}
 }
 \value{
-A tibble with the input columns plus prediction results.
-The output column is named according to the signature's output field.
+A tibble with the columns of \code{new_data} plus a \code{result}
+list-column holding each row's output as a named list, exactly as
+returned by \code{\link[=run_dataset]{run_dataset()}}.
 }
 \description{
-S3 predict method for dsprrr Modules, providing a tidymodels-familiar
-interface. This is an alternative to \code{run_dataset()} that matches the
-pattern used by parsnip and other tidymodels packages.
+\code{predict()} on a module is \code{\link[=run_dataset]{run_dataset()}} under the name tidymodels users
+expect: \code{predict(module, new_data)} is \code{run_dataset(module, new_data)}.
 }
 \examples{
-\dontrun{
-# Create a module
-mod <- signature("text -> sentiment") |>
-  module( chat = chat_openai())
-
-# Use predict() like parsnip models
-new_data <- tibble::tibble(text = c("Great!", "Terrible"))
-predict(mod, new_data)
-
-# Equivalent to run_dataset()
-run_dataset(mod, new_data, .llm = mod$chat)
+shout <- module_fn("text -> reply", function(text) toupper(text))
+predictions <- predict(shout, data.frame(text = c("great", "terrible")))
+predictions
+vapply(predictions$result, function(r) r$reply, character(1))
 }
+\seealso{
+Other execution:
+\code{\link[=concurrency_control]{concurrency_control()}},
+\code{\link[=evaluate]{evaluate()}},
+\code{\link[=run]{run()}},
+\code{\link[=run_async]{run_async()}},
+\code{\link[=run_dataset]{run_dataset()}},
+\code{\link[=run_stream]{run_stream()}},
+\code{\link[=stream_async]{stream_async()}},
+\code{\link[=stream_listener]{stream_listener()}}
 }
+\concept{execution}

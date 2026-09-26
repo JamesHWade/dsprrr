@@ -2,7 +2,7 @@
 % Please edit documentation in R/assertion-helpers.R
 \name{assert_not_matches}
 \alias{assert_not_matches}
-\title{Assert Output Does Not Match Pattern}
+\title{Assert that an output does not match a regular expression}
 \usage{
 assert_not_matches(
   field = NULL,
@@ -13,28 +13,44 @@ assert_not_matches(
 )
 }
 \arguments{
-\item{field}{The output field to check. If NULL, checks the entire output.}
+\item{field}{The output field to check. With \code{NULL}, the whole output is
+checked, which suits outputs with a single field. A missing field fails
+the check.}
 
-\item{pattern}{The regular expression pattern that must NOT match.}
+\item{pattern}{A regular expression (Perl syntax) that must not match.}
 
-\item{message}{Optional custom error message. If NULL, generates a default.}
+\item{message}{The message shown when the check fails, which
+\code{\link[=with_assertions]{with_assertions()}} also sends back to the model on a retry. With \code{NULL},
+a message naming the field and pattern.}
 
-\item{ignore_case}{Logical. If TRUE, matching is case-insensitive. Default FALSE.}
+\item{ignore_case}{If \code{TRUE}, ignore case when matching.}
 
-\item{type}{"assert" for hard assertion (default), "suggest" for soft suggestion.}
+\item{type}{\code{"assert"} (the default) for a hard assertion, which makes
+\code{\link[=with_assertions]{with_assertions()}} retry when it fails, or \code{"suggest"} for a soft one,
+which only gives a warning.}
 }
 \value{
-An Assertion object
+An assertion for \code{\link[=assertion_set]{assertion_set()}} or \code{\link[=with_assertions]{with_assertions()}}.
 }
 \description{
-Create an assertion that validates the output does NOT match a regular expression.
+\code{assert_not_matches()} checks that an output field does not match a
+Perl-compatible regular expression. A missing field passes.
 }
 \examples{
-\dontrun{
-# Must not contain URLs
-assert_not_matches("answer", "https?://", "Must not contain URLs")
-
-# Must not contain code blocks
-assert_not_matches("summary", "```", "Must not contain code blocks")
+assert_not_matches("answer", "https?://", "Do not include links")
+assert_not_matches("summary", "```", "Do not include code blocks")
 }
+\seealso{
+Other assertions:
+\code{\link[=assert_contains]{assert_contains()}},
+\code{\link[=assert_custom]{assert_custom()}},
+\code{\link[=assert_length]{assert_length()}},
+\code{\link[=assert_matches]{assert_matches()}},
+\code{\link[=assert_not_contains]{assert_not_contains()}},
+\code{\link[=assert_not_empty]{assert_not_empty()}},
+\code{\link[=assert_one_of]{assert_one_of()}},
+\code{\link[=assert_range]{assert_range()}},
+\code{\link{assertions}},
+\code{\link[=with_assertions]{with_assertions()}}
 }
+\concept{assertions}

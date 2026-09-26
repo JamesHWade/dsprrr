@@ -2,7 +2,7 @@
 % Please edit documentation in R/signature-transforms.R
 \name{with_reasoning}
 \alias{with_reasoning}
-\title{Add Chain-of-Thought Reasoning to a Signature}
+\title{Add a reasoning field to a signature}
 \usage{
 with_reasoning(
   x,
@@ -13,51 +13,49 @@ with_reasoning(
 )
 }
 \arguments{
-\item{x}{A signature object created by \code{\link[=signature]{signature()}}, or string notation
-such as \code{"question -> answer"}.}
+\item{x}{A signature from \code{\link[=signature]{signature()}}, or a signature string such as
+\code{"question -> answer"}.}
 
-\item{prefix}{Character. The prefix for the reasoning field description.
-Default uses DSPy-style "Let's think step by step" prompt.}
+\item{prefix}{Start of the reasoning field's description. The description
+reads "Reasoning: \code{prefix} produce the \code{fields}.", where \code{fields} names
+the original output fields.}
 
-\item{reasoning_field}{Character. Name of the reasoning field to add.
-Default is "reasoning".}
+\item{reasoning_field}{Name of the added field.}
 
-\item{instructions}{Character. Optional new instructions for the signature.
-If NULL (default), original instructions are preserved with reasoning context.}
+\item{instructions}{New instructions. With \code{NULL} (the default), existing
+instructions get " Think through your reasoning step by step before
+providing the answer." appended, and empty instructions are replaced by
+"Given \code{inputs}, think step by step and produce \code{outputs}."}
 
-\item{...}{Additional arguments (unused)}
+\item{...}{Ignored.}
 }
 \value{
-A new signature object with a reasoning field added to its output
-type.
+A new signature whose output is an object with the reasoning field
+first, followed by the original output fields. A bare output type becomes
+a field named \code{answer}.
 }
 \description{
-Transforms a signature to include a reasoning field before the original output.
-This implements the Chain-of-Thought prompting pattern where the model is
-asked to "show its work" before providing the final answer.
-}
-\details{
-The transform works by:
-\enumerate{
-\item Extracting existing output fields from the signature's output_type
-\item Creating a new output_type with reasoning as the first field
-\item Adding appropriate description to guide the model
-}
-
-The reasoning field is always placed first to encourage the model to
-reason before answering (per Chain-of-Thought research).
+\code{with_reasoning()} adds a string output field, \code{reasoning} by default,
+before the existing output fields, so the model writes out its reasoning
+before it answers (chain-of-thought prompting). \code{\link[=chain_of_thought]{chain_of_thought()}} builds
+a module from the result.
 }
 \examples{
-# Basic usage with string notation
-sig <- with_reasoning("question -> answer")
+with_reasoning("question -> answer")
 
-# Custom prefix
+# The prefix goes into the description of the reasoning field
 sig <- with_reasoning(
-  "math_problem -> solution",
-  prefix = "Let me solve this step by step:"
+  "math_problem -> solution: float",
+  prefix = "Let me solve this step by step, then"
 )
-
-# With explicit signature
-sig <- signature("context, question -> answer")
-cot_sig <- with_reasoning(sig)
+sig@output_type@properties$reasoning@description
 }
+\seealso{
+Other signatures:
+\code{\link[=has_reasoning]{has_reasoning()}},
+\code{\link[=input]{input()}},
+\code{\link[=signature]{signature()}},
+\code{\link[=with_instructions]{with_instructions()}},
+\code{\link[=without_reasoning]{without_reasoning()}}
+}
+\concept{signatures}

@@ -2,7 +2,7 @@
 % Please edit documentation in R/ellmer.R
 \name{as_ellmer_tool}
 \alias{as_ellmer_tool}
-\title{Convert a DSPrrr Module to an ellmer Tool}
+\title{Turn a module into an ellmer tool}
 \usage{
 as_ellmer_tool(
   module,
@@ -17,73 +17,75 @@ as_ellmer_tool(
 )
 }
 \arguments{
-\item{module}{A DSPrrr module (created with \code{\link[=module]{module()}}).}
+\item{module}{A module, such as one created with \code{\link[=module]{module()}} or
+\code{\link[=module_fn]{module_fn()}}.}
 
-\item{name}{Optional tool name. Defaults to a name derived from the signature.}
+\item{name}{Tool name. Defaults to \code{dsprrr_} followed by the input field
+names.}
 
-\item{description}{Optional tool description. Defaults to the signature's
-instructions or a generated description.}
+\item{description}{Tool description for the model. Defaults to the
+signature's instructions.}
 
-\item{.llm}{Optional ellmer Chat object for the module to use when called.
-If not provided, the module's stored chat or default chat is used.}
+\item{.llm}{The chat the module uses when the tool is called. With \code{NULL},
+the module's own chat or the default chat (see \code{\link[=get_default_chat]{get_default_chat()}}).}
 
-\item{annotations}{Optional ellmer tool annotations list, passed through to
-\code{\link[ellmer:tool]{ellmer::tool()}}. This lets downstream runtimes reason about properties
-such as read-only or destructive behavior without dsprrr depending on them.}
+\item{annotations}{A list of ellmer tool annotations, passed to
+\code{\link[ellmer:tool]{ellmer::tool()}}, for example to mark the tool read-only.}
 
-\item{output}{Tool result serialization mode:
+\item{output}{How the tool returns its result:
 \itemize{
-\item \code{"auto"} returns the native module result with fields ordered to match
-the signature.
-\item \code{"json"} returns compact JSON with signature-ordered top-level fields.
-\item \code{"text"} returns the primary output field as text when possible, or JSON
-text otherwise.
-\item \code{"raw"} returns the native module result unchanged, without field
-reordering.
+\item \code{"auto"} (the default): the module's output with fields in signature
+order.
+\item \code{"json"}: compact JSON with fields in signature order.
+\item \code{"text"}: the main output field as text if possible, otherwise JSON.
+\item \code{"raw"}: the module's output unchanged.
 }}
 
-\item{copy}{Whether tool calls should use the supplied module directly
-(\code{"none"}) or a fresh deep copy (\code{"deep"}).}
+\item{copy}{\code{"none"} (the default) calls \code{module} itself, so its traces
+accumulate; \code{"deep"} calls a fresh deep copy each time.}
 
-\item{error}{Tool error handling:
+\item{error}{What happens when the module fails:
 \itemize{
-\item \code{"reject"} (default) returns a structured recoverable error observation
-suitable for surfacing back to an LLM. The condition class is preserved
-in \verb{$type}.
-\item \code{"abort"} propagates the original error to the caller.
-\item \code{"return"} signals the error as a classed \code{dsprrr_tool_error} condition
-carrying the structured observation in \verb{$payload}. Callers can install
-a \code{withCallingHandlers()} to inspect the failure without aborting.
+\item \code{"reject"} (the default): the tool returns an error description the
+model can read and react to. Its \verb{$type} holds the condition class.
+\item \code{"abort"}: the error propagates to the caller.
+\item \code{"return"}: a \code{dsprrr_tool_error} condition carrying the error
+description in \verb{$payload} is signalled, which a
+\code{\link[=withCallingHandlers]{withCallingHandlers()}} handler can inspect.
 }}
 
-\item{trace_context}{A named, JSON-compatible list captured by the tool and
-propagated to dsprrr execution metadata and traces. The tool's declared
-result schema is unchanged.}
+\item{trace_context}{A named, JSON-compatible list recorded in the
+metadata and traces of every call made through the tool, as in \code{\link[=run]{run()}}.}
 }
 \value{
-A \code{ToolDef} object from ellmer, suitable for use with
-\code{ellmer::Chat$register_tool()}.
+An ellmer tool definition (\code{ToolDef}) for \code{Chat$register_tool()} or
+the \code{tools} argument of \code{\link[=react]{react()}}. It can also be called directly with
+the input fields as arguments.
 }
 \description{
-Creates an ellmer-compatible tool from a dsprrr module. This allows modules
-to be used as tools in ellmer Chat objects, enabling agentic workflows where
-the LLM can call dsprrr modules as part of its reasoning.
+\code{as_ellmer_tool()} wraps a module as an ellmer tool, so a Chat, or a
+\code{\link[=react]{react()}} agent, can call it during a conversation. The tool's arguments
+are the module's input fields, with their types and descriptions.
 }
 \examples{
+shout <- module_fn("text -> reply", function(text) toupper(text))
+shout_tool <- as_ellmer_tool(shout, name = "shout", description = "Upper-case text.")
+shout_tool(text = "quiet please")
+
 \dontrun{
-# Create a sentiment analysis module
-sentiment_mod <- module(
+sentiment <- module(
   signature("text -> sentiment: enum('positive', 'negative', 'neutral')")
 )
+sentiment_tool <- as_ellmer_tool(sentiment, name = "analyze_sentiment")
 
-# Convert to ellmer tool
-sentiment_tool <- as_ellmer_tool(sentiment_mod, name = "analyze_sentiment")
-
-# Register with a Chat for agentic use
-chat <- ellmer::chat_openai()
+chat <- ellmer::chat_openai(model = "gpt-6-luna")
 chat$register_tool(sentiment_tool)
-
-# Now the LLM can use the sentiment tool
-chat$chat("Analyze the sentiment of: 'I love this product!'")
+chat$chat("What is the sentiment of: 'I love this product!'")
 }
 }
+\seealso{
+Other integrations:
+\code{\link[=create_search_tool]{create_search_tool()}},
+\code{\link[=ragnar_tool]{ragnar_tool()}}
+}
+\concept{integrations}

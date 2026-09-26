@@ -2,7 +2,7 @@
 % Please edit documentation in R/assertion-helpers.R
 \name{assert_range}
 \alias{assert_range}
-\title{Assert Numeric Value in Range}
+\title{Assert that a numeric output is within a range}
 \usage{
 assert_range(
   field = NULL,
@@ -12,26 +12,38 @@ assert_range(
 )
 }
 \arguments{
-\item{field}{The output field to check. If NULL, checks the entire output.}
+\item{field}{The output field to check. With \code{NULL}, the whole output is
+checked, which suits outputs with a single field. A missing field fails
+the check.}
 
-\item{min}{Minimum value (inclusive). Default NULL (no minimum).}
+\item{min, max}{Inclusive bounds. Give at least one.}
 
-\item{max}{Maximum value (inclusive). Default NULL (no maximum).}
-
-\item{type}{"assert" for hard assertion (default), "suggest" for soft suggestion.}
+\item{type}{\code{"assert"} (the default) for a hard assertion, which makes
+\code{\link[=with_assertions]{with_assertions()}} retry when it fails, or \code{"suggest"} for a soft one,
+which only gives a warning.}
 }
 \value{
-An Assertion object
+An assertion for \code{\link[=assertion_set]{assertion_set()}} or \code{\link[=with_assertions]{with_assertions()}}.
 }
 \description{
-Create an assertion that validates a numeric output value is within a range.
+\code{assert_range()} checks that an output field, converted to a number, lies
+within \code{min} and \code{max}. A value that cannot be converted fails the check.
 }
 \examples{
-\dontrun{
-# Score must be between 0 and 100
 assert_range("score", min = 0, max = 100)
-
-# Confidence must be positive
-assert_range("confidence", min = 0)
+assert_range("confidence", min = 0, type = "suggest")
 }
+\seealso{
+Other assertions:
+\code{\link[=assert_contains]{assert_contains()}},
+\code{\link[=assert_custom]{assert_custom()}},
+\code{\link[=assert_length]{assert_length()}},
+\code{\link[=assert_matches]{assert_matches()}},
+\code{\link[=assert_not_contains]{assert_not_contains()}},
+\code{\link[=assert_not_empty]{assert_not_empty()}},
+\code{\link[=assert_not_matches]{assert_not_matches()}},
+\code{\link[=assert_one_of]{assert_one_of()}},
+\code{\link{assertions}},
+\code{\link[=with_assertions]{with_assertions()}}
 }
+\concept{assertions}

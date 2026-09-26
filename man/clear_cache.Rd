@@ -2,29 +2,45 @@
 % Please edit documentation in R/cache.R
 \name{clear_cache}
 \alias{clear_cache}
-\title{Clear dsprrr Cache}
+\title{Clear the response cache}
 \usage{
 clear_cache(which = c("all", "memory", "disk"))
 }
 \arguments{
-\item{which}{Character. Which cache tier to clear: \code{"all"} (default),
-\code{"memory"}, or \code{"disk"}.}
+\item{which}{Which tier to clear: \code{"all"} (the default), \code{"memory"} or
+\code{"disk"}.}
 }
 \value{
-Invisibly returns \code{TRUE} on success.
+\code{TRUE}, invisibly. If a tier cannot be cleaned up, the cache is
+still detached and an error lists the tiers that failed.
 }
 \description{
-Clear cached LLM responses. Can clear memory cache, disk cache, or both.
+\code{clear_cache()} deletes cached model responses from memory, from disk or
+both, and resets the hit and miss counts reported by \code{\link[=cache_stats]{cache_stats()}}.
+}
+\details{
+The disk tier is cleared only if it has been opened in this session,
+which happens at the first cached model call. In a fresh session,
+\code{clear_cache()} leaves the directory on disk alone; delete the directory
+shown by \code{\link[=dsprrr_sitrep]{dsprrr_sitrep()}} to remove it.
 }
 \examples{
-\dontrun{
-# Clear all caches
-clear_cache()
-
-# Clear only memory cache
 clear_cache("memory")
+cache_stats()
 
-# Clear only disk cache
-clear_cache("disk")
+\dontrun{
+# Delete every cached response, on disk too
+clear_cache()
 }
 }
+\seealso{
+Other configuration:
+\code{\link[=cache_stats]{cache_stats()}},
+\code{\link[=configure_cache]{configure_cache()}},
+\code{\link[=dsp_configure]{dsp_configure()}},
+\code{\link[=dsprrr_sitrep]{dsprrr_sitrep()}},
+\code{\link[=get_default_chat]{get_default_chat()}},
+\code{\link[=is_reasoning_model]{is_reasoning_model()}},
+\code{\link[=with_lm]{with_lm()}}
+}
+\concept{configuration}

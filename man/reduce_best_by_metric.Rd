@@ -2,32 +2,55 @@
 % Please edit documentation in R/module-ensemble.R
 \name{reduce_best_by_metric}
 \alias{reduce_best_by_metric}
-\title{Best by Metric Reducer}
+\title{Pick the ensemble output that scores best against a known answer}
 \usage{
 reduce_best_by_metric(metric, maximize = TRUE)
 }
 \arguments{
-\item{metric}{A metric function created with \verb{metric_*()} functions}
+\item{metric}{A metric called as \code{metric(output, expected)}, such as
+\code{metric_f1(field = "answer")}. With a built-in metric and a \code{field}, set
+the expected value as a list containing that field.}
 
-\item{maximize}{If TRUE (default), return highest-scoring output.
-If FALSE, return lowest-scoring output.}
+\item{maximize}{If \code{TRUE} (the default), return the highest-scoring output;
+if \code{FALSE}, the lowest.}
 }
 \value{
-A reduce function for use with \code{ensemble()}
+A function \verb{function(outputs, weights = NULL)} for the \code{reduce_fn}
+argument of \code{\link[=ensemble]{ensemble()}}, with a \code{"set_expected"} attribute that stores
+the expected value for later calls.
 }
 \description{
-Creates a reduce function that scores each output using a metric function
-and returns the best-scoring output. Requires expected value to be set
-via the \code{set_expected} attribute before calling.
+\code{reduce_best_by_metric()} makes a reducer for \code{\link[=ensemble]{ensemble()}} that scores
+every output with \code{metric} against an expected value and returns the best
+one. The expected value is not part of the inputs: set it with
+\code{attr(reducer, "set_expected")(value)} before each \code{\link[=run]{run()}}, which makes
+this reducer useful when you know the answer, for example while studying
+how ensemble members differ on labelled data.
+}
+\details{
+Calling the reducer on more than one output before an expected value is
+set is an error. A metric error gives a warning and leaves that output
+out; if no output can be scored, the reducer errors.
 }
 \examples{
-\dontrun{
-# Score each output and return best
-ens <- ensemble(
-  modules,
-  reduce_fn = reduce_best_by_metric(
-    metric = metric_exact_match(field = "answer")
-  )
-)
+pick <- reduce_best_by_metric(metric_f1(field = "answer"))
+attr(pick, "set_expected")(list(answer = "the capital is Paris"))
+pick(list(
+  list(answer = "Paris"),
+  list(answer = "the capital of France is Paris")
+))
 }
+\seealso{
+Other composition:
+\code{\link[=as_reward_fn]{as_reward_fn()}},
+\code{\link[=best_of_n]{best_of_n()}},
+\code{\link[=ensemble]{ensemble()}},
+\code{\link[=pipeline]{pipeline()}},
+\code{\link[=reduce_first]{reduce_first()}},
+\code{\link[=reduce_majority]{reduce_majority()}},
+\code{\link[=reduce_weighted_vote]{reduce_weighted_vote()}},
+\code{\link[=refine]{refine()}},
+\code{\link[=step]{step()}},
+\code{\link[=with_assertions]{with_assertions()}}
 }
+\concept{composition}

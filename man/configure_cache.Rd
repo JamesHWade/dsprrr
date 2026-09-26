@@ -2,7 +2,7 @@
 % Please edit documentation in R/cache.R
 \name{configure_cache}
 \alias{configure_cache}
-\title{Configure dsprrr Cache}
+\title{Configure the response cache}
 \usage{
 configure_cache(
   enable = TRUE,
@@ -16,104 +16,113 @@ configure_cache(
 )
 }
 \arguments{
-\item{enable}{Logical. Master switch to enable/disable all caching.
-Default \code{TRUE}.}
+\item{enable}{Turn all caching on or off.}
 
-\item{enable_memory}{Logical. Enable in-memory LRU cache. Default \code{TRUE}.}
+\item{enable_memory}{Use the memory cache.}
 
-\item{enable_disk}{Logical. Enable persistent disk cache. Default \code{TRUE}.}
+\item{enable_disk}{Use the disk cache.}
 
-\item{disk_path}{Character. Path for disk cache directory.
-Defaults to \code{tools::R_user_dir("dsprrr", "cache")}, unless overridden by
-\code{DSPRRR_CACHE_PATH}.}
+\item{disk_path}{Directory for the disk cache. Defaults to
+\code{tools::R_user_dir("dsprrr", "cache")}, or \code{DSPRRR_CACHE_PATH} when set.}
 
-\item{disk_private}{Logical. Enforce private cache storage. On Unix, require
-effective ownership and exact private POSIX modes for the directory and
-response files, plus root-or-effective ownership for every existing
-ancestor. On Windows, use inherited ACLs and report privacy as unverified.
-Set to \code{FALSE} only for an explicitly trusted shared cache. Default \code{TRUE}.}
+\item{disk_private}{If \code{TRUE} (the default), enforce the ownership and
+permission checks described under Privacy. \code{FALSE} is only for a trusted
+shared cache.}
 
-\item{memory_max_entries}{Integer. Maximum entries in memory cache.
-Default \code{1000L}.}
+\item{memory_max_entries}{Maximum number of responses in the memory cache
+(least recently used ones are dropped first).}
 
-\item{disk_max_size}{Numeric. Maximum disk cache size in bytes.
-Default \code{500 * 1024^2} (500MB).}
+\item{disk_max_size}{Maximum size of the disk cache in bytes (500 MB by
+default).}
 
-\item{disk_max_age}{Numeric. Maximum age in seconds for disk cache entries.
-Default \code{Inf} (no age limit).}
+\item{disk_max_age}{Maximum age of disk entries in seconds. \code{Inf} (the
+default) keeps them until they are pruned for size.}
 }
 \value{
-Invisibly returns the previous cache configuration as a list.
+The previous settings, invisibly, as a list that can be passed back
+with \code{do.call(configure_cache, old)}. \code{NULL} if the settings had not been
+read yet in this session.
 }
 \description{
-Configure the caching behavior for LLM responses. By default, both memory
-and disk caching are enabled.
+dsprrr caches model responses, so repeating a request returns the stored
+answer without calling the model. That makes re-running code faster and
+cheaper. There are two tiers, both on by default: a memory cache for the
+session and a disk cache that lasts across sessions. \code{configure_cache()}
+changes the settings for the rest of the session.
 }
 \details{
-The cache stores versioned envelopes containing parsed LLM responses and,
-when needed, semantic conversation-turn deltas used to restore an ellmer
-Chat after a cache hit. Although cache keys hash request identity, envelope
-values may contain raw request content and model outputs. Treat persistent
-cache files as sensitive data.
+\subsection{What counts as the same request}{
 
-\strong{Disk privacy}: By default, the disk cache uses the platform-specific
-per-user cache directory. On Unix, dsprrr verifies effective ownership,
-canonical path identity, a cache directory with exactly mode \code{0700}, and
-response files with exactly mode \code{0600} before serialized reads and writes.
-Every existing ancestor must be owned by root or the effective user,
-including sticky shared parents. Unsafe disk caches fall back to memory when
-enabled; otherwise no cache tier remains active.
-On Windows, the per-user directory inherits the account's filesystem ACLs;
-base R cannot verify that those ACLs are owner-only. Set \code{disk_private = FALSE} only for a cache whose writers and readers are all trusted.
+A cached response is used only when everything that could change the
+answer matches: provider, model, parameters such as temperature, system
+prompt, conversation history, prompt and output schema. \code{\link[=best_of_n]{best_of_n()}},
+\code{\link[=refine]{refine()}} and \code{\link[=with_assertions]{with_assertions()}} attempts, and \code{\link[=evaluate]{evaluate()}} epochs after
+the first, use separate cache partitions, so they get fresh responses.
+Chats with registered tools are never cached.
 
-Existing Unix caches must already use exactly mode \code{0700} for the directory
-and \code{0600} for every response file; special mode bits are rejected. Caches
-with different modes, untrusted ancestors, symbolic links, non-regular
-filesystem entries, or unverifiable ownership are not changed or read;
-dsprrr uses memory caching when enabled and otherwise runs uncached. A shared
-writable cache could replace an RDS response envelope and must be treated as
-untrusted serialized input.
+To skip the cache for one call, pass \code{.cache = FALSE} to \code{\link[=run]{run()}},
+\code{\link[=run_dataset]{run_dataset()}} or \code{\link[=evaluate]{evaluate()}}. To turn caching off for a whole
+environment, for example on CI, set the environment variable
+\code{DSPRRR_CACHE_ENABLED=false} (or \code{0}, \code{no}, \code{off}); \code{DSPRRR_CACHE_PATH}
+moves the default disk location.
+}
 
-POSIX modes cannot describe every filesystem policy. dsprrr does not inspect
-extended ACLs, administrators can still access owner files, and some network
-filesystems do not honor local mode changes. A same-account process can also
-race path checks and file opens; dsprrr checks identity before and after I/O
-but base R does not expose descriptor-level \code{openat()}/\code{fstat()} guarantees.
-Avoid shared or network cache paths for sensitive workloads. In CI, disable
-caching with \code{DSPRRR_CACHE_ENABLED=false} or use a job-specific
-\code{DSPRRR_CACHE_PATH}.
+\subsection{Privacy}{
 
-\strong{Environment variable}: Set \code{DSPRRR_CACHE_ENABLED=false} (or \code{0}, \code{no},
-\code{off}) to globally disable caching, useful for CI/testing environments.
+Cache files hold the requests and the parsed responses, and, where
+needed, the conversation turns used to restore a Chat after a cache hit.
+Treat the disk cache as sensitive data.
 
-\strong{Git}: The default cache is outside the project. If you explicitly use a
-project-local path, add it to \code{.gitignore}, for example:
+The default disk location is the per-user cache directory from
+\code{\link[tools:R_user_dir]{tools::R_user_dir()}}. On Unix, dsprrr reads and writes it only if the
+directory has mode \code{0700}, every response file has mode \code{0600}, the
+effective user owns them, and every existing parent directory belongs to
+root or that user. A cache that fails these checks (other modes, special
+mode bits, symbolic links, files that are not regular, or ownership that
+cannot be verified) is neither changed nor read: dsprrr falls back to the
+memory cache if it is enabled and otherwise runs uncached. On Windows, the
+directory inherits the account's access rules, which base R cannot verify.
 
-\if{html}{\out{<div class="sourceCode">}}\preformatted{# dsprrr LLM response cache
-.dsprrr_cache/
-}\if{html}{\out{</div>}}
+These checks cannot see extended ACLs, stop administrators, or cover
+network file systems that ignore local modes, and a process running as
+the same user could swap files between a check and a read. Avoid shared or
+network cache paths for sensitive work. Set \code{disk_private = FALSE} only
+for a cache whose readers and writers you all trust: a writable shared
+cache could replace a stored response, which dsprrr reads back with
+\code{readRDS()}.
+
+If you point the disk cache inside a project, add the directory (for
+example \verb{.dsprrr_cache/}) to \code{.gitignore}.
+}
 }
 \examples{
-\dontrun{
-# Use defaults (caching enabled)
-configure_cache()
+cache_stats()
 
-# Disable disk cache (memory only)
+# Turn caching off for a while, then restore the previous settings
+old <- configure_cache(enable = FALSE)
+cache_stats()$enabled
+do.call(configure_cache, old)
+cache_stats()$enabled
+
+\dontrun{
+# Keep responses in memory only
 configure_cache(enable_disk = FALSE)
 
-# Disable all caching
-configure_cache(enable = FALSE)
+# A larger cache in another directory
+configure_cache(disk_path = "~/.dsprrr_cache", disk_max_size = 1024^3)
 
-# Custom disk location and size
-configure_cache(
-  disk_path = "~/.dsprrr_cache",
-  disk_max_size = 1024^3  # 1GB
-)
-
-# Trusted shared caches require an explicit privacy opt-out
-configure_cache(
-  disk_path = "/srv/trusted-team/dsprrr-cache",
-  disk_private = FALSE
-)
+# A shared cache that every user of the directory trusts
+configure_cache(disk_path = "/srv/team/dsprrr-cache", disk_private = FALSE)
 }
 }
+\seealso{
+Other configuration:
+\code{\link[=cache_stats]{cache_stats()}},
+\code{\link[=clear_cache]{clear_cache()}},
+\code{\link[=dsp_configure]{dsp_configure()}},
+\code{\link[=dsprrr_sitrep]{dsprrr_sitrep()}},
+\code{\link[=get_default_chat]{get_default_chat()}},
+\code{\link[=is_reasoning_model]{is_reasoning_model()}},
+\code{\link[=with_lm]{with_lm()}}
+}
+\concept{configuration}

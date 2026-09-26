@@ -2,28 +2,40 @@
 % Please edit documentation in R/assertion-helpers.R
 \name{assert_not_empty}
 \alias{assert_not_empty}
-\title{Assert Output is Not Empty}
+\title{Assert that an output is not empty}
 \usage{
 assert_not_empty(field = NULL, type = c("assert", "suggest"))
 }
 \arguments{
-\item{field}{The output field to check. If NULL, checks the entire output.}
+\item{field}{The output field to check. With \code{NULL}, the whole output is
+checked, which suits outputs with a single field. A missing field fails
+the check.}
 
-\item{type}{"assert" for hard assertion (default), "suggest" for soft suggestion.}
+\item{type}{\code{"assert"} (the default) for a hard assertion, which makes
+\code{\link[=with_assertions]{with_assertions()}} retry when it fails, or \code{"suggest"} for a soft one,
+which only gives a warning.}
 }
 \value{
-An Assertion object
+An assertion for \code{\link[=assertion_set]{assertion_set()}} or \code{\link[=with_assertions]{with_assertions()}}.
 }
 \description{
-Create an assertion that validates the output is not empty or whitespace-only.
+\code{assert_not_empty()} checks that an output field has at least one
+character that is not white space.
 }
 \examples{
-\dontrun{
-# Answer must not be empty
 assert_not_empty("answer")
-
-# All fields must have content
-assert_not_empty("summary")
-assert_not_empty("conclusion")
 }
+\seealso{
+Other assertions:
+\code{\link[=assert_contains]{assert_contains()}},
+\code{\link[=assert_custom]{assert_custom()}},
+\code{\link[=assert_length]{assert_length()}},
+\code{\link[=assert_matches]{assert_matches()}},
+\code{\link[=assert_not_contains]{assert_not_contains()}},
+\code{\link[=assert_not_matches]{assert_not_matches()}},
+\code{\link[=assert_one_of]{assert_one_of()}},
+\code{\link[=assert_range]{assert_range()}},
+\code{\link{assertions}},
+\code{\link[=with_assertions]{with_assertions()}}
 }
+\concept{assertions}

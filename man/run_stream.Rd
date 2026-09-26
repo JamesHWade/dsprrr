@@ -2,83 +2,84 @@
 % Please edit documentation in R/async.R
 \name{run_stream}
 \alias{run_stream}
-\title{Run a Module with Streaming Listeners and Status Events}
+\title{Run a module with streaming callbacks}
 \usage{
 run_stream(module, ..., .llm = NULL, listeners = list(), on_status = NULL)
 }
 \arguments{
-\item{module}{A dsprrr Module or pipeline.}
+\item{module}{A module or a pipeline from \code{\link[=pipeline]{pipeline()}}.}
 
-\item{...}{Named inputs matching the module's signature.}
+\item{...}{Inputs named after the signature's input fields.}
 
-\item{.llm}{Optional ellmer Chat object.}
+\item{.llm}{An ellmer Chat; see \code{\link[=run]{run()}} for how it is chosen when
+omitted.}
 
-\item{listeners}{A \code{\link[=stream_listener]{stream_listener()}} or list of them.}
+\item{listeners}{A \code{\link[=stream_listener]{stream_listener()}}, or a list of them.}
 
-\item{on_status}{Optional function called with status event lists.}
+\item{on_status}{A function called with a list for each progress event
+(see below), or \code{NULL}.}
 }
 \value{
-The final output (named list for structured outputs, character
-for plain string outputs), invisibly.
+The output, invisibly, in the same form as \code{\link[=run]{run()}} returns it.
 }
 \description{
-Executes a module (or pipeline) while streaming output to per-field
-listeners and emitting status events. This is dsprrr's analogue of
-DSPy's \code{streamify()}: use it to surface intermediate progress and
-incremental output in Shiny apps or console tools.
-
-For pipelines, a status event is emitted as each step starts and ends,
-and listeners fire for matching fields at any step — not just the final
-one.
+\code{run_stream()} runs a module or pipeline like \code{\link[=run]{run()}}, but sends output
+text to \code{\link[=stream_listener]{stream_listener()}} callbacks as it is produced and reports
+progress through \code{on_status}. It is dsprrr's counterpart to DSPy's
+\code{streamify()}, for showing progress in Shiny apps or at the console. In a
+pipeline, listeners fire for matching fields at every step, not only the
+last.
 }
 \details{
-\subsection{Streaming behavior}{
-\itemize{
-\item Modules whose output is a single string field are token-streamed:
-matching listeners receive text chunks as they arrive, and the
-accumulated text becomes the field's value. Token streaming uses the
-provider's text mode and requires the \code{coro} package.
-\item Modules with multiple or non-string output fields run normally;
-matching listeners fire once with the completed value.
-\item Streaming execution does not record traces and bypasses the response
-cache.
-}
-}
+\subsection{Streaming}{
 
-\subsection{Specialized modules}{
+A prediction module (from \code{\link[=module]{module()}} or \code{\link[=chain_of_thought]{chain_of_thought()}}) whose only
+output field is a string is streamed chunk by chunk when a listener asks
+for that field; the collected text becomes the field's value. This needs
+the coro package. Any other module runs normally, and matching listeners
+receive the complete value once. When coro is installed, a listener on the
+single string field of a module that is not a prediction module (such as
+\code{\link[=module_fn]{module_fn()}} or \code{\link[=react]{react()}}) is an error, raised before any request is
+made.
 
-One-shot fallback execution uses each module's own \code{forward()} method, so it
-remains available to specialized modules when no matching token listener is
-active or the output is not token-streamable. Actual token streaming uses a
-direct provider path and is limited to ordinary \code{PredictModule} steps.
-Unsupported token-stream requests are rejected before provider work.
+Streaming runs do not use the response cache and record no traces.
 }
 
 \subsection{Status events}{
 
-When \code{on_status} is provided, it is called with a list describing each
-event:
+\code{on_status} receives lists with these elements:
 \itemize{
-\item \code{type}: one of \code{"step_start"}, \code{"field_start"}, \code{"field_end"},
-\code{"field_complete"}, \code{"step_end"}
-\item \code{step}, \code{n_steps}: position within the pipeline (both \code{1} for a
-single module)
-\item \code{module}: class name of the executing module
-\item \code{field}: the output field name (field events only)
+\item \code{type}: \code{"step_start"}, \code{"field_start"}, \code{"field_end"} (around streamed
+text), \code{"field_complete"} (a field delivered in one piece) or
+\code{"step_end"}.
+\item \code{step} and \code{n_steps}: the step's position in a pipeline; both are 1 for a
+single module.
+\item \code{module}: the class of the module running the step.
+\item \code{field}: the output field, for field events.
 }
 }
 }
 \examples{
 \dontrun{
-sig <- signature("question -> answer")
-mod <- module(sig)
-
+writer <- module(signature("question -> answer"))
 run_stream(
-  mod,
-  question = "Tell me a story",
-  .llm = ellmer::chat_openai(),
+  writer,
+  question = "Tell me a short story about a lighthouse.",
+  .llm = ellmer::chat_openai(model = "gpt-6-luna"),
   listeners = stream_listener("answer", function(chunk) cat(chunk)),
-  on_status = function(ev) message("[", ev$type, "] step ", ev$step)
+  on_status = function(event) message("[", event$type, "] step ", event$step)
 )
 }
 }
+\seealso{
+Other execution:
+\code{\link[=concurrency_control]{concurrency_control()}},
+\code{\link[=evaluate]{evaluate()}},
+\code{\link[=predict.Module]{predict.Module()}},
+\code{\link[=run]{run()}},
+\code{\link[=run_async]{run_async()}},
+\code{\link[=run_dataset]{run_dataset()}},
+\code{\link[=stream_async]{stream_async()}},
+\code{\link[=stream_listener]{stream_listener()}}
+}
+\concept{execution}

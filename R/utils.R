@@ -25,7 +25,7 @@ with_rollout_scope <- function(scope, code) {
   if (!is.null(scope)) {
     .dsprrr_env$rollout_scope <- compose_rollout_id(old, scope)
   }
-  on.exit(.dsprrr_env$rollout_scope <- old, add = TRUE)
+  on.exit(assign("rollout_scope", old, envir = .dsprrr_env), add = TRUE)
   force(code)
 }
 
@@ -133,7 +133,7 @@ eval_vignette <- function() {
 #' Check for ellmer credentials
 #'
 #' @return Logical indicating if any LLM API keys are available
-#' @keywords internal
+#' @noRd
 has_ellmer_credentials <- function() {
   any(
     nzchar(Sys.getenv("OPENAI_API_KEY")),
@@ -468,20 +468,29 @@ input_value_matches_type <- function(value, expected_type) {
   TRUE
 }
 
-#' Check if a model is a reasoning model
+#' Test whether a model name is a reasoning model
 #'
-#' Reasoning models (OpenAI o1/o3/o4-mini, GPT-5 series) use different
-#' parameters than traditional models. They don't support `temperature`
-#' or `top_p`, instead using `reasoning_effort` (low/medium/high).
+#' @description
+#' `is_reasoning_model()` guesses from its name whether a model is a
+#' reasoning model: OpenAI's o-series (`o1`, `o3`, `o4-mini`, ...), the
+#' GPT-5 and GPT-6 families (such as `gpt-6-luna`), and any name containing
+#' "reasoning". Reasoning models are tuned with `reasoning_effort` rather
+#' than `temperature` or `top_p`; gpt-6-luna, for example, accepts
+#' `temperature` and `top_p` only with `reasoning_effort = "none"`.
 #'
-#' @param model_name Character string of the model name (e.g., "o3", "gpt-5").
-#' @return Logical indicating whether the model is a reasoning model.
+#' @details
+#' [module_parameters()] uses this check to decide which parameters to
+#' offer for tuning. dsprrr does not change the parameters of calls made with
+#' [run()] for reasoning models.
+#'
+#' @param model_name A model name, such as `"gpt-6-luna"` or `"o3"`.
+#' @return `TRUE` or `FALSE`. `NULL`, `NA` and empty names give `FALSE`.
 #' @export
+#' @family configuration
 #' @examples
-#' is_reasoning_model("gpt-4o")      # FALSE
-#' is_reasoning_model("o3")          # TRUE
-#' is_reasoning_model("o4-mini")     # TRUE
-#' is_reasoning_model("gpt-5")       # TRUE
+#' is_reasoning_model("gpt-6-luna")
+#' is_reasoning_model("o4-mini")
+#' is_reasoning_model("gpt-4o")
 is_reasoning_model <- function(model_name) {
   if (is.null(model_name) || is.na(model_name) || !nzchar(model_name)) {
     return(FALSE)

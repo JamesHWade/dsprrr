@@ -2,44 +2,38 @@
 % Please edit documentation in R/chat-default.R
 \name{session_cost}
 \alias{session_cost}
-\title{Session Cost Summary}
+\title{Summarize this session's token use and cost}
 \usage{
 session_cost()
 }
 \value{
-A list with:
-\itemize{
-\item \code{n_calls}: Integer, number of LLM calls
-\item \code{tokens_in}: Integer, total input tokens
-\item \code{tokens_out}: Integer, total output tokens
-\item \code{total_tokens}: Integer, sum of input and output tokens
-\item \code{cost}: Numeric, total estimated cost in USD
-\item \code{by_model}: A tibble with per-model breakdown (if available)
-}
+A list of class \code{dsprrr_session_cost} with \code{n_calls}, \code{tokens_in},
+\code{tokens_out}, \code{total_tokens}, \code{cost} (in US dollars; \code{NA} if any call's
+cost is unknown) and \code{by_model}, a tibble with the same totals per model.
 }
 \description{
-Get cost and token usage summary for the current dsprrr session.
-This aggregates data from all LLM calls tracked in the prompt history.
+\code{session_cost()} adds up the tokens and estimated cost of the model calls
+in the prompt history (see \code{\link[=inspect_history]{inspect_history()}}), overall and per model.
+}
+\details{
+The prompt history keeps the most recent 100 calls by default
+(\code{options(dsprrr.prompt_history_max = )}), so older calls drop out of the
+totals, and \code{\link[=clear_prompt_history]{clear_prompt_history()}} resets them. Only calls recorded in
+the history count: see \code{\link[=inspect_history]{inspect_history()}} for which ones are. Costs are
+ellmer's estimates.
 }
 \examples{
-\dontrun{
-# After running a module a few times
-mod <- module(signature("question -> answer"))
-run(mod, question = "What is 2+2?")
-run(mod, question = "What is the capital of France?")
-
-# Get session summary
 session_cost()
-#> $n_calls
-#> [1] 2
-#> $tokens_in
-#> [1] 45
-#> $tokens_out
-#> [1] 12
-#> $cost
-#> [1] 0.0001
-
-# Access total cost directly
-session_cost()$cost
+session_cost()$total_tokens
 }
+\seealso{
+Other inspection:
+\code{\link{accessors}},
+\code{\link[=clear_prompt_history]{clear_prompt_history()}},
+\code{\link[=clear_traces]{clear_traces()}},
+\code{\link[=export_traces]{export_traces()}},
+\code{\link[=get_last_prompt]{get_last_prompt()}},
+\code{\link[=inspect_history]{inspect_history()}},
+\code{\link[=summarize_traces]{summarize_traces()}}
 }
+\concept{inspection}

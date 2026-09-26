@@ -2,8 +2,92 @@
 % Please edit documentation in R/accessors.R
 \name{accessors}
 \alias{accessors}
-\title{Accessor Functions for DSPrrr Results}
-\description{
-Helper functions to extract data from structured results returned by
-\code{run()}, \code{evaluate()}, and other DSPrrr functions.
+\alias{get_output}
+\alias{get_metadata}
+\alias{get_tokens}
+\alias{get_cost}
+\title{Extract outputs, metadata and costs from results}
+\usage{
+get_output(x, ...)
+
+get_metadata(x, ...)
+
+get_tokens(x, ...)
+
+get_cost(x, ...)
 }
+\arguments{
+\item{x}{A result: a \code{dsprrr_result} or \code{dsprrr_batch_result} from \code{\link[=run]{run()}}
+with \code{.return_format = "structured"}, or a \code{dsprrr_evaluation} from
+\code{\link[=evaluate]{evaluate()}}. For other objects, \code{get_output()} returns \code{x} itself and
+the other functions return empty or missing values.}
+
+\item{...}{Not used.}
+}
+\value{
+\itemize{
+\item \code{get_output()}: the outputs, as described above.
+\item \code{get_metadata()}: a list, or a list of lists; an empty list when \code{x} has
+no metadata.
+\item \code{get_tokens()}: a list of the three counts for a single result, or a
+tibble with columns \code{index}, \code{input_tokens}, \code{output_tokens} and
+\code{total_tokens} for a batch or an evaluation. Unknown counts are \code{NA}.
+\item \code{get_cost()}: a number (\code{NA} when unknown) for a single result. For a
+batch or an evaluation, a list of class \code{dsprrr_cost_summary} with
+\code{costs} (a tibble of \code{index} and \code{cost}), \code{total} and \code{n_missing};
+missing costs give a warning and make \code{total} \code{NA} instead of counting
+as free.
+}
+}
+\description{
+These functions read the parts of a result so you do not need to know its
+structure. They work on results of \code{\link[=run]{run()}} with
+\code{.return_format = "structured"}, for single inputs and batches, and on
+\code{\link[=evaluate]{evaluate()}} results.
+\itemize{
+\item \code{get_output()} returns the outputs: the named list of output fields for
+a single result, a list of them for a batch, and the predictions of an
+evaluation.
+\item \code{get_metadata()} returns the call metadata: a list for a single result
+and one list per row for a batch or an evaluation.
+\item \code{get_tokens()} returns \code{input_tokens}, \code{output_tokens} and
+\code{total_tokens}.
+\item \code{get_cost()} returns the estimated cost in US dollars.
+}
+
+For \code{\link[=run_dataset]{run_dataset()}} results, use the \code{result} and \code{.metadata} columns
+instead.
+}
+\examples{
+shout <- module_fn("text -> reply", function(text) toupper(text))
+result <- run(shout, text = "hello", .return_format = "structured")
+
+get_output(result)
+get_metadata(result)$latency_ms
+# Function-backed modules make no model calls, so these are NA
+get_tokens(result)
+get_cost(result)
+
+\dontrun{
+qa <- module(signature("question -> answer"))
+batch <- run(
+  qa,
+  question = c("What is 2 + 2?", "What is 3 + 3?"),
+  .llm = ellmer::chat_openai(model = "gpt-6-luna"),
+  .return_format = "structured"
+)
+get_tokens(batch)
+get_cost(batch)$total
+}
+}
+\seealso{
+Other inspection:
+\code{\link[=clear_prompt_history]{clear_prompt_history()}},
+\code{\link[=clear_traces]{clear_traces()}},
+\code{\link[=export_traces]{export_traces()}},
+\code{\link[=get_last_prompt]{get_last_prompt()}},
+\code{\link[=inspect_history]{inspect_history()}},
+\code{\link[=session_cost]{session_cost()}},
+\code{\link[=summarize_traces]{summarize_traces()}}
+}
+\concept{inspection}

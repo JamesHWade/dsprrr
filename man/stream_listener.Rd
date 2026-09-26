@@ -2,37 +2,54 @@
 % Please edit documentation in R/async.R
 \name{stream_listener}
 \alias{stream_listener}
-\title{Create a Stream Listener for a Module Output Field}
+\title{Listen to one output field while streaming}
 \usage{
 stream_listener(field, callback)
 }
 \arguments{
-\item{field}{Name of the output field to listen to (a single string).}
+\item{field}{The name of the output field, such as \code{"answer"}.}
 
-\item{callback}{A function called with each chunk of text (a single
-string). For non-streamable fields, called once with the full value.}
+\item{callback}{A function called with one string: each chunk of text, or
+the complete value of a field that cannot be streamed.}
 }
 \value{
-A \code{dsprrr_stream_listener} object for use with \code{\link[=run_stream]{run_stream()}}.
+A listener (class \code{dsprrr_stream_listener}) for the \code{listeners}
+argument of \code{\link[=run_stream]{run_stream()}}.
 }
 \description{
-Creates a listener that receives streamed content for a specific output
-field during \code{\link[=run_stream]{run_stream()}}. This mirrors DSPy's \code{StreamListener}:
-attach a callback to the field you care about (e.g., \code{"answer"}) and it
-fires as content for that field is produced — token by token when the
-field can be token-streamed, or once with the complete value otherwise.
+\code{stream_listener()} attaches a callback to an output field for
+\code{\link[=run_stream]{run_stream()}}, like DSPy's \code{StreamListener}. The callback receives the
+field's text as it is produced: chunk by chunk when the field can be
+streamed, otherwise once with the complete value.
 }
 \details{
-Token-level streaming is available when a module's output is a single
-string field. In that case dsprrr streams the response as plain text and
-treats the accumulated text as the field's value. Modules with multiple
-or non-string output fields run normally and fire each matching listener
-once with the completed value (chunked streaming of structured output is
-not supported by the underlying structured-output API).
+A field can be streamed chunk by chunk when it is the only output field of
+its module and is a string. Fields of modules with several outputs, or
+non-string outputs, arrive once, when the module finishes, because
+structured output cannot be streamed.
 }
 \examples{
+show_answer <- stream_listener("answer", function(chunk) cat(chunk))
+
 \dontrun{
-listener <- stream_listener("answer", function(chunk) cat(chunk))
-run_stream(mod, question = "Tell me a story", listeners = list(listener))
+storyteller <- module(signature("question -> answer"))
+run_stream(
+  storyteller,
+  question = "Tell me a short story about a lighthouse.",
+  .llm = ellmer::chat_openai(model = "gpt-6-luna"),
+  listeners = show_answer
+)
 }
 }
+\seealso{
+Other execution:
+\code{\link[=concurrency_control]{concurrency_control()}},
+\code{\link[=evaluate]{evaluate()}},
+\code{\link[=predict.Module]{predict.Module()}},
+\code{\link[=run]{run()}},
+\code{\link[=run_async]{run_async()}},
+\code{\link[=run_dataset]{run_dataset()}},
+\code{\link[=run_stream]{run_stream()}},
+\code{\link[=stream_async]{stream_async()}}
+}
+\concept{execution}

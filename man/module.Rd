@@ -14,45 +14,74 @@ module(
 )
 }
 \arguments{
-\item{signature}{A Signature object defining the module interface.}
+\item{signature}{A signature from \code{\link[=signature]{signature()}}. A string is not accepted
+here; wrap it in \code{\link[=signature]{signature()}}.}
 
-\item{chat}{Optional ellmer Chat object. When supplied, \code{\link[=run]{run()}} uses it unless
-an explicit \code{.llm} is provided.}
+\item{chat}{An ellmer Chat stored on the module. \code{\link[=run]{run()}} uses it unless you
+pass \code{.llm}; see \code{\link[=get_default_chat]{get_default_chat()}} for the full order.}
 
-\item{template}{Optional glue template for prompt generation.}
+\item{template}{A glue template for the input part of the prompt, with
+input fields in single braces, as in \code{"Review: {text}"}. The default
+(\code{""}) lists each input as \code{name: value}.}
 
-\item{demos}{Optional list of demonstration examples.}
+\item{demos}{Worked examples placed before the input in every prompt: a
+list of \code{list(inputs = list(...), output = list(...))}. \code{\link[=compile]{compile()}} sets
+demos for you.}
 
-\item{config}{Optional prediction configuration. Model parameters such as
-temperature belong here, for example \code{config = list(temperature = 0.2)}.}
+\item{config}{Model settings applied to a copy of the chat on every call:
+\code{temperature}, \code{top_p}, \code{reasoning_effort}, \code{max_tokens},
+\code{max_output_tokens}, \code{frequency_penalty}, \code{presence_penalty} and
+\code{service_tier}, for example \code{config = list(reasoning_effort = "low")}.
+Reasoning models such as gpt-6-luna accept \code{temperature} and \code{top_p} only
+with \code{reasoning_effort = "none"}. Chat settings such as \code{model} or
+\code{provider} are an error here; set them on the chat instead.}
 
-\item{...}{Must be empty. Use a dedicated constructor for advanced module
-behavior.}
+\item{...}{Must be empty. Arguments of other constructors, such as \code{tools}
+or \code{type}, give an error that names the constructor to use.}
 }
 \value{
-A PredictModule executed with \code{\link[=run]{run()}}.
+A prediction module (an R6 object of class \code{PredictModule}) to use
+with \code{\link[=run]{run()}}, \code{\link[=run_dataset]{run_dataset()}}, \code{\link[=evaluate]{evaluate()}} and \code{\link[=compile]{compile()}}.
 }
 \description{
-Create a standard structured-prediction module. This is the primary
-constructor in the dsprrr journey:
+\code{module()} turns a signature into a prediction module: one structured model
+call per input, whose output follows the signature. It is the usual
+starting point:
 \code{\link[=signature]{signature()}} -> \code{module()} -> \code{\link[=run]{run()}} -> \code{\link[=evaluate]{evaluate()}} -> \code{\link[=compile]{compile()}}.
 
-Agentic, reasoning, and code-executing programs use explicit constructors
-such as \code{\link[=react]{react()}}, \code{\link[=chain_of_thought]{chain_of_thought()}}, \code{\link[=multi_chain_comparison]{multi_chain_comparison()}},
-\code{\link[=program_of_thought]{program_of_thought()}}, \code{\link[=code_act]{code_act()}}, \code{\link[=rlm_module]{rlm_module()}}, and \code{\link[=flex]{flex()}}. Keeping
-those choices in the function name prevents configuration from silently
-changing the kind of program being built.
+Other kinds of program have their own constructors: \code{\link[=chain_of_thought]{chain_of_thought()}}
+adds a reasoning step, \code{\link[=react]{react()}} calls tools, \code{\link[=multi_chain_comparison]{multi_chain_comparison()}}
+compares several reasoning chains, and \code{\link[=program_of_thought]{program_of_thought()}},
+\code{\link[=code_act]{code_act()}}, \code{\link[=rlm_module]{rlm_module()}} and \code{\link[=flex]{flex()}} run code.
 }
 \examples{
-classifier <- signature("text -> sentiment") |>
-  module(template = "Analyze: {text}")
-
-configured <- signature("question -> answer") |>
-  module(config = list(temperature = 0.2))
+classifier <- module(
+  signature("text -> sentiment: enum('positive', 'negative', 'neutral')"),
+  template = "Classify the sentiment of this review:\n{text}",
+  demos = list(
+    list(
+      inputs = list(text = "Arrived broken."),
+      output = list(sentiment = "negative")
+    )
+  ),
+  config = list(reasoning_effort = "low")
+)
+classifier
 
 \dontrun{
-llm <- ellmer::chat_openai()
-result <- classifier |>
-  run(text = "Great package!", .llm = llm)
+run(
+  classifier,
+  text = "Great package!",
+  .llm = ellmer::chat_openai(model = "gpt-6-luna")
+)
 }
 }
+\seealso{
+Other program constructors:
+\code{\link[=chain_of_thought]{chain_of_thought()}},
+\code{\link[=module_fn]{module_fn()}},
+\code{\link[=multi_chain_comparison]{multi_chain_comparison()}},
+\code{\link[=rag_module]{rag_module()}},
+\code{\link[=react]{react()}}
+}
+\concept{program constructors}

@@ -2,42 +2,61 @@
 % Please edit documentation in R/metrics.R
 \name{metric_with_trace}
 \alias{metric_with_trace}
-\title{Create a Trace-Aware Metric}
+\title{Metric that also sees the execution trace}
 \usage{
 metric_with_trace(fn, field = NULL)
 }
 \arguments{
-\item{fn}{A function with signature
-\verb{function(prediction, expected, program_trace)}. It must return a numeric
-or logical score, or \code{list(score = , feedback = )}. An explicit
-\code{program_trace} formal (including after \code{...}) is matched by name;
-otherwise the trace is supplied as the third positional argument. Any
-additional formals must have defaults.}
+\item{fn}{A function called as \code{fn(prediction, expected, program_trace)}.
+It returns a logical or numeric score, or \code{list(score = , feedback = )}.
+A formal argument named \code{program_trace} receives the trace by name
+(even after \code{...}); otherwise the trace is the third positional
+argument. Any other arguments need defaults.}
 
-\item{field}{Optional expected-output column name, stored like the \code{field}
-attribute on built-in metrics.}
+\item{field}{The name of the data column that holds the expected output,
+stored in the metric's \code{"field"} attribute for optimizers.}
 }
 \value{
-A metric function classed as \code{dsprrr_trace_metric}.
+A metric function of class \code{dsprrr_trace_metric}.
 }
 \description{
-Wraps a metric so it can score both what a program returned and how the
-result was produced. Trace-aware metrics receive a third \code{program_trace}
-argument containing the row and epoch identifiers, the module's ordered
-execution events, and per-row metadata. They work with \code{\link[=evaluate]{evaluate()}} and
-every optimizer that delegates to it, including \link{GEPA}.
+\code{metric_with_trace()} makes a metric that scores both what a program
+returned and how it got there. Besides the prediction and the expected
+row, the function receives a \code{program_trace}: the row and epoch numbers,
+a \code{status} (\code{"ok"}, \code{"error"} or \code{"untraced"}), the module's execution
+\code{events} in order, and the row's call \code{metadata} (tokens, cost, latency).
+Use it to penalize token use, latency, iterations or tool calls alongside
+correctness.
 
-This makes quality-efficiency objectives explicit. For example, a metric can
-penalize excessive token use, latency, iterations, or tool calls while still
-returning textual feedback for reflective optimizers.
+Trace-aware metrics work with \code{\link[=evaluate]{evaluate()}} and the optimizers that use it,
+including \code{\link[=GEPA]{GEPA()}}. Called directly without a trace, they are an error.
 }
 \examples{
-metric <- metric_with_trace(function(prediction, expected, program_trace) {
-  correct <- identical(prediction$answer, expected$answer)
-  tokens <- program_trace$metadata$total_tokens
-  if (is.null(tokens)) tokens <- 0
-  as.numeric(correct) - min(tokens / 10000, 0.1)
-}, field = "answer")
+# Correctness, minus up to 0.1 for token use
+efficient <- metric_with_trace(
+  function(prediction, expected, program_trace) {
+    correct <- identical(prediction$answer, expected$answer)
+    tokens <- program_trace$metadata$total_tokens
+    if (is.null(tokens) || is.na(tokens)) tokens <- 0
+    as.numeric(correct) - min(tokens / 10000, 0.1)
+  },
+  field = "answer"
+)
 
-# evaluate(module, data, metric, .llm = llm)
+# A function-backed module records no tokens, so only correctness counts
+rule <- module_fn("question -> answer", function(question) "4")
+quiz <- data.frame(question = c("2 + 2?", "3 + 3?"), answer = c("4", "6"))
+evaluate(rule, quiz, metric = efficient)$scores
 }
+\seealso{
+Other metrics:
+\code{\link[=evaluate]{evaluate()}},
+\code{\link[=metric_contains]{metric_contains()}},
+\code{\link[=metric_custom]{metric_custom()}},
+\code{\link[=metric_exact_match]{metric_exact_match()}},
+\code{\link[=metric_f1]{metric_f1()}},
+\code{\link[=metric_field_match]{metric_field_match()}},
+\code{\link[=metric_threshold]{metric_threshold()}},
+\code{\link[=metric_with_feedback]{metric_with_feedback()}}
+}
+\concept{metrics}

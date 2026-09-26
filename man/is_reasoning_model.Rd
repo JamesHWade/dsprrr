@@ -2,24 +2,42 @@
 % Please edit documentation in R/utils.R
 \name{is_reasoning_model}
 \alias{is_reasoning_model}
-\title{Check if a model is a reasoning model}
+\title{Test whether a model name is a reasoning model}
 \usage{
 is_reasoning_model(model_name)
 }
 \arguments{
-\item{model_name}{Character string of the model name (e.g., "o3", "gpt-5").}
+\item{model_name}{A model name, such as \code{"gpt-6-luna"} or \code{"o3"}.}
 }
 \value{
-Logical indicating whether the model is a reasoning model.
+\code{TRUE} or \code{FALSE}. \code{NULL}, \code{NA} and empty names give \code{FALSE}.
 }
 \description{
-Reasoning models (OpenAI o1/o3/o4-mini, GPT-5 series) use different
-parameters than traditional models. They don't support \code{temperature}
-or \code{top_p}, instead using \code{reasoning_effort} (low/medium/high).
+\code{is_reasoning_model()} guesses from its name whether a model is a
+reasoning model: OpenAI's o-series (\code{o1}, \code{o3}, \code{o4-mini}, ...), the
+GPT-5 and GPT-6 families (such as \code{gpt-6-luna}), and any name containing
+"reasoning". Reasoning models are tuned with \code{reasoning_effort} rather
+than \code{temperature} or \code{top_p}; gpt-6-luna, for example, accepts
+\code{temperature} and \code{top_p} only with \code{reasoning_effort = "none"}.
+}
+\details{
+\code{\link[=module_parameters]{module_parameters()}} uses this check to decide which parameters to
+offer for tuning. dsprrr does not change the parameters of calls made with
+\code{\link[=run]{run()}} for reasoning models.
 }
 \examples{
-is_reasoning_model("gpt-4o")      # FALSE
-is_reasoning_model("o3")          # TRUE
-is_reasoning_model("o4-mini")     # TRUE
-is_reasoning_model("gpt-5")       # TRUE
+is_reasoning_model("gpt-6-luna")
+is_reasoning_model("o4-mini")
+is_reasoning_model("gpt-4o")
 }
+\seealso{
+Other configuration:
+\code{\link[=cache_stats]{cache_stats()}},
+\code{\link[=clear_cache]{clear_cache()}},
+\code{\link[=configure_cache]{configure_cache()}},
+\code{\link[=dsp_configure]{dsp_configure()}},
+\code{\link[=dsprrr_sitrep]{dsprrr_sitrep()}},
+\code{\link[=get_default_chat]{get_default_chat()}},
+\code{\link[=with_lm]{with_lm()}}
+}
+\concept{configuration}

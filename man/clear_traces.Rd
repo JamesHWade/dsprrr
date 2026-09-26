@@ -2,22 +2,37 @@
 % Please edit documentation in R/traces.R
 \name{clear_traces}
 \alias{clear_traces}
-\title{Clear Module Traces}
+\title{Clear a module's traces}
 \usage{
 clear_traces(module)
 }
 \arguments{
-\item{module}{A DSPrrr module}
+\item{module}{A module.}
 }
 \value{
-The module (invisibly) with traces cleared
+The module, invisibly. A message reports how many traces were
+removed.
 }
 \description{
-Clear all recorded traces from a module while preserving other state.
+\code{clear_traces()} removes the traces recorded on a module and keeps
+everything else, such as its demos and settings. The module is changed in
+place. The session's prompt history is separate; see
+\code{\link[=clear_prompt_history]{clear_prompt_history()}}.
 }
 \examples{
-\dontrun{
-# Clear traces after analysis
-my_module <- clear_traces(my_module)
+shout <- module_fn("text -> reply", function(text) toupper(text))
+run(shout, text = "hello")
+clear_traces(shout)
+nrow(export_traces(shout))
 }
+\seealso{
+Other inspection:
+\code{\link{accessors}},
+\code{\link[=clear_prompt_history]{clear_prompt_history()}},
+\code{\link[=export_traces]{export_traces()}},
+\code{\link[=get_last_prompt]{get_last_prompt()}},
+\code{\link[=inspect_history]{inspect_history()}},
+\code{\link[=session_cost]{session_cost()}},
+\code{\link[=summarize_traces]{summarize_traces()}}
 }
+\concept{inspection}

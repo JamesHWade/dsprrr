@@ -2,7 +2,7 @@
 % Please edit documentation in R/module-wrapper.R
 \name{refine}
 \alias{refine}
-\title{Create a Refine Wrapper Module}
+\title{Retry a module with feedback until it scores well}
 \usage{
 refine(
   module,
@@ -16,49 +16,99 @@ refine(
 )
 }
 \arguments{
-\item{module}{A Module object to wrap}
+\item{module}{The module to wrap.}
 
-\item{N}{Maximum number of attempts (default 3)}
+\item{N}{Maximum number of attempts.}
 
-\item{reward_fn}{Reward function with signature \verb{function(prediction, inputs)},
-returning a score between 0 and 1}
+\item{reward_fn}{A function called as \code{reward_fn(prediction, inputs)},
+returning a score, usually between 0 and 1. The default gives 1 to every
+prediction, so pass a real reward function.}
 
-\item{threshold}{Score threshold for early stopping (default 1.0)}
+\item{threshold}{Score at which to stop early. Default 1.}
 
-\item{fail_count}{Maximum consecutive failures before erroring (default N)}
+\item{fail_count}{Number of consecutive failed attempts after which to
+give up with an error. Defaults to \code{N}.}
 
-\item{feedback_template}{Template for generating feedback. Uses glue syntax
-with available variables: \verb{\\\{score\\\}}, \verb{\\\{prediction\\\}}, and input field names.}
+\item{feedback_template}{A glue template for the feedback. It can use
+\code{{score}} (rounded to 3 digits), \code{{prediction}} (the output fields
+written as \code{field: value}, separated by \verb{; }) and any input field. The
+default is "Previous attempt scored \{score\}. The answer was:
+\{prediction\}. Please try again with improvements."}
 
-\item{feedback_field}{Name of the input field to inject feedback into}
+\item{feedback_field}{Name of the input that carries the feedback.}
 
-\item{...}{Additional arguments passed to the module constructor}
+\item{...}{Passed to the wrapper: \code{chat} (an ellmer Chat, which defaults
+to the wrapped module's chat) or \code{config}.}
 }
 \value{
-A RefineModule object
+A module (an R6 object of class \code{RefineModule}) with the same
+signature as \code{module}.
 }
 \description{
-Factory function to create a Refine wrapper around any module.
-Extends BestOfN with iterative refinement using feedback.
+\code{refine()} works like \code{\link[=best_of_n]{best_of_n()}}, but after an attempt scores below
+\code{threshold} it passes feedback about that attempt into the next one. The
+feedback is the \code{feedback_template} filled in with the attempt's score,
+its prediction and the inputs; it says only what the template says.
+}
+\details{
+If the wrapped module's signature declares \code{feedback_field} as an input,
+the first attempt receives "No feedback yet." and later attempts receive
+the filled-in template; callers never pass it to \code{\link[=run]{run()}}. If the signature
+does not declare it, the feedback is still passed to the wrapped module: a
+prediction module without a custom template then adds it to the prompt as
+an extra \verb{feedback:} line on retries.
+
+The returned module has \code{get_attempts()} and \code{get_feedback_history()}
+methods for the last run (or all runs, with \code{all = TRUE}).
 }
 \examples{
-# Create a QA module - include feedback in signature for refinement
-# RefineModule will automatically inject feedback on subsequent attempts
-qa <- module(signature("question, feedback -> answer"))
-
-# Wrap with refinement
-one_word_reward <- function(pred, inputs) {
-  words <- strsplit(as.character(pred$answer), "\\\\s+")[[1]]
-  if (length(words) == 1) 1.0 else 0.0
+one_word <- function(prediction, inputs) {
+  length(strsplit(prediction$answer, " ")[[1]]) == 1
 }
 
+# An offline stand-in for a model that shortens its answer once it gets
+# feedback
+drafter <- module_fn(
+  "question, feedback -> answer",
+  function(question, feedback) {
+    if (feedback == "No feedback yet.") "The capital of France is Paris." else "Paris"
+  }
+)
+refined <- refine(
+  drafter,
+  N = 3L,
+  reward_fn = one_word,
+  feedback_template = "Your answer '{prediction}' scored {score}. Reply with one word."
+)
+run(refined, question = "What is the capital of France?")
+refined$get_feedback_history()
+
+\dontrun{
+qa <- module(signature("question, feedback -> answer"))
 refined <- refine(
   qa,
-  N = 3,
-  reward_fn = one_word_reward,
-  feedback_template = "Score: {score}. Your answer '{prediction}' was too long. Give a single word."
+  N = 3L,
+  reward_fn = one_word,
+  feedback_template = "Your answer '{prediction}' was too long. Give a single word."
 )
-
-# When running, only provide 'question' - feedback is auto-injected:
-# result <- run(refined, question = "What is the capital of France?", .llm = llm)
+run(
+  refined,
+  question = "What is the capital of France?",
+  .llm = ellmer::chat_openai(model = "gpt-6-luna")
+)
 }
+}
+\seealso{
+Other composition:
+\code{\link[=as_reward_fn]{as_reward_fn()}},
+\code{\link[=best_of_n]{best_of_n()}},
+\code{\link[=ensemble]{ensemble()}},
+\code{\link[=pipeline]{pipeline()}},
+\code{\link[=reduce_best_by_metric]{reduce_best_by_metric()}},
+\code{\link[=reduce_first]{reduce_first()}},
+\code{\link[=reduce_majority]{reduce_majority()}},
+\code{\link[=reduce_weighted_vote]{reduce_weighted_vote()}},
+\code{\link[=step]{step()}},
+\code{\link[=with_assertions]{with_assertions()}}
+}
+\concept{composition}

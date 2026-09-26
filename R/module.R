@@ -1,39 +1,60 @@
 #' Create a prediction module
 #'
 #' @description
-#' Create a standard structured-prediction module. This is the primary
-#' constructor in the dsprrr journey:
+#' `module()` turns a signature into a prediction module: one structured model
+#' call per input, whose output follows the signature. It is the usual
+#' starting point:
 #' [signature()] -> `module()` -> [run()] -> [evaluate()] -> [compile()].
 #'
-#' Agentic, reasoning, and code-executing programs use explicit constructors
-#' such as [react()], [chain_of_thought()], [multi_chain_comparison()],
-#' [program_of_thought()], [code_act()], [rlm_module()], and [flex()]. Keeping
-#' those choices in the function name prevents configuration from silently
-#' changing the kind of program being built.
+#' Other kinds of program have their own constructors: [chain_of_thought()]
+#' adds a reasoning step, [react()] calls tools, [multi_chain_comparison()]
+#' compares several reasoning chains, and [program_of_thought()],
+#' [code_act()], [rlm_module()] and [flex()] run code.
 #'
-#' @param signature A Signature object defining the module interface.
-#' @param chat Optional ellmer Chat object. When supplied, [run()] uses it unless
-#'   an explicit `.llm` is provided.
-#' @param template Optional glue template for prompt generation.
-#' @param demos Optional list of demonstration examples.
-#' @param config Optional prediction configuration. Model parameters such as
-#'   temperature belong here, for example `config = list(temperature = 0.2)`.
-#' @param ... Must be empty. Use a dedicated constructor for advanced module
-#'   behavior.
+#' @param signature A signature from [signature()]. A string is not accepted
+#'   here; wrap it in [signature()].
+#' @param chat An ellmer Chat stored on the module. [run()] uses it unless you
+#'   pass `.llm`; see [get_default_chat()] for the full order.
+#' @param template A glue template for the input part of the prompt, with
+#'   input fields in single braces, as in `"Review: {text}"`. The default
+#'   (`""`) lists each input as `name: value`.
+#' @param demos Worked examples placed before the input in every prompt: a
+#'   list of `list(inputs = list(...), output = list(...))`. [compile()] sets
+#'   demos for you.
+#' @param config Model settings applied to a copy of the chat on every call:
+#'   `temperature`, `top_p`, `reasoning_effort`, `max_tokens`,
+#'   `max_output_tokens`, `frequency_penalty`, `presence_penalty` and
+#'   `service_tier`, for example `config = list(reasoning_effort = "low")`.
+#'   Reasoning models such as gpt-6-luna accept `temperature` and `top_p` only
+#'   with `reasoning_effort = "none"`. Chat settings such as `model` or
+#'   `provider` are an error here; set them on the chat instead.
+#' @param ... Must be empty. Arguments of other constructors, such as `tools`
+#'   or `type`, give an error that names the constructor to use.
 #'
-#' @return A PredictModule executed with [run()].
+#' @return A prediction module (an R6 object of class `PredictModule`) to use
+#'   with [run()], [run_dataset()], [evaluate()] and [compile()].
 #' @export
+#' @family program constructors
 #' @examples
-#' classifier <- signature("text -> sentiment") |>
-#'   module(template = "Analyze: {text}")
-#'
-#' configured <- signature("question -> answer") |>
-#'   module(config = list(temperature = 0.2))
+#' classifier <- module(
+#'   signature("text -> sentiment: enum('positive', 'negative', 'neutral')"),
+#'   template = "Classify the sentiment of this review:\n{text}",
+#'   demos = list(
+#'     list(
+#'       inputs = list(text = "Arrived broken."),
+#'       output = list(sentiment = "negative")
+#'     )
+#'   ),
+#'   config = list(reasoning_effort = "low")
+#' )
+#' classifier
 #'
 #' \dontrun{
-#' llm <- ellmer::chat_openai()
-#' result <- classifier |>
-#'   run(text = "Great package!", .llm = llm)
+#' run(
+#'   classifier,
+#'   text = "Great package!",
+#'   .llm = ellmer::chat_openai(model = "gpt-6-luna")
+#' )
 #' }
 module <- function(
   signature,

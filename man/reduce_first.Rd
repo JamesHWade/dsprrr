@@ -2,19 +2,37 @@
 % Please edit documentation in R/module-ensemble.R
 \name{reduce_first}
 \alias{reduce_first}
-\title{First Successful Output Reducer}
+\title{Pick the first successful ensemble output}
 \usage{
 reduce_first()
 }
 \value{
-A reduce function for use with \code{ensemble()}
+A function \verb{function(outputs, weights = NULL)} for the \code{reduce_fn}
+argument of \code{\link[=ensemble]{ensemble()}}.
 }
 \description{
-Creates a reduce function that simply returns the first successful output.
-Useful when you want to try multiple modules but just need one answer.
+\code{reduce_first()} makes a reducer for \code{\link[=ensemble]{ensemble()}} that returns the output
+of the first module that succeeded, in the order of \code{modules}. Use it for
+fallbacks: a module fails, and the next one answers.
+}
+\details{
+\code{\link[=ensemble]{ensemble()}} still runs every module, so this does not save calls.
 }
 \examples{
-\dontrun{
-ens <- ensemble(modules, reduce_fn = reduce_first())
+first <- reduce_first()
+first(list(list(answer = "from module 1"), list(answer = "from module 2")))
 }
+\seealso{
+Other composition:
+\code{\link[=as_reward_fn]{as_reward_fn()}},
+\code{\link[=best_of_n]{best_of_n()}},
+\code{\link[=ensemble]{ensemble()}},
+\code{\link[=pipeline]{pipeline()}},
+\code{\link[=reduce_best_by_metric]{reduce_best_by_metric()}},
+\code{\link[=reduce_majority]{reduce_majority()}},
+\code{\link[=reduce_weighted_vote]{reduce_weighted_vote()}},
+\code{\link[=refine]{refine()}},
+\code{\link[=step]{step()}},
+\code{\link[=with_assertions]{with_assertions()}}
 }
+\concept{composition}

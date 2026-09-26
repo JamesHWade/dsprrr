@@ -2,113 +2,122 @@
 % Please edit documentation in R/run.R
 \name{run}
 \alias{run}
-\title{Execute an LLM Module}
+\title{Run a module on named inputs}
 \usage{
 run(module, ...)
 }
 \arguments{
-\item{module}{A DSPrrr module (e.g., created with \code{module()})}
+\item{module}{A module, such as one created with \code{\link[=module]{module()}},
+\code{\link[=chain_of_thought]{chain_of_thought()}}, \code{\link[=react]{react()}}, \code{\link[=module_fn]{module_fn()}} or \code{\link[=pipeline]{pipeline()}}.}
 
-\item{...}{Named arguments corresponding to the module's signature inputs.
-Can be single values or vectors for batch processing. RLM is the exception:
-every supplied value is one context variable regardless of its R length;
-use \code{\link[=run_dataset]{run_dataset()}} for multiple RLM invocations. Additional parameters:
-\describe{
-\item{.llm}{An ellmer chat object for LLM interaction (optional)}
-\item{.verbose}{Logical indicating whether to print debug information}
-\item{.concurrency}{A validated policy created by
-\code{\link[=concurrency_control]{concurrency_control()}}. Omission uses sequential execution.}
-\item{.progress}{Logical indicating whether to show progress bar for batch processing (default TRUE)}
-\item{.return_format}{Character, either "simple" (default) or "structured".
-"simple" returns just the output, "structured" returns list with output, chat, and metadata.}
-\item{.trace_context}{A named, JSON-compatible list copied into run
-metadata and traces. Credential-like fields and runtime objects are
-rejected before execution.}
-\item{.cache}{Logical or NULL. Per-call cache control. If NULL (default), uses global config.
-If TRUE, attempts to use cache (no effect if caching globally disabled).
-If FALSE, bypasses cache for this call only.}
-}}
+\item{...}{Inputs named after the signature's input fields, followed by any
+of the runtime arguments described below. RLM modules (\code{\link[=rlm_module]{rlm_module()}})
+treat every value as one context object whatever its length; use
+\code{\link[=run_dataset]{run_dataset()}} to run them several times.}
 }
 \value{
-For single inputs with \code{.return_format = "simple"}, the parsed
-output according to the module's signature. Object-shaped outputs remain
-named records for both scalar and batch calls.
-For single inputs with .return_format="structured": A list with components:
-\itemize{
-\item output: The parsed output
-\item chat: The ellmer chat object used
-\item metadata: Additional metadata (tokens used, latency, etc.)
-}
+With \code{.return_format = "simple"}, the outputs as a named list with
+one element per output field, for example \code{list(answer = "4")}. A
+signature whose output type is a bare ellmer type (such as
+\code{ellmer::type_enum()}) returns the bare value instead. A batch returns a
+list with one such result per input element.
 
-For batch inputs: A list of results matching the input length. Empty
-batches return a zero-length list (with class \code{dsprrr_batch_result} for
-structured output).
+With \code{.return_format = "structured"}, a list of class \code{dsprrr_result}
+with elements \code{output} (as above), \code{chat} (the ellmer Chat used) and
+\code{metadata} (model, prompt, token counts, cost, latency, cache status and
+error). A batch returns a list of these with class \code{dsprrr_batch_result}.
+Use \code{\link[=get_output]{get_output()}}, \code{\link[=get_metadata]{get_metadata()}} or \code{\link[=get_cost]{get_cost()}} to read them.
 }
 \description{
-Execute a module with the provided inputs to generate LLM output.
-This is the primary function for running modules created with \code{module()}.
-
-Supports both single inputs and batch processing. Batch execution can be
-parallelised, but is conservative by default to avoid reusing LLM clients
-across workers.
+\code{run()} calls a module with inputs named after its signature's input fields
+and returns the outputs. Give a vector instead of a single value to run a
+batch: each element is one call, and length-1 inputs are recycled.
 }
 \details{
-\strong{Retry Behavior:} ellmer automatically retries failed requests up to 3 times
-(configurable via \code{options(ellmer_max_tries = n)}). This handles transient
-errors like rate limits and connection failures. See ellmer documentation
-for more details.
+ellmer retries failed requests (see \code{options(ellmer_max_tries = )}). A
+failure that remains raises an error for a single input. In a batch, a
+failed row becomes \code{NA} with a warning, and with
+\code{.return_format = "structured"} its message is in \code{metadata$error}.
 
-Zero-length inputs form an empty batch only when every input is zero length.
-Empty batches return immediately without resolving a Chat or touching cache,
-trace, or prompt-history state. Mixing zero-length and non-empty inputs is an
-error.
+Batches must have inputs of one common length, or length 1. If every input
+has length zero, \code{run()} returns an empty list without calling the model.
+Modules with their own execution loop, such as \code{\link[=react]{react()}}, accept single
+inputs only; use \code{\link[=run_dataset]{run_dataset()}} for them.
 
-RLM inputs use scalar object semantics: vectors, lists, matrices, data frames,
-and fitted models each remain one \code{.context} variable for one investigation.
-Use \code{\link[=run_dataset]{run_dataset()}} for multiple RLM invocations and list-columns for rich
-per-row objects.
+An input can also be an ellmer content object, such as
+\code{ellmer::content_image_file("receipt.png")}; prediction modules send it to
+the model along with the text of the prompt.
 
-Scalar and batch Predict calls record one trace per attempted row. Structured
-metadata reports usage, error, cache, backend, and batch-index fields. Native
-ellmer and mirai workers return row records that are committed to module and
-global trace state by the parent in input order. Specialized Predict
-subclasses, such as ReAct, preserve their scalar \code{forward()} method and
-currently reject vectorized inputs rather than bypassing specialized logic.
-
-Trace context is correlation-only: it is not included in prompts, provider
-requests, cache keys, or program artifact identity. Each attempted execution
-also records \code{program_artifact_id}, derived from the program's existing
-artifact integrity digest. \code{program_artifact_id} is a reserved field: for a
-registry-backed program, call \code{\link[=program_artifact_id]{program_artifact_id()}} once with its registry
-to bind the verified runtime references before execution.
+Each call records a trace on the module (see \code{\link[=export_traces]{export_traces()}}).
+Prediction modules also add every model call to the session's prompt
+history (see \code{\link[=inspect_history]{inspect_history()}}).
 }
+\section{Runtime arguments}{
+
+These arguments start with a dot so they cannot clash with input names.
+Any other dot-prefixed name is an error.
+\describe{
+\item{\code{.llm}}{An ellmer Chat to use for this call. It takes precedence
+over the chat stored on the module, a chat set with \code{\link[=with_lm]{with_lm()}} or
+\code{\link[=local_lm]{local_lm()}}, and the default chat; see \code{\link[=get_default_chat]{get_default_chat()}} for the
+full order.}
+\item{\code{.cache}}{\code{NULL} (the default) follows \code{\link[=configure_cache]{configure_cache()}}.
+\code{FALSE} skips the response cache for this call. \code{TRUE} uses it when
+caching is enabled globally and has no effect otherwise.}
+\item{\code{.concurrency}}{A policy from \code{\link[=concurrency_control]{concurrency_control()}} for batch
+inputs. The default runs rows one after another.}
+\item{\code{.return_format}}{\code{"simple"} (the default) returns the outputs;
+\code{"structured"} also returns the Chat and call metadata (see Value).}
+\item{\code{.show_prompt}}{If \code{TRUE}, print a preview before the call: the
+instructions (first 200 characters), the input field names, the output
+type and the number of demos. It does not show the filled-in prompt;
+use \code{\link[=get_last_prompt]{get_last_prompt()}} after the call for that.}
+\item{\code{.trace_context}}{A named, JSON-compatible list copied into the
+call metadata and traces, for example \code{list(request_id = "abc")}. It is
+never sent to the model and is not part of cache keys. Credential-like
+field names and runtime objects are rejected.}
+\item{\code{.progress}}{Show a progress bar for batch inputs. Default
+\code{TRUE}.}
+\item{\code{.verbose}}{If \code{TRUE}, print the rendered input section of each
+prompt. Default \code{FALSE}.}
+}
+}
+
 \examples{
+# A function-backed module runs without a model
+shout <- module_fn("text -> reply", function(text) toupper(text))
+run(shout, text = "hello")
+
 \dontrun{
-# Single input
-llm <- ellmer::chat_openai()
-result <- signature("text -> sentiment") |>
-  module() |>
-  run(text = "I love this!", .llm = llm)
+llm <- ellmer::chat_openai(model = "gpt-6-luna")
+classify <- module(
+  signature("text -> sentiment: enum('positive', 'negative', 'neutral')")
+)
 
-# Batch processing
-results <- signature("text -> sentiment") |>
-  module() |>
-  run(text = c("I love this!", "This is bad"), .llm = llm)
+# One input returns a named list
+result <- run(classify, text = "I love this!", .llm = llm)
+result$sentiment
 
-# Structured return
-result <- signature("text -> sentiment") |>
-  module() |>
-  run(text = "Great!", .llm = llm, .return_format = "structured")
-# Access: result$output, result$chat, result$metadata
+# A vector runs a batch: one result per element
+run(classify, text = c("I love this!", "This is bad"), .llm = llm)
 
-# Configure ellmer retry behavior (if needed)
-options(ellmer_max_tries = 5)
+# Structured results carry the Chat and call metadata
+res <- run(classify, text = "Great!", .llm = llm, .return_format = "structured")
+res$metadata$cost
+
+# Skip the response cache for one call
+run(classify, text = "Great!", .llm = llm, .cache = FALSE)
 }
 }
 \seealso{
-\itemize{
-\item \code{\link[=run_dataset]{run_dataset()}} for running a module on a data frame
-\item \code{\link[=evaluate]{evaluate()}} for running with metric evaluation
-\item \code{\link[=module]{module()}} for creating modules
+Other execution:
+\code{\link[=concurrency_control]{concurrency_control()}},
+\code{\link[=evaluate]{evaluate()}},
+\code{\link[=predict.Module]{predict.Module()}},
+\code{\link[=run_async]{run_async()}},
+\code{\link[=run_dataset]{run_dataset()}},
+\code{\link[=run_stream]{run_stream()}},
+\code{\link[=stream_async]{stream_async()}},
+\code{\link[=stream_listener]{stream_listener()}}
 }
-}
+\concept{execution}

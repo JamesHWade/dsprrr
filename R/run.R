@@ -1,102 +1,103 @@
-#' Execute an LLM Module
+#' Run a module on named inputs
 #'
 #' @description
-#' Execute a module with the provided inputs to generate LLM output.
-#' This is the primary function for running modules created with `module()`.
+#' `run()` calls a module with inputs named after its signature's input fields
+#' and returns the outputs. Give a vector instead of a single value to run a
+#' batch: each element is one call, and length-1 inputs are recycled.
 #'
-#' Supports both single inputs and batch processing. Batch execution can be
-#' parallelised, but is conservative by default to avoid reusing LLM clients
-#' across workers.
+#' @param module A module, such as one created with [module()],
+#'   [chain_of_thought()], [react()], [module_fn()] or [pipeline()].
+#' @param ... Inputs named after the signature's input fields, followed by any
+#'   of the runtime arguments described below. RLM modules ([rlm_module()])
+#'   treat every value as one context object whatever its length; use
+#'   [run_dataset()] to run them several times.
 #'
-#' @param module A DSPrrr module (e.g., created with `module()`)
-#' @param ... Named arguments corresponding to the module's signature inputs.
-#'   Can be single values or vectors for batch processing. RLM is the exception:
-#'   every supplied value is one context variable regardless of its R length;
-#'   use [run_dataset()] for multiple RLM invocations. Additional parameters:
-#'   \describe{
-#'     \item{.llm}{An ellmer chat object for LLM interaction (optional)}
-#'     \item{.verbose}{Logical indicating whether to print debug information}
-#'     \item{.concurrency}{A validated policy created by
-#'       [concurrency_control()]. Omission uses sequential execution.}
-#'     \item{.progress}{Logical indicating whether to show progress bar for batch processing (default TRUE)}
-#'     \item{.return_format}{Character, either "simple" (default) or "structured".
-#'       "simple" returns just the output, "structured" returns list with output, chat, and metadata.}
-#'     \item{.trace_context}{A named, JSON-compatible list copied into run
-#'       metadata and traces. Credential-like fields and runtime objects are
-#'       rejected before execution.}
-#'     \item{.cache}{Logical or NULL. Per-call cache control. If NULL (default), uses global config.
-#'       If TRUE, attempts to use cache (no effect if caching globally disabled).
-#'       If FALSE, bypasses cache for this call only.}
-#'   }
+#' @section Runtime arguments:
+#' These arguments start with a dot so they cannot clash with input names.
+#' Any other dot-prefixed name is an error.
+#' \describe{
+#'   \item{`.llm`}{An ellmer Chat to use for this call. It takes precedence
+#'     over the chat stored on the module, a chat set with [with_lm()] or
+#'     [local_lm()], and the default chat; see [get_default_chat()] for the
+#'     full order.}
+#'   \item{`.cache`}{`NULL` (the default) follows [configure_cache()].
+#'     `FALSE` skips the response cache for this call. `TRUE` uses it when
+#'     caching is enabled globally and has no effect otherwise.}
+#'   \item{`.concurrency`}{A policy from [concurrency_control()] for batch
+#'     inputs. The default runs rows one after another.}
+#'   \item{`.return_format`}{`"simple"` (the default) returns the outputs;
+#'     `"structured"` also returns the Chat and call metadata (see Value).}
+#'   \item{`.show_prompt`}{If `TRUE`, print a preview before the call: the
+#'     instructions (first 200 characters), the input field names, the output
+#'     type and the number of demos. It does not show the filled-in prompt;
+#'     use [get_last_prompt()] after the call for that.}
+#'   \item{`.trace_context`}{A named, JSON-compatible list copied into the
+#'     call metadata and traces, for example `list(request_id = "abc")`. It is
+#'     never sent to the model and is not part of cache keys. Credential-like
+#'     field names and runtime objects are rejected.}
+#'   \item{`.progress`}{Show a progress bar for batch inputs. Default
+#'     `TRUE`.}
+#'   \item{`.verbose`}{If `TRUE`, print the rendered input section of each
+#'     prompt. Default `FALSE`.}
+#' }
 #'
 #' @details
-#' **Retry Behavior:** ellmer automatically retries failed requests up to 3 times
-#' (configurable via `options(ellmer_max_tries = n)`). This handles transient
-#' errors like rate limits and connection failures. See ellmer documentation
-#' for more details.
+#' ellmer retries failed requests (see `options(ellmer_max_tries = )`). A
+#' failure that remains raises an error for a single input. In a batch, a
+#' failed row becomes `NA` with a warning, and with
+#' `.return_format = "structured"` its message is in `metadata$error`.
 #'
-#' Zero-length inputs form an empty batch only when every input is zero length.
-#' Empty batches return immediately without resolving a Chat or touching cache,
-#' trace, or prompt-history state. Mixing zero-length and non-empty inputs is an
-#' error.
+#' Batches must have inputs of one common length, or length 1. If every input
+#' has length zero, `run()` returns an empty list without calling the model.
+#' Modules with their own execution loop, such as [react()], accept single
+#' inputs only; use [run_dataset()] for them.
 #'
-#' RLM inputs use scalar object semantics: vectors, lists, matrices, data frames,
-#' and fitted models each remain one `.context` variable for one investigation.
-#' Use [run_dataset()] for multiple RLM invocations and list-columns for rich
-#' per-row objects.
+#' An input can also be an ellmer content object, such as
+#' `ellmer::content_image_file("receipt.png")`; prediction modules send it to
+#' the model along with the text of the prompt.
 #'
-#' Scalar and batch Predict calls record one trace per attempted row. Structured
-#' metadata reports usage, error, cache, backend, and batch-index fields. Native
-#' ellmer and mirai workers return row records that are committed to module and
-#' global trace state by the parent in input order. Specialized Predict
-#' subclasses, such as ReAct, preserve their scalar `forward()` method and
-#' currently reject vectorized inputs rather than bypassing specialized logic.
+#' Each call records a trace on the module (see [export_traces()]).
+#' Prediction modules also add every model call to the session's prompt
+#' history (see [inspect_history()]).
 #'
-#' Trace context is correlation-only: it is not included in prompts, provider
-#' requests, cache keys, or program artifact identity. Each attempted execution
-#' also records `program_artifact_id`, derived from the program's existing
-#' artifact integrity digest. `program_artifact_id` is a reserved field: for a
-#' registry-backed program, call [program_artifact_id()] once with its registry
-#' to bind the verified runtime references before execution.
+#' @return With `.return_format = "simple"`, the outputs as a named list with
+#'   one element per output field, for example `list(answer = "4")`. A
+#'   signature whose output type is a bare ellmer type (such as
+#'   `ellmer::type_enum()`) returns the bare value instead. A batch returns a
+#'   list with one such result per input element.
 #'
-#' @return For single inputs with `.return_format = "simple"`, the parsed
-#'   output according to the module's signature. Object-shaped outputs remain
-#'   named records for both scalar and batch calls.
-#'   For single inputs with .return_format="structured": A list with components:
-#'   - output: The parsed output
-#'   - chat: The ellmer chat object used
-#'   - metadata: Additional metadata (tokens used, latency, etc.)
-#'
-#'   For batch inputs: A list of results matching the input length. Empty
-#'   batches return a zero-length list (with class `dsprrr_batch_result` for
-#'   structured output).
+#'   With `.return_format = "structured"`, a list of class `dsprrr_result`
+#'   with elements `output` (as above), `chat` (the ellmer Chat used) and
+#'   `metadata` (model, prompt, token counts, cost, latency, cache status and
+#'   error). A batch returns a list of these with class `dsprrr_batch_result`.
+#'   Use [get_output()], [get_metadata()] or [get_cost()] to read them.
 #' @export
+#' @family execution
 #' @examples
+#' # A function-backed module runs without a model
+#' shout <- module_fn("text -> reply", function(text) toupper(text))
+#' run(shout, text = "hello")
+#'
 #' \dontrun{
-#' # Single input
-#' llm <- ellmer::chat_openai()
-#' result <- signature("text -> sentiment") |>
-#'   module() |>
-#'   run(text = "I love this!", .llm = llm)
+#' llm <- ellmer::chat_openai(model = "gpt-6-luna")
+#' classify <- module(
+#'   signature("text -> sentiment: enum('positive', 'negative', 'neutral')")
+#' )
 #'
-#' # Batch processing
-#' results <- signature("text -> sentiment") |>
-#'   module() |>
-#'   run(text = c("I love this!", "This is bad"), .llm = llm)
+#' # One input returns a named list
+#' result <- run(classify, text = "I love this!", .llm = llm)
+#' result$sentiment
 #'
-#' # Structured return
-#' result <- signature("text -> sentiment") |>
-#'   module() |>
-#'   run(text = "Great!", .llm = llm, .return_format = "structured")
-#' # Access: result$output, result$chat, result$metadata
+#' # A vector runs a batch: one result per element
+#' run(classify, text = c("I love this!", "This is bad"), .llm = llm)
 #'
-#' # Configure ellmer retry behavior (if needed)
-#' options(ellmer_max_tries = 5)
+#' # Structured results carry the Chat and call metadata
+#' res <- run(classify, text = "Great!", .llm = llm, .return_format = "structured")
+#' res$metadata$cost
+#'
+#' # Skip the response cache for one call
+#' run(classify, text = "Great!", .llm = llm, .cache = FALSE)
 #' }
-#' @seealso
-#' * [run_dataset()] for running a module on a data frame
-#' * [evaluate()] for running with metric evaluation
-#' * [module()] for creating modules
 run <- function(module, ...) {
   UseMethod("run")
 }
@@ -3831,49 +3832,67 @@ call_llm <- function(
   )
 }
 
-#' Execute Module on Data
+#' Run a module on each row of a data frame
 #'
 #' @description
-#' Execute a module on a data frame/tibble with optimized batch processing.
-#' Zero-row data frames return a zero-row tibble with the same result columns
-#' as a non-empty call, without resolving a Chat or changing runtime state.
+#' `run_dataset()` runs a module once per row of `data`, taking each input from
+#' the column with the same name, and adds the outputs as a `result`
+#' list-column. It works for every module type, including those that
+#' [run()] only accepts one input at a time.
 #'
-#' @param module A DSPrrr module (e.g., created with `module()`)
-#' @param data A tibble or data frame with columns matching the module's inputs.
-#' @param ... Additional arguments passed to [run()].
+#' @param module A module, such as one created with [module()] or
+#'   [module_fn()].
+#' @param data A data frame with one column per required signature input.
+#'   Other columns (such as expected answers) are kept in the result but not
+#'   sent to the module.
+#' @param ... Only `.cache` is accepted here, with the same meaning as in
+#'   [run()]. Any other dot-prefixed argument is an error.
 #'
-#' @return A tibble with the input columns plus a `result` list-column containing
-#'   one named declared-output record per row.
-#'   With `.return_format = "structured"`, the tibble also contains `.error`,
-#'   `.metadata`, and `.chat`; `.error` is `NA` for successful rows and contains
-#'   the LLM execution error message for failed rows.
+#' @details
+#' A row that fails gets `NA` in `result` and a warning; with
+#' `.return_format = "structured"` its error message is in `.error`. A
+#' zero-row data frame returns a zero-row tibble with the same columns,
+#' without calling the model.
+#'
+#' @return A tibble with the columns of `data` plus `result`, a list-column
+#'   holding each row's output (a named list, as returned by [run()]). With
+#'   `.return_format = "structured"`, it also has `.error` (`NA` for rows that
+#'   succeeded), `.metadata` and `.chat`.
 #' @export
+#' @family execution
 #' @examples
-#' \dontrun{
-#' # Process data
-#' df <- tibble::tibble(
-#'   text = c("I love this!", "This is bad", "Okay product")
-#' )
+#' # A function-backed module runs without a model
+#' shout <- module_fn("text -> reply", function(text) toupper(text))
+#' reviews <- data.frame(text = c("great", "broken"), stars = c(5, 1))
+#' results <- run_dataset(shout, reviews)
+#' results
+#' results$result[[1]]$reply
 #'
-#' llm <- ellmer::chat_openai()
-#' results <- signature("text -> sentiment") |>
-#'   module() |>
-#'   run_dataset(df, .llm = llm)
+#' \dontrun{
+#' classify <- module(signature("text -> sentiment"))
+#' run_dataset(
+#'   classify,
+#'   reviews,
+#'   .llm = ellmer::chat_openai(model = "gpt-6-luna"),
+#'   .return_format = "structured"
+#' )
 #' }
 run_dataset <- function(module, ...) {
   UseMethod("run_dataset")
 }
 
 #' @rdname run_dataset
-#' @param .llm Optional ellmer Chat object for LLM calls
-#' @param .verbose Logical whether to print verbose output
-#' @param .concurrency Optional batch policy created by
-#'   [concurrency_control()]. Omission uses sequential execution.
-#' @param .progress Logical whether to show progress bar
-#' @param .return_format Character either "simple" or "structured"
-#' @param .trace_context A named, JSON-compatible list copied into row metadata
-#'   and traces. When omitted inside another dsprrr operation, the active
-#'   context is inherited.
+#' @param .llm An ellmer Chat for all rows. See [run()] for how it is chosen
+#'   when omitted.
+#' @param .verbose If `TRUE`, print the rendered input section of each
+#'   prompt.
+#' @param .concurrency A policy from [concurrency_control()]. The default runs
+#'   rows one after another.
+#' @param .progress Show a progress bar. Default `TRUE`.
+#' @param .return_format `"simple"` (the default) or `"structured"`.
+#' @param .trace_context A named, JSON-compatible list copied into each row's
+#'   metadata and traces. When omitted inside another dsprrr operation, the
+#'   active context is inherited.
 #' @export
 run_dataset.Module <- function(
   module,
@@ -4452,6 +4471,7 @@ show_prompt_preview <- function(module) {
 #' Print method for dsprrr_batch_result
 #' @param x A dsprrr_batch_result object
 #' @param ... Additional arguments (unused)
+#' @noRd
 #' @export
 print.dsprrr_batch_result <- function(x, ...) {
   n <- length(x)

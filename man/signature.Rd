@@ -2,44 +2,94 @@
 % Please edit documentation in R/signature.R
 \name{signature}
 \alias{signature}
-\title{Create a Typed Module Signature}
+\title{Define a module's inputs and outputs}
 \usage{
 signature(x = NULL, inputs = NULL, output_type = NULL, instructions = "", ...)
 }
 \arguments{
-\item{x}{Either a string in DSPy format ("inputs -> output") or NULL}
+\item{x}{A signature string, \code{"inputs -> outputs"} (see below).}
 
-\item{inputs}{List of input specifications (when using explicit notation)}
+\item{inputs}{For the explicit form: a list of \code{\link[=input]{input()}} specifications.}
 
-\item{output_type}{An ellmer type object (when using explicit notation)}
+\item{output_type}{For the explicit form: an ellmer type. Use
+\code{\link[ellmer:type_object]{ellmer::type_object()}} for named output fields; a bare type such as
+\code{ellmer::type_enum()} makes \code{\link[=run]{run()}} return a bare value.}
 
-\item{instructions}{Optional instructions for the operation}
+\item{instructions}{What the module should do. The instructions are placed
+at the top of every prompt. For a string signature, the default is
+generated from the field names, for example "Given the fields
+\code{question}, produce the fields \code{answer}."}
 
-\item{...}{Additional arguments}
+\item{...}{Ignored. Misspelled arguments are dropped without a warning, so
+check the spelling of \code{instructions}.}
 }
 \value{
-A signature object for use with \code{\link[=module]{module()}} and related constructors.
+A \code{Signature} object (S7) with properties \verb{@inputs} (a list of
+\code{\link[=input]{input()}} specifications), \verb{@output_type} (an ellmer type) and
+\verb{@instructions} (a string). Pass it to \code{\link[=module]{module()}} or another
+constructor.
 }
 \description{
-The primary function for creating signatures. Accepts either DSPy-style
-string notation or explicit arguments. Input and output names must be valid,
-unique R field names, and the two namespaces must not overlap.
+A signature declares what a module takes in, what it returns and what it
+should do. Write it as a DSPy-style string such as
+\code{"question -> answer"}, or build it from \code{\link[=input]{input()}} specifications and an
+ellmer type.
+
+Field names must be valid, unique R names, and no name can be both an input
+and an output.
+}
+\details{
+\subsection{String notation}{
+
+A signature string has comma-separated field names on each side of one
+\verb{->}. Any field can take a type after a colon, as in
+\code{"question: str, k: int -> answer: str, confidence: float"}. Fields without
+a type are strings. The outputs always form a named list, so a module built
+from \code{"text -> sentiment"} returns \code{list(sentiment = ...)}.\tabular{ll}{
+   Type in the string \tab Field type \cr
+   \code{str}, \code{string} \tab string \cr
+   \code{int}, \code{integer} \tab integer \cr
+   \code{float}, \code{number}, \code{numeric} \tab number \cr
+   \code{bool}, \code{boolean}, \code{logical} \tab logical \cr
+   \code{enum('a', 'b')}, \code{Literal['a', 'b']} \tab one of the listed values \cr
+   \code{list[T]}, \code{array(T)}, \code{T[]} \tab array of \code{T} \cr
+   \code{dict[K, V]} \tab object with free-form keys (\code{K} and \code{V} are not enforced) \cr
+   \code{Optional[T]} \tab \code{T}, marked as not required \cr
+}
+
+
+Bounds such as \code{number[0, 100]} or \code{string[5, 10]} are accepted but
+dropped, leaving a plain number or string. \code{Union[A, B]} uses \code{A} and
+warns. An unknown type name is an error that suggests the closest known
+type. The string form has no syntax for field descriptions: use the
+explicit form with \code{\link[=input]{input()}} descriptions and described ellmer types, such
+as \code{ellmer::type_string("One sentence")}.
+}
 }
 \examples{
-# String notation (recommended for simple cases)
-sig1 <- signature("text -> sentiment")
-sig2 <- signature("context, question -> answer: string")
-sig3 <- signature("text -> label: enum('positive', 'negative', 'neutral')")
+signature("text -> sentiment")
+signature(
+  "text -> label: enum('positive', 'negative', 'neutral')",
+  instructions = "Classify the sentiment of a product review."
+)
+signature("question: str, k: int -> answers: list[str], confidence: float")
 
-# Explicit notation (for complex cases)
-sig4 <- signature(
-  inputs = list(
-    input("text", description = "Text to analyze")
-  ),
+# Explicit form, with descriptions
+signature(
+  inputs = list(input("review", description = "A customer review")),
   output_type = ellmer::type_object(
-    sentiment = ellmer::type_string(),
-    confidence = ellmer::type_number()
+    sentiment = ellmer::type_enum(c("positive", "negative")),
+    confidence = ellmer::type_number("Between 0 and 1")
   ),
-  instructions = "Analyze the text"
+  instructions = "Classify the review."
 )
 }
+\seealso{
+Other signatures:
+\code{\link[=has_reasoning]{has_reasoning()}},
+\code{\link[=input]{input()}},
+\code{\link[=with_instructions]{with_instructions()}},
+\code{\link[=with_reasoning]{with_reasoning()}},
+\code{\link[=without_reasoning]{without_reasoning()}}
+}
+\concept{signatures}

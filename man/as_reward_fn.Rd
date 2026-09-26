@@ -2,33 +2,72 @@
 % Please edit documentation in R/module-wrapper.R
 \name{as_reward_fn}
 \alias{as_reward_fn}
-\title{Convert a Metric to a Reward Function}
+\title{Turn a metric into a reward function}
 \usage{
 as_reward_fn(metric, expected_field = "expected", prediction_field = NULL)
 }
 \arguments{
-\item{metric}{A metric function created with \verb{metric_*()} functions}
+\item{metric}{A metric, such as \code{metric_exact_match()}. The metric
+receives \code{prediction_field} of the prediction and the bare expected
+value, so do not give it a \code{field} of its own.}
 
-\item{expected_field}{Character. Name of the field in inputs that contains
-the expected value. Default is "expected".}
+\item{expected_field}{Name of the input that holds the expected value.}
 
-\item{prediction_field}{Character. If the prediction is a list, extract
-this field before comparing. If NULL, uses the whole prediction.}
+\item{prediction_field}{Name of the prediction field to compare. With
+\code{NULL}, the whole prediction is passed to the metric.}
 }
 \value{
-A reward function suitable for \code{best_of_n()} and \code{refine()}
+A function \verb{function(prediction, inputs)} returning a numeric
+score.
 }
 \description{
-Adapts a metric function (with signature \verb{function(prediction, expected)})
-to a reward function (with signature \verb{function(prediction, inputs)}).
+\code{as_reward_fn()} adapts a metric, called as \code{metric(prediction, expected)},
+into a reward function for \code{\link[=best_of_n]{best_of_n()}} and \code{\link[=refine]{refine()}}, called as
+\code{reward(prediction, inputs)}. The expected value is read from the inputs
+under \code{expected_field}.
+}
+\details{
+Because the expected value travels with the inputs of \code{\link[=run]{run()}}, the
+wrapped module receives it too, and \code{\link[=run]{run()}} warns that it is not declared
+in the signature. A module without a custom \code{template} writes every input
+into its prompt, so it would show the expected answer to the model. Give
+the wrapped module a \code{template} that leaves that field out, as in the
+example. If the input is missing, the reward is 0 with a warning.
 }
 \examples{
-# Convert exact match metric to reward function
-reward <- as_reward_fn(metric_exact_match(), expected_field = "answer")
-
-# With field extraction
 reward <- as_reward_fn(
-  metric_exact_match(field = "sentiment"),
-  expected_field = "expected_sentiment"
+  metric_exact_match(ignore_case = TRUE),
+  expected_field = "expected",
+  prediction_field = "answer"
+)
+reward(list(answer = "paris"), list(question = "Capital?", expected = "Paris"))
+reward(list(answer = "Lyon"), list(question = "Capital?", expected = "Paris"))
+
+\dontrun{
+qa <- module(
+  signature("question -> answer"),
+  template = "Question: {question}\nReply with a single word."
+)
+checked <- best_of_n(qa, N = 3L, reward_fn = reward)
+run(
+  checked,
+  question = "What is the capital of France?",
+  expected = "Paris",
+  .llm = ellmer::chat_openai(model = "gpt-6-luna")
 )
 }
+}
+\seealso{
+Other composition:
+\code{\link[=best_of_n]{best_of_n()}},
+\code{\link[=ensemble]{ensemble()}},
+\code{\link[=pipeline]{pipeline()}},
+\code{\link[=reduce_best_by_metric]{reduce_best_by_metric()}},
+\code{\link[=reduce_first]{reduce_first()}},
+\code{\link[=reduce_majority]{reduce_majority()}},
+\code{\link[=reduce_weighted_vote]{reduce_weighted_vote()}},
+\code{\link[=refine]{refine()}},
+\code{\link[=step]{step()}},
+\code{\link[=with_assertions]{with_assertions()}}
+}
+\concept{composition}

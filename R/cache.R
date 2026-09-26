@@ -1,17 +1,9 @@
-#' LLM Response Caching
+#' LLM response caching
 #'
-#' @description
-#' dsprrr provides automatic caching of LLM responses to speed up development
-#' and reduce costs. The cache uses a two-tier architecture:
-#' 1. **Memory cache**: Fast in-session LRU cache
-#' 2. **Disk cache**: Persistent cache across R sessions
-#'
-#' Versioned cache envelopes can contain raw request content, parsed model
-#' outputs, and semantic conversation-turn deltas. Persistent cache directories
-#' must therefore be treated as sensitive storage; see [configure_cache()].
+#' The user-facing documentation is on the [configure_cache()] page.
 #'
 #' @name cache
-#' @keywords internal
+#' @noRd
 NULL
 
 # ── Cache Configuration ──────────────────────────────────────────────────────
@@ -29,101 +21,97 @@ default_disk_cache_path <- function() {
   if (nzchar(path)) path.expand(path) else tools::R_user_dir("dsprrr", "cache")
 }
 
-#' Configure dsprrr Cache
+#' Configure the response cache
 #'
 #' @description
-#' Configure the caching behavior for LLM responses. By default, both memory
-#' and disk caching are enabled.
+#' dsprrr caches model responses, so repeating a request returns the stored
+#' answer without calling the model. That makes re-running code faster and
+#' cheaper. There are two tiers, both on by default: a memory cache for the
+#' session and a disk cache that lasts across sessions. `configure_cache()`
+#' changes the settings for the rest of the session.
 #'
 #' @details
-#' The cache stores versioned envelopes containing parsed LLM responses and,
-#' when needed, semantic conversation-turn deltas used to restore an ellmer
-#' Chat after a cache hit. Although cache keys hash request identity, envelope
-#' values may contain raw request content and model outputs. Treat persistent
-#' cache files as sensitive data.
+#' ## What counts as the same request
 #'
-#' **Disk privacy**: By default, the disk cache uses the platform-specific
-#' per-user cache directory. On Unix, dsprrr verifies effective ownership,
-#' canonical path identity, a cache directory with exactly mode `0700`, and
-#' response files with exactly mode `0600` before serialized reads and writes.
-#' Every existing ancestor must be owned by root or the effective user,
-#' including sticky shared parents. Unsafe disk caches fall back to memory when
-#' enabled; otherwise no cache tier remains active.
-#' On Windows, the per-user directory inherits the account's filesystem ACLs;
-#' base R cannot verify that those ACLs are owner-only. Set `disk_private =
-#' FALSE` only for a cache whose writers and readers are all trusted.
+#' A cached response is used only when everything that could change the
+#' answer matches: provider, model, parameters such as temperature, system
+#' prompt, conversation history, prompt and output schema. [best_of_n()],
+#' [refine()] and [with_assertions()] attempts, and [evaluate()] epochs after
+#' the first, use separate cache partitions, so they get fresh responses.
+#' Chats with registered tools are never cached.
 #'
-#' Existing Unix caches must already use exactly mode `0700` for the directory
-#' and `0600` for every response file; special mode bits are rejected. Caches
-#' with different modes, untrusted ancestors, symbolic links, non-regular
-#' filesystem entries, or unverifiable ownership are not changed or read;
-#' dsprrr uses memory caching when enabled and otherwise runs uncached. A shared
-#' writable cache could replace an RDS response envelope and must be treated as
-#' untrusted serialized input.
+#' To skip the cache for one call, pass `.cache = FALSE` to [run()],
+#' [run_dataset()] or [evaluate()]. To turn caching off for a whole
+#' environment, for example on CI, set the environment variable
+#' `DSPRRR_CACHE_ENABLED=false` (or `0`, `no`, `off`); `DSPRRR_CACHE_PATH`
+#' moves the default disk location.
 #'
-#' POSIX modes cannot describe every filesystem policy. dsprrr does not inspect
-#' extended ACLs, administrators can still access owner files, and some network
-#' filesystems do not honor local mode changes. A same-account process can also
-#' race path checks and file opens; dsprrr checks identity before and after I/O
-#' but base R does not expose descriptor-level `openat()`/`fstat()` guarantees.
-#' Avoid shared or network cache paths for sensitive workloads. In CI, disable
-#' caching with `DSPRRR_CACHE_ENABLED=false` or use a job-specific
-#' `DSPRRR_CACHE_PATH`.
+#' ## Privacy
 #'
-#' **Environment variable**: Set `DSPRRR_CACHE_ENABLED=false` (or `0`, `no`,
-#' `off`) to globally disable caching, useful for CI/testing environments.
+#' Cache files hold the requests and the parsed responses, and, where
+#' needed, the conversation turns used to restore a Chat after a cache hit.
+#' Treat the disk cache as sensitive data.
 #'
-#' **Git**: The default cache is outside the project. If you explicitly use a
-#' project-local path, add it to `.gitignore`, for example:
-#' ```
-#' # dsprrr LLM response cache
-#' .dsprrr_cache/
-#' ```
+#' The default disk location is the per-user cache directory from
+#' [tools::R_user_dir()]. On Unix, dsprrr reads and writes it only if the
+#' directory has mode `0700`, every response file has mode `0600`, the
+#' effective user owns them, and every existing parent directory belongs to
+#' root or that user. A cache that fails these checks (other modes, special
+#' mode bits, symbolic links, files that are not regular, or ownership that
+#' cannot be verified) is neither changed nor read: dsprrr falls back to the
+#' memory cache if it is enabled and otherwise runs uncached. On Windows, the
+#' directory inherits the account's access rules, which base R cannot verify.
 #'
-#' @param enable Logical. Master switch to enable/disable all caching.
-#'   Default `TRUE`.
-#' @param enable_memory Logical. Enable in-memory LRU cache. Default `TRUE`.
-#' @param enable_disk Logical. Enable persistent disk cache. Default `TRUE`.
-#' @param disk_path Character. Path for disk cache directory.
-#'   Defaults to `tools::R_user_dir("dsprrr", "cache")`, unless overridden by
-#'   `DSPRRR_CACHE_PATH`.
-#' @param disk_private Logical. Enforce private cache storage. On Unix, require
-#'   effective ownership and exact private POSIX modes for the directory and
-#'   response files, plus root-or-effective ownership for every existing
-#'   ancestor. On Windows, use inherited ACLs and report privacy as unverified.
-#'   Set to `FALSE` only for an explicitly trusted shared cache. Default `TRUE`.
-#' @param memory_max_entries Integer. Maximum entries in memory cache.
-#'   Default `1000L`.
-#' @param disk_max_size Numeric. Maximum disk cache size in bytes.
-#'   Default `500 * 1024^2` (500MB).
-#' @param disk_max_age Numeric. Maximum age in seconds for disk cache entries.
-#'   Default `Inf` (no age limit).
+#' These checks cannot see extended ACLs, stop administrators, or cover
+#' network file systems that ignore local modes, and a process running as
+#' the same user could swap files between a check and a read. Avoid shared or
+#' network cache paths for sensitive work. Set `disk_private = FALSE` only
+#' for a cache whose readers and writers you all trust: a writable shared
+#' cache could replace a stored response, which dsprrr reads back with
+#' `readRDS()`.
 #'
-#' @return Invisibly returns the previous cache configuration as a list.
+#' If you point the disk cache inside a project, add the directory (for
+#' example `.dsprrr_cache/`) to `.gitignore`.
+#'
+#' @param enable Turn all caching on or off.
+#' @param enable_memory Use the memory cache.
+#' @param enable_disk Use the disk cache.
+#' @param disk_path Directory for the disk cache. Defaults to
+#'   `tools::R_user_dir("dsprrr", "cache")`, or `DSPRRR_CACHE_PATH` when set.
+#' @param disk_private If `TRUE` (the default), enforce the ownership and
+#'   permission checks described under Privacy. `FALSE` is only for a trusted
+#'   shared cache.
+#' @param memory_max_entries Maximum number of responses in the memory cache
+#'   (least recently used ones are dropped first).
+#' @param disk_max_size Maximum size of the disk cache in bytes (500 MB by
+#'   default).
+#' @param disk_max_age Maximum age of disk entries in seconds. `Inf` (the
+#'   default) keeps them until they are pruned for size.
+#'
+#' @return The previous settings, invisibly, as a list that can be passed back
+#'   with `do.call(configure_cache, old)`. `NULL` if the settings had not been
+#'   read yet in this session.
 #'
 #' @export
+#' @family configuration
 #' @examples
-#' \dontrun{
-#' # Use defaults (caching enabled)
-#' configure_cache()
+#' cache_stats()
 #'
-#' # Disable disk cache (memory only)
+#' # Turn caching off for a while, then restore the previous settings
+#' old <- configure_cache(enable = FALSE)
+#' cache_stats()$enabled
+#' do.call(configure_cache, old)
+#' cache_stats()$enabled
+#'
+#' \dontrun{
+#' # Keep responses in memory only
 #' configure_cache(enable_disk = FALSE)
 #'
-#' # Disable all caching
-#' configure_cache(enable = FALSE)
+#' # A larger cache in another directory
+#' configure_cache(disk_path = "~/.dsprrr_cache", disk_max_size = 1024^3)
 #'
-#' # Custom disk location and size
-#' configure_cache(
-#'   disk_path = "~/.dsprrr_cache",
-#'   disk_max_size = 1024^3  # 1GB
-#' )
-#'
-#' # Trusted shared caches require an explicit privacy opt-out
-#' configure_cache(
-#'   disk_path = "/srv/trusted-team/dsprrr-cache",
-#'   disk_private = FALSE
-#' )
+#' # A shared cache that every user of the directory trusts
+#' configure_cache(disk_path = "/srv/team/dsprrr-cache", disk_private = FALSE)
 #' }
 configure_cache <- function(
   enable = TRUE,
@@ -206,27 +194,33 @@ cache_recompose_active_tiers <- function() {
   invisible(.dsprrr_env$cache)
 }
 
-#' Clear dsprrr Cache
+#' Clear the response cache
 #'
 #' @description
-#' Clear cached LLM responses. Can clear memory cache, disk cache, or both.
+#' `clear_cache()` deletes cached model responses from memory, from disk or
+#' both, and resets the hit and miss counts reported by [cache_stats()].
 #'
-#' @param which Character. Which cache tier to clear: `"all"` (default),
-#'   `"memory"`, or `"disk"`.
+#' @details
+#' The disk tier is cleared only if it has been opened in this session,
+#' which happens at the first cached model call. In a fresh session,
+#' `clear_cache()` leaves the directory on disk alone; delete the directory
+#' shown by [dsprrr_sitrep()] to remove it.
 #'
-#' @return Invisibly returns `TRUE` on success.
+#' @param which Which tier to clear: `"all"` (the default), `"memory"` or
+#'   `"disk"`.
+#'
+#' @return `TRUE`, invisibly. If a tier cannot be cleaned up, the cache is
+#'   still detached and an error lists the tiers that failed.
 #'
 #' @export
+#' @family configuration
 #' @examples
-#' \dontrun{
-#' # Clear all caches
-#' clear_cache()
-#'
-#' # Clear only memory cache
 #' clear_cache("memory")
+#' cache_stats()
 #'
-#' # Clear only disk cache
-#' clear_cache("disk")
+#' \dontrun{
+#' # Delete every cached response, on disk too
+#' clear_cache()
 #' }
 clear_cache <- function(which = c("all", "memory", "disk")) {
   which <- match.arg(which)
@@ -350,27 +344,25 @@ clear_cache <- function(which = c("all", "memory", "disk")) {
   invisible(TRUE)
 }
 
-#' Get Cache Statistics
+#' Report response-cache statistics
 #'
 #' @description
-#' Get statistics about cache usage including hit rate, entry counts,
-#' and sizes.
+#' `cache_stats()` reports whether caching is on, how many requests were
+#' served from the cache (hits) or sent to the model (misses) since the
+#' cache was last cleared, and how many responses each tier holds.
 #'
-#' @return A list with cache statistics:
-#'   - `enabled`: Logical, whether caching is enabled
-#'   - `hits`: Integer, number of cache hits
-#'   - `misses`: Integer, number of cache misses
-#'   - `hit_rate`: Numeric, proportion of requests served from cache
-#'   - `memory_entries`: Integer, entries in memory cache (if available)
-#'   - `disk_entries`: Integer, entries in disk cache (if available)
+#' @return A list of class `dsprrr_cache_stats` with `enabled`, `hits`,
+#'   `misses`, `hit_rate` (hits as a share of all requests), and
+#'   `memory_entries` and `disk_entries` once those tiers are in use. If the
+#'   disk cache failed its privacy checks, also `degraded = TRUE` and
+#'   `degraded_reason`. Printing it gives a short report.
 #'
 #' @export
+#' @family configuration
 #' @examples
-#' \dontrun{
-#' # Check cache performance
 #' stats <- cache_stats()
+#' stats
 #' stats$hit_rate
-#' }
 cache_stats <- function() {
   config <- get_cache_config()
   stats <- .dsprrr_env$cache_stats %||% list(hits = 0L, misses = 0L)

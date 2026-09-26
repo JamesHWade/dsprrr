@@ -2,33 +2,50 @@
 % Please edit documentation in R/metrics.R
 \name{metric_custom}
 \alias{metric_custom}
-\title{Create a Custom Metric}
+\title{Wrap a custom metric function}
 \usage{
 metric_custom(fn, name = NULL)
 }
 \arguments{
-\item{fn}{A two-argument metric function returning one logical/numeric score
+\item{fn}{A function called as \code{fn(prediction, expected)}, where
+\code{prediction} is the output (a named list) and \code{expected} the whole data
+row, as a one-row data frame. It returns one logical or numeric score,
 or \code{list(score = , feedback = )}.}
 
-\item{name}{Optional name for the metric (for debugging)}
+\item{name}{A name used in error messages and warnings.}
 }
 \value{
-A metric function with enhanced error handling
+A metric function with the same return values as \code{fn}, except that
+numeric scores outside 0 to 1 are clipped to that range with a warning,
+and errors are re-raised with the metric's name.
 }
 \description{
-Wrapper for creating custom metric functions with consistent interface
-and error handling. The function may return one logical or numeric score, or
-\code{list(score = , feedback = )} for feedback-aware optimization.
+\code{metric_custom()} wraps your own scoring function so that its errors name
+the metric and its numeric scores stay between 0 and 1. Any function
+\verb{function(prediction, expected)} already works as a metric; the wrapper
+only adds these checks.
 }
 \examples{
-# Custom length comparison
-length_metric <- metric_custom(function(pred, exp) {
-  nchar(as.character(pred)) == nchar(as.character(exp))
-}, name = "length_match")
-
-# Custom scoring function
-score_metric <- metric_custom(function(pred, exp) {
-  # Return value between 0 and 1
-  min(nchar(pred) / nchar(exp), 1)
-})
+# Partial credit for answers that are close in length
+length_ratio <- metric_custom(
+  function(prediction, expected) {
+    nchar(prediction$answer) / nchar(expected$answer)
+  },
+  name = "length_ratio"
+)
+row <- data.frame(question = "Capital of France?", answer = "Paris")
+length_ratio(list(answer = "Pa"), row)
+length_ratio(list(answer = "Paris, France"), row)
 }
+\seealso{
+Other metrics:
+\code{\link[=evaluate]{evaluate()}},
+\code{\link[=metric_contains]{metric_contains()}},
+\code{\link[=metric_exact_match]{metric_exact_match()}},
+\code{\link[=metric_f1]{metric_f1()}},
+\code{\link[=metric_field_match]{metric_field_match()}},
+\code{\link[=metric_threshold]{metric_threshold()}},
+\code{\link[=metric_with_feedback]{metric_with_feedback()}},
+\code{\link[=metric_with_trace]{metric_with_trace()}}
+}
+\concept{metrics}

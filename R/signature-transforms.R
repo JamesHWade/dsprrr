@@ -1,30 +1,20 @@
-#' Signature Transforms for Advanced Reasoning Modules
+#' Replace or extend signature instructions
 #'
 #' @description
-#' Functions for transforming signatures to enable different reasoning patterns.
-#' These are composable transforms that modify the output type of a signature
-#' to include additional fields like chain-of-thought reasoning.
+#' `with_instructions()` replaces a signature's instructions.
+#' `append_instructions()` adds text after the existing instructions,
+#' separated by a blank line. Both keep the input and output fields and return
+#' a new signature; the original is unchanged.
 #'
-#' @name signature-transforms
-NULL
-
-#' Derive a Signature with New Instructions
+#' @param x A signature from [signature()], or a signature string such as
+#'   `"question -> answer"`.
+#' @param instructions One string. Empty text is allowed when the signature
+#'   stays valid; `append_instructions()` then returns the instructions
+#'   unchanged.
 #'
-#' @description
-#' `with_instructions()` replaces a signature's instructions while preserving
-#' its input and output fields. `append_instructions()` layers additional
-#' instructions after the existing text, separated by a blank line. Both
-#' functions return a new signature object and never mutate the original.
-#'
-#' @param x A signature object created by [signature()], or string notation
-#'   such as `"question -> answer"`.
-#' @param instructions A single, non-missing character string. Empty text is
-#'   allowed when the resulting signature remains valid; for
-#'   `append_instructions()` it is a no-op.
-#'
-#' @return A new signature object.
+#' @return A new signature.
+#' @family signatures
 #' @export
-#' @rdname signature-transforms
 #' @examples
 #' base <- signature(
 #'   "text -> summary",
@@ -32,10 +22,10 @@ NULL
 #' )
 #'
 #' concise <- append_instructions(base, "Use at most 30 words.")
-#' base@instructions
 #' concise@instructions
 #'
-#' replaced <- with_instructions(base, "Return one sentence.")
+#' with_instructions(base, "Return one sentence.")@instructions
+#' base@instructions
 with_instructions <- function(x, instructions) {
   sig <- signature_transform_input(x)
   instructions <- validate_signature_instructions(instructions)
@@ -48,7 +38,7 @@ with_instructions <- function(x, instructions) {
 }
 
 #' @export
-#' @rdname signature-transforms
+#' @rdname with_instructions
 append_instructions <- function(x, instructions) {
   sig <- signature_transform_input(x)
   instructions <- validate_signature_instructions(instructions)
@@ -87,49 +77,41 @@ signature_transform_input <- function(x) {
   )
 }
 
-#' Add Chain-of-Thought Reasoning to a Signature
+#' Add a reasoning field to a signature
 #'
 #' @description
-#' Transforms a signature to include a reasoning field before the original output.
-#' This implements the Chain-of-Thought prompting pattern where the model is
-#' asked to "show its work" before providing the final answer.
+#' `with_reasoning()` adds a string output field, `reasoning` by default,
+#' before the existing output fields, so the model writes out its reasoning
+#' before it answers (chain-of-thought prompting). [chain_of_thought()] builds
+#' a module from the result.
 #'
-#' @param x A signature object created by [signature()], or string notation
-#'   such as `"question -> answer"`.
-#' @param prefix Character. The prefix for the reasoning field description.
-#'   Default uses DSPy-style "Let's think step by step" prompt.
-#' @param reasoning_field Character. Name of the reasoning field to add.
-#'   Default is "reasoning".
-#' @param instructions Character. Optional new instructions for the signature.
-#'   If NULL (default), original instructions are preserved with reasoning context.
-#' @param ... Additional arguments (unused)
+#' @param x A signature from [signature()], or a signature string such as
+#'   `"question -> answer"`.
+#' @param prefix Start of the reasoning field's description. The description
+#'   reads "Reasoning: `prefix` produce the `fields`.", where `fields` names
+#'   the original output fields.
+#' @param reasoning_field Name of the added field.
+#' @param instructions New instructions. With `NULL` (the default), existing
+#'   instructions get " Think through your reasoning step by step before
+#'   providing the answer." appended, and empty instructions are replaced by
+#'   "Given `inputs`, think step by step and produce `outputs`."
+#' @param ... Ignored.
 #'
-#' @return A new signature object with a reasoning field added to its output
-#'   type.
-#'
-#' @details
-#' The transform works by:
-#' 1. Extracting existing output fields from the signature's output_type
-#' 2. Creating a new output_type with reasoning as the first field
-#' 3. Adding appropriate description to guide the model
-#'
-#' The reasoning field is always placed first to encourage the model to
-#' reason before answering (per Chain-of-Thought research).
+#' @return A new signature whose output is an object with the reasoning field
+#'   first, followed by the original output fields. A bare output type becomes
+#'   a field named `answer`.
 #'
 #' @export
+#' @family signatures
 #' @examples
-#' # Basic usage with string notation
-#' sig <- with_reasoning("question -> answer")
+#' with_reasoning("question -> answer")
 #'
-#' # Custom prefix
+#' # The prefix goes into the description of the reasoning field
 #' sig <- with_reasoning(
-#'   "math_problem -> solution",
-#'   prefix = "Let me solve this step by step:"
+#'   "math_problem -> solution: float",
+#'   prefix = "Let me solve this step by step, then"
 #' )
-#'
-#' # With explicit signature
-#' sig <- signature("context, question -> answer")
-#' cot_sig <- with_reasoning(sig)
+#' sig@output_type@properties$reasoning@description
 with_reasoning <- function(
   x,
   prefix = "Let's think step by step in order to",
@@ -215,32 +197,38 @@ with_reasoning <- function(
   )
 }
 
-#' Create a Chain-of-Thought Module
+#' Create a chain-of-thought module
 #'
 #' @description
-#' Convenience function that creates a PredictModule with chain-of-thought
-#' reasoning enabled. This is equivalent to calling `with_reasoning()` on
-#' a signature and then creating a module from it.
+#' `chain_of_thought()` is `module(with_reasoning(x))`: a prediction module
+#' whose output starts with a `reasoning` field, so the model reasons step by
+#' step before it gives the other outputs.
 #'
-#' @param x A signature object created by [signature()], or string notation.
-#' @param prefix Character. The prefix for the reasoning field.
-#' @param chat Optional ellmer Chat object.
-#' @param template Optional glue template.
-#' @param demos Optional demonstration examples.
-#' @param config Optional prediction configuration.
+#' @param x A signature from [signature()], or a signature string.
+#' @param prefix Start of the reasoning field's description; see
+#'   [with_reasoning()].
+#' @param chat,template,demos,config As in [module()].
 #' @param ... Must be empty.
 #'
-#' @return A PredictModule with reasoning enabled
+#' @return A prediction module, as from [module()]. [run()] returns the
+#'   reasoning along with the other outputs, for example
+#'   `list(reasoning = "...", answer = "...")`.
 #'
 #' @export
+#' @family program constructors
 #' @examples
-#' # Create a chain-of-thought QA module
-#' mod <- chain_of_thought("question -> answer")
+#' solver <- chain_of_thought("question -> answer: float")
+#' solver
 #'
-#' # Use it like any other module
-#' # result <- run(mod, question = "What is 15 * 24?", .llm = llm)
-#' # result$reasoning contains step-by-step reasoning
-#' # result$answer contains the final answer
+#' \dontrun{
+#' result <- run(
+#'   solver,
+#'   question = "What is 15 * 24?",
+#'   .llm = ellmer::chat_openai(model = "gpt-6-luna")
+#' )
+#' result$reasoning
+#' result$answer
+#' }
 chain_of_thought <- function(
   x,
   prefix = "Let's think step by step in order to",
@@ -324,25 +312,22 @@ describe_output_fields <- function(fields) {
   }
 }
 
-#' Check if a Signature has Chain-of-Thought
+#' Test whether a signature has a reasoning field
 #'
 #' @description
-#' Tests whether a signature has been transformed with `with_reasoning()`.
-#' Checks for the presence of a reasoning field in the output type.
+#' `has_reasoning()` checks whether a signature's output has a field named
+#' `reasoning_field`, as added by [with_reasoning()].
 #'
-#' @param sig A signature object created by [signature()].
-#' @param reasoning_field Character. Name of reasoning field to check for.
-#' @return Logical. TRUE if signature has chain-of-thought reasoning.
+#' @param sig A signature from [signature()].
+#' @param reasoning_field Name of the field to look for.
+#' @return `TRUE` or `FALSE`. Anything other than a signature gives `FALSE`.
 #'
 #' @export
+#' @family signatures
 #' @examples
 #' sig <- signature("question -> answer")
 #' has_reasoning(sig)
-#' # FALSE
-#'
-#' cot_sig <- with_reasoning(sig)
-#' has_reasoning(cot_sig)
-#' # TRUE
+#' has_reasoning(with_reasoning(sig))
 has_reasoning <- function(sig, reasoning_field = "reasoning") {
   # Check if it's a Signature (S7 class check)
   if (!S7::S7_inherits(sig, Signature)) {
@@ -360,21 +345,25 @@ has_reasoning <- function(sig, reasoning_field = "reasoning") {
   FALSE
 }
 
-#' Remove Chain-of-Thought from a Signature
+#' Remove the reasoning field from a signature
 #'
 #' @description
-#' Reverses the `with_reasoning()` transform by removing the reasoning field
-#' from the output type. Useful for comparing reasoning vs non-reasoning
-#' module performance.
+#' `without_reasoning()` drops the reasoning field that [with_reasoning()]
+#' added, for example to compare a module with and without chain-of-thought.
+#' The instructions are kept as they are.
 #'
-#' @param sig A signature object, typically created with [with_reasoning()].
-#' @param reasoning_field Character. Name of reasoning field to remove.
-#' @return A new signature object without the reasoning field.
+#' @param sig A signature from [signature()], usually one returned by
+#'   [with_reasoning()].
+#' @param reasoning_field Name of the field to remove.
+#' @return A new signature without the field, or `sig` unchanged if it has no
+#'   such field. If no output field would remain, the output becomes a single
+#'   string field named `answer`.
 #'
 #' @export
+#' @family signatures
 #' @examples
-#' cot_sig <- with_reasoning("question -> answer")
-#' plain_sig <- without_reasoning(cot_sig)
+#' cot <- with_reasoning("question -> answer")
+#' without_reasoning(cot)
 without_reasoning <- function(sig, reasoning_field = "reasoning") {
   if (!S7::S7_inherits(sig, Signature)) {
     cli::cli_abort("Expected a Signature object")

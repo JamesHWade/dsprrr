@@ -1,20 +1,30 @@
-#' Create a ragnar Search Tool for ReAct Modules
+#' Search a ragnar store from a tool-using module
 #'
 #' @description
-#' Creates an ellmer-compatible tool that searches a ragnar document store.
-#' This tool can be used with ReAct modules or registered with ellmer Chat
-#' objects for agentic document retrieval.
+#' `ragnar_tool()` wraps a ragnar document store as an ellmer tool that takes
+#' a search query and returns the `k` best-matching chunks as text. Give it to
+#' [react()] so the agent can search your documents while it reasons, or
+#' register it on an ellmer Chat. [rag_module()] is the alternative that
+#' retrieves once, before every call.
 #'
-#' @param store A ragnar store created with `ragnar::ragnar_store_create()`.
-#' @param k Number of documents to retrieve per search (default 5).
-#' @param name Tool name (default "search_knowledge").
-#' @param description Tool description for the LLM.
+#' @param store A ragnar store, built with `ragnar::ragnar_store_create()`,
+#'   `ragnar::ragnar_store_insert()` and `ragnar::ragnar_store_build_index()`.
+#' @param k Number of chunks to return per search.
+#' @param name Tool name shown to the model.
+#' @param description Tool description shown to the model. The default says
+#'   it searches the knowledge base and returns the top `k` documents.
 #'
-#' @return An ellmer tool definition (see [ellmer::tool()]) for `react()`
+#' @details
+#' Results are numbered (`[Result 1]`, `[Result 2]`, ...) and separated by
+#' `---`. A search error is returned to the model as text instead of
+#' stopping the conversation. Requires the ragnar package.
+#'
+#' @return An ellmer tool definition (see [ellmer::tool()]) for [react()]
 #'   modules or `Chat$register_tool()`. It can also be called directly with a
 #'   query string.
 #'
 #' @export
+#' @family integrations
 #' @examples
 #' \dontrun{
 #' # Create a ragnar store from documents
@@ -29,16 +39,15 @@
 #' ragnar_store_build_index(store)
 #'
 #' # Create a search tool
-#' search_tool <- ragnar_tool(store, k = 3)
+#' search_tool <- ragnar_tool(store, k = 3L)
+#' search_tool("How do I configure the cache?")
 #'
-#' # Use with ReAct module
-#' react_mod <- react(
-#'   signature("question -> answer"),
-#'   tools = list(search_tool)
-#' )
+#' # Use with a ReAct module
+#' agent <- react("question -> answer", tools = list(search_tool))
+#' run(agent, question = "How do I turn caching off?", .llm = ellmer::chat_openai(model = "gpt-6-luna"))
 #'
-#' # Or register with ellmer Chat
-#' chat <- ellmer::chat_openai()
+#' # Or register it on an ellmer Chat
+#' chat <- ellmer::chat_openai(model = "gpt-6-luna")
 #' chat$register_tool(search_tool)
 #' }
 ragnar_tool <- function(
@@ -117,25 +126,30 @@ format_search_results <- function(results) {
   paste(formatted, collapse = "\n\n---\n\n")
 }
 
-#' Create a Semantic Search Tool from Documents
+#' Build a search tool from a set of documents
 #'
 #' @description
-#' Convenience function that creates a ragnar store from documents and wraps
-#' it in a search tool in one step.
+#' `create_search_tool()` builds a ragnar store from documents (one chunked
+#' document per element, embedded with `embedding_fn`), indexes it and wraps
+#' it with [ragnar_tool()], in one step. Embedding the documents calls the
+#' embedding provider.
 #'
-#' @param documents Character vector of documents, or a data frame with a
-#'   'text' or 'content' column.
-#' @param embedding_fn Embedding function passed to
-#'   `ragnar::ragnar_store_create()` as `embed`, e.g.
+#' @param documents A character vector of documents, or a data frame with a
+#'   `text` or `content` column.
+#' @param embedding_fn An embedding function, passed to
+#'   `ragnar::ragnar_store_create()` as `embed`, for example
 #'   `\(x) ragnar::embed_openai(x, model = "text-embedding-3-small")`.
-#' @param k Number of documents to retrieve per search (default 5).
-#' @param name Tool name (default "search_documents").
-#' @param description Optional tool description.
-#' @param ... Additional arguments passed to `ragnar::ragnar_store_create()`.
+#' @param k Number of chunks to return per search.
+#' @param name Tool name shown to the model.
+#' @param description Tool description shown to the model; see
+#'   [ragnar_tool()].
+#' @param ... Passed to `ragnar::ragnar_store_create()`, for example
+#'   `location` to keep the store in a file instead of in memory.
 #'
 #' @return An ellmer tool definition, as returned by [ragnar_tool()].
 #'
 #' @export
+#' @family integrations
 #' @examples
 #' \dontrun{
 #' # Create tool directly from documents

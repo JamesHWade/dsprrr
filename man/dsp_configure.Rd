@@ -2,7 +2,7 @@
 % Please edit documentation in R/chat-default.R
 \name{dsp_configure}
 \alias{dsp_configure}
-\title{Configure dsprrr Default Settings}
+\title{Configure the default chat from a provider name}
 \usage{
 dsp_configure(
   provider = NULL,
@@ -26,19 +26,21 @@ the appropriate environment variable.}
 
 \item{temperature}{Sampling temperature, applied through
 \code{ellmer::params(temperature = )}. Default \code{NULL} uses the provider
-default. Reasoning models ignore it.}
+default. Reasoning models may ignore or reject it: gpt-6-luna accepts it
+only with \code{params = ellmer::params(reasoning_effort = "none")}.}
 
 \item{...}{Additional arguments passed to the ellmer chat constructor
 (\code{\link[ellmer:chat_openai]{ellmer::chat_openai()}}, \code{\link[ellmer:chat_anthropic]{ellmer::chat_anthropic()}} or
 \code{\link[ellmer:chat_google_gemini]{ellmer::chat_google_gemini()}}), such as \code{params} or \code{system_prompt}.}
 }
 \value{
-Invisibly returns the configured Chat object.
+The new default Chat, invisibly.
 }
 \description{
-Configure the default LLM provider and settings for dsprrr. Similar to
-DSPy's \code{dspy.configure(lm=lm)}, this sets up a default Chat that will be
-used by modules when no explicit Chat is provided.
+\code{dsp_configure()} builds an ellmer Chat for a provider and makes it the
+default chat, like DSPy's \code{dspy.configure(lm = ...)}. Modules use it when
+neither the call nor the module names a chat; see \code{\link[=get_default_chat]{get_default_chat()}}
+for the full order.
 }
 \examples{
 \dontrun{
@@ -46,12 +48,31 @@ used by modules when no explicit Chat is provided.
 dsp_configure()
 
 # Configure with specific provider and model
-dsp_configure(provider = "openai", model = "gpt-4.1-mini")
+dsp_configure(provider = "openai", model = "gpt-6-luna")
 
 # Configure with temperature
 dsp_configure(provider = "anthropic", temperature = 0.7)
+
+# gpt-6-luna takes a temperature only with reasoning turned off
+dsp_configure(
+  provider = "openai",
+  model = "gpt-6-luna",
+  temperature = 0,
+  params = ellmer::params(reasoning_effort = "none")
+)
 
 # Now run() uses this configuration
 run(module(signature("question -> answer")), question = "What is 2+2?")
 }
 }
+\seealso{
+Other configuration:
+\code{\link[=cache_stats]{cache_stats()}},
+\code{\link[=clear_cache]{clear_cache()}},
+\code{\link[=configure_cache]{configure_cache()}},
+\code{\link[=dsprrr_sitrep]{dsprrr_sitrep()}},
+\code{\link[=get_default_chat]{get_default_chat()}},
+\code{\link[=is_reasoning_model]{is_reasoning_model()}},
+\code{\link[=with_lm]{with_lm()}}
+}
+\concept{configuration}

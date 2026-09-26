@@ -1,38 +1,32 @@
-#' Create an Exact Match Metric
+#' Exact-match metric
 #'
 #' @description
-#' Creates a metric function that checks for exact string match between
-#' predicted and expected values. Can optionally extract a specific field
-#' from structured outputs.
+#' `metric_exact_match()` makes a metric that is `TRUE` when the prediction
+#' equals the expected value, compared as text, and `FALSE` otherwise.
 #'
 #' @param field Name of the output field to compare. `evaluate()`,
 #'   `optimize_grid()` and `compile()` pass the whole data row as `expected`;
 #'   when `field` is `NULL`, the metric compares the one prediction field that
 #'   is also a column of that row, and errors if there is not exactly one.
-#' @param ignore_case Logical, whether to ignore case when comparing
-#' @param normalize Logical, whether to normalize whitespace
+#' @param ignore_case If `TRUE`, compare without regard to case.
+#' @param normalize If `TRUE` (the default), trim white space at both ends and
+#'   collapse runs of white space before comparing.
 #'
-#' @return A function with signature function(prediction, expected) -> logical
+#' @return A function `function(prediction, expected)` returning `TRUE` or
+#'   `FALSE`, for [evaluate()], [compile()] and the optimizers. `field` is
+#'   stored in its `"field"` attribute.
 #' @export
+#' @family metrics
 #' @examples
-#' # Simple exact match
-#' metric <- metric_exact_match()
-#' metric("hello", "hello")  # TRUE
-#' metric("hello", "world")  # FALSE
+#' match_sentiment <- metric_exact_match(field = "sentiment")
 #'
-#' # Field extraction for structured outputs
-#' metric <- metric_exact_match(field = "sentiment")
-#' metric(list(sentiment = "positive"), list(sentiment = "positive"))  # TRUE
-#'
-#' # Case insensitive matching
-#' metric <- metric_exact_match(ignore_case = TRUE)
-#' metric("Hello", "hello")  # TRUE
-#'
-#' # evaluate() passes the whole data row as `expected`; the shared field
-#' # (here `sentiment`) is compared
-#' metric <- metric_exact_match()
+#' # How evaluate() calls it: the prediction, then the whole data row
 #' row <- data.frame(text = "Great!", sentiment = "positive")
-#' metric(list(sentiment = "positive"), row)  # TRUE
+#' match_sentiment(list(sentiment = "positive"), row)
+#' match_sentiment(list(sentiment = "negative"), row)
+#'
+#' # Called directly on two values
+#' metric_exact_match(ignore_case = TRUE)("Paris ", "paris")
 metric_exact_match <- function(
   field = NULL,
   ignore_case = FALSE,
@@ -65,28 +59,28 @@ metric_exact_match <- function(
   fn
 }
 
-#' Create an F1 Score Metric
+#' Token-overlap F1 metric
 #'
 #' @description
-#' Creates a metric function that calculates the F1 score between predicted
-#' and expected text based on token overlap.
+#' `metric_f1()` makes a metric that scores how many words the prediction and
+#' the expected text share, as the F1 score (harmonic mean of precision and
+#' recall) of their word counts. It gives partial credit, which suits
+#' free-text answers.
 #'
 #' @inheritParams metric_exact_match
-#' @param normalize Logical, whether to normalize text before tokenization
+#' @param normalize If `TRUE` (the default), lower-case both texts and replace
+#'   punctuation with spaces before splitting them into words.
 #'
-#' @return A function with signature function(prediction, expected) -> numeric
+#' @return A function `function(prediction, expected)` returning a number
+#'   between 0 and 1. Two empty texts score 1. `field` is stored in its
+#'   `"field"` attribute.
 #' @export
+#' @family metrics
 #' @examples
-#' # Token-based F1 score
-#' metric <- metric_f1()
-#' metric("the quick brown fox", "the fast brown fox")  # 0.75
-#'
-#' # Field extraction
-#' metric <- metric_f1(field = "answer")
-#' metric(
-#'   list(answer = "the quick brown fox"),
-#'   list(answer = "the fast brown fox")
-#' )
+#' f1 <- metric_f1(field = "answer")
+#' row <- data.frame(question = "Where is the Louvre?", answer = "in Paris, France")
+#' f1(list(answer = "Paris"), row)
+#' f1(list(answer = "It is in Paris, France"), row)
 metric_f1 <- function(field = NULL, normalize = TRUE) {
   fn <- function(prediction, expected) {
     values <- metric_values(prediction, expected, field)
@@ -144,27 +138,37 @@ metric_f1 <- function(field = NULL, normalize = TRUE) {
   fn
 }
 
-#' Create a Contains Metric
+#' Metric that checks for a pattern in the output
 #'
 #' @description
-#' Creates a metric function that checks if the prediction contains
-#' a specific substring or pattern.
+#' `metric_contains()` makes a metric that is `TRUE` when the prediction
+#' contains `pattern`. The pattern is fixed when you create the metric: the
+#' metric ignores its `expected` argument, so every row is checked for the
+#' same pattern. To compare against a column of the data, use
+#' [metric_exact_match()], [metric_f1()] or a custom metric.
 #'
-#' @param pattern The pattern to search for (can be a regex)
-#' @param field Optional field name to extract from structured outputs
-#' @param ignore_case Logical, whether to ignore case
-#' @param fixed Logical, whether pattern is a fixed string (not regex)
+#' @param pattern The text to look for; a regular expression when
+#'   `fixed = FALSE`.
+#' @param field The output field to search. Give it for outputs with more than
+#'   one field; with `NULL`, the whole prediction is searched.
+#' @param ignore_case If `TRUE`, ignore case.
+#' @param fixed If `TRUE` (the default), match `pattern` as plain text.
 #'
-#' @return A function with signature function(prediction, expected) -> logical
+#' @return A function `function(prediction, expected = NULL)` returning
+#'   `TRUE` or `FALSE`. `field` is stored in its `"field"` attribute.
 #' @export
+#' @family metrics
 #' @examples
-#' # Check for substring
-#' metric <- metric_contains("positive", ignore_case = TRUE)
-#' metric("The result is POSITIVE", NULL)  # TRUE
+#' cites_source <- metric_contains("[source]", field = "answer")
+#' cites_source(list(answer = "Paris [source]"))
+#' cites_source(list(answer = "Paris"))
 #'
-#' # Regex pattern
-#' metric <- metric_contains("\\d+", fixed = FALSE)
-#' metric("The answer is 42", NULL)  # TRUE
+#' # The expected value is ignored
+#' cites_source(list(answer = "Paris [source]"), data.frame(answer = "Lyon"))
+#'
+#' # A regular expression
+#' has_number <- metric_contains("[0-9]+", field = "answer", fixed = FALSE)
+#' has_number(list(answer = "The answer is 42"))
 metric_contains <- function(
   pattern,
   field = NULL,
@@ -198,30 +202,36 @@ metric_contains <- function(
   fn
 }
 
-#' Create a Custom Metric
+#' Wrap a custom metric function
 #'
 #' @description
-#' Wrapper for creating custom metric functions with consistent interface
-#' and error handling. The function may return one logical or numeric score, or
-#' `list(score = , feedback = )` for feedback-aware optimization.
+#' `metric_custom()` wraps your own scoring function so that its errors name
+#' the metric and its numeric scores stay between 0 and 1. Any function
+#' `function(prediction, expected)` already works as a metric; the wrapper
+#' only adds these checks.
 #'
-#' @param fn A two-argument metric function returning one logical/numeric score
+#' @param fn A function called as `fn(prediction, expected)`, where
+#'   `prediction` is the output (a named list) and `expected` the whole data
+#'   row, as a one-row data frame. It returns one logical or numeric score,
 #'   or `list(score = , feedback = )`.
-#' @param name Optional name for the metric (for debugging)
+#' @param name A name used in error messages and warnings.
 #'
-#' @return A metric function with enhanced error handling
+#' @return A metric function with the same return values as `fn`, except that
+#'   numeric scores outside 0 to 1 are clipped to that range with a warning,
+#'   and errors are re-raised with the metric's name.
 #' @export
+#' @family metrics
 #' @examples
-#' # Custom length comparison
-#' length_metric <- metric_custom(function(pred, exp) {
-#'   nchar(as.character(pred)) == nchar(as.character(exp))
-#' }, name = "length_match")
-#'
-#' # Custom scoring function
-#' score_metric <- metric_custom(function(pred, exp) {
-#'   # Return value between 0 and 1
-#'   min(nchar(pred) / nchar(exp), 1)
-#' })
+#' # Partial credit for answers that are close in length
+#' length_ratio <- metric_custom(
+#'   function(prediction, expected) {
+#'     nchar(prediction$answer) / nchar(expected$answer)
+#'   },
+#'   name = "length_ratio"
+#' )
+#' row <- data.frame(question = "Capital of France?", answer = "Paris")
+#' length_ratio(list(answer = "Pa"), row)
+#' length_ratio(list(answer = "Paris, France"), row)
 metric_custom <- function(fn, name = NULL) {
   if (!is.function(fn)) {
     cli::cli_abort("fn must be a function")
@@ -267,24 +277,29 @@ metric_custom <- function(fn, name = NULL) {
   }
 }
 
-#' Create a Field Equality Metric
+#' Metric that compares several output fields
 #'
 #' @description
-#' Creates a metric that checks equality of multiple fields in
-#' structured outputs.
+#' `metric_field_match()` makes a metric that compares several fields of the
+#' prediction with the columns of the same names in the expected row.
+#' Values must be exactly equal (numbers may differ in storage type only).
 #'
-#' @param fields Character vector of field names to compare
-#' @param require_all Logical, whether all fields must match (AND) or any (OR)
+#' @param fields Names of the fields to compare.
+#' @param require_all If `TRUE` (the default), every field must match; if
+#'   `FALSE`, one match is enough.
 #'
-#' @return A function with signature function(prediction, expected) -> logical
+#' @return A function `function(prediction, expected)` returning `TRUE` or
+#'   `FALSE`. A field missing from either side is an error.
 #' @export
+#' @family metrics
 #' @examples
-#' # Check multiple fields
-#' metric <- metric_field_match(c("sentiment", "confidence"))
-#' metric(
-#'   list(sentiment = "positive", confidence = 0.9),
-#'   list(sentiment = "positive", confidence = 0.9)
-#' )  # TRUE
+#' both <- metric_field_match(c("city", "country"))
+#' row <- data.frame(question = "Where is the Louvre?", city = "Paris", country = "France")
+#' both(list(city = "Paris", country = "France"), row)
+#' both(list(city = "Paris", country = "Belgium"), row)
+#'
+#' either <- metric_field_match(c("city", "country"), require_all = FALSE)
+#' either(list(city = "Paris", country = "Belgium"), row)
 metric_field_match <- function(fields, require_all = TRUE) {
   if (!is.character(fields) || length(fields) == 0) {
     cli::cli_abort("fields must be a non-empty character vector")
@@ -437,47 +452,44 @@ get_metric_field <- function(metric) {
   attr(metric, "field")
 }
 
-#' Create a Metric with Textual Feedback
+#' Metric that returns a score and feedback
 #'
 #' @description
-#' Wraps a metric function so it can return both a numeric score and
-#' textual feedback explaining the score. Feedback-aware optimizers such
-#' as [GEPA] use this feedback to guide their reflection step, mirroring
-#' DSPy's GEPA feedback-metric protocol.
+#' `metric_with_feedback()` marks a metric whose function returns textual
+#' feedback along with its score, as
+#' `list(score = , feedback = "what went wrong")`. Feedback-aware optimizers
+#' such as [GEPA()] use the feedback to guide their reflection step, as in
+#' DSPy's GEPA. Everywhere else, including [evaluate()], only the score is
+#' used; `evaluate()` also returns the feedback in `feedbacks`.
 #'
-#' The wrapped function must return either:
-#' - a single numeric (or logical) score, or
-#' - a list with elements `score` (numeric or logical) and optionally
-#'   `feedback` (a single character string).
+#' @param fn A function called as `fn(prediction, expected)`, where
+#'   `prediction` is the output (a named list) and `expected` the whole data
+#'   row, as a one-row data frame. It returns a logical or numeric score, or
+#'   `list(score = , feedback = )` with `feedback` a single string.
+#' @param field The name of the data column that holds the expected output.
+#'   It is only stored, in the metric's `"field"` attribute, for optimizers
+#'   that look it up; `fn` still receives the whole row and prediction.
 #'
-#' Feedback metrics work everywhere ordinary metrics do: [evaluate()] and
-#' optimizers simply use the `score` element. Optimizers that understand
-#' feedback additionally collect the `feedback` strings.
-#'
-#' @param fn A function with signature `function(prediction, expected)`
-#'   returning a score or a `list(score = , feedback = )`.
-#' @param field Optional name of the column in training data containing the
-#'   expected output (stored as the metric's `field` attribute, like other
-#'   built-in metrics).
-#'
-#' @return A metric function classed as `dsprrr_feedback_metric`.
+#' @return A metric function of class `dsprrr_feedback_metric`.
 #' @export
+#' @family metrics
 #' @examples
-#' metric <- metric_with_feedback(
+#' graded <- metric_with_feedback(
 #'   function(prediction, expected) {
-#'     if (identical(prediction, expected)) {
+#'     if (identical(prediction$answer, expected$answer)) {
 #'       list(score = 1, feedback = "Correct.")
 #'     } else {
 #'       list(
 #'         score = 0,
-#'         feedback = paste0("Expected '", expected, "' but got '", prediction, "'.")
+#'         feedback = paste0("Expected '", expected$answer, "' but got '", prediction$answer, "'.")
 #'       )
 #'     }
 #'   },
 #'   field = "answer"
 #' )
-#' metric("4", "4")
-#' metric("5", "4")
+#' row <- data.frame(question = "What is 2 + 2?", answer = "4")
+#' graded(list(answer = "4"), row)
+#' graded(list(answer = "5"), row)
 metric_with_feedback <- function(fn, field = NULL) {
   if (!is.function(fn)) {
     cli::cli_abort("{.arg fn} must be a function")
@@ -500,39 +512,47 @@ is_feedback_metric <- function(metric) {
   inherits(metric, "dsprrr_feedback_metric")
 }
 
-#' Create a Trace-Aware Metric
+#' Metric that also sees the execution trace
 #'
 #' @description
-#' Wraps a metric so it can score both what a program returned and how the
-#' result was produced. Trace-aware metrics receive a third `program_trace`
-#' argument containing the row and epoch identifiers, the module's ordered
-#' execution events, and per-row metadata. They work with [evaluate()] and
-#' every optimizer that delegates to it, including [GEPA].
+#' `metric_with_trace()` makes a metric that scores both what a program
+#' returned and how it got there. Besides the prediction and the expected
+#' row, the function receives a `program_trace`: the row and epoch numbers,
+#' a `status` (`"ok"`, `"error"` or `"untraced"`), the module's execution
+#' `events` in order, and the row's call `metadata` (tokens, cost, latency).
+#' Use it to penalize token use, latency, iterations or tool calls alongside
+#' correctness.
 #'
-#' This makes quality-efficiency objectives explicit. For example, a metric can
-#' penalize excessive token use, latency, iterations, or tool calls while still
-#' returning textual feedback for reflective optimizers.
+#' Trace-aware metrics work with [evaluate()] and the optimizers that use it,
+#' including [GEPA()]. Called directly without a trace, they are an error.
 #'
-#' @param fn A function with signature
-#'   `function(prediction, expected, program_trace)`. It must return a numeric
-#'   or logical score, or `list(score = , feedback = )`. An explicit
-#'   `program_trace` formal (including after `...`) is matched by name;
-#'   otherwise the trace is supplied as the third positional argument. Any
-#'   additional formals must have defaults.
-#' @param field Optional expected-output column name, stored like the `field`
-#'   attribute on built-in metrics.
+#' @param fn A function called as `fn(prediction, expected, program_trace)`.
+#'   It returns a logical or numeric score, or `list(score = , feedback = )`.
+#'   A formal argument named `program_trace` receives the trace by name
+#'   (even after `...`); otherwise the trace is the third positional
+#'   argument. Any other arguments need defaults.
+#' @param field The name of the data column that holds the expected output,
+#'   stored in the metric's `"field"` attribute for optimizers.
 #'
-#' @return A metric function classed as `dsprrr_trace_metric`.
+#' @return A metric function of class `dsprrr_trace_metric`.
 #' @export
+#' @family metrics
 #' @examples
-#' metric <- metric_with_trace(function(prediction, expected, program_trace) {
-#'   correct <- identical(prediction$answer, expected$answer)
-#'   tokens <- program_trace$metadata$total_tokens
-#'   if (is.null(tokens)) tokens <- 0
-#'   as.numeric(correct) - min(tokens / 10000, 0.1)
-#' }, field = "answer")
+#' # Correctness, minus up to 0.1 for token use
+#' efficient <- metric_with_trace(
+#'   function(prediction, expected, program_trace) {
+#'     correct <- identical(prediction$answer, expected$answer)
+#'     tokens <- program_trace$metadata$total_tokens
+#'     if (is.null(tokens) || is.na(tokens)) tokens <- 0
+#'     as.numeric(correct) - min(tokens / 10000, 0.1)
+#'   },
+#'   field = "answer"
+#' )
 #'
-#' # evaluate(module, data, metric, .llm = llm)
+#' # A function-backed module records no tokens, so only correctness counts
+#' rule <- module_fn("question -> answer", function(question) "4")
+#' quiz <- data.frame(question = c("2 + 2?", "3 + 3?"), answer = c("4", "6"))
+#' evaluate(rule, quiz, metric = efficient)$scores
 metric_with_trace <- function(fn, field = NULL) {
   if (!is.function(fn)) {
     cli::cli_abort("{.arg fn} must be a function")
@@ -716,25 +736,34 @@ normalize_metric_result <- function(raw) {
   list(score = score, feedback = feedback)
 }
 
-#' Create a Threshold Metric
+#' Turn a numeric metric into pass/fail
 #'
 #' @description
-#' Wraps a metric to return TRUE/FALSE based on a threshold. Logical, numeric,
-#' feedback, and trace-aware metrics all use the package-wide metric protocol;
-#' feedback and trace dispatch are preserved by the wrapper.
+#' `metric_threshold()` wraps a metric so that it returns `TRUE` when the
+#' score passes `threshold` and `FALSE` otherwise. Use it where a yes/no
+#' judgement is needed, for example to count only answers with an F1 score
+#' of at least 0.8 as correct.
 #'
-#' @param metric A metric function returning a logical/numeric score or
+#' @param metric A metric returning a logical or numeric score, or
 #'   `list(score = , feedback = )`.
-#' @param threshold The threshold value for success
-#' @param comparison One of ">=", ">", "==", "<", "<="
+#' @param threshold The score to compare against.
+#' @param comparison How to compare the score with `threshold`: one of
+#'   `">="` (the default), `">"`, `"=="`, `"<"` or `"<="`.
 #'
-#' @return A metric function returning logical scores. Trace-aware and feedback
-#'   protocols are preserved when present on `metric`.
+#' @return A metric returning `TRUE` or `FALSE`. If `metric` returns
+#'   feedback, the result is `list(score = TRUE/FALSE, feedback = )`. The
+#'   `field` attribute and trace-aware and feedback classes of `metric` are
+#'   kept.
 #' @export
+#' @family metrics
 #' @examples
-#' # F1 score with threshold
-#' metric <- metric_threshold(metric_f1(), threshold = 0.8)
-#' metric("the quick brown fox", "the fast brown fox")  # FALSE (0.75 < 0.8)
+#' f1 <- metric_f1(field = "answer")
+#' good_enough <- metric_threshold(f1, threshold = 0.8)
+#' row <- data.frame(question = "Where is the Louvre?", answer = "The Louvre is in Paris")
+#'
+#' f1(list(answer = "In Paris"), row)
+#' good_enough(list(answer = "In Paris"), row)
+#' good_enough(list(answer = "The Louvre is in Paris, France"), row)
 metric_threshold <- function(metric, threshold = 0.5, comparison = ">=") {
   if (!is.function(metric)) {
     cli::cli_abort("metric must be a function")
