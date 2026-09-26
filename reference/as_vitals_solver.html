@@ -60,6 +60,7 @@ generate_structured())."><meta property="og:image" content="https://jameshwade.g
     <li><a class="dropdown-item" href="../articles/vitals-recipes.html">Evaluate with Vitals</a></li>
     <li><a class="dropdown-item" href="../articles/rag-workflows.html">Build RAG Pipelines</a></li>
     <li><a class="dropdown-item" href="../articles/chaining-modules.html">Chaining Modules</a></li>
+    <li><a class="dropdown-item" href="../articles/calibrated-decisions.html">Calibrated Decisions</a></li>
     <li><a class="dropdown-item" href="../articles/orchestration.html">Deploy to Production</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Integrations</h6></li>
@@ -165,7 +166,7 @@ with components <code>result</code>, <code>solver_chat</code>, and optionally <c
 <span class="r-in"><span>  credentials <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="st">"example-key"</span>,</span></span>
 <span class="r-in"><span>  echo <span class="op">=</span> <span class="st">"none"</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Using <span style="color: #00BB00;">model</span> = <span style="color: #0000BB;">"gpt-5.4"</span>.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Using <span style="color: #00BB00;">model</span> = <span style="color: #0000BB;">"gpt-5.6-terra"</span>.</span>
 <span class="r-in"><span><span class="va">solver</span> <span class="op">&lt;-</span> <span class="fu">as_vitals_solver</span><span class="op">(</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="module.html">module</a></span><span class="op">(</span><span class="fu"><a href="signature.html">signature</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span><span class="op">)</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>  .llm <span class="op">=</span> <span class="va">chat</span></span></span>

@@ -6,6 +6,7 @@ articles:
   advanced-modules: advanced-modules.html
   advanced-optimization: advanced-optimization.html
   articles/agentic-optimization-harnesses: agentic-optimization-harnesses.html
+  calibrated-decisions: calibrated-decisions.html
   chaining-modules: chaining-modules.html
   cheatsheet: cheatsheet.html
   compilation-optimization: compilation-optimization.html
@@ -34,7 +35,7 @@ articles:
   tutorial-structured-outputs: tutorial-structured-outputs.html
   vitals-integration: vitals-integration.html
   vitals-recipes: vitals-recipes.html
-last_built: 2026-08-28T01:27Z
+last_built: 2026-09-26T09:47Z
 urls:
   reference: https://jameshwade.github.io/dsprrr/reference
   article: https://jameshwade.github.io/dsprrr/articles

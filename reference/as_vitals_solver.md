@@ -60,7 +60,7 @@ chat <- ellmer::chat_openai(
   credentials = function() "example-key",
   echo = "none"
 )
-#> Using model = "gpt-5.4".
+#> Using model = "gpt-5.6-terra".
 solver <- as_vitals_solver(
   module(signature("question -> answer")),
   .llm = chat

@@ -525,13 +525,14 @@ ChainOfThought via signature transforms
 ([`with_reasoning()`](https://jameshwade.github.io/dsprrr/reference/with_reasoning.md),
 [`chain_of_thought()`](https://jameshwade.github.io/dsprrr/reference/chain_of_thought.md))
 
-**Teleprompters (10):** - LabeledFewShot, BootstrapFewShot,
+**Teleprompters (11):** - LabeledFewShot, BootstrapFewShot,
 BootstrapFewShotWithRandomSearch - MIPROv2, SIMBA, GEPA, COPRO,
-KNNFewShot, GridSearch, BetterTogether - Ensembling is a module
-(`EnsembleModule`), not a teleprompter - BootstrapFewShot compiles
-pipelines **jointly**: per-step demos are harvested from passing
-end-to-end traces (DSPy-style whole-program compilation) - GEPA supports
-feedback metrics via
+KNNFewShot, GridSearch, BetterTogether - ReAnchor (experimental, DSPy
+3.4): fits decision thresholds/cuts/weights from recorded evidence;
+single Predict modules only - Ensembling is a module (`EnsembleModule`),
+not a teleprompter - BootstrapFewShot compiles pipelines **jointly**:
+per-step demos are harvested from passing end-to-end traces (DSPy-style
+whole-program compilation) - GEPA supports feedback metrics via
 [`metric_with_feedback()`](https://jameshwade.github.io/dsprrr/reference/metric_with_feedback.md):
 metrics may return `list(score = , feedback = )` and the feedback drives
 reflection - GEPA can optimize a Flex program’s complete canonical
@@ -555,7 +556,12 @@ LM configuration:
 Async support:
 [`run_async()`](https://jameshwade.github.io/dsprrr/reference/run_async.md),
 [`stream_async()`](https://jameshwade.github.io/dsprrr/reference/stream_async.md)
-with promises - Streaming listeners:
+with promises - Experimental calibrated decisions (`R/decision.R`):
+[`with_decisions()`](https://jameshwade.github.io/dsprrr/reference/with_decisions.md)
+swaps boolean/enum fields for probability-evidence schemas at request
+time and decodes after the cache (in `PredictModule$forward()` and
+`process_batch_item()`); settings live in `config$decisions` - Streaming
+listeners:
 [`run_stream()`](https://jameshwade.github.io/dsprrr/reference/run_stream.md) +
 [`stream_listener()`](https://jameshwade.github.io/dsprrr/reference/stream_listener.md)
 (per-field callbacks, pipeline status events) - vitals bridges

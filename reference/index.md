@@ -105,6 +105,25 @@ Derive a new signature without changing execution semantics
 - [`has_reasoning()`](https://jameshwade.github.io/dsprrr/reference/has_reasoning.md)
   : Check if a Signature has Chain-of-Thought
 
+## Calibrated decisions
+
+Experimental probability-evidence outputs (DSPy 3.4 decision types),
+decoded locally with tunable thresholds, cuts, and weights
+
+- [`decision_bool()`](https://jameshwade.github.io/dsprrr/reference/decision_types.md)
+  [`decision_score()`](https://jameshwade.github.io/dsprrr/reference/decision_types.md)
+  [`decision_choice()`](https://jameshwade.github.io/dsprrr/reference/decision_types.md)
+  **\[experimental\]** : Calibrated decision outputs
+- [`with_decisions()`](https://jameshwade.github.io/dsprrr/reference/with_decisions.md)
+  **\[experimental\]** : Attach calibrated decision outputs to a module
+- [`decision_settings()`](https://jameshwade.github.io/dsprrr/reference/decision_settings.md)
+  **\[experimental\]** : Decision settings of a module
+- [`decision_evidence()`](https://jameshwade.github.io/dsprrr/reference/decision_evidence.md)
+  **\[experimental\]** : Probability evidence behind decision outputs
+- [`ReAnchor()`](https://jameshwade.github.io/dsprrr/reference/ReAnchor.md)
+  **\[experimental\]** : ReAnchor: calibrate decision outputs against a
+  metric
+
 ## Execution and inspection
 
 Batch policy, graphs, and module metadata

@@ -10,6 +10,7 @@
 <url><loc>https://jameshwade.github.io/dsprrr/articles/advanced-modules.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/articles/advanced-optimization.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/articles/agentic-optimization-harnesses.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/articles/calibrated-decisions.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/articles/chaining-modules.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/articles/cheatsheet.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/articles/compilation-optimization.html</loc></url>
@@ -54,6 +55,7 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/MIPROv2.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/MetaHarness.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/Omni.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/ReAnchor.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/SIMBA.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/Teleprompter.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/TrialLog.html</loc></url>
@@ -97,6 +99,9 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/configure_cache.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/create_search_tool.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/create_trial.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/decision_evidence.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/decision_settings.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/decision_types.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/default-chat.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/dsp_configure.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/dsprrr-package.html</loc></url>
@@ -215,6 +220,7 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/validate_workflow.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/vitals_metrics.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/with_assertions.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/with_decisions.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/with_lm.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/with_reasoning.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/without_reasoning.html</loc></url>

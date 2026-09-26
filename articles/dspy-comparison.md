@@ -7,12 +7,27 @@ what is different, and what is not (yet) available.
 
 ## Version baseline
 
-This comparison was checked against DSPy **3.3.0**, released on
-2026-08-03. That release introduces experimental `Flex` and `ReActV2`
-modules, advances an experimental typed provider-neutral
-`LMRequest -> LMResponse` migration path, and hardens errors, execution
-limits, and serialization. See the [DSPy 3.3.0 release
-notes](https://github.com/stanfordnlp/dspy/releases/tag/3.3.0).
+This comparison was checked against DSPy **3.4.0**, released on
+2026-09-25. DSPy calls 3.4 its “LM transition release”:
+
+- DSPy’s LM layer now runs through bundled native engines. The
+  experimental 3.3 `LMRequest`/`LMResponse` types have been removed, and
+  OpenAI-style `lm(messages = ...)` calls are deprecated until 3.5.
+- It adds experimental **decision types** (`Noul`, `Score`, `Choice`)
+  and the **ReAnchor** calibration optimizer.
+- It adds a persistent `LocalInterpreter`, async `ReActV2`, and
+  call-time interpreter factories for RLM.
+
+The 3.3.1 patch release, also covered here, deprecated `CodeAct` and
+`ProgramOfThought`, added objective-aware GEPA frontiers, and exposed
+optimizer and interpreter callback events. See the [DSPy 3.4.0 release
+notes](https://github.com/stanfordnlp/dspy/releases/tag/3.4.0).
+
+The earlier 3.3.0 release introduced the experimental `Flex` and
+`ReActV2` modules that dsprrr’s
+[`flex()`](https://jameshwade.github.io/dsprrr/reference/flex.md) and
+[`react()`](https://jameshwade.github.io/dsprrr/reference/react.md)
+follow.
 
 dsprrr adopts the durable contracts that fit R and ellmer. It does not
 present an existing prompt optimizer as equivalent to a new DSPy feature
@@ -29,9 +44,9 @@ all provider communication.
 |----|----|----|
 | `dspy.Predict` | `module(sig)` | Core predictor |
 | `dspy.ChainOfThought` | [`chain_of_thought()`](https://jameshwade.github.io/dsprrr/reference/chain_of_thought.md), [`with_reasoning()`](https://jameshwade.github.io/dsprrr/reference/with_reasoning.md) | Implemented as signature transforms |
-| `dspy.ReAct` / experimental `ReActV2` | `react(sig)` | Native ellmer turn history, tool-call IDs, parallel calls per assistant turn, enforced iteration limit, then structured finalization; behaviorally aligned, not a port of the Python class |
-| `dspy.ProgramOfThought` | [`program_of_thought()`](https://jameshwade.github.io/dsprrr/reference/program_of_thought.md) | Generates and executes **R** code (not Python); accepts either a caller-owned reused runner or a fresh per-invocation interpreter factory |
-| `dspy.CodeAct` | [`code_act()`](https://jameshwade.github.io/dsprrr/reference/code_act.md) | Hybrid tools + R code execution with an enforced inner tool-call limit; accepts either a caller-owned reused runner or a fresh per-invocation interpreter factory. The built-in runner is trusted-input-only, and sandboxed backends can implement the runner protocol |
+| `dspy.ReAct` / experimental `ReActV2` | `react(sig)` | Native ellmer turn history, tool-call IDs, parallel calls per assistant turn, enforced iteration limit, then structured finalization; behaviorally aligned, not a port of the Python class. DSPy 3.4’s async `ReActV2.acall()` corresponds to dsprrr’s promise-based async execution |
+| `dspy.ProgramOfThought` (deprecated in DSPy 3.3.1) | [`program_of_thought()`](https://jameshwade.github.io/dsprrr/reference/program_of_thought.md) | Generates and executes **R** code (not Python); accepts either a caller-owned reused runner or a fresh per-invocation interpreter factory. dsprrr keeps it supported; DSPy points users to `RLM` and `Flex` |
+| `dspy.CodeAct` (deprecated in DSPy 3.3.1) | [`code_act()`](https://jameshwade.github.io/dsprrr/reference/code_act.md) | Hybrid tools + R code execution with an enforced inner tool-call limit; accepts either a caller-owned reused runner or a fresh per-invocation interpreter factory. The built-in runner is trusted-input-only, and sandboxed backends can implement the runner protocol |
 | `dspy.BestOfN` | [`best_of_n()`](https://jameshwade.github.io/dsprrr/reference/best_of_n.md) | Reward-function-guided retries |
 | `dspy.Refine` | [`refine()`](https://jameshwade.github.io/dsprrr/reference/refine.md) | Retries with LLM-generated feedback |
 | `dspy.MultiChainComparison` | [`multi_chain_comparison()`](https://jameshwade.github.io/dsprrr/reference/multi_chain_comparison.md) |  |
@@ -41,6 +56,7 @@ all provider communication.
 | `dspy.majority` | [`ensemble()`](https://jameshwade.github.io/dsprrr/reference/ensemble_module.md) with [`reduce_majority()`](https://jameshwade.github.io/dsprrr/reference/reduce_majority.md) | Plus [`reduce_weighted_vote()`](https://jameshwade.github.io/dsprrr/reference/reduce_weighted_vote.md), [`reduce_best_by_metric()`](https://jameshwade.github.io/dsprrr/reference/reduce_best_by_metric.md) |
 | `dspy.KNN` | `KNNFewShot` teleprompter / KNN module | Bring-your-own vectorizer (e.g., `ragnar::embed_openai()`) |
 | Retrieval (custom functions) | [`rag_module()`](https://jameshwade.github.io/dsprrr/reference/rag_module.md) + ragnar | First-class ragnar retriever integration |
+| Experimental decision outputs on `Predict` (`Noul`, `Score`, `Choice`) | [`with_decisions()`](https://jameshwade.github.io/dsprrr/reference/with_decisions.md) with [`decision_bool()`](https://jameshwade.github.io/dsprrr/reference/decision_types.md), [`decision_score()`](https://jameshwade.github.io/dsprrr/reference/decision_types.md), [`decision_choice()`](https://jameshwade.github.io/dsprrr/reference/decision_types.md) (experimental) | Probability evidence from ellmer structured output, decoded locally with per-field `threshold`, `cuts`, and `weights`. Native logical/character values are returned, and evidence is available through [`decision_evidence()`](https://jameshwade.github.io/dsprrr/reference/decision_evidence.md). DSPy’s TypeSafe “System One” backend has no R counterpart |
 
 For ProgramOfThought, CodeAct, and RLM, choose either a caller-owned
 `runner` or a zero-argument `interpreter_factory` that creates a fresh
@@ -60,8 +76,9 @@ context once and keeps derived values for the invocation.
 
 ### RLM parity and intentional differences
 
-dsprrr now matches the DSPy 3.3 RLM execution contracts that determine
-how an investigation behaves:
+dsprrr matches the DSPy 3.3 RLM execution contracts that determine how
+an investigation behaves (DSPy 3.4 leaves them unchanged, apart from the
+interpreter binding noted below):
 
 - one factory-owned interpreter belongs to each invocation, and
   persistent backends retain state across its iterations;
@@ -84,7 +101,8 @@ The remaining RLM differences are intentional and user-visible:
 |----|----|----|
 | Generated language | Python | R, with signature inputs under `.context` |
 | Returned value | Prediction with trajectory and top-level `final_reasoning` | [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md) output plus structured metadata; per-step reasoning is in the bounded trajectory and output source is explicit |
-| Interpreter binding | Optional interpreter may be supplied to each `forward()` call | Runner or factory is bound when constructing [`rlm_module()`](https://jameshwade.github.io/dsprrr/reference/rlm_module.md); the one-call [`rlm()`](https://jameshwade.github.io/dsprrr/reference/rlm.md) helper creates that binding for one invocation |
+| Interpreter binding | DSPy 3.4 accepts a keyword-only `interpreter_factory` at call time (replacing 3.3’s live interpreter argument), or a `dspy.settings.interpreter_factory` default | Runner or factory is bound when constructing [`rlm_module()`](https://jameshwade.github.io/dsprrr/reference/rlm_module.md); the one-call [`rlm()`](https://jameshwade.github.io/dsprrr/reference/rlm.md) helper creates that binding for one invocation |
+| Local persistent interpreter | 3.4 adds a persistent CPython `LocalInterpreter` without Deno | `r_code_runner(persistent = TRUE)` keeps one trusted callr R process for an invocation |
 | Default local execution | DSPy interpreter configuration | [`rlm()`](https://jameshwade.github.io/dsprrr/reference/rlm.md) creates a fresh managed `mcp-repl` OS sandbox with network disabled and workspace writes allowed |
 | Large or rich input | `SandboxSerializable` can define interpreter-specific one-time staging | Persistent trusted callr stages serializable native R objects once; no general public custom-staging protocol yet. Managed MCP requires the final raw-or-compressed JSON-RPC request to fit 7 KB and each encoded control frame to fit 3,000 bytes |
 | Typed outputs | Signature adapters validate the configured Python/Pydantic type | RLM validates explicit ellmer string, number, integer, boolean, enum, array, and object types; opaque `TypeJsonSchema` nodes are rejected rather than accepted without validation |
@@ -121,9 +139,10 @@ feedback injection.
 | `BootstrapFewShotWithRandomSearch` | `BootstrapFewShotWithRandomSearch` | Random search over ordinary labeled/bootstrap candidates; rejects programs containing Flex or RLM rather than returning a baseline-only no-op |
 | `MIPROv2` | `MIPROv2` | Root Predict modules search instruction + demo candidates; nested graphs search child instructions with `max_bootstrapped_demos = 0L` |
 | `SIMBA` | `SIMBA` | Adapted: hard-example mining + LLM-generated rules; simplified vs. the full introspective algorithm |
-| `GEPA` | `GEPA` | Adapted reflective optimization for instructions and complete Flex sources, with separate train/validation roles, multi-objective selection, lineage, and optional retained outputs. Cached subsample merge acceptance, fine-grained resume, and built-in experiment trackers remain different |
+| `GEPA` | `GEPA` | Adapted reflective optimization for instructions and complete Flex sources, with separate train/validation roles, multi-objective selection, lineage, and optional retained outputs. DSPy 3.3.1’s per-metric `objective_scores` and `frontier_type` map to dsprrr’s named `metrics` list with Pareto selection. Cached subsample merge acceptance, fine-grained resume, parallel candidate evaluation, and built-in experiment trackers remain different |
 | `COPRO` | `COPRO` | Equivalent (coordinate ascent over instructions) |
 | `KNNFewShot` | `KNNFewShot` | Equivalent |
+| Experimental `ReAnchor` (3.4) | [`ReAnchor()`](https://jameshwade.github.io/dsprrr/reference/ReAnchor.md) (experimental) | Same gap-midpoint candidates, fold check, and restore-if-not-better rule. Fitting re-decodes recorded evidence instead of re-running the program, so it makes no provider calls; single Predict modules only |
 | `Ensemble` | [`ensemble()`](https://jameshwade.github.io/dsprrr/reference/ensemble_module.md) | Direct module constructor rather than a teleprompter |
 | `BetterTogether` | `BetterTogether` | Chains prompt optimizers via strategy strings; does **not** alternate prompt/weight optimization (no finetuning backend) |
 | `BootstrapFinetune` | — | Not implemented (planned); dsprrr currently optimizes prompts, not weights |
@@ -209,6 +228,48 @@ preserves the row-aligned traces for every epoch. Trace events may
 contain prompts, inputs, and model responses, so handle them as
 potentially sensitive data.
 
+### Decision types and ReAnchor
+
+DSPy 3.4 declares decisions as signature annotations and keeps the
+tunable settings on the predictor:
+
+``` python
+class Match(dspy.Signature):
+    pair: str = dspy.InputField(desc="Two listings.")
+    match: bool = dspy.OutputField(desc="Are they the same item?")
+
+matcher = dspy.Predict(Match)
+matcher.fields["match"] = {"threshold": 0.7}
+tuned = ReAnchor(metric).compile(matcher, trainset=trainset, valset=valset)
+```
+
+dsprrr splits the declaration the same way. The answer space stays in
+the signature, and the settings live on the module:
+
+``` r
+
+sig <- signature(
+  inputs = list(input("pair", description = "Two listings")),
+  output_type = ellmer::type_object(
+    match = ellmer::type_boolean("Are they the same item?")
+  )
+)
+matcher <- module(sig) |> with_decisions(match = decision_bool(threshold = 0.7))
+tuned <- compile(
+  matcher,
+  ReAnchor(metric = metric_exact_match(field = "match")),
+  trainset,
+  valset = valset,
+  .llm = llm
+)
+decision_settings(tuned)
+```
+
+See [Calibrated
+Decisions](https://jameshwade.github.io/dsprrr/articles/calibrated-decisions.md)
+for Score and Choice decisions, the evidence schema, and how ReAnchor
+searches.
+
 ## Signatures and types
 
 | DSPy | dsprrr |
@@ -221,6 +282,7 @@ potentially sensitive data.
 | `dspy.History` | Native ellmer turns preserved in ReAct metadata and traces; not a signature type |
 | `dspy.Tool`, `dspy.ToolCalls`, `ToolCallResults` | ellmer `ToolDef`, `ContentToolRequest`, and `ContentToolResult`; IDs remain attached to native turns |
 | `dspy.Reasoning` (native reasoning traces) | Not yet first-class; [`with_reasoning()`](https://jameshwade.github.io/dsprrr/reference/with_reasoning.md) adds a prompted reasoning field |
+| Experimental `Noul`, `Score[...]`, `Choice[...]` annotations | Plain [`type_boolean()`](https://ellmer.tidyverse.org/reference/type_boolean.html) / [`type_enum()`](https://ellmer.tidyverse.org/reference/type_boolean.html) outputs plus [`with_decisions()`](https://jameshwade.github.io/dsprrr/reference/with_decisions.md) settings on the module; the answer space stays in the signature, and the tunable settings live on the module |
 
 ## Programs and composition
 
@@ -246,7 +308,7 @@ optimizers operate on single modules).
 
 | Capability | DSPy | dsprrr |
 |----|----|----|
-| LM client | `dspy.LM`; experimental typed `LMRequest -> LMResponse` migration boundary in 3.3 | Provider-neutral ellmer `Chat`; [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md) normalizes prompt and content inputs into typed requests, while a complete package-wide invocation record is still planned |
+| LM client | `dspy.LM` on bundled native engines (`engine = "auto"`) with a LiteLLM fallback in 3.4; the 3.3 `LMRequest`/`LMResponse` types were removed | Provider-neutral ellmer `Chat`; [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md) normalizes prompt and content inputs into typed requests, while a complete package-wide invocation record is still planned |
 | Configuration | `dspy.configure()` / `dspy.context()` | [`dsp_configure()`](https://jameshwade.github.io/dsprrr/reference/dsp_configure.md), [`with_lm()`](https://jameshwade.github.io/dsprrr/reference/with_lm.md), [`local_lm()`](https://jameshwade.github.io/dsprrr/reference/local_lm.md) |
 | Caching | Two-tier memory + disk | Two-tier memory + disk ([`configure_cache()`](https://jameshwade.github.io/dsprrr/reference/configure_cache.md)) |
 | Async | `acall`/`aforward`, `asyncify` | [`run_async()`](https://jameshwade.github.io/dsprrr/reference/run_async.md) with promises for ordinary Predict modules and isolated background workflows for factory-backed ProgramOfThought, CodeAct, and RLM. Caller-owned interpreters and specialized streaming remain rejected rather than shared or bypassed |
@@ -254,7 +316,7 @@ optimizers operate on single modules).
 | Usage tracking | `track_usage` | [`get_tokens()`](https://jameshwade.github.io/dsprrr/reference/get_tokens.md), [`get_cost()`](https://jameshwade.github.io/dsprrr/reference/get_cost.md), [`session_cost()`](https://jameshwade.github.io/dsprrr/reference/session_cost.md) |
 | Parallel evaluation | `Evaluate(num_threads = ...)` | `evaluate(.concurrency = concurrency_control(...))` via mirai or ellmer’s native parallelism. Declarative zero/one-step Flex is supported; executable and multi-step Flex currently require sequential rows |
 | Saving programs | `save`/`load`; sanitized LM state and explicit unsafe-class opt-in in 3.3 | Versioned whole-program artifacts via [`save_program()`](https://jameshwade.github.io/dsprrr/reference/program-artifact.md) / [`load_program()`](https://jameshwade.github.io/dsprrr/reference/program-artifact.md) or pins, with registry-backed runtime IDs and explicit trusted opt-in |
-| Observability | MLflow autolog, OpenTelemetry callbacks | Traces tibble, [`inspect_history()`](https://jameshwade.github.io/dsprrr/reference/inspect_history.md), [`export_traces()`](https://jameshwade.github.io/dsprrr/reference/export_traces.md); package-level OpenTelemetry spans are planned on top of ellmer |
+| Observability | MLflow autolog, OpenTelemetry callbacks; 3.3.1 adds optimizer-compile and interpreter-lifecycle callback events | Traces tibble, [`inspect_history()`](https://jameshwade.github.io/dsprrr/reference/inspect_history.md), [`export_traces()`](https://jameshwade.github.io/dsprrr/reference/export_traces.md); package-level OpenTelemetry spans are planned on top of ellmer |
 | Adapters (Chat/JSON/XML/TwoStep/BAML) | Yes | No adapter layer; ellmer’s `chat_structured()` handles structured output |
 | Evaluation framework | `dspy.Evaluate`, including trace-aware metrics | [`evaluate()`](https://jameshwade.github.io/dsprrr/reference/evaluate.md), [`eval_program()`](https://jameshwade.github.io/dsprrr/reference/eval_program.md), [`metric_with_trace()`](https://jameshwade.github.io/dsprrr/reference/metric_with_trace.md), plus **vitals** integration |
 
@@ -282,7 +344,7 @@ The RLM differences above are disclosed boundaries. Some are intentional
 API choices; others, such as a general public custom-staging protocol,
 remain parity work. Remaining package-level gaps are:
 
-In rough priority order, based on the stable DSPy 3.3 runtime:
+In rough priority order, based on the stable DSPy 3.4 runtime:
 
 1.  **General custom input staging for interpreter-backed modules**,
     analogous to DSPy’s `SandboxSerializable`, beyond the current
@@ -308,6 +370,11 @@ In rough priority order, based on the stable DSPy 3.3 runtime:
 8.  **Weight and RL optimization**, after provider-neutral training
     data, reproducibility, cost accounting, and artifact contracts are
     stable.
+9.  **Whole-program decision calibration.**
+    [`ReAnchor()`](https://jameshwade.github.io/dsprrr/reference/ReAnchor.md)
+    fits a single Predict module exactly; DSPy also re-runs composed
+    programs with cached answers. Concurrent execution of decision
+    modules is also not yet supported.
 
 If one of these blocks your use case, please [open an
 issue](https://github.com/JamesHWade/dsprrr/issues).

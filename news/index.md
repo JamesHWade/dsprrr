@@ -6,6 +6,14 @@ First development changelog. dsprrr is experimental; the API may change.
 
 ### Breaking changes
 
+- dsprrr now requires ellmer \>= 0.5.0. Runtime parameters such as
+  `temperature` are applied to the Chat’s `Model` object, where ellmer
+  0.5.0 keeps request arguments. Provider inspection (cache keys,
+  program artifacts, and optimizer checkpoints) no longer reads the
+  deprecated `Provider@model`, `@params`, and `@extra_args` properties,
+  so no deprecation warnings are raised. Cache keys still include the
+  model’s params and extra arguments.
+
 - [`module()`](https://jameshwade.github.io/dsprrr/reference/module.md)
   now constructs only standard prediction modules. Tool use and other
   advanced execution semantics use explicit constructors such as
@@ -113,6 +121,44 @@ First development changelog. dsprrr is experimental; the API may change.
   `provider` strings.
 
 ### New features
+
+- Experimental calibrated decision outputs, following DSPy 3.4’s
+  decision types.
+  [`with_decisions()`](https://jameshwade.github.io/dsprrr/reference/with_decisions.md)
+  attaches
+  [`decision_bool()`](https://jameshwade.github.io/dsprrr/reference/decision_types.md),
+  [`decision_score()`](https://jameshwade.github.io/dsprrr/reference/decision_types.md),
+  or
+  [`decision_choice()`](https://jameshwade.github.io/dsprrr/reference/decision_types.md)
+  to described boolean and enum outputs of a Predict module. The model
+  returns probability evidence, which dsprrr decodes locally into
+  ordinary logical or character values using per-field `threshold`,
+  `cuts`, and `weights`. These settings are not part of the request or
+  the cache key, so changing them re-decodes cached evidence.
+  [`decision_evidence()`](https://jameshwade.github.io/dsprrr/reference/decision_evidence.md)
+  returns the probabilities, scores, levels, and confidences behind each
+  decision, and
+  [`decision_settings()`](https://jameshwade.github.io/dsprrr/reference/decision_settings.md)
+  lists the settings. Decision settings persist in program artifacts.
+  Concurrent batch backends and token streaming reject decision modules
+  rather than returning undecoded evidence.
+
+- Experimental
+  [`ReAnchor()`](https://jameshwade.github.io/dsprrr/reference/ReAnchor.md)
+  teleprompter, following DSPy 3.4’s `ReAnchor`. It fits decision
+  thresholds, Score cuts, and Choice weights against a metric.
+  Candidates are the midpoints of gaps between observed evidence. A
+  candidate is kept only when it scores strictly better and passes a
+  held-out fold check, and the original configuration is restored when
+  the fitted module does not beat it. Fitting re-decodes recorded
+  evidence, so it makes no provider calls beyond one baseline pass and
+  one evidence pass. The new “Calibrated Decisions” article walks
+  through both features.
+
+- The DSPy comparison article now uses DSPy 3.4.0 as its baseline. It
+  covers the LM transition, call-time RLM interpreter factories, the
+  persistent `LocalInterpreter`, the deprecation of `CodeAct` and
+  `ProgramOfThought` in DSPy 3.3.1, and objective-aware GEPA frontiers.
 
 - [`flex()`](https://jameshwade.github.io/dsprrr/reference/flex.md) lets
   GEPA optimize how a module executes—not only its instructions— with

@@ -50,6 +50,8 @@ Task-oriented guides for specific workflows
   ragnar](https://jameshwade.github.io/dsprrr/articles/rag-workflows.md):
 - [Chaining Modules and
   Pipelines](https://jameshwade.github.io/dsprrr/articles/chaining-modules.md):
+- [Calibrated
+  Decisions](https://jameshwade.github.io/dsprrr/articles/calibrated-decisions.md):
 - [Production Workflows with
   dsprrr](https://jameshwade.github.io/dsprrr/articles/orchestration.md):
 - [Integration with
