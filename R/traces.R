@@ -54,8 +54,15 @@ export_traces <- function(
     return(module$get_traces())
   }
 
-  # Start with basic metrics
+  # Start with basic metrics. `get_traces()` always carries the prompt and
+  # response text, so drop them unless the caller asked for them.
   result <- module$get_traces()
+  if (!include_prompts) {
+    result$prompt <- NULL
+  }
+  if (!include_outputs) {
+    result$response <- NULL
+  }
 
   # Add optional fields
   if (include_prompts) {
