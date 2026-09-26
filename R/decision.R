@@ -204,7 +204,7 @@ with_decisions <- function(module, ...) {
   }
   spec_names <- names(specs)
   if (
-    is.null(spec_names) || any(!nzchar(spec_names)) || anyDuplicated(spec_names)
+    is.null(spec_names) || !all(nzchar(spec_names)) || anyDuplicated(spec_names)
   ) {
     decision_abort("All decision specifications must have unique field names")
   }
@@ -285,6 +285,10 @@ resolve_decision_spec <- function(spec, field, output_type) {
 
   kind <- spec$kind
   resolved <- list(kind = kind, description = description)
+  if (!isTRUE(field_type@required)) {
+    # Keep the signature's optionality in the evidence schema and decoding.
+    resolved$optional <- TRUE
+  }
   if (identical(kind, "bool")) {
     if (
       !inherits(field_type, "ellmer::TypeBasic") ||
@@ -429,7 +433,7 @@ validate_decision_weights <- function(weights, values, field) {
       !all(names(weights) %in% values) ||
       anyDuplicated(names(weights)) ||
       anyNA(weights) ||
-      any(!is.finite(weights)) ||
+      !all(is.finite(weights)) ||
       any(weights < 0)
   ) {
     decision_abort(c(
@@ -541,12 +545,14 @@ decision_evidence_type <- function(decision) {
     "Report probability evidence for this decision rather than a bare answer.",
     decision_question(decision)
   )
+  required <- !isTRUE(decision$optional)
   if (identical(decision$kind, "bool")) {
     return(ellmer::type_object(
       .description = description,
       probability = ellmer::type_number(
         "Probability, from 0 to 1, that the answer is true."
-      )
+      ),
+      .required = required
     ))
   }
   labels <- if (identical(decision$kind, "score")) {
@@ -576,7 +582,8 @@ decision_evidence_type <- function(decision) {
     probabilities = probabilities,
     confidence = ellmer::type_number(
       "Confidence in the decision, from 0 to 1."
-    )
+    ),
+    .required = required
   )
 }
 
@@ -717,6 +724,11 @@ decision_decode_response <- function(response, decisions) {
   }
   records <- list()
   for (field in names(decisions)) {
+    if (is.null(response[[field]]) && isTRUE(decisions[[field]]$optional)) {
+      # An omitted optional decision stays absent, as it would without
+      # evidence decoding.
+      next
+    }
     evidence <- decision_parse_evidence(
       response[[field]],
       decisions[[field]],

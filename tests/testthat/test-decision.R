@@ -350,3 +350,51 @@ test_that("decision_evidence validates its input", {
   empty <- decision_evidence(list(output = list(), metadata = list()))
   expect_identical(nrow(empty), 0L)
 })
+
+test_that("optional decision outputs stay optional", {
+  sig <- signature(
+    inputs = list(input("text")),
+    output_type = ellmer::type_object(
+      flag = ellmer::type_boolean("Should this be flagged?", required = FALSE),
+      label = ellmer::type_enum(c("a", "b"), "Which label?")
+    )
+  )
+  mod <- with_decisions(
+    module(sig),
+    flag = decision_bool(),
+    label = decision_choice()
+  )
+  request_type <- decision_request_type(
+    mod$signature@output_type,
+    module_decisions(mod)
+  )
+  expect_false(request_type@properties$flag@required)
+  expect_true(request_type@properties$label@required)
+
+  mock <- new_decision_chat(function(input, field, field_type) {
+    if (field == "flag") {
+      NULL
+    } else {
+      list(probabilities = list(a = 0.2, b = 0.8), confidence = 0.6)
+    }
+  })
+  result <- run(
+    mod,
+    text = "x",
+    .llm = mock$chat,
+    .return_format = "structured"
+  )
+  expect_null(result$output$flag)
+  expect_identical(result$output$label, "b")
+  expect_identical(decision_evidence(result)$field, "label")
+
+  required <- new_decision_chat(function(input, field, field_type) NULL)
+  expect_error(
+    run(
+      with_decisions(module(sig), label = decision_choice()),
+      text = "x",
+      .llm = required$chat
+    ),
+    class = "dsprrr_decision_evidence_error"
+  )
+})

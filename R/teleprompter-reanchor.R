@@ -94,7 +94,7 @@ ReAnchor <- S7::new_class(
       validator = function(value) {
         if (
           !is.null(value) &&
-            (length(value) == 0L || anyNA(value) || any(!nzchar(value)))
+            (length(value) == 0L || anyNA(value) || !all(nzchar(value)))
         ) {
           return("fields must be NULL or non-empty field names")
         }
@@ -168,7 +168,7 @@ compile_reanchor <- function(
   optimized <- copy_module(program)
   original <- module_decisions(optimized)
   plan <- reanchor_plan(optimized, teleprompter@fields)
-  if (length(plan$decisions) == 0L) {
+  if (length(plan$targets) == 0L) {
     skipped <- paste0(names(plan$skipped), ": ", plan$skipped)
     reanchor_abort(c(
       "No output can be calibrated",
@@ -192,7 +192,9 @@ compile_reanchor <- function(
   decisions <- plan$decisions
   current <- evidence_run$scores
   fitted_rows <- list()
-  for (field in names(decisions)) {
+  # Only the targeted fields are fitted; other configured decisions keep
+  # their settings unchanged.
+  for (field in plan$targets) {
     fit <- reanchor_fit_field(
       field = field,
       decisions = decisions,
@@ -268,7 +270,11 @@ reanchor_plan <- function(module, fields = NULL) {
   output_type <- module$signature@output_type
   existing <- module_decisions(module)
   if (!inherits(output_type, "ellmer::TypeObject")) {
-    return(list(decisions = existing, skipped = character()))
+    return(list(
+      decisions = existing,
+      targets = character(),
+      skipped = character()
+    ))
   }
   candidates <- names(output_type@properties)
   if (!is.null(fields)) {
@@ -314,6 +320,7 @@ reanchor_plan <- function(module, fields = NULL) {
       decisions,
       existing[setdiff(names(existing), names(decisions))]
     ),
+    targets = names(decisions) %||% character(),
     skipped = skipped
   )
 }
@@ -363,7 +370,7 @@ reanchor_score_outputs <- function(outputs, metadata, data, metric) {
     },
     numeric(1)
   )
-  if (any(!is.finite(scores))) {
+  if (!all(is.finite(scores))) {
     reanchor_abort("ReAnchor requires finite metric scores")
   }
   scores
@@ -375,6 +382,10 @@ reanchor_rescore <- function(run, decisions, data, metric) {
   outputs <- lapply(seq_along(run$outputs), function(i) {
     output <- run$outputs[[i]]
     for (field in names(decisions)) {
+      if (is.null(run$evidence[[i]][[field]])) {
+        # An omitted optional decision has nothing to re-decode.
+        next
+      }
       output[[field]] <- decision_decode_field(
         run$evidence[[i]][[field]],
         decisions[[field]],
@@ -515,6 +526,7 @@ reanchor_fit_field <- function(
   max_candidates
 ) {
   decision <- decisions[[field]]
+  evidence <- Filter(Negate(is.null), evidence)
   check <- list(passed = 0L, failed = 0L)
   best_scores <- base
   candidates <- 0L

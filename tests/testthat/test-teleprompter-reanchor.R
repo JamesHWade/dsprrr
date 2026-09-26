@@ -265,3 +265,38 @@ test_that("ReAnchor folds are deterministic and cover every row", {
   expect_setequal(unlist(folds), 1:7)
   expect_identical(folds, reanchor_folds(7L, 5L))
 })
+
+test_that("ReAnchor fits only the requested fields", {
+  data <- flag_data()
+  mock <- new_decision_chat(function(input, field, field_type) {
+    list(probability = data$p[data$text == input])
+  })
+  mod <- module(signature(
+    inputs = list(input("text")),
+    output_type = ellmer::type_object(
+      flag = ellmer::type_boolean("Should this item be flagged?"),
+      other = ellmer::type_boolean("Is this item archived?")
+    )
+  )) |>
+    with_decisions(
+      flag = decision_bool(),
+      other = decision_bool(threshold = 0.4)
+    )
+  metric <- function(prediction, expected) {
+    as.numeric(identical(prediction$flag, expected$flag[[1]])) +
+      as.numeric(identical(prediction$other, expected$flag[[1]]))
+  }
+
+  tuned <- compile(
+    mod,
+    ReAnchor(metric = metric, fields = "flag"),
+    data,
+    .llm = mock$chat
+  )
+
+  settings <- decision_settings(tuned)
+  expect_gt(settings$threshold[settings$field == "flag"], 0.65)
+  expect_identical(settings$threshold[settings$field == "other"], 0.4)
+  fitted <- optimization_result(tuned)$extensions$re_anchor$fitted
+  expect_identical(vapply(fitted, `[[`, character(1), "field"), "flag")
+})
