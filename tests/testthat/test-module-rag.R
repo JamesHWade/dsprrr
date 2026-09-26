@@ -90,3 +90,30 @@ test_that("assertion and ensemble wrappers inherit supplied inputs", {
     "Paris"
   )
 })
+
+test_that("pipelines, tools and vitals tasks leave supplied inputs to the module", {
+  local_reset_cache()
+  llm <- new_test_chat(chat_structured = function(...) list(answer = "Paris"))
+  rag <- rag_module(
+    "question, relevant_context -> answer",
+    retriever = function(query, k) "Paris is the capital of France."
+  )
+
+  shout <- module_fn("answer -> shouted", function(answer) toupper(answer))
+  flow <- pipeline(rag, shout)
+  input_names <- vapply(flow$signature@inputs, function(x) x$name, "")
+  expect_equal(input_names, "question")
+  expect_equal(
+    run(flow, question = "Capital?", .llm = llm, .cache = FALSE)$shouted,
+    "PARIS"
+  )
+
+  tool <- as_ellmer_tool(rag, .llm = llm)
+  expect_named(tool@arguments@properties, "question")
+
+  skip_if_not_installed("vitals")
+  data <- tibble::tibble(question = "Capital?", target = "Paris")
+  expect_no_error(
+    as_vitals_task(rag, data, scorer = vitals::detect_includes(), .llm = llm)
+  )
+})

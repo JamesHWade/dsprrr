@@ -122,7 +122,7 @@ as_ellmer_tool <- function(
 
   # Build argument specification for ellmer::tool() from signature inputs
   arg_specs <- list()
-  sig_inputs <- module$signature@inputs
+  sig_inputs <- caller_input_specs(module)
   for (input_spec in sig_inputs) {
     input_name <- input_spec$name
     input_desc <- input_spec$description %||% paste("The", input_name, "value")
@@ -151,7 +151,7 @@ as_ellmer_tool <- function(
   # Create a function with named parameters matching the signature inputs
   # ellmer::tool() requires argument names to match function formals
   input_names <- vapply(
-    module$signature@inputs,
+    caller_input_specs(module),
     function(x) x$name,
     character(1)
   )

@@ -203,7 +203,7 @@ PipelineModule <- R6::R6Class(
 
         # Validate inputs against module signature
         required_inputs <- vapply(
-          step@module$signature@inputs,
+          caller_input_specs(step@module),
           function(x) x$name,
           character(1)
         )
@@ -357,7 +357,7 @@ PipelineModule <- R6::R6Class(
         merged_inputs <- modifyList(mapped_inputs, step@static_inputs)
 
         required_inputs <- vapply(
-          step@module$signature@inputs,
+          caller_input_specs(step@module),
           function(x) x$name,
           character(1)
         )
@@ -543,7 +543,7 @@ PipelineModule <- R6::R6Class(
 
       for (i in seq_along(steps)) {
         step <- steps[[i]]
-        module_inputs <- step@module$signature@inputs
+        module_inputs <- caller_input_specs(step@module)
 
         for (inp in module_inputs) {
           input_name <- inp$name

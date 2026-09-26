@@ -59,7 +59,7 @@ as_vitals_solver <- function(
 
   # Get signature info for extracting inputs from nested vitals format
 
-  sig_inputs <- module$signature@inputs
+  sig_inputs <- caller_input_specs(module)
   sig_input_names <- vapply(sig_inputs, function(x) x$name, character(1))
   output_type <- module$signature@output_type
 
@@ -775,7 +775,7 @@ as_vitals_task <- function(
 
   # Get required input columns from module's signature
   sig_input_names <- vapply(
-    module$signature@inputs,
+    caller_input_specs(module),
     function(x) x$name,
     character(1)
   )

@@ -29,6 +29,20 @@ with_rollout_scope <- function(scope, code) {
   force(code)
 }
 
+#' Signature inputs a caller must provide
+#'
+#' Leaves out the inputs a module fills in itself (see `supplied_inputs()`),
+#' such as a RAG module's retrieved context.
+#' @noRd
+caller_input_specs <- function(module) {
+  supplied <- if (is.function(module$supplied_inputs)) {
+    module$supplied_inputs()
+  } else {
+    character()
+  }
+  Filter(function(x) !x$name %in% supplied, module$signature@inputs)
+}
+
 #' Combine the active rollout scope with a call's own rollout id
 #' @noRd
 scoped_rollout_id <- function(rollout_id) {
