@@ -28,7 +28,7 @@ something you can run.
 
 ```r
 library(dsprrr)
-chat <- ellmer::chat_openai(model = "gpt-4.1")
+chat <- ellmer::chat_openai(model = "gpt-6-luna")
 
 analyzer <- module(signature(
   "review -> sentiment: enum('positive', 'negative', 'neutral'), stars: int, summary: string"
@@ -48,8 +48,9 @@ str(result)
 
 `stars` comes back as an integer and `sentiment` is always one of the three
 labels, so the result can go straight into a data frame. The output above was
-recorded from a real call in
-[Tutorial 3](articles/tutorial-structured-outputs.html).
+recorded from a real call to `gpt-4.1` in
+[Tutorial 3](articles/tutorial-structured-outputs.html); `gpt-6-luna` may word
+the summary differently.
 
 ## How the pieces fit
 

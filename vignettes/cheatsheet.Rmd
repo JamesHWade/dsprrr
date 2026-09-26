@@ -40,11 +40,11 @@ library(dsprrr)
 qa <- module(signature("question -> answer"))
 
 # Pass a chat to one call
-chat <- ellmer::chat_openai(model = "gpt-4.1-mini")
+chat <- ellmer::chat_openai(model = "gpt-6-luna")
 run(qa, question = "What is the capital of France?", .llm = chat)
 
 # Or set a default for the session
-dsp_configure(provider = "openai", model = "gpt-4.1-mini") # or "anthropic", "google"
+dsp_configure(provider = "openai", model = "gpt-6-luna") # or "anthropic", "google"
 set_default_chat(ellmer::chat_anthropic(model = "claude-sonnet-4-5")) # any ellmer chat
 run(qa, question = "What is the capital of France?")
 
@@ -66,15 +66,24 @@ are set, dsprrr uses the first of: the `.llm` argument, the module's own chat
 detail.
 
 Sampling parameters can be set for the default chat, on a chat you build, or
-for one module. Reasoning models such as the gpt-5 family ignore temperature.
+for one module. gpt-6-luna reasons by default and accepts `temperature` only
+with `reasoning_effort = "none"`.
 
 ```{r}
-dsp_configure(provider = "openai", model = "gpt-4.1-mini", temperature = 0)
-chat <- ellmer::chat_openai(
-  model = "gpt-4.1-mini",
-  params = ellmer::params(temperature = 0)
+dsp_configure(
+  provider = "openai",
+  model = "gpt-6-luna",
+  temperature = 0,
+  params = ellmer::params(reasoning_effort = "none")
 )
-qa_cold <- module(signature("question -> answer"), config = list(temperature = 0))
+chat <- ellmer::chat_openai(
+  model = "gpt-6-luna",
+  params = ellmer::params(reasoning_effort = "none", temperature = 0)
+)
+qa_quick <- module(
+  signature("question -> answer"),
+  config = list(reasoning_effort = "low")
+)
 ```
 
 ## Define signatures
@@ -343,7 +352,7 @@ optimize_grid(
   data = trainset,
   metric = metric_exact_match(field = "sentiment"),
   parameters = list(
-    temperature = c(0, 0.7),
+    reasoning_effort = c("none", "low"),
     instructions_suffix = c("", "Reply with the label only.")
   ),
   .llm = chat

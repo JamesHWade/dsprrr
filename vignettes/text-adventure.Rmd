@@ -146,7 +146,7 @@ match_one <- function(text, options) {
   if (nzchar(text) && length(hits) > 0) hits[[1]] else NA_character_
 }
 
-play <- function(llm = chat_openai(model = "gpt-4.1-mini")) {
+play <- function(llm = chat_openai(model = "gpt-6-luna")) {
   if (!interactive()) stop("play() needs an interactive R session.")
   # A fresh copy of the chat per call: the model sees only what is passed in.
   ask <- function(mod, ...) run(mod, ..., .llm = llm$clone())
@@ -256,7 +256,7 @@ rulings <- tibble::tribble(
   "sing to calm the gulls", "screaming gulls overhead",  "lantern",   FALSE
 )
 
-llm <- chat_openai(model = "gpt-4.1-mini")
+llm <- chat_openai(model = "gpt-6-luna")
 referee_metric <- metric_exact_match(field = "success")
 
 evaluate(skill_check, rulings, metric = referee_metric, .llm = llm)$mean_score

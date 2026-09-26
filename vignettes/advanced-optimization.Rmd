@@ -63,7 +63,7 @@ library(dsprrr)
 ```
 
 ```{r setup}
-llm <- ellmer::chat_openai(model = "gpt-4.1-mini")
+llm <- ellmer::chat_openai(model = "gpt-6-luna")
 
 triage <- module(signature(
   inputs = list(input("ticket", description = "Customer support ticket")),
@@ -248,7 +248,7 @@ rewritten <- triage |>
   compile(
     COPRO(
       metric = metric,
-      prompt_model = ellmer::chat_openai(model = "gpt-4.1"),
+      prompt_model = ellmer::chat_openai(model = "gpt-6-luna"),
       breadth = 5L,
       depth = 2L
     ),
@@ -320,7 +320,7 @@ hardened <- triage |>
       num_candidates = 4L,
       max_steps = 4L,
       max_demos = 4L,
-      prompt_model = ellmer::chat_openai(model = "gpt-4.1")
+      prompt_model = ellmer::chat_openai(model = "gpt-6-luna")
     ),
     trainset,
     valset = valset,

@@ -50,7 +50,7 @@ print(runner)
 if (interactive()) {
   cli::cli_h1("ProgramOfThought: Exact Computation")
 
-  llm <- chat_openai(model = "gpt-4o-mini")
+  llm <- chat_openai(model = "gpt-6-luna")
   pot <- program_of_thought("question -> answer", runner = runner)
 
   # Simple arithmetic

@@ -75,7 +75,7 @@ data frame with `question` and `answer` columns:
 library(dsprrr)
 
 qa_module <- module(signature("question -> answer"))
-llm <- ellmer::chat_openai(model = "gpt-4.1-mini")
+llm <- ellmer::chat_openai(model = "gpt-6-luna")
 
 split <- split_dataset(examples, prop = 0.8, seed = 42L)
 trainset <- split$train

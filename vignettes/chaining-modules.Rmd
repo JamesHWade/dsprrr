@@ -86,7 +86,7 @@ Run the pipeline like any module. The result holds the last step's outputs,
 here a list with one element, `headline`:
 
 ```{r run}
-llm <- ellmer::chat_openai(model = "gpt-4.1-mini")
+llm <- ellmer::chat_openai(model = "gpt-6-luna")
 notes <- paste(
   "v2.3: Rewrote CSV export, now twice as fast.",
   "Added a dark mode.",

@@ -43,8 +43,8 @@ if (should_eval) {
 applications: a `Task` runs a solver over a dataset, grades each answer with a
 scorer, and writes a log you can browse. This page shows how to evaluate a
 dsprrr module as a vitals solver, choose a scorer, read the results, and use
-vitals scorers as dsprrr metrics. The outputs below are recorded responses from
-`gpt-4o-mini`.
+vitals scorers as dsprrr metrics. The code uses `gpt-6-luna`; the outputs below
+are recorded responses from `gpt-4o-mini`, replayed when the site is built.
 
 ```{r setup}
 #| eval: !expr has_vitals
@@ -80,7 +80,7 @@ task <- as_vitals_task(
   scorer = detect_match(),
   name = "sentiment",
   dir = tempdir(),
-  .llm = chat_openai(model = "gpt-4o-mini")
+  .llm = chat_openai(model = "gpt-6-luna")
 )
 
 task$eval()
@@ -142,7 +142,7 @@ test_task <- as_vitals_task(
   scorer = detect_match(),
   name = "qa-test",
   dir = tempdir(),
-  .llm = chat_openai(model = "gpt-4o-mini")
+  .llm = chat_openai(model = "gpt-6-luna")
 )
 
 test_task$eval()
@@ -166,8 +166,8 @@ failed. Use `location = "exact"`, `"begin"` or `"any"` when that matters.
 
 The examples above use `detect_match()`. For explanations, `model_graded_qa()`
 asks a model whether the answer meets the target, treated as a criterion.
-Without a `scorer_chat` it grades with a fresh copy of the solver's Chat, here
-`gpt-4o-mini` grading itself. `chain_of_thought()` adds a `reasoning` output,
+Without a `scorer_chat` it grades with a fresh copy of the solver's Chat, so
+the model grades its own answers. `chain_of_thought()` adds a `reasoning` output,
 so `result` is JSON with both fields and the grader sees the reasoning too:
 
 ```{r scorer-graded}
@@ -188,7 +188,7 @@ task <- as_vitals_task(
   scorer = model_graded_qa(),
   name = "explanations",
   dir = tempdir(),
-  .llm = chat_openai(model = "gpt-4o-mini")
+  .llm = chat_openai(model = "gpt-6-luna")
 )
 
 task$eval()
@@ -217,7 +217,7 @@ task <- as_vitals_task(
   scorer = detect_includes(),
   name = "code-gen",
   dir = tempdir(),
-  .llm = chat_openai(model = "gpt-4o-mini")
+  .llm = chat_openai(model = "gpt-6-luna")
 )
 
 task$eval()
@@ -255,7 +255,7 @@ task <- as_vitals_task(
   scorer = detect_match(),
   name = "sentiment-analysis",
   dir = tempdir(),
-  .llm = chat_openai(model = "gpt-4o-mini")
+  .llm = chat_openai(model = "gpt-6-luna")
 )
 
 task$eval()
@@ -294,7 +294,7 @@ test_data <- tibble(
   target = c("120 miles", "12")
 )
 
-llm <- chat_openai(model = "gpt-4o-mini")
+llm <- chat_openai(model = "gpt-6-luna")
 
 results <- list()
 for (name in c("basic", "cot")) {
@@ -351,7 +351,7 @@ task <- as_vitals_task(
   name = "news-classification",
   epochs = 3L,
   dir = tempdir(),
-  .llm = chat_openai(model = "gpt-4o-mini"),
+  .llm = chat_openai(model = "gpt-6-luna"),
   .cache = FALSE
 )
 
@@ -389,7 +389,7 @@ tickets <- tibble(
 
 task <- Task$new(
   dataset = tickets,
-  solver = as_vitals_solver(triage, .llm = chat_openai(model = "gpt-4o-mini")),
+  solver = as_vitals_solver(triage, .llm = chat_openai(model = "gpt-6-luna")),
   scorer = detect_match(location = "exact"),
   dir = tempdir()
 )
@@ -422,7 +422,7 @@ evaluate(
   qa_module,
   testset,
   metric = metric_detect_match(),
-  .llm = chat_openai(model = "gpt-4o-mini")
+  .llm = chat_openai(model = "gpt-6-luna")
 )
 ```
 

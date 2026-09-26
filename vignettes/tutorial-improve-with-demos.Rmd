@@ -46,8 +46,11 @@ right, add worked examples (demos) to its prompt by hand or with
 library(dsprrr)
 library(ellmer)
 
-chat <- chat_openai(model = "gpt-5-mini")
+chat <- chat_openai(model = "gpt-6-luna")
 ```
+
+The answers on this page were recorded with `gpt-5-mini` and are replayed when the
+site is built, so `gpt-6-luna` may word them differently.
 
 ## A ticket classifier
 
@@ -113,7 +116,8 @@ mean(predicted == tickets$category)
 tickets[predicted != tickets$category, ]
 ```
 
-gpt-5-mini labels all ten tickets correctly, so the list of misses is empty.
+In the recorded run, gpt-5-mini labels all ten tickets correctly, so the list
+of misses is empty.
 That is the check to make before adding demos. Demos lengthen every prompt, and
 they can only help on tickets the model gets wrong, so with this baseline there
 is nothing for them to fix. When your baseline does miss tickets, read the
@@ -205,7 +209,7 @@ vapply(
 )
 ```
 
-All three versions score 1. On this task, gpt-5-mini does as well without demos
+All three versions score 1. On this task, the recorded model does as well without demos
 as with them.
 
 The comparison also favors the demo versions, because some of the scored

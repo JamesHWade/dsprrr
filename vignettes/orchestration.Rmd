@@ -64,7 +64,7 @@ Chat, set a factory near the top of `_targets.R`; it receives the model name:
 
 ```{r}
 options(dsprrr.targets.llm_factory = function(model) {
-  ellmer::chat_openai(model = "gpt-4.1-mini")
+  ellmer::chat_openai(model = "gpt-6-luna")
 })
 ```
 
@@ -146,7 +146,7 @@ result <- evaluate(
   classify,
   reviews,
   metric = metric_exact_match(field = "sentiment"),
-  .llm = ellmer::chat_openai(model = "gpt-4.1-mini")
+  .llm = ellmer::chat_openai(model = "gpt-6-luna")
 )
 pin_vitals_log(board, "sentiment-eval", result, module = classify)
 
@@ -186,7 +186,7 @@ results, each row's metadata records the backend that ran it.
 results <- run(
   classify,
   text = reviews$text,
-  .llm = ellmer::chat_openai(model = "gpt-4.1-mini"),
+  .llm = ellmer::chat_openai(model = "gpt-6-luna"),
   .concurrency = control,
   .return_format = "structured"
 )

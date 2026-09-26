@@ -184,7 +184,7 @@ result <- run(
   sessions = sessions,
   changes = changes,
   question = question,
-  .llm = ellmer::chat_openai(model = "gpt-4.1"),
+  .llm = ellmer::chat_openai(model = "gpt-6-luna"),
   .return_format = "structured"
 )
 
@@ -365,7 +365,7 @@ answer <- rlm(
   "document, question -> answer",
   document = "Owner: team-a\nCommitment: publish the audit by Friday",
   question = "Which commitments have no owner?",
-  .llm = ellmer::chat_openai(model = "gpt-4.1-mini"),
+  .llm = ellmer::chat_openai(model = "gpt-6-luna"),
   .max_iterations = 4L,
   .max_llm_calls = 0L
 )

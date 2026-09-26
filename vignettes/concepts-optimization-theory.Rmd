@@ -38,7 +38,7 @@ and the instructions, and each has its own way of producing candidates:
 | Instructions | A model rewriting them after reading failed rows | `COPRO`, `GEPA`, `SIMBA` (as appended rules) |
 | Instructions | A data summary and fixed tips appended | `MIPROv2` |
 | Decision thresholds and weights | Probabilities recorded in one extra pass | `ReAnchor` |
-| Request settings, such as temperature | A grid that you define | `optimize_grid()` |
+| Request settings, such as reasoning effort or temperature | A grid that you define | `optimize_grid()` |
 | The program's source | A model rewriting it | `GEPA` on `flex()` modules, `AutoResearch()`, `MetaHarness()` |
 
 The three kinds of demos behave differently. Labeled demos show the answers
@@ -61,9 +61,10 @@ numbers without further calls. At the other end, GEPA can treat a whole
 `flex()` program as one candidate and rewrite its source; see
 [Flex: optimize a whole program](flex-optimization.html).
 
-Request settings, such as `temperature`, are searched only by
-`optimize_grid()`. Reasoning models, such as the gpt-5 and o-series models,
-ignore `temperature`, so do not sweep it with them.
+Request settings, such as `reasoning_effort` or `temperature`, are searched
+only by `optimize_grid()`. Reasoning models such as gpt-6-luna reject
+`temperature` while they reason, so sweep `reasoning_effort` with them, or turn
+reasoning off (`reasoning_effort = "none"`) before sweeping `temperature`.
 
 ## How the metric steers the search
 

@@ -361,7 +361,7 @@ test_that("integration test with cassette", {
   skip_if_not(file.exists(cassette_file), "VCR cassette not recorded")
 
   vcr::local_cassette("my-test")
-  llm <- ellmer::chat_openai(model = "gpt-4o-mini")
+  llm <- ellmer::chat_openai(model = "gpt-6-luna")
   # ... test code
 })
 ```

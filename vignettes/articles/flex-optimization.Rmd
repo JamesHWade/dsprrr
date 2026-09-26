@@ -223,7 +223,7 @@ feedback; validation rows decide which candidate survives. Keep the first run
 small and bounded:
 
 ```{r router-compile}
-llm <- ellmer::chat_openai(model = "gpt-5-mini")
+llm <- ellmer::chat_openai(model = "gpt-6-luna")
 
 optimized <- compile(
   baseline,

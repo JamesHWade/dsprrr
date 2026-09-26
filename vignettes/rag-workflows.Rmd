@@ -76,7 +76,7 @@ faq <- rag_module(faq_sig, retriever = keyword_retriever, k = 2L)
 Only the model call needs an API key:
 
 ```{r run}
-llm <- ellmer::chat_openai(model = "gpt-4.1-mini")
+llm <- ellmer::chat_openai(model = "gpt-6-luna")
 result <- run(
   faq,
   question = "How long do I have to return an unused item?",
@@ -154,7 +154,7 @@ agent <- react(
 run(
   agent,
   question = "I ordered at 9am. When will express delivery arrive, and can I still return it?",
-  .llm = ellmer::chat_openai(model = "gpt-4.1-mini")
+  .llm = ellmer::chat_openai(model = "gpt-6-luna")
 )
 ```
 

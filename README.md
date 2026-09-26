@@ -65,7 +65,7 @@ signature(
 `module()` turns it into something you can run with any ellmer chat:
 
 ``` r
-chat <- ellmer::chat_openai(model = "gpt-4.1")
+chat <- ellmer::chat_openai(model = "gpt-6-luna")
 
 analyzer <- module(signature(
   "review -> sentiment: enum('positive', 'negative', 'neutral'), stars: int, summary: string"
@@ -83,8 +83,10 @@ str(result)
 #>  $ summary  : chr "Powerful and easy-to-clean blender, but a bit loud."
 ```
 
-That output was recorded from a real call in the [structured outputs
-tutorial](https://jameshwade.github.io/dsprrr/articles/tutorial-structured-outputs.html).
+That output was recorded from a real call to `gpt-4.1` in the
+[structured outputs
+tutorial](https://jameshwade.github.io/dsprrr/articles/tutorial-structured-outputs.html);
+`gpt-6-luna` may word the summary differently.
 
 To measure and improve a module, give it labeled rows and a metric:
 

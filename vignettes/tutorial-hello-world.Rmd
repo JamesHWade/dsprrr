@@ -57,12 +57,15 @@ library(dsprrr)
 library(ellmer)
 ```
 
-dsprrr sends requests through an ellmer chat object. The output on this page
-comes from `gpt-4.1`:
+dsprrr sends requests through an ellmer chat object. The tutorials use OpenAI's
+`gpt-6-luna`:
 
 ```{r create-chat}
-chat <- chat_openai(model = "gpt-4.1")
+chat <- chat_openai(model = "gpt-6-luna")
 ```
+
+The answers on this page were recorded with `gpt-4.1` and are replayed when the
+site is built, so `gpt-6-luna` may word them differently.
 
 Any other ellmer chat, such as `chat_anthropic()`, works the same way.
 

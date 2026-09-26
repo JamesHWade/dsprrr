@@ -224,7 +224,7 @@ input longer than one as a batch, one call per element, so vectors and
 tables are collapsed to single strings on the way:
 
 ```{r analyze}
-analyze_package <- function(info, llm = chat_openai(model = "gpt-4.1")) {
+analyze_package <- function(info, llm = chat_openai(model = "gpt-6-luna")) {
   # One chat for all four stages, so later stages also see earlier turns.
   purpose <- run(
     purpose_mod,
@@ -274,7 +274,8 @@ analyze_package <- function(info, llm = chat_openai(model = "gpt-4.1")) {
 
 The writer's output type is a bare `type_string()`, so `run()` returns the
 text itself. Here is the file gpt-4.1 wrote for dsprrr when this article was
-recorded, in January 2026:
+recorded, in January 2026; the code now uses gpt-6-luna, whose file will read
+differently:
 
 ```{r simple-use}
 #| cassette: simple-use
@@ -401,7 +402,7 @@ The package name stops at the first step, so R adds the heading:
 
 ```{r pipeline-run}
 #| eval: false
-llm <- chat_openai(model = "gpt-4.1")
+llm <- chat_openai(model = "gpt-6-luna")
 
 out <- run(
   llms_program,

@@ -108,7 +108,7 @@ Run the module as usual:
 ```{r}
 #| label: run
 #| eval: false
-llm <- ellmer::chat_openai(model = "gpt-4.1-mini")
+llm <- ellmer::chat_openai(model = "gpt-6-luna")
 
 run(triage, ticket = "I was charged twice and can't open my invoices.", .llm = llm)
 # Returns a list: urgent (logical), severity and team (character), summary

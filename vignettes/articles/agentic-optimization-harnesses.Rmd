@@ -139,7 +139,7 @@ keeps task traces, model choice, and cost attribution apart.
 ```{r}
 library(ellmer)
 
-task_chat <- chat_openai(model = "gpt-4.1-mini")
+task_chat <- chat_openai(model = "gpt-6-luna")
 research_chat <- chat_anthropic(model = "claude-sonnet-4-5")
 
 metric <- metric_with_feedback(

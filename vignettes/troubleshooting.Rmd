@@ -66,7 +66,7 @@ try(run(qa, question = "What is the capital of France?"))
 session:
 
 ```{r}
-chat <- ellmer::chat_openai(model = "gpt-4.1-mini")
+chat <- ellmer::chat_openai(model = "gpt-6-luna")
 run(qa, question = "What is the capital of France?", .llm = chat)
 
 set_default_chat(chat)
@@ -86,7 +86,7 @@ try(dsp_configure())
 
 ```{r}
 #| eval: true
-chat <- ellmer::chat_openai(model = "gpt-4.1-mini")
+chat <- ellmer::chat_openai(model = "gpt-6-luna")
 try(run(qa, question = "What is the capital of France?", .llm = chat))
 ```
 

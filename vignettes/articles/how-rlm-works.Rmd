@@ -145,7 +145,7 @@ credentials to the runner, but that alone does not hide them: an
 `r_code_runner()` process inherits your environment variables.
 
 `sub_lm` sets the chat for these queries, for example
-`sub_lm = ellmer::chat_openai(model = "gpt-4.1-mini")` in `rlm_module()`. The
+`sub_lm = ellmer::chat_openai(model = "gpt-6-luna")` in `rlm_module()`. The
 default, `NULL`, reuses the chat that runs the main loop. Every question counts
 against `max_llm_calls` (default 50), including each one in a batch, and
 `max_llm_calls = 0` removes both query helpers. In `llm_query_batched()`, a
@@ -183,7 +183,7 @@ result <- run(
   sessions = sessions,
   changes = changes,
   question = "Which cohort's conversion fell after release 2.4.0, and why?",
-  .llm = ellmer::chat_openai(model = "gpt-4.1"),
+  .llm = ellmer::chat_openai(model = "gpt-6-luna"),
   .return_format = "structured"
 )
 

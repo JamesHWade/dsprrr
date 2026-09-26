@@ -48,7 +48,7 @@ classify <- module(
 scored <- run_dataset(
   classify,
   reviews,
-  .llm = ellmer::chat_openai(model = "gpt-4.1-mini")
+  .llm = ellmer::chat_openai(model = "gpt-6-luna")
 )
 scored$.pred_class <- factor(
   vapply(
@@ -89,13 +89,17 @@ optimize_grid(
   data = reviews,
   metric = metric_exact_match(field = "sentiment"),
   grid = dials::grid_regular(temperature(), levels = 3),
-  .llm = ellmer::chat_openai(model = "gpt-4.1-mini")
+  # gpt-6-luna accepts temperature only with reasoning turned off
+  .llm = ellmer::chat_openai(
+    model = "gpt-6-luna",
+    params = ellmer::params(reasoning_effort = "none")
+  )
 )
 module_trials(classify)
 ```
 
-`module_parameters(classify)` suggests a parameter set for a module. Don't
-sweep `temperature` for reasoning models; see
+`module_parameters(classify)` suggests a parameter set for a module. To tune
+how much a reasoning model thinks, use a `reasoning_effort()` grid instead; see
 [Models, providers and streaming](models-and-providers.html).
 
 ## The parsnip model

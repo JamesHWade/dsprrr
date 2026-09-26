@@ -55,7 +55,7 @@ labeled examples, and `evaluate()` scores the result on held-out rows.
 Here is a sentiment classifier written as a plain ellmer prompt:
 
 ```{r}
-chat <- ellmer::chat_openai(model = "gpt-4.1-mini")
+chat <- ellmer::chat_openai(model = "gpt-6-luna")
 chat$chat(
   "Is this review positive, negative or neutral? The battery died after a week."
 )

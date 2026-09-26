@@ -32,7 +32,7 @@ evaluated, in DSPy:
 ```python
 import dspy
 
-dspy.configure(lm=dspy.LM("openai/gpt-4.1-mini"))
+dspy.configure(lm=dspy.LM("openai/gpt-6-luna"))
 
 qa = dspy.Predict("question -> answer")
 qa(question="What is the capital of France?").answer
@@ -57,7 +57,7 @@ and in dsprrr:
 ```{r}
 library(dsprrr)
 
-dsp_configure(provider = "openai", model = "gpt-4.1-mini")
+dsp_configure(provider = "openai", model = "gpt-6-luna")
 
 qa <- module(signature("question -> answer"))
 run(qa, question = "What is the capital of France?")$answer

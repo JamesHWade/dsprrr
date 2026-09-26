@@ -64,7 +64,7 @@ actually used in `metadata$provider_calls`, `metadata$total_tokens` and
 is 205:
 
 ```{r shared-task}
-llm <- ellmer::chat_openai(model = "gpt-4.1-mini")
+llm <- ellmer::chat_openai(model = "gpt-6-luna")
 question <- "A train leaves at 9:40 and arrives at 13:05. How many minutes is the trip?"
 ```
 
@@ -232,7 +232,9 @@ checked$get_attempts()
 
 `multi_chain_comparison()` runs a chain-of-thought version of the signature
 `M` times at `temperature` (default 0.7), then makes one more call that reads
-all attempts and returns a reasoned final answer. The default comparison
+all attempts and returns a reasoned final answer. gpt-6-luna accepts that
+temperature only with reasoning turned off, so the example gives it its own
+chat with `reasoning_effort = "none"`. The default comparison
 prompt lists the attempts but not the original inputs, so pass a
 `comparison_template` that includes them. It is a glue string with `{M}`,
 `{attempts_text}` and your input fields:
@@ -246,7 +248,11 @@ mcc <- multi_chain_comparison(
     "Compare the {M} attempts above and give the best final answer."
   )
 )
-run(mcc, question = question, .llm = llm)
+mcc_llm <- ellmer::chat_openai(
+  model = "gpt-6-luna",
+  params = ellmer::params(reasoning_effort = "none")
+)
+run(mcc, question = question, .llm = mcc_llm)
 mcc$get_attempts()
 ```
 
@@ -312,7 +318,7 @@ agent <- react("question -> answer", tools = list(lookup_train))
 result <- run(
   agent,
   question = "How many minutes does train 412 take?",
-  .llm = ellmer::chat_openai(model = "gpt-4.1-mini"),
+  .llm = ellmer::chat_openai(model = "gpt-6-luna"),
   .return_format = "structured"
 )
 result$output$answer

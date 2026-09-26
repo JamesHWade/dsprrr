@@ -44,7 +44,7 @@ If none is set, dsprrr creates a default Chat from the first API key it finds:
 `dsprrr_sitrep()` shows the active default.
 
 ```{r}
-set_default_chat(ellmer::chat_openai(model = "gpt-4.1-mini"))
+set_default_chat(ellmer::chat_openai(model = "gpt-6-luna"))
 classify <- module(signature("text -> sentiment: enum('positive', 'negative')"))
 reviews <- c("Arrived broken.", "Works great.")
 
@@ -57,9 +57,9 @@ with_lm(claude, run(classify, text = reviews)) # every call in the block
 
 A module's own Chat takes precedence over `with_lm()`. `dsp_configure()`
 builds a Chat from a provider name, e.g.
-`dsp_configure(provider = "openai", model = "gpt-4.1-mini")`, and passes other
-arguments to the ellmer constructor. Its `temperature` argument is currently
-stored but not sent; pass `params = ellmer::params(temperature = 0)` instead.
+`dsp_configure(provider = "openai", model = "gpt-6-luna")`, applies its
+`temperature` argument through `ellmer::params()`, and passes other arguments
+to the ellmer constructor.
 
 A Chat keeps its conversation. Each single `run()` call adds its question and
 answer to the Chat it used (the `.llm` argument, the module's own Chat, a
@@ -75,39 +75,47 @@ task or clear one with `chat$set_turns(list())`.
 
 Put sampling and output settings on the Chat with `ellmer::params()`. ellmer
 translates them into each provider's field names (for OpenAI, `max_tokens` is
-sent as `max_output_tokens`):
+sent as `max_output_tokens` and `reasoning_effort` as `reasoning.effort`):
 
 ```{r}
 chat <- ellmer::chat_openai(
-  model = "gpt-4.1-mini",
-  params = ellmer::params(temperature = 0, max_tokens = 500)
+  model = "gpt-6-luna",
+  params = ellmer::params(
+    reasoning_effort = "none",
+    temperature = 0,
+    max_tokens = 500
+  )
 )
 ```
 
 A module can also carry parameters in its `config`, as in
-`module(sig, config = list(temperature = 0))`; `optimize_grid()` applies the
-values it tries this way. These entries are added to the request body under the
-names you give, without ellmer's translation.
+`module(sig, config = list(reasoning_effort = "low"))`; `optimize_grid()`
+applies the values it tries this way. Standard parameters go through
+`ellmer::params()` and are translated the same way; other names are sent as
+you give them.
 
 ## Reasoning models
 
-Reasoning models, such as OpenAI's o-series and GPT-5, work through a problem
-before they answer. Three things change when you use one:
+Reasoning models work through a problem before they answer. gpt-6-luna
+reasons by default; its `reasoning_effort` can be `"none"`, `"low"`,
+`"medium"` (the default), `"high"`, `"xhigh"` or `"max"`. Three things change
+when you use one:
 
-- They don't use `temperature` or `top_p`. Leave both unset and don't sweep
-  them in `optimize_grid()`. dsprrr sends whatever you set; it does not adjust
+- `temperature` and `top_p` apply only when reasoning is off. With gpt-6-luna,
+  set `reasoning_effort = "none"` before you set or sweep them, and leave them
+  unset otherwise. dsprrr sends whatever you set; it does not adjust
   parameters for reasoning models.
-- Set the amount of thinking with `ellmer::params(reasoning_effort = )`, which
-  ellmer sends to OpenAI as `reasoning.effort`. A `reasoning_effort` entry in a
-  module's `config` (including one tried by `optimize_grid()`) is sent as a
-  top-level field instead.
+- Set the amount of thinking with `reasoning_effort`, on the Chat
+  (`ellmer::params(reasoning_effort = )`) or in a module's `config`, including
+  a grid tried by `optimize_grid()`. Either way it reaches OpenAI as
+  `reasoning.effort`.
 - The reasoning is not part of the result. `run()` returns the signature's
   output fields; use `chain_of_thought()` if you want a `reasoning` field.
 
 ```{r}
 solver <- module(signature("problem -> answer: int"))
 thinker <- ellmer::chat_openai(
-  model = "gpt-5-mini",
+  model = "gpt-6-luna",
   params = ellmer::params(reasoning_effort = "low")
 )
 run(
@@ -118,11 +126,11 @@ run(
 ```
 
 `is_reasoning_model()` guesses from the name alone. It matches OpenAI's
-o-series and `gpt-5` names and any name containing "reasoning":
+o-series, `gpt-5` and `gpt-6` names and any name containing "reasoning":
 
 ```{r reasoning-names}
 #| eval: true
-models <- c("gpt-4.1-mini", "gpt-5-mini", "o4-mini", "claude-sonnet-4-5")
+models <- c("gpt-6-luna", "o4-mini", "claude-sonnet-4-5")
 vapply(models, is_reasoning_model, logical(1))
 ```
 
@@ -134,33 +142,38 @@ name looks like a reasoning model:
 #| eval: !expr has_dials
 qa <- module(signature("question -> answer"))
 knobs <- c("temperature", "top_p", "reasoning_effort")
-module_parameters(qa, model = "gpt-4.1-mini", include = knobs)
-module_parameters(qa, model = "gpt-5-mini", include = knobs)
+module_parameters(qa, model = "claude-sonnet-4-5", include = knobs)
+module_parameters(qa, model = "gpt-6-luna", include = knobs)
 ```
 
 ## Images and other content
 
 Pass ellmer content objects as inputs. dsprrr writes the other inputs into the
-prompt text and sends each content object after it. With ellmer 0.5.0 this
-currently works only for a batch of two or more rows on the ellmer backend; a
-single `run()` call, a sequential batch and `run_async()` fail with
-"`...` must be made up strings or <content> objects".
+prompt text and sends each content object after it:
 
 ```{r}
 read_receipt <- module(signature("receipt -> merchant: str, total: float"))
-receipts <- list(
-  ellmer::content_image_url("https://example.com/receipts/2026-09-01.jpg"),
-  ellmer::content_image_url("https://example.com/receipts/2026-09-03.jpg")
-)
+chat <- ellmer::chat_openai(model = "gpt-6-luna")
+
 run(
   read_receipt,
-  receipt = receipts,
-  .llm = ellmer::chat_openai(model = "gpt-4.1-mini"),
-  .concurrency = concurrency_control(backend = "ellmer", max_active = 2L)
+  receipt = ellmer::content_image_url("https://example.com/receipts/0901.jpg"),
+  .llm = chat
 )
 ```
 
-The result has one named list per image, e.g. `result[[1]]$total`.
+A list of content objects is a batch, one call per element:
+
+```{r}
+receipts <- list(
+  ellmer::content_image_url("https://example.com/receipts/0901.jpg"),
+  ellmer::content_image_url("https://example.com/receipts/0903.jpg")
+)
+totals <- run(read_receipt, receipt = receipts, .llm = chat)
+totals[[1]]$total
+```
+
+The result has one named list per image.
 `ellmer::content_image_file()` and `ellmer::content_pdf_url()` build other
 kinds of content; the model must accept the kind you send.
 
@@ -179,10 +192,10 @@ sentiment_tool <- as_ellmer_tool(
   name = "classify_sentiment",
   description = "Classify the sentiment of a customer review.",
   output = "json",
-  .llm = ellmer::chat_openai(model = "gpt-4.1-mini")
+  .llm = ellmer::chat_openai(model = "gpt-6-luna")
 )
 
-assistant <- ellmer::chat_openai(model = "gpt-4.1-mini")
+assistant <- ellmer::chat_openai(model = "gpt-6-luna")
 assistant$register_tool(sentiment_tool)
 assistant$chat("Is this review positive? 'I love this product!'")
 ```
@@ -217,7 +230,7 @@ qa <- module(signature("question -> answer"))
 run_async(
   qa,
   question = "What is the capital of Peru?",
-  .llm = ellmer::chat_openai(model = "gpt-4.1-mini")
+  .llm = ellmer::chat_openai(model = "gpt-6-luna")
 ) |>
   then(\(result) cat(result$answer, "\n"))
 ```
@@ -242,7 +255,7 @@ writer <- module(signature("topic -> essay"))
 run_stream(
   writer,
   topic = "Why rivers meander",
-  .llm = ellmer::chat_openai(model = "gpt-4.1-mini"),
+  .llm = ellmer::chat_openai(model = "gpt-6-luna"),
   listeners = stream_listener("essay", \(chunk) cat(chunk))
 )
 ```
@@ -262,7 +275,7 @@ library(coro)
 chunks <- stream_async(
   writer,
   topic = "Why rivers meander",
-  .llm = ellmer::chat_openai(model = "gpt-4.1-mini")
+  .llm = ellmer::chat_openai(model = "gpt-6-luna")
 )
 print_all <- async(function() {
   for (chunk in await_each(chunks)) cat(chunk)

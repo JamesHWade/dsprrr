@@ -48,8 +48,11 @@ with `optimize_grid()`, search instructions and demos together with
 library(dsprrr)
 library(ellmer)
 
-chat <- chat_openai(model = "gpt-5-mini")
+chat <- chat_openai(model = "gpt-6-luna")
 ```
+
+The answers on this page were recorded with `gpt-5-mini` and are replayed when the
+site is built, so `gpt-6-luna` may word them differently.
 
 ## A classifier and two datasets
 
@@ -111,7 +114,7 @@ baseline_results$mean_score
 baseline_results$scores
 ```
 
-gpt-5-mini labels all four test reviews correctly, so here a search can at best
+In the recorded run, gpt-5-mini labels all four test reviews correctly, so here a search can at best
 match the baseline. Four reviews are too few to rank configurations anyway:
 each is worth 25 percentage points, and one changed answer can reverse a
 comparison. The datasets in this tutorial are small to keep it cheap; when the
@@ -160,7 +163,8 @@ times the number of rows. Settings you can search for a Predict module include:
 | `instructions` | Replaces the signature's instructions. |
 | `instructions_suffix` | Appends text to the signature's instructions. |
 | `template` | The glue string that lays out the inputs, such as `"Review: {review}"`. |
-| `temperature`, `top_p` | Sampling settings sent to the model. Reasoning models such as gpt-5-mini do not support them. |
+| `reasoning_effort` | How much a reasoning model such as gpt-6-luna thinks before answering (`"none"` to `"max"`). |
+| `temperature`, `top_p` | Sampling settings sent to the model. gpt-6-luna accepts them only with `reasoning_effort = "none"`. |
 
 ## Search instructions and demos together
 

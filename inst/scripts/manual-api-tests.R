@@ -13,7 +13,7 @@ library(dsprrr)
 library(ellmer)
 
 # Set up LLM
-llm <- chat_openai(model = "gpt-4o-mini")
+llm <- chat_openai(model = "gpt-6-luna")
 # llm <- chat_anthropic(model = "claude-sonnet-4-20250514")
 
 # =============================================================================
@@ -104,7 +104,7 @@ tool <- as_ellmer_tool(
 print(tool)
 
 # Register and use
-agent <- chat_openai(model = "gpt-4o-mini")
+agent <- chat_openai(model = "gpt-6-luna")
 agent$register_tool(
   as_ellmer_tool(
     sentiment_mod,

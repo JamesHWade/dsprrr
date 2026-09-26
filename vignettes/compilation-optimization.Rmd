@@ -55,12 +55,17 @@ module.
 library(dsprrr)
 library(ellmer)
 
-llm <- chat_openai(model = "gpt-5-mini")
-search_llm <- chat_openai(model = "gpt-4o-mini")
+llm <- chat_openai(model = "gpt-6-luna")
+search_llm <- chat_openai(
+  model = "gpt-6-luna",
+  params = params(reasoning_effort = "low")
+)
 ```
 
-`llm` runs and scores the module. `search_llm` is a cheaper model used only
-while searching.
+`llm` runs and scores the module. `search_llm` thinks less, which makes it
+cheaper, and is used only while searching. The output on this page was
+recorded with `gpt-5-mini` (runs) and `gpt-4o-mini` (search) and is replayed
+when the site is built, so `gpt-6-luna` may give different answers and scores.
 
 ## Task, data and metric
 
@@ -316,7 +321,7 @@ bootstrapped <- email_classifier |>
   )
 ```
 
-`compile()` always returns a copy. To tune settings such as temperature on the
+`compile()` always returns a copy. To tune settings such as reasoning effort on the
 module itself, use `optimize_grid()`, which updates the module in place
 ([Tutorial 5](tutorial-optimize-your-module.html) walks through it).
 

@@ -156,7 +156,7 @@ potentially sensitive when storing or exporting evaluation results.
 prediction:
 
 ```{r}
-llm <- ellmer::chat_openai(model = "gpt-4.1-mini")
+llm <- ellmer::chat_openai(model = "gpt-6-luna")
 mod <- module(signature(
   "text -> sentiment: enum('positive', 'negative', 'neutral')"
 ))
@@ -294,7 +294,7 @@ optimize_grid(
   data = trainset,
   metric = metric,
   parameters = list(
-    temperature = c(0, 0.7),
+    reasoning_effort = c("none", "low"),
     instructions_suffix = c("Answer in one word.", "Give only the name or number.")
   ),
   .llm = llm
