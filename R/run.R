@@ -3938,7 +3938,14 @@ run_dataset.Module <- function(
       function(x) tryCatch(isTRUE(x$type@required), error = function(e) TRUE),
       logical(1)
     )
-    required_names <- declared_names[required]
+    # Inputs the module fills in itself (retrieved context, refine feedback)
+    # are not expected as data columns.
+    supplied <- if (is.function(module$supplied_inputs)) {
+      module$supplied_inputs()
+    } else {
+      character()
+    }
+    required_names <- setdiff(declared_names[required], supplied)
     missing_cols <- setdiff(required_names, names(data))
 
     if (length(missing_cols) > 0) {

@@ -41,3 +41,24 @@ test_that("wrappers inherit the inputs a RAG module supplies", {
   expect_equal(result$answer, "Paris")
   expect_equal(wrapped$supplied_inputs(), "relevant_context")
 })
+
+test_that("run_dataset() and evaluate() need no column for supplied inputs", {
+  local_reset_cache()
+  llm <- new_test_chat(chat_structured = function(...) list(answer = "Paris"))
+  rag <- rag_module(
+    "question, relevant_context -> answer",
+    retriever = function(query, k) "Paris is the capital of France."
+  )
+  data <- tibble::tibble(question = "Capital of France?", answer = "Paris")
+
+  results <- run_dataset(rag, data, .llm = llm)
+  expect_equal(results$result[[1]]$answer, "Paris")
+
+  scores <- evaluate(
+    rag,
+    data,
+    metric = metric_exact_match(field = "answer"),
+    .llm = llm
+  )
+  expect_equal(scores$mean_score, 1)
+})
