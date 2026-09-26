@@ -72,5 +72,10 @@ decision_score(criteria = c("Cosmetic", "Degraded", "Outage"))
 decision_choice(weights = c(other = 0.5))
 }
 \seealso{
-\code{\link[=with_decisions]{with_decisions()}}, \code{\link[=decision_evidence]{decision_evidence()}}, \code{\link[=ReAnchor]{ReAnchor()}}
+Other decisions:
+\code{\link[=ReAnchor]{ReAnchor()}},
+\code{\link[=decision_evidence]{decision_evidence()}},
+\code{\link[=decision_settings]{decision_settings()}},
+\code{\link[=with_decisions]{with_decisions()}}
 }
+\concept{decisions}

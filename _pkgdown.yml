@@ -11,315 +11,394 @@ template:
     code_font: {google: "Fira Code"}
 
 home:
-  title: "dsprrr: Programming—not prompting—LLMs in R"
+  title: "dsprrr: typed, testable LLM programs in R"
   description: >
-    Declare typed LLM tasks in R, compose them into programs, optimize them with
-    data, or adaptively investigate large and awkward R objects.
+    Declare LLM tasks in R with typed inputs and outputs, measure them with
+    metrics, and improve their instructions and examples with your data.
 
 navbar:
   structure:
-    left: [intro, tutorials, howto, concepts, reference]
+    left: [intro, tutorials, howto, concepts, reference, news]
     right: [search, lightswitch, github]
   components:
     intro:
-      text: Get Started
-      href: articles/getting-started.html
+      text: Get started
+      href: articles/tutorial-hello-world.html
     tutorials:
       text: Tutorials
       menu:
-        - text: "Learning Path"
-        - text: "1. Your First LLM Call"
+        - text: "1. Your first LLM call"
           href: articles/tutorial-hello-world.html
-        - text: "2. Building a Classifier"
+        - text: "2. Build a classifier"
           href: articles/tutorial-build-classifier.html
-        - text: "3. Structured Outputs"
+        - text: "3. Extract structured data"
           href: articles/tutorial-structured-outputs.html
-        - text: "4. Improving with Examples"
+        - text: "4. Improve with examples"
           href: articles/tutorial-improve-with-demos.html
-        - text: "5. Optimization"
+        - text: "5. Optimize a module"
           href: articles/tutorial-optimize-your-module.html
-        - text: "6. Production"
+        - text: "6. Save and reuse a module"
           href: articles/tutorial-deploy-to-production.html
         - text: "---"
-        - text: "Advanced Tutorials"
-        - text: "Build an AI Game Master"
-          href: articles/text-adventure.html
-        - text: "Generate Package Docs"
+        - text: "Projects"
+        - text: "Generate an llms.txt file"
           href: articles/llms-txt.html
-        - text: "Investigate a Regression with RLM"
+        - text: "Investigate a regression with RLM"
           href: articles/tutorial-rlm-dsprrr.html
+        - text: "Build a text adventure"
+          href: articles/text-adventure.html
     howto:
-      text: How-to Guides
+      text: How-to guides
       menu:
+        - text: "Build"
+        - text: "Choose a module type"
+          href: articles/advanced-modules.html
+        - text: "Chain modules into pipelines"
+          href: articles/chaining-modules.html
+        - text: "Retrieval-augmented generation"
+          href: articles/rag-workflows.html
+        - text: "Calibrated decisions"
+          href: articles/calibrated-decisions.html
+        - text: "---"
+        - text: "Measure and improve"
+        - text: "Compile and optimize"
+          href: articles/compilation-optimization.html
+        - text: "Choose an optimizer"
+          href: articles/advanced-optimization.html
+        - text: "Evaluate with vitals"
+          href: articles/vitals-recipes.html
+        - text: "---"
+        - text: "Run"
+        - text: "Models, providers and streaming"
+          href: articles/models-and-providers.html
+        - text: "Run dsprrr in pipelines"
+          href: articles/orchestration.html
+        - text: "Use dsprrr with tidymodels"
+          href: articles/tidymodels-integration.html
         - text: "Troubleshooting"
           href: articles/troubleshooting.html
-        - text: "Compile & Optimize"
-          href: articles/compilation-optimization.html
-        - text: "Evaluate with Vitals"
-          href: articles/vitals-recipes.html
-        - text: "Build RAG Pipelines"
-          href: articles/rag-workflows.html
-        - text: "Chaining Modules"
-          href: articles/chaining-modules.html
-        - text: "Calibrated Decisions"
-          href: articles/calibrated-decisions.html
-        - text: "Deploy to Production"
-          href: articles/orchestration.html
-        - text: "---"
-        - text: "Integrations"
-        - text: "Vitals Package"
-          href: articles/vitals-integration.html
-        - text: "tidymodels"
-          href: articles/tidymodels-integration.html
-        - text: "Advanced ellmer"
-          href: articles/advanced-ellmer.html
     concepts:
       text: Concepts
       menu:
-        - text: "The DSPy Philosophy"
-          href: articles/concepts-dspy-philosophy.html
-        - text: "dsprrr vs. DSPy"
-          href: articles/dspy-comparison.html
-        - text: "Signatures & Modules"
+        - text: "How dsprrr works"
           href: articles/concepts-signatures-modules.html
-        - text: "How Optimization Works"
-          href: articles/concepts-optimization-theory.html
-        - text: "Why Metrics Matter"
+        - text: "Metrics and evaluation"
           href: articles/concepts-why-metrics-matter.html
-        - text: "How RLMs Work"
+        - text: "How optimization works"
+          href: articles/concepts-optimization-theory.html
+        - text: "dsprrr for DSPy users"
+          href: articles/dspy-comparison.html
+        - text: "How RLM works"
           href: articles/how-rlm-works.html
         - text: "---"
-        - text: "Deep Dives"
-        - text: "Flex: Optimize the Whole Program"
+        - text: "Experimental"
+        - text: "Flex: optimize a whole program"
           href: articles/flex-optimization.html
-        - text: "Advanced Reasoning"
-          href: articles/advanced-modules.html
-        - text: "Advanced Optimization"
-          href: articles/advanced-optimization.html
-        - text: "Composing Optimizers with Omni"
+        - text: "Compose optimizers with Omni"
           href: articles/omni-meta-optimization.html
-        - text: "Agentic Optimization Harnesses"
+        - text: "Agentic optimization harnesses"
           href: articles/agentic-optimization-harnesses.html
-        - text: "Reasoning Models"
-          href: articles/reasoning-models.html
     reference:
       text: Reference
       menu:
-        - text: "Quick Reference"
-          href: articles/cheatsheet.html
-        - text: "API Documentation"
+        - text: "Function reference"
           href: reference/index.html
+        - text: "Quick reference"
+          href: articles/cheatsheet.html
 
 logo:
   file: man/figures/logo.png
   alt: dsprrr hex sticker
 
+redirects:
+  - ["articles/getting-started.html", "articles/tutorial-hello-world.html"]
+  - ["articles/vitals-integration.html", "articles/vitals-recipes.html"]
+  - ["articles/concepts-dspy-philosophy.html", "articles/concepts-signatures-modules.html"]
+  - ["articles/advanced-ellmer.html", "articles/models-and-providers.html"]
+  - ["articles/reasoning-models.html", "articles/models-and-providers.html"]
+
 articles:
   - title: Tutorials
-    desc: Learn dsprrr step by step, from first LLM call to production deployment
+    desc: >
+      Start here. Six short steps from a first call to a saved, optimized
+      module; each one builds on the last.
     contents:
-    - getting-started
     - tutorial-hello-world
     - tutorial-build-classifier
     - tutorial-structured-outputs
     - tutorial-improve-with-demos
     - tutorial-optimize-your-module
     - tutorial-deploy-to-production
-    - text-adventure
+
+  - title: Projects
+    desc: Longer worked examples on a realistic task.
+    contents:
     - llms-txt
     - articles/tutorial-rlm-dsprrr
+    - text-adventure
 
-  - title: How-to Guides
-    desc: Task-oriented guides for specific workflows
+  - title: Build
+    desc: Pick a module type, compose modules, and add retrieval or decisions.
     contents:
-    - troubleshooting
-    - compilation-optimization
-    - vitals-recipes
-    - rag-workflows
+    - advanced-modules
     - chaining-modules
+    - rag-workflows
     - calibrated-decisions
+
+  - title: Measure and improve
+    desc: Evaluate modules and optimize them with data.
+    contents:
+    - compilation-optimization
+    - advanced-optimization
+    - vitals-recipes
+
+  - title: Run
+    desc: Configure models and run dsprrr in larger workflows.
+    contents:
+    - models-and-providers
     - orchestration
-    - vitals-integration
     - tidymodels-integration
-    - advanced-ellmer
+    - troubleshooting
 
   - title: Concepts
-    desc: Understand the philosophy, design, and theory behind dsprrr
+    desc: How dsprrr works and why, and how it maps to DSPy.
     contents:
-    - concepts-dspy-philosophy
-    - dspy-comparison
     - concepts-signatures-modules
-    - concepts-optimization-theory
     - concepts-why-metrics-matter
+    - concepts-optimization-theory
+    - dspy-comparison
     - articles/how-rlm-works
+
+  - title: Experimental
+    desc: Features whose interfaces may change.
+    contents:
     - articles/flex-optimization
-    - advanced-modules
-    - advanced-optimization
     - articles/omni-meta-optimization
     - articles/agentic-optimization-harnesses
-    - reasoning-models
 
   - title: Reference
-    desc: Quick lookup
+    desc: Quick lookup.
     contents:
     - cheatsheet
 
-# ── Reference ──────────────────────────────────────────────────────────────────
-# Organized as: Define → Build → Compose → Validate → Evaluate →
-#               Optimize → Configure → Deploy → Integrate
-
 reference:
-  - title: Primary journey
-    desc: Define, run, evaluate, and improve a program
+  - title: Signatures
+    desc: Declare a task's inputs, typed outputs and instructions.
     contents:
     - signature
     - input
-    - module
-    - run
-    - run_dataset
-    - evaluate
-    - compile
-    - optimize_grid
+    - with_instructions
+    - with_reasoning
+    - without_reasoning
+    - has_reasoning
 
-  - title: Advanced program constructors
-    desc: Choose these when execution semantics differ from standard prediction
+  - title: Build a program
+    desc: >
+      Turn a signature into a module. `module()` makes one model call; the
+      other constructors answer the same signature in a different way.
     contents:
-    - react
-    - module-react
+    - module
     - chain_of_thought
     - multi_chain_comparison
-    - module-multichain
-    - program_of_thought
-    - module-program-of-thought
-    - code_act
-    - module-codeact
-    - rlm_module
-    - rlm
-    - module-rlm
-    - flex
+    - react
     - rag_module
-    - module-wrapper
+    - module_fn
+    - flex
+
+  - title: Compose programs
+    desc: Chain modules, retry them with a reward, or combine several answers.
+    contents:
+    - pipeline
+    - step
     - best_of_n
     - refine
     - as_reward_fn
-    - module-ensemble
-    - ensemble_module
     - ensemble
     - reduce_majority
     - reduce_weighted_vote
     - reduce_first
     - reduce_best_by_metric
 
-  - title: Extension and interoperability seams
-    desc: Integrate custom modules and R ecosystem generics
+  - title: Programs that run code
+    desc: Let a model write and run R code, and choose where that code runs.
     contents:
-    - module_fn
-    - as_ellmer_tool
-    - predict.Module
+    - program_of_thought
+    - code_act
+    - rlm_module
+    - rlm
     - r_code_runner
-    - r-code-runner
     - mcp_repl_runner
+    - run_demo
 
-  - title: Signature transforms
-    desc: Derive a new signature without changing execution semantics
-    contents:
-    - signature-transforms
-    - with_instructions
-    - append_instructions
-    - with_reasoning
-    - without_reasoning
-    - has_reasoning
-
-  - title: Calibrated decisions
+  - title: Run programs
     desc: >
-      Experimental probability-evidence outputs (DSPy 3.4 decision types),
-      decoded locally with tunable thresholds, cuts, and weights
+      Run a module on named inputs or on a data frame, in parallel,
+      asynchronously or as a stream, and read what came back.
     contents:
-    - decision_types
-    - with_decisions
-    - decision_settings
-    - decision_evidence
-    - ReAnchor
-
-  - title: Execution and inspection
-    desc: Batch policy, graphs, and module metadata
-    contents:
+    - run
+    - run_dataset
+    - predict.Module
     - concurrency_control
-    - module-graph
+    - run_async
+    - run_stream
+    - stream_listener
+    - stream_async
+    - accessors
 
-  - title: Pipelines
-    desc: Chain modules into multi-step workflows
+  - title: Validate outputs
+    desc: Check outputs and retry with feedback when a check fails.
     contents:
-    - pipeline
-    - "%>>%"
-    - step
-
-  - title: Assertions
-    desc: Validate outputs and retry with automatic backtracking
-    contents:
-    - assertions
-    - assert_output
-    - suggest_output
-    - assertion_set
     - with_assertions
-    - assertion-helpers
+    - assertions
     - assert_length
     - assert_contains
     - assert_not_contains
     - assert_matches
     - assert_not_matches
     - assert_one_of
-    - assert_custom
-    - assert_not_empty
     - assert_range
+    - assert_not_empty
+    - assert_custom
 
-  - title: Metrics
-    desc: Score program outputs with explicit objectives
+  - title: Evaluate
+    desc: Score a program on labeled data with a metric.
     contents:
-    - starts_with("metric_")
+    - evaluate
+    - metric_exact_match
+    - metric_f1
+    - metric_contains
+    - metric_field_match
+    - metric_custom
+    - metric_threshold
+    - metric_with_feedback
+    - metric_with_trace
+    - vitals_metrics
 
-  - title: Teleprompters
-    desc: Automated prompt optimization strategies
+  - title: Optimize with compile()
+    desc: >
+      Optimizers, which dsprrr calls teleprompters, tune a program's
+      demonstrations, instructions or decision rules against a metric. The
+      "Choose an optimizer" article compares them.
     contents:
-    - Teleprompter
+    - compile
     - LabeledFewShot
-    - GridSearchTeleprompter
     - BootstrapFewShot
     - BootstrapFewShotWithRandomSearch
     - KNNFewShot
+    - COPRO
+    - MIPROv2
+    - GEPA
+    - SIMBA
+    - GridSearchTeleprompter
     - BetterTogether
+    - ReAnchor
+    - Teleprompter
+
+  - title: Experimental optimizers
+    desc: Compose optimizers, or let an agent run optimization experiments.
+    contents:
     - Omni
     - AutoResearch
     - MetaHarness
-    - SIMBA
-    - GEPA
-    - MIPROv2
-    - COPRO
 
-  - title: Optimization inspection
-    desc: Inspect parameters, trials, and metrics attached to programs
-    contents:
-    - module_parameters
-    - module_trials
-    - module_metrics
-
-  - title: Optimization Results
-    desc: Inspect trials, extract best configurations, and export
+  - title: Inspect optimization results
+    desc: See what an optimizer changed and reuse the result.
     contents:
     - optimization_result
-    - print.dsprrr_optimization_result
-    - optimizer-accessors
+    - optimization_summary
     - best_params
     - best_demos
-    - apply_best_config
     - top_trials
     - config_diff
+    - apply_best_config
     - export_module_code
-    - optimization_summary
-    - print.dsprrr_optimization_summary
 
-  - title: Optimizer Infrastructure
-    desc: Low-level building blocks for custom optimizers
+  - title: Grid search
+    desc: Try combinations of request settings, instructions and templates.
+    contents:
+    - optimize_grid
+    - module_trials
+    - module_metrics
+    - module_parameters
+
+  - title: Calibrated decisions
+    desc: >
+      Experimental. Yes/no and label outputs decoded locally from probability
+      evidence, with thresholds you can tune.
+    contents:
+    - decision_types
+    - with_decisions
+    - decision_settings
+    - decision_evidence
+
+  - title: Models and caching
+    desc: Choose the chat a call uses and control the response cache.
+    contents:
+    - dsp_configure
+    - get_default_chat
+    - with_lm
+    - is_reasoning_model
+    - configure_cache
+    - cache_stats
+    - clear_cache
+    - dsprrr_sitrep
+
+  - title: Prompts, traces and costs
+    desc: Inspect what was sent to the model, what came back and what it cost.
+    contents:
+    - get_last_prompt
+    - inspect_history
+    - clear_prompt_history
+    - export_traces
+    - summarize_traces
+    - clear_traces
+    - session_cost
+
+  - title: Save and deploy
+    desc: Save programs, pin them to a board, and start a workflow project.
+    contents:
+    - program-artifact
+    - pin_module_config
+    - restore_module_config
+    - pin_trace
+    - pin_vitals_log
+    - use_dsprrr_template
+    - validate_workflow
+
+  - title: Program graphs
+    desc: Inspect, freeze and transform the modules inside a program.
+    contents:
+    - module-graph
+
+  - title: vitals
+    desc: Evaluate modules with the vitals package.
+    contents:
+    - as_vitals_solver
+    - as_vitals_task
+    - as_vitals_samples
+    - as_vitals_cost
+    - as_dsprrr_traces
+    - summarize_traces_df
+    - as_dsprrr_metric
+
+  - title: Tools and retrieval
+    desc: Expose modules as ellmer tools and search document stores.
+    contents:
+    - as_ellmer_tool
+    - ragnar_tool
+    - create_search_tool
+
+  - title: tidymodels
+    desc: A parsnip model specification and dials parameters.
+    contents:
+    - llm_predict
+    - register_dsprrr_engine
+    - temperature
+    - top_p
+    - reasoning_effort
+
+  - title: Build your own optimizer
+    desc: Lower-level pieces the built-in optimizers are made from.
     contents:
     - optimizer_control
     - eval_program
@@ -331,112 +410,3 @@ reference:
     - write_trials_jsonl
     - read_trials_jsonl
     - load_trial_log
-
-  - title: Configuration
-    desc: Set up LLM providers, caching, and global options
-    contents:
-    - dsp_configure
-    - dsprrr_sitrep
-    - default-chat
-    - get_default_chat
-    - set_default_chat
-    - clear_default_chat
-    - with_lm
-    - local_lm
-    - configure_cache
-    - clear_cache
-    - cache_stats
-
-  - title: Async & Streaming
-    desc: Non-blocking execution and streaming responses
-    contents:
-    - async
-    - run_async
-    - stream_async
-    - run_stream
-    - stream_listener
-
-  - title: Debugging & Traces
-    desc: Inspect prompts, execution history, and traces
-    contents:
-    - prompt-visibility
-    - get_last_prompt
-    - inspect_history
-    - clear_prompt_history
-    - export_traces
-    - summarize_traces
-    - clear_traces
-
-  - title: Results & Printing
-    desc: Extract outputs, costs, and display formatted results
-    contents:
-    - accessors
-    - get_output
-    - get_metadata
-    - get_tokens
-    - get_cost
-    - session_cost
-    - print.dsprrr_evaluation
-    - print.dsprrr_batch_result
-    - print.dsprrr_cost_summary
-
-  - title: Production & Deployment
-    desc: Pin configurations, validate workflows, and deploy to production
-    contents:
-    - program-artifact
-    - program_artifact
-    - program_artifact_id
-    - save_program
-    - load_program
-    - orchestration
-    - pin_module_config
-    - restore_module_config
-    - pin_trace
-    - pin_vitals_log
-    - use_dsprrr_template
-    - validate_workflow
-
-  - title: Vitals Integration
-    desc: Bridge to the vitals evaluation framework
-    contents:
-    - as_vitals_solver
-    - as_vitals_task
-    - as_vitals_cost
-    - as_vitals_samples
-    - as_dsprrr_traces
-    - summarize_traces_df
-    - as_dsprrr_metric
-    - metric_model_graded_qa
-    - metric_model_graded_fact
-    - metric_detect_match
-    - metric_detect_includes
-    - metric_detect_pattern
-
-  - title: ellmer & RAG
-    desc: Retrieval helpers built on ragnar and ellmer tools
-    contents:
-    - ragnar_tool
-    - create_search_tool
-    - print.ragnar_tool
-
-  - title: tidymodels Integration
-    desc: Use LLM modules as parsnip model engines with dials parameters
-    contents:
-    - llm_predict
-    - fit_llm_predict
-    - predict_llm_class
-    - predict_llm_numeric
-    - register_dsprrr_engine
-    - temperature
-    - top_p
-    - reasoning_effort
-
-  - title: Demo & Interactive Tools
-    desc: Interactive demonstrations and exploration tools
-    contents:
-    - run_demo
-
-  - title: Utilities
-    desc: Model detection helpers
-    contents:
-    - is_reasoning_model

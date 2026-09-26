@@ -29,7 +29,7 @@
 ^getting-started\.md$
 ^gh-issue.*\.md$
 ^PHASE2_ISSUE\.md$
-^vignettes/_vcr/\.gitkeep$
+^vignettes/_vcr$
 ^vignettes/.*_cache$
 ^tests/testthat/\.dsprrr_cache$
 ^inst/shiny-demo/srcts$

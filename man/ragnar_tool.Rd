@@ -2,48 +2,82 @@
 % Please edit documentation in R/ragnar.R
 \name{ragnar_tool}
 \alias{ragnar_tool}
-\title{Create a ragnar Search Tool for ReAct Modules}
+\title{Search a ragnar store from a tool-using module}
 \usage{
 ragnar_tool(store, k = 5L, name = "search_knowledge", description = NULL)
 }
 \arguments{
-\item{store}{A ragnar store created with \code{ragnar::ragnar_store_create()}.}
+\item{store}{A ragnar store, built with \code{ragnar::ragnar_store_create()},
+\code{ragnar::ragnar_store_insert()} and \code{ragnar::ragnar_store_build_index()}.}
 
-\item{k}{Number of documents to retrieve per search (default 5).}
+\item{k}{Number of chunks to return per search.}
 
-\item{name}{Tool name (default "search_knowledge").}
+\item{name}{Tool name shown to the model.}
 
-\item{description}{Tool description for the LLM.}
+\item{description}{Tool description shown to the model. The default says
+it searches the knowledge base and returns the top \code{k} documents.}
 }
 \value{
-A function suitable for use with ReAct modules or
-\code{ellmer::Chat$register_tool()}.
+An ellmer tool definition (see \code{\link[ellmer:tool]{ellmer::tool()}}) for \code{\link[=react]{react()}}
+modules or \code{Chat$register_tool()}. It can also be called directly with a
+query string.
 }
 \description{
-Creates an ellmer-compatible tool that searches a ragnar document store.
-This tool can be used with ReAct modules or registered with ellmer Chat
-objects for agentic document retrieval.
+\code{ragnar_tool()} wraps a ragnar document store as an ellmer tool that takes
+a search query and returns the \code{k} best-matching chunks as text. Give it to
+\code{\link[=react]{react()}} so the agent can search your documents while it reasons, or
+register it on an ellmer Chat. \code{\link[=rag_module]{rag_module()}} is the alternative that
+retrieves once, before every call.
+}
+\details{
+Results are numbered (\verb{[Result 1]}, \verb{[Result 2]}, ...) and separated by
+\verb{---}. A search error is returned to the model as text instead of
+stopping the conversation. Requires the ragnar package.
 }
 \examples{
 \dontrun{
 # Create a ragnar store from documents
 library(ragnar)
 store <- ragnar_store_create(
-  documents = my_docs,
-  embedding_fn = embed_openai()
+  embed = \\(x) embed_openai(x, model = "text-embedding-3-small")
 )
+for (i in seq_along(my_docs)) {
+  doc <- MarkdownDocument(my_docs[[i]], origin = paste0("doc-", i))
+  ragnar_store_insert(store, markdown_chunk(doc))
+}
+ragnar_store_build_index(store)
 
 # Create a search tool
-search_tool <- ragnar_tool(store, k = 3)
+search_tool <- ragnar_tool(store, k = 3L)
+search_tool("How do I configure the cache?")
 
-# Use with ReAct module
-react_mod <- react(
-  signature("question -> answer"),
-  tools = list(search_tool)
-)
+# Use with a ReAct module
+agent <- react("question -> answer", tools = list(search_tool))
+run(agent, question = "How do I turn caching off?", .llm = ellmer::chat_openai(model = "gpt-6-luna"))
 
-# Or register with ellmer Chat
-chat <- ellmer::chat_openai()
+# Or register it on an ellmer Chat
+chat <- ellmer::chat_openai(model = "gpt-6-luna")
 chat$register_tool(search_tool)
 }
 }
+\seealso{
+Other integrations:
+\code{\link[=as_dsprrr_metric]{as_dsprrr_metric()}},
+\code{\link[=as_dsprrr_traces]{as_dsprrr_traces()}},
+\code{\link[=as_ellmer_tool]{as_ellmer_tool()}},
+\code{\link[=as_vitals_cost]{as_vitals_cost()}},
+\code{\link[=as_vitals_samples]{as_vitals_samples()}},
+\code{\link[=as_vitals_solver]{as_vitals_solver()}},
+\code{\link[=as_vitals_task]{as_vitals_task()}},
+\code{\link[=create_search_tool]{create_search_tool()}},
+\code{\link[=llm_predict]{llm_predict()}},
+\code{\link[=reasoning_effort]{reasoning_effort()}},
+\code{\link[=register_dsprrr_engine]{register_dsprrr_engine()}},
+\code{\link[=summarize_traces_df]{summarize_traces_df()}},
+\code{\link[=temperature]{temperature()}},
+\code{\link[=top_p]{top_p()}},
+\code{\link[=use_dsprrr_template]{use_dsprrr_template()}},
+\code{\link[=validate_workflow]{validate_workflow()}},
+\code{\link{vitals_metrics}}
+}
+\concept{integrations}

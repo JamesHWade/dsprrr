@@ -2,19 +2,31 @@
 % Please edit documentation in R/inspect.R
 \name{clear_prompt_history}
 \alias{clear_prompt_history}
-\title{Clear Prompt History}
+\title{Clear the prompt history}
 \usage{
 clear_prompt_history()
 }
 \value{
-Invisibly returns the number of entries cleared.
+The number of entries removed, invisibly. A message reports it
+when the history was not empty.
 }
 \description{
-Clears the global prompt history. Useful for testing or to free memory.
+\code{clear_prompt_history()} empties the session's prompt history, which
+\code{\link[=get_last_prompt]{get_last_prompt()}}, \code{\link[=inspect_history]{inspect_history()}} and \code{\link[=session_cost]{session_cost()}} read. Module
+traces are kept; see \code{\link[=clear_traces]{clear_traces()}} for those.
 }
 \examples{
-\dontrun{
-# Clear history
-clear_prompt_history()
+removed <- clear_prompt_history()
+removed
 }
+\seealso{
+Other inspection:
+\code{\link{accessors}},
+\code{\link[=clear_traces]{clear_traces()}},
+\code{\link[=export_traces]{export_traces()}},
+\code{\link[=get_last_prompt]{get_last_prompt()}},
+\code{\link[=inspect_history]{inspect_history()}},
+\code{\link[=session_cost]{session_cost()}},
+\code{\link[=summarize_traces]{summarize_traces()}}
 }
+\concept{inspection}

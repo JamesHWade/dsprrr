@@ -20,8 +20,8 @@
 #' The actual LLM calls happen in the parent R process, not in the sandboxed code
 #' execution environment.
 #'
-#' @keywords internal
 #' @name rlm-tools
+#' @noRd
 NULL
 
 

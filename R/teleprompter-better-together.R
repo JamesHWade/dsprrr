@@ -2,55 +2,95 @@
 #
 # DSPy-style meta-optimizer for chaining arbitrary teleprompters.
 
-#' BetterTogether Teleprompter
+#' BetterTogether: run several optimizers in sequence
 #'
 #' @include teleprompter.R optimizer-core.R
 #'
 #' @description
-#' A meta-teleprompter that runs multiple optimization strategies in sequence.
-#' This mirrors DSPy's `BetterTogether` optimizer surface for composing prompt
-#' optimizers and future weight optimizers with a strategy string such as
-#' `"p -> g -> p"`.
+#' `BetterTogether()` chains optimizers. A strategy string such as
+#' `"p -> g -> p"` runs the optimizer named `p`, then `g` on its result, then
+#' `p` again. Every intermediate program is scored on a validation set and the
+#' best one is returned. It mirrors DSPy's `BetterTogether`.
 #'
-#' `BetterTogether()` accepts optimizers either through the named `optimizers`
-#' list or as named arguments in `...`. Strategy steps refer to those names.
-#' Each intermediate program is evaluated on `valset` when available; the best
-#' scored program is returned. Without a validation set, the latest program in
-#' the strategy is returned.
+#' @details
+#' Name the optimizers in `optimizers` or as named arguments in `...`; the
+#' strategy refers to those names. Without any, `BetterTogether()` uses
+#' `p = BootstrapFewShotWithRandomSearch(metric = metric)`.
 #'
-#' @param metric Metric function used to score candidate programs.
-#' @param optimizers Named list of [Teleprompter] objects. If omitted, dsprrr
-#'   defaults to `p = BootstrapFewShotWithRandomSearch(metric = metric)`.
-#' @param ... Named [Teleprompter] objects, used as strategy keys. These are
-#'   combined with `optimizers`.
-#' @param metric_threshold Minimum score required to be considered successful.
-#' @param max_errors Maximum number of errors allowed during evaluation.
-#' @param default_strategy Strategy to use when `compile()` does not receive
-#'   `strategy`. Defaults to `"p"`.
-#' @param valset_ratio Fraction of `trainset` to hold out as validation when
-#'   `valset` is not supplied. Set to `0` to skip validation.
-#' @param shuffle_trainset_between_steps Whether to shuffle training rows before
-#'   each optimizer step.
-#' @param seed Optional random seed for reproducible splitting and shuffling.
-#' @param verbose Whether to print progress messages.
+#' [compile()] accepts extra arguments for this optimizer: `strategy`
+#' (overrides `default_strategy`), `optimizer_compile_args` (a list, named by
+#' optimizer, of further arguments for that optimizer's [compile()] call), and
+#' `valset_ratio`, `shuffle_trainset_between_steps` and `seed`, which override
+#' the values stored here.
 #'
-#' @return A `BetterTogether` teleprompter object.
+#' The validation set is `valset` when given. Otherwise `floor(valset_ratio *
+#' nrow(trainset))` rows are held out, which is none for fewer than 10 rows at
+#' the default ratio. Each step receives the remaining training rows and the
+#' validation set. The original program is scored as well, so the result can
+#' be the unchanged program. Without a validation set, the last program in the
+#' strategy is returned. A step that fails raises a warning and ends the run
+#' with the best program so far; the default `p` optimizer fails this way when
+#' there is no validation set.
+#'
+#' The scored candidates are stored in
+#' `optimization_result(compiled)$extensions$better_together$candidate_programs`.
+#'
+#' @param metric A metric function (required) used to score every candidate
+#'   on the validation set, such as `metric_exact_match(field = "answer")`.
+#' @param optimizers Named list of optimizer objects, such as
+#'   `list(p = BootstrapFewShotWithRandomSearch(metric = metric))`.
+#' @param ... Further named optimizer objects, combined with `optimizers`.
+#' @param metric_threshold Accepted for consistency with the other optimizers
+#'   (see [Teleprompter()]); `BetterTogether()` does not use it.
+#' @param max_errors Does not stop the run; set `max_errors` on each wrapped
+#'   optimizer instead.
+#' @param default_strategy Strategy used when [compile()] gets no `strategy`
+#'   (default `"p"`): optimizer names joined by `->`.
+#' @param valset_ratio Share of `trainset` held out for validation when no
+#'   `valset` is given (default `0.1`). `0` skips validation.
+#' @param shuffle_trainset_between_steps Whether to shuffle the training rows
+#'   before each step (default `TRUE`).
+#' @param seed Optional seed for the validation split and the shuffles.
+#' @param verbose Whether to print progress messages (default `TRUE`).
+#'
+#' @return A `BetterTogether` object to pass to [compile()].
+#' @family teleprompters
 #' @export
 #' @examples
-#' \dontrun{
 #' metric <- metric_exact_match(field = "answer")
 #'
 #' tp <- BetterTogether(
 #'   metric = metric,
-#'   optimizers = list(
-#'     p = BootstrapFewShotWithRandomSearch(metric = metric),
-#'     g = GEPA(metric = metric, population_size = 4L, generations = 2L)
-#'   ),
+#'   p = BootstrapFewShotWithRandomSearch(metric = metric),
+#'   g = GEPA(metric = metric, population_size = 4L, generations = 2L),
 #'   default_strategy = "p -> g -> p"
 #' )
+#' tp
 #'
-#' compiled <- compile(qa_module, tp, trainset, valset = valset, .llm = llm)
+#' \dontrun{
+#' qa <- module(signature("question -> answer"))
+#' trainset <- data.frame(
+#'   question = c("Capital of France?", "Capital of Peru?", "Capital of Chad?"),
+#'   answer = c("Paris", "Lima", "N'Djamena")
+#' )
+#' valset <- data.frame(
+#'   question = c("Capital of Japan?", "Capital of Kenya?"),
+#'   answer = c("Tokyo", "Nairobi")
+#' )
+#' llm <- ellmer::chat_openai(model = "gpt-6-luna")
+#'
+#' compiled <- compile(qa, tp, trainset, valset = valset, .llm = llm)
 #' optimization_result(compiled)$extensions$better_together$candidate_programs
+#'
+#' # Try another strategy without building a new optimizer
+#' compiled_g <- compile(
+#'   qa,
+#'   tp,
+#'   trainset,
+#'   valset = valset,
+#'   .llm = llm,
+#'   strategy = "g"
+#' )
 #' }
 BetterTogether <- S7::new_class(
   "BetterTogether",
@@ -660,5 +700,3 @@ print_better_together <- function(x, ...) {
   cli::cli_text("{.field Optimizers}: {.field {names(optimizers)}}")
   invisible(x)
 }
-
-S7::method(print, BetterTogether) <- print_better_together

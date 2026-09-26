@@ -1,28 +1,66 @@
-#' Compile a program
+#' Optimize a program with a teleprompter
 #'
 #' @description
-#' Optimize a dsprrr program with a teleprompter. This is the single
-#' user-facing compilation entry point and is ordered for the native pipe:
+#' `compile()` improves a program (its demos, instructions or other settings)
+#' with a teleprompter such as [LabeledFewShot()], [BootstrapFewShot()] or
+#' [MIPROv2()], using a training set. It returns a new program and leaves the
+#' input unchanged. Its argument order suits the native pipe:
 #' `program |> compile(teleprompter, trainset)`.
 #'
-#' @param program A dsprrr module or compositional program to optimize.
-#' @param teleprompter A Teleprompter defining the optimization strategy.
-#' @param ... Additional arguments. The first is normally `trainset`, a data
-#'   frame. Optimizers may also accept `valset`, `.llm`, and
-#'   `.trace_context`.
+#' @param program The module or pipeline to optimize. Programs made with
+#'   [module_fn()] cannot be compiled.
+#' @param teleprompter A teleprompter object that sets the optimization
+#'   strategy. Integer settings of teleprompters need integer literals, as in
+#'   `LabeledFewShot(k = 3L)`; `k = 3` is an error.
+#' @param ... The training set and optimizer options:
+#'   - `trainset` (required, third argument): a data frame with the program's
+#'     input columns and the expected outputs.
+#'   - `valset`: an optional validation data frame, for teleprompters that
+#'     use one. It may also be given as the fourth argument.
+#'   - `.llm`: an ellmer Chat for the program's calls (see [run()]).
+#'   - `.trace_context`: a named, JSON-compatible list copied into the
+#'     metadata and traces of the calls made while compiling.
 #'
-#' @return An optimized program.
+#'   Some teleprompters take further arguments; see their help pages.
+#'
+#' @details
+#' Teleprompters that score candidates call the metric as
+#' `metric(prediction, expected)`, where `expected` is the whole training
+#' row, so give built-in metrics a `field`, as in
+#' `metric_exact_match(field = "sentiment")`. Compiling a program that is
+#' already compiled works but gives a warning.
+#'
+#' @return A new, compiled program of the same kind as `program`. Check it
+#'   with `compiled$is_compiled()`.
 #' @export
+#' @family teleprompters
 #' @examples
-#' \dontrun{
-#' classifier <- module(signature("text -> sentiment"))
+#' classifier <- module(
+#'   signature("text -> sentiment: enum('positive', 'negative')")
+#' )
 #' trainset <- data.frame(
-#'   text = c("I love it!", "Terrible experience"),
-#'   sentiment = c("positive", "negative")
+#'   text = c("I love it!", "Terrible experience", "Works great", "Broke in a day"),
+#'   sentiment = c("positive", "negative", "positive", "negative")
 #' )
 #'
-#' optimized <- classifier |>
-#'   compile(LabeledFewShot(k = 2L), trainset)
+#' # LabeledFewShot copies training rows into the prompt as demos, so it
+#' # needs no model calls
+#' compiled <- classifier |> compile(LabeledFewShot(k = 2L), trainset)
+#' compiled$is_compiled()
+#' classifier$is_compiled()
+#' compiled$demo_table
+#'
+#' \dontrun{
+#' # BootstrapFewShot runs the program and keeps demos that pass the metric
+#' bootstrapped <- classifier |>
+#'   compile(
+#'     BootstrapFewShot(
+#'       metric = metric_exact_match(field = "sentiment"),
+#'       max_bootstrapped_demos = 2L
+#'     ),
+#'     trainset,
+#'     .llm = ellmer::chat_openai(model = "gpt-6-luna")
+#'   )
 #' }
 compile <- S7::new_generic("compile", c("program", "teleprompter"))
 

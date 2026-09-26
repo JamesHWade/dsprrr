@@ -2,21 +2,37 @@
 % Please edit documentation in R/optimizer-logging.R
 \name{read_trials_jsonl}
 \alias{read_trials_jsonl}
-\title{Read Trials from JSONL File}
+\title{Read trial records from a JSON Lines file}
 \usage{
 read_trials_jsonl(path)
 }
 \arguments{
-\item{path}{File path for the JSONL file.}
+\item{path}{Path of the JSON Lines file.}
 }
 \value{
-A list of optimization trial records.
+A list of trial records.
 }
 \description{
-Read optimization trial records from a JSONL file.
+\code{read_trials_jsonl()} reads the trial records written by
+\code{\link[=write_trials_jsonl]{write_trials_jsonl()}} or kept in a \link{TrialLog}'s \code{trials.jsonl}.
 }
 \examples{
-\dontrun{
-trials <- read_trials_jsonl("trials.jsonl")
+path <- tempfile(fileext = ".jsonl")
+trials <- list(create_trial("my-search", params = list(k = 2L)))
+write_trials_jsonl(trials, path)
+trials <- read_trials_jsonl(path)
+trials[[1]]
 }
+\seealso{
+Other optimizer building blocks:
+\code{\link{TrialLog}},
+\code{\link[=complete_trial]{complete_trial()}},
+\code{\link[=create_trial]{create_trial()}},
+\code{\link[=eval_program]{eval_program()}},
+\code{\link[=load_trial_log]{load_trial_log()}},
+\code{\link[=optimizer_control]{optimizer_control()}},
+\code{\link[=sample_dataset]{sample_dataset()}},
+\code{\link[=split_dataset]{split_dataset()}},
+\code{\link[=write_trials_jsonl]{write_trials_jsonl()}}
 }
+\concept{optimizer building blocks}

@@ -2,47 +2,69 @@
 % Please edit documentation in R/pipeline.R
 \name{step}
 \alias{step}
-\title{Create a Pipeline Step with Mappings}
+\title{Configure one pipeline step}
 \usage{
 step(module, map = list(), select = character(0), ...)
 }
 \arguments{
-\item{module}{A Module object}
+\item{module}{The module to run at this step.}
 
-\item{map}{Named character vector mapping upstream output fields to this
-module's input fields. Format: \code{c(output_field = "input_field")}.}
+\item{map}{A named character vector (or list) that renames fields coming
+from the previous step. Names are the previous step's output fields and
+values are this module's input fields: \code{map = c(summary = "passage")}
+passes the upstream \code{summary} as \code{passage}. In the first step, \code{map}
+renames the pipeline's inputs.}
 
-\item{select}{Character vector of output field names to pass forward.
-If empty, all fields are passed.}
+\item{select}{Names of this step's output fields to pass to the next step.
+By default all of them are passed. For the last step, \code{select} also
+limits what the pipeline returns.}
 
-\item{...}{Static inputs to inject (name = value pairs)}
+\item{...}{Fixed inputs for this step, as \code{name = value}: values for input
+fields of \code{module} that stay the same on every call. They are inputs,
+not settings, so something like \code{system_prompt = "Be brief"} would
+reach the prompt as an extra input field. They override mapped values
+with the same name.}
 }
 \value{
-A PipelineStep object for use in \code{pipeline()}
+A pipeline step (an S7 object of class \code{PipelineStep}) to pass to
+\code{\link[=pipeline]{pipeline()}}.
 }
 \description{
-Wraps a module with input/output mapping configuration for use in \code{pipeline()}.
+\code{step()} wraps a module for \code{\link[=pipeline]{pipeline()}} when its inputs do not line up
+with the previous step's outputs by name, when only some of its outputs
+should go on to the next step, or when it needs fixed inputs.
 }
 \examples{
-\dontrun{
-# Map 'documents' from upstream to 'context' input
-pipeline(
-  mod_retrieve,
-  step(mod_answer, map = c(documents = "context")),
-  mod_format
+summarize <- module_fn("text -> summary", function(text) substr(text, 1, 30))
+translate <- module_fn(
+  "passage, language -> translation, n_chars: int",
+  function(passage, language) {
+    list(translation = paste0("[", language, "] ", passage), n_chars = nchar(passage))
+  }
 )
+shout <- module_fn("translation -> reply", function(translation) toupper(translation))
 
-# Select only certain output fields
-pipeline(
-  mod_analyze,
-  step(mod_format, select = c("summary", "score")),
-  mod_present
+p <- pipeline(
+  summarize,
+  # `summary` becomes `passage`, `language` is fixed, and only
+  # `translation` goes on to `shout`
+  step(translate, map = c(summary = "passage"), select = "translation", language = "French"),
+  shout
 )
-
-# Inject static inputs
-pipeline(
-  mod_retrieve,
-  step(mod_answer, system_prompt = "Be concise")
-)
+run(p, text = "dsprrr turns language model calls into programs.")
 }
+\seealso{
+Other composition:
+\code{\link[=as_reward_fn]{as_reward_fn()}},
+\code{\link[=best_of_n]{best_of_n()}},
+\code{\link[=ensemble]{ensemble()}},
+\code{\link{module-graph}},
+\code{\link[=pipeline]{pipeline()}},
+\code{\link[=reduce_best_by_metric]{reduce_best_by_metric()}},
+\code{\link[=reduce_first]{reduce_first()}},
+\code{\link[=reduce_majority]{reduce_majority()}},
+\code{\link[=reduce_weighted_vote]{reduce_weighted_vote()}},
+\code{\link[=refine]{refine()}},
+\code{\link[=with_assertions]{with_assertions()}}
 }
+\concept{composition}

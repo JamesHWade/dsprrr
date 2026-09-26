@@ -246,6 +246,64 @@ First development changelog. dsprrr is experimental; the API may change.
 
 ## Bug fixes
 
+* `metric_exact_match()` and `metric_f1()` now work without `field` in
+  `evaluate()`, `optimize_grid()`, and `compile()`. Those functions pass the
+  whole data row as `expected`, so every row used to fail with "Metric must
+  return a single logical or numeric score" (and `metric_f1()` scored against
+  every column). The metric now compares the one prediction field that is also
+  a data column, and asks for `field` when that is ambiguous. This also fixes
+  `optimize_grid()`'s default metric.
+
+* `refine()` and `rag_module()` programs now run through `run()`,
+  `run_dataset()` and `evaluate()`. Input validation used to demand the
+  `feedback` and `relevant_context` fields the modules fill in themselves. When a refined module declares `feedback`, the
+  first attempt receives "No feedback yet.".
+
+* ragnar integration matches ragnar's API: retrieval passes `top_k`,
+  `ragnar_tool()` returns an ellmer tool definition that `react()` and
+  `Chat$register_tool()` accept, and `create_search_tool()` builds its store
+  with `ragnar_store_create(embed = )`, `markdown_chunk()`, and
+  `ragnar_store_insert()`.
+
+* Print methods work in the installed package. Top-level
+  `S7::method(print, ...) <-` calls created a `print` binding in the
+  namespace, which sent every `S3method(print, ...)` registration to the
+  wrong methods table, so evaluation results, cache statistics, prompt
+  inspections, costs and optimizer objects printed as raw lists. The S7 print
+  methods are now registered in `.onLoad()`.
+
+* `evaluate(epochs = )` samples fresh responses in every epoch. Epochs after
+  the first now use their own cache partition; previously they replayed
+  epoch 1 from the response cache, so `score_std` and `ci_95` collapsed to 0
+  unless `.cache = FALSE` was set.
+
+* Image and other content inputs work in single `run()` calls, sequential
+  batches and `run_async()`. The prompt parts were passed to ellmer as one
+  list argument, which ellmer 0.5.0 rejects; only batches on the ellmer
+  backend worked.
+
+* Runtime parameters set on a module (`config$params`, `optimize_grid()`
+  grids, `reasoning_effort()`) now go through ellmer's standard `params`, so
+  ellmer sends them in each provider's format. `reasoning_effort` used to be
+  sent as a top-level field that OpenAI's Responses API does not accept; it is
+  now sent as `reasoning.effort`. Parameters ellmer does not know are still
+  sent verbatim. `is_reasoning_model()` recognizes the gpt-6 family.
+
+* `optimize_grid(parameters = )` no longer leaves `expand.grid()`'s
+  `out.attrs` attribute on `best_params`, which made `save_program()` and
+  `pin_module_config()` fail on grid-searched modules. Printing
+  `session_cost()` no longer errors when the cost is unknown.
+
+* `dsp_configure()` applies `temperature` to the chat (through
+  `ellmer::params()`) instead of only recording it, and honors `model` and
+  `api_key` when it detects the provider from environment variables.
+
+* `optimize_grid()`'s `instructions_suffix` parameter appends to the module's
+  instructions instead of replacing them.
+
+* `export_traces()` and `pin_trace()` leave out prompts and responses unless
+  `include_prompts` or `include_outputs` is `TRUE`, as documented.
+
 * DSPy 3.3 execution contracts are enforced in the R runtime: `rlm_module()`
   rejects duplicate, reserved, missing, and ellipsis-style tool names, rejects
   unexpected invocation inputs, and no longer stringifies arbitrary sub-LM

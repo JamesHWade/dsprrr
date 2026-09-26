@@ -1,8 +1,8 @@
 ---
-title: "Tutorial 2: Building a Reusable Classifier"
+title: "Tutorial 2: Build a classifier"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Tutorial 2: Building a Reusable Classifier}
+  %\VignetteIndexEntry{Tutorial 2: Build a classifier}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -36,65 +36,45 @@ if (should_eval) {
 }
 ```
 
-In [Tutorial 1](tutorial-hello-world.html), you built and ran a typed module. Now
-you will use that same contract across hundreds of texts.
-
-In this tutorial, you'll build a **reusable module**—a classifier you can use over and over.
-
-**Time**: 20-25 minutes
-
-## What You'll Build
-
-A sentiment classifier that:
-- Processes single texts or batches
-- Remembers its configuration
-- Can be saved and reused
-
-## Prerequisites
-
-- Completed [Tutorial 1](tutorial-hello-world.html)
-- `OPENAI_API_KEY` set in your environment
+You will build a sentiment classifier and run it three ways: on one text, on a
+vector of texts, and on a data frame with `run_dataset()`. It uses the
+signature syntax from [Tutorial 1](tutorial-hello-world.html).
 
 ```{r setup}
+#| eval: true
+#| message: false
 library(dsprrr)
 library(ellmer)
+
+chat <- chat_openai(model = "gpt-6-luna")
 ```
 
-## Step 1: Declare the Classifier
+The answers on this page were recorded with `gpt-4.1` and are replayed when the
+site is built, so `gpt-6-luna` may word them differently.
 
-Declare the task once as a signature:
+## Define the classifier
 
-```{r declare-signature}
-sentiment_sig <- signature(
-  "text -> sentiment: enum('positive', 'negative', 'neutral')"
-)
-```
-
-The signature is the reusable typed contract for every call.
-
-## Step 2: Create a Reusable Module
-
-Wrap the signature in a reusable module:
+Start from the sentiment signature in Tutorial 1 and print the module:
 
 ```{r create-module}
-chat <- chat_openai()
-classifier <- module(sentiment_sig)
+#| eval: true
+classifier <- module(
+  signature("text -> sentiment: enum('positive', 'negative', 'neutral')")
+)
 
 classifier
 ```
 
-Now `classifier` is an object you can use repeatedly.
+The printout shows the inputs, the output type and the instructions that start
+every prompt. This signature has no instructions of its own, so dsprrr wrote a
+default from the field names.
 
-## Step 3: Classify Single Texts
-
-Use `run()` to classify:
+## Classify one text
 
 ```{r predict-single}
 #| cassette: true
 run(classifier, text = "I absolutely loved this movie!", .llm = chat)
 ```
-
-Try a few more:
 
 ```{r predict-more}
 #| cassette: true
@@ -109,61 +89,52 @@ run(
 )
 ```
 
-## Step 4: Batch Processing
+The mixed review came back `neutral`. Whether that is right depends on what
+you need the labels for; instructions, below, let you decide.
 
-Here's where modules shine. Process multiple texts with `run_dataset()`:
+## Classify a vector of texts
+
+Pass a vector and `run()` returns a list with one result per element, in the
+same order. Each result is the named list you saw above, so
+`purrr::map_chr()` can pull out the labels:
 
 ```{r batch-vector}
 #| cassette: true
-reviews <- tibble::tibble(
-  text = c(
-    "Best purchase I've ever made!",
-    "Broke after one day. Total garbage.",
-    "Does what it says. Nothing special.",
-    "Exceeded all my expectations!",
-    "Would not recommend to anyone."
-  )
+reviews <- c(
+  "Best purchase I've ever made!",
+  "Broke after one day. Total garbage.",
+  "Does what it says. Nothing special.",
+  "Exceeded all my expectations!",
+  "Would not recommend to anyone."
 )
 
-run_dataset(classifier, reviews, .llm = chat)
+sentiments <- run(classifier, text = reviews, .llm = chat)
+purrr::map_chr(sentiments, "sentiment")
 ```
 
-All five classifications came back from one dataset operation, while dsprrr retained one observable provider attempt per review.
+Each element is still its own request to the model, and by default they are
+sent one after another. `concurrency_control()` lets several run at once.
 
-## Step 5: Add Instructions
+## Add instructions
 
-Add task-specific guidance to the signature:
+Instructions replace the default line. Use them to settle cases the labels
+leave open, such as mixed reviews:
 
-```{r full-control}
-# Define the signature separately
+```{r add-instructions}
 sig <- signature(
   "text -> sentiment: enum('positive', 'negative', 'neutral')",
   instructions = "Classify the overall sentiment. If mixed, choose the dominant emotion."
 )
 
-sig
-```
-
-Now create a module from the signature:
-
-```{r create-module-full}
 classifier2 <- module(sig)
-
-classifier2
 ```
 
-## Step 6: Running with `run()`
-
-With the full control approach, use `run()` to execute:
+The new module takes the same inputs, one at a time or as a vector:
 
 ```{r run-single}
 #| cassette: true
 run(classifier2, text = "This is fantastic!", .llm = chat)
 ```
-
-Notice you pass the chat object via `.llm`. This gives you flexibility—you can use different LLMs for different calls.
-
-Batch processing works the same way:
 
 ```{r run-batch}
 #| cassette: true
@@ -174,15 +145,17 @@ run(
 )
 ```
 
-## Step 7: Working with Data Frames
+This is the full return value of a vectorized call: a list of named lists.
 
-Real data often comes in data frames. Use `run_dataset()`:
+## Classify a data frame
+
+`run_dataset()` takes a data frame with a column for each input. It returns the
+data frame with a `result` list-column added, and other columns, like `id`,
+come through unchanged:
 
 ```{r dataset-processing}
 #| cassette: true
-library(tibble)
-
-reviews_df <- tibble(
+reviews_df <- tibble::tibble(
   id = 1:4,
   text = c(
     "Absolutely wonderful experience!",
@@ -193,14 +166,19 @@ reviews_df <- tibble(
 )
 
 results <- run_dataset(classifier2, reviews_df, .llm = chat)
+results$sentiment <- purrr::map_chr(results$result, "sentiment")
 results
 ```
 
-The results include your original columns plus the classification.
+Like `run()`, `run_dataset()` sends one request per row. The module records
+every call, and `summarize_traces(classifier2)` reports how many requests it
+made and the tokens they used.
 
-## Step 8: Adding Descriptions
+## Describe the inputs
 
-Make your inputs more informative with descriptions:
+A signature can also be built from `input()` objects and an ellmer type. An
+input's description becomes its heading in the prompt, in place of the
+input's name:
 
 ```{r with-descriptions}
 #| cassette: true
@@ -221,44 +199,8 @@ run(
 )
 ```
 
-Descriptions help the LLM understand what it's working with.
+The output type here is a bare `type_enum()` rather than a named field, so
+`run()` returns the label itself instead of a list.
 
-## Step 9: Checking Your Work
-
-Modules track their calls. See what happened:
-
-```{r trace-summary}
-#| eval: false
-classifier2$trace_summary()
-```
-
-This shows you how many calls were made and the token costs.
-
-## What You Learned
-
-In this tutorial, you:
-
-1. Declared a reusable signature and module
-2. Used `run()` for individual inputs
-3. Used `run_dataset()` for batch processing
-4. Processed data frames with `run_dataset()`
-5. Added input descriptions for clarity
-6. Checked your work with `trace_summary()`
-
-## The Module Advantage
-
-The same module contract scales from exploration to optimization:
-
-1. **Reusability**: Define once, use everywhere
-2. **Efficiency**: Batch processing reduces API calls
-3. **Configuration**: Change settings in one place
-4. **Optimization**: Modules can be improved with training data (covered in [Tutorial 4](tutorial-improve-with-demos.html))
-5. **Tracing**: Track what happened for debugging
-
-## Next Steps
-
-Your classifier works, but can it handle more complex outputs? Continue to:
-
-- **[Tutorial 3: Extracting Structured Data](tutorial-structured-outputs.html)** — Get multiple fields and nested structures
-- **[Quick Reference](cheatsheet.html)** — Module types and methods
-- **[Understanding Signatures & Modules](concepts-signatures-modules.html)** — Why S7 for signatures, R6 for modules
+Next, [Tutorial 3](tutorial-structured-outputs.html) returns several fields
+at once, including lists and nested records.

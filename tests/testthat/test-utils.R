@@ -103,6 +103,37 @@ test_that("non-interactive vignette builds require explicit opt-in", {
   expect_identical(dsprrr:::eval_vignette(), TRUE)
 })
 
+test_that("CI replays cassettes only for pkgdown site builds", {
+  dir <- withr::local_tempdir()
+  dir.create(file.path(dir, "_vcr"))
+  writeLines("http_interactions: []", file.path(dir, "_vcr", "demo-chunk.yml"))
+  withr::local_dir(dir)
+  local_mocked_bindings(
+    current_input = function(...) "demo.Rmd",
+    .package = "knitr"
+  )
+  withr::local_envvar(c(
+    CI = "true",
+    `_R_CHECK_PACKAGE_NAME_` = "",
+    OPENAI_API_KEY = "test-key",
+    IN_PKGDOWN = "true"
+  ))
+
+  expect_true(dsprrr:::eval_vignette())
+
+  # R CMD build and R CMD check on CI stay offline.
+  withr::local_envvar(IN_PKGDOWN = "")
+  expect_false(dsprrr:::eval_vignette())
+
+  # Without cassettes, CI never calls a provider, even with credentials.
+  withr::local_envvar(IN_PKGDOWN = "true")
+  local_mocked_bindings(
+    current_input = function(...) "other.Rmd",
+    .package = "knitr"
+  )
+  expect_false(dsprrr:::eval_vignette())
+})
+
 # --- null coalescing operator tests ---
 
 test_that("null coalescing operator works correctly", {
@@ -390,4 +421,10 @@ test_that("dataset runtime-name validation does not force arguments", {
   expect_s3_class(condition, "dsprrr_reserved_input_error")
   expect_identical(forced, FALSE)
   expect_no_error(run_dataset(mod, empty, .cache = FALSE))
+})
+
+test_that("the namespace does not mask base::print", {
+  # A `print` binding in the namespace sends S3method(print, ...) registrations
+  # to the namespace's own methods table, so installed objects print as lists.
+  expect_false(exists("print", envir = asNamespace("dsprrr"), inherits = FALSE))
 })

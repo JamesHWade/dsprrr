@@ -14,6 +14,46 @@ compose_rollout_id <- function(rollout_id, i) {
   if (is.null(rollout_id)) as.character(i) else paste0(rollout_id, ".", i)
 }
 
+#' Evaluate code with an extra cache partition
+#'
+#' Responses cached inside `code` are keyed by `scope` as well, so repeated
+#' evaluation epochs get fresh responses instead of replaying the first epoch.
+#' `NULL` leaves the current partition unchanged.
+#' @noRd
+with_rollout_scope <- function(scope, code) {
+  old <- .dsprrr_env$rollout_scope
+  if (!is.null(scope)) {
+    .dsprrr_env$rollout_scope <- compose_rollout_id(old, scope)
+  }
+  on.exit(assign("rollout_scope", old, envir = .dsprrr_env), add = TRUE)
+  force(code)
+}
+
+#' Signature inputs a caller must provide
+#'
+#' Leaves out the inputs a module fills in itself (see `supplied_inputs()`),
+#' such as a RAG module's retrieved context.
+#' @noRd
+caller_input_specs <- function(module) {
+  supplied <- if (is.function(module$supplied_inputs)) {
+    module$supplied_inputs()
+  } else {
+    character()
+  }
+  Filter(function(x) !x$name %in% supplied, module$signature@inputs)
+}
+
+#' Combine the active rollout scope with a call's own rollout id
+#' @noRd
+scoped_rollout_id <- function(rollout_id) {
+  scope <- .dsprrr_env$rollout_scope
+  if (is.null(scope)) {
+    rollout_id
+  } else {
+    compose_rollout_id(scope, rollout_id %||% "")
+  }
+}
+
 #' Reject R's partial matching for public constructor arguments
 #' @noRd
 reject_partial_argument_matches <- function(call, fn) {
@@ -63,46 +103,51 @@ is_ellmer_type <- function(x) {
     inherits(x, "ellmer::TypeJsonSchema")
 }
 
-#' Decide whether local vignette examples can run
+#' Decide whether a vignette's LLM examples run
+#'
+#' Articles with recorded provider responses (vcr cassettes in `_vcr/`) replay
+#' them, so the pkgdown site shows real output. On CI that is the only way code
+#' runs: pkgdown site builds replay cassettes, and every other build (including
+#' `R CMD build` and `R CMD check`) stays offline. Locally, an interactive
+#' session or `DSPRRR_VIGNETTES_EVAL=true` also runs examples live when
+#' provider credentials are available, which is how cassettes are recorded.
 #' @noRd
 eval_vignette <- function() {
-  # Skip during R CMD check or CI (cassettes may not match current code)
   if (nzchar(Sys.getenv("_R_CHECK_PACKAGE_NAME_"))) {
-    return(FALSE)
-  }
-  if (nzchar(Sys.getenv("CI"))) {
-    return(FALSE)
-  }
-
-  # Source-package builds run non-interactively and must stay offline even
-  # when the developer's environment contains API keys or unrelated
-  # cassettes. Opt in explicitly when recording or refreshing vignettes.
-  force_eval <- identical(Sys.getenv("DSPRRR_VIGNETTES_EVAL"), "true") ||
-    identical(Sys.getenv("VITALS_SHOULD_EVAL"), "true")
-  if (!interactive() && !force_eval) {
     return(FALSE)
   }
 
   name <- tools::file_path_sans_ext(knitr::current_input())
-
-  # Check if vcr cassettes exist for this vignette
-  cassettes <- dir("_vcr", pattern = paste0(name, "*"))
+  cassettes <- dir("_vcr", pattern = paste0("^", name, "-.*\\.yml$"))
   has_cassette <- length(cassettes) > 0
 
-  # Check if API keys are available
-  has_key <- has_ellmer_credentials()
+  if (nzchar(Sys.getenv("CI"))) {
+    should_eval <- has_cassette && identical(Sys.getenv("IN_PKGDOWN"), "true")
+  } else {
+    force_eval <- identical(Sys.getenv("DSPRRR_VIGNETTES_EVAL"), "true") ||
+      identical(Sys.getenv("VITALS_SHOULD_EVAL"), "true")
+    should_eval <- (interactive() || force_eval) &&
+      (has_cassette || has_ellmer_credentials())
+  }
 
-  # Suppress echo for cleaner vignettes
-  options(ellmer_echo = "none")
-
-  # Evaluate if we have keys OR cassettes
-  has_key || has_cassette
+  if (should_eval) {
+    # Keep console chatter out of the rendered page: ellmer's streaming echo,
+    # progress bars, masking notices from library(), and the one-time cache
+    # notice.
+    options(
+      ellmer_echo = "none",
+      cli.progress_show_after = Inf,
+      conflicts.policy = list(warn = FALSE)
+    )
+    .dsprrr_env$cache_first_hit_shown <- TRUE
+  }
+  should_eval
 }
 
 #' Check for ellmer credentials
 #'
 #' @return Logical indicating if any LLM API keys are available
-#' @keywords internal
+#' @noRd
 has_ellmer_credentials <- function() {
   any(
     nzchar(Sys.getenv("OPENAI_API_KEY")),
@@ -226,7 +271,8 @@ validate_signature_inputs <- function(
   missing = c("error", "warn", "ignore"),
   extra = c("warn", "error", "ignore"),
   type = c("warn", "error", "ignore"),
-  context = "inputs"
+  context = "inputs",
+  supplied = character()
 ) {
   missing <- match.arg(missing)
   extra <- match.arg(extra)
@@ -248,7 +294,8 @@ validate_signature_inputs <- function(
     function(x) tryCatch(isTRUE(x$type@required), error = function(e) TRUE),
     logical(1)
   )
-  required_names <- declared_names[required]
+  # Inputs the module fills in itself are never required from the caller.
+  required_names <- setdiff(declared_names[required], supplied)
   provided_names <- names(inputs) %||% character()
 
   missing_names <- setdiff(required_names, provided_names)
@@ -435,20 +482,29 @@ input_value_matches_type <- function(value, expected_type) {
   TRUE
 }
 
-#' Check if a model is a reasoning model
+#' Test whether a model name is a reasoning model
 #'
-#' Reasoning models (OpenAI o1/o3/o4-mini, GPT-5 series) use different
-#' parameters than traditional models. They don't support `temperature`
-#' or `top_p`, instead using `reasoning_effort` (low/medium/high).
+#' @description
+#' `is_reasoning_model()` guesses from its name whether a model is a
+#' reasoning model: OpenAI's o-series (`o1`, `o3`, `o4-mini`, ...), the
+#' GPT-5 and GPT-6 families (such as `gpt-6-luna`), and any name containing
+#' "reasoning". Reasoning models are tuned with `reasoning_effort` rather
+#' than `temperature` or `top_p`; gpt-6-luna, for example, accepts
+#' `temperature` and `top_p` only with `reasoning_effort = "none"`.
 #'
-#' @param model_name Character string of the model name (e.g., "o3", "gpt-5").
-#' @return Logical indicating whether the model is a reasoning model.
+#' @details
+#' [module_parameters()] uses this check to decide which parameters to
+#' offer for tuning. dsprrr does not change the parameters of calls made with
+#' [run()] for reasoning models.
+#'
+#' @param model_name A model name, such as `"gpt-6-luna"` or `"o3"`.
+#' @return `TRUE` or `FALSE`. `NULL`, `NA` and empty names give `FALSE`.
 #' @export
+#' @family configuration
 #' @examples
-#' is_reasoning_model("gpt-4o")      # FALSE
-#' is_reasoning_model("o3")          # TRUE
-#' is_reasoning_model("o4-mini")     # TRUE
-#' is_reasoning_model("gpt-5")       # TRUE
+#' is_reasoning_model("gpt-6-luna")
+#' is_reasoning_model("o4-mini")
+#' is_reasoning_model("gpt-4o")
 is_reasoning_model <- function(model_name) {
   if (is.null(model_name) || is.na(model_name) || !nzchar(model_name)) {
     return(FALSE)
@@ -458,6 +514,7 @@ is_reasoning_model <- function(model_name) {
   reasoning_patterns <- c(
     "^o[0-9]", # o1, o3, o4-mini
     "^gpt-5", # gpt-5 series
+    "^gpt-6", # gpt-6 series (reasoning on by default)
     "-reasoning", # explicit reasoning suffix
     "reasoning" # generic reasoning indicator
   )

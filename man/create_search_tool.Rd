@@ -2,7 +2,7 @@
 % Please edit documentation in R/ragnar.R
 \name{create_search_tool}
 \alias{create_search_tool}
-\title{Create a Semantic Search Tool from Documents}
+\title{Build a search tool from a set of documents}
 \usage{
 create_search_tool(
   documents,
@@ -14,26 +14,31 @@ create_search_tool(
 )
 }
 \arguments{
-\item{documents}{Character vector of documents, or a data frame with a
-'text' or 'content' column.}
+\item{documents}{A character vector of documents, or a data frame with a
+\code{text} or \code{content} column.}
 
-\item{embedding_fn}{Embedding function from ragnar (e.g.,
-\code{ragnar::embed_openai()}).}
+\item{embedding_fn}{An embedding function, passed to
+\code{ragnar::ragnar_store_create()} as \code{embed}, for example
+\verb{\\(x) ragnar::embed_openai(x, model = "text-embedding-3-small")}.}
 
-\item{k}{Number of documents to retrieve per search (default 5).}
+\item{k}{Number of chunks to return per search.}
 
-\item{name}{Tool name (default "search_documents").}
+\item{name}{Tool name shown to the model.}
 
-\item{description}{Optional tool description.}
+\item{description}{Tool description shown to the model; see
+\code{\link[=ragnar_tool]{ragnar_tool()}}.}
 
-\item{...}{Additional arguments passed to \code{ragnar::ragnar_store_create()}.}
+\item{...}{Passed to \code{ragnar::ragnar_store_create()}, for example
+\code{location} to keep the store in a file instead of in memory.}
 }
 \value{
-A search tool function.
+An ellmer tool definition, as returned by \code{\link[=ragnar_tool]{ragnar_tool()}}.
 }
 \description{
-Convenience function that creates a ragnar store from documents and wraps
-it in a search tool in one step.
+\code{create_search_tool()} builds a ragnar store from documents (one chunked
+document per element, embedded with \code{embedding_fn}), indexes it and wraps
+it with \code{\link[=ragnar_tool]{ragnar_tool()}}, in one step. Embedding the documents calls the
+embedding provider.
 }
 \examples{
 \dontrun{
@@ -46,7 +51,7 @@ docs <- c(
 
 search_tool <- create_search_tool(
   documents = docs,
-  embedding_fn = ragnar::embed_openai(),
+  embedding_fn = \\(x) ragnar::embed_openai(x, model = "text-embedding-3-small"),
   k = 2
 )
 
@@ -54,3 +59,24 @@ search_tool <- create_search_tool(
 search_tool("What language is best for statistics?")
 }
 }
+\seealso{
+Other integrations:
+\code{\link[=as_dsprrr_metric]{as_dsprrr_metric()}},
+\code{\link[=as_dsprrr_traces]{as_dsprrr_traces()}},
+\code{\link[=as_ellmer_tool]{as_ellmer_tool()}},
+\code{\link[=as_vitals_cost]{as_vitals_cost()}},
+\code{\link[=as_vitals_samples]{as_vitals_samples()}},
+\code{\link[=as_vitals_solver]{as_vitals_solver()}},
+\code{\link[=as_vitals_task]{as_vitals_task()}},
+\code{\link[=llm_predict]{llm_predict()}},
+\code{\link[=ragnar_tool]{ragnar_tool()}},
+\code{\link[=reasoning_effort]{reasoning_effort()}},
+\code{\link[=register_dsprrr_engine]{register_dsprrr_engine()}},
+\code{\link[=summarize_traces_df]{summarize_traces_df()}},
+\code{\link[=temperature]{temperature()}},
+\code{\link[=top_p]{top_p()}},
+\code{\link[=use_dsprrr_template]{use_dsprrr_template()}},
+\code{\link[=validate_workflow]{validate_workflow()}},
+\code{\link{vitals_metrics}}
+}
+\concept{integrations}

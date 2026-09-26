@@ -2,29 +2,51 @@
 % Please edit documentation in R/metrics.R
 \name{metric_threshold}
 \alias{metric_threshold}
-\title{Create a Threshold Metric}
+\title{Turn a numeric metric into pass/fail}
 \usage{
 metric_threshold(metric, threshold = 0.5, comparison = ">=")
 }
 \arguments{
-\item{metric}{A metric function returning a logical/numeric score or
+\item{metric}{A metric returning a logical or numeric score, or
 \code{list(score = , feedback = )}.}
 
-\item{threshold}{The threshold value for success}
+\item{threshold}{The score to compare against.}
 
-\item{comparison}{One of ">=", ">", "==", "<", "<="}
+\item{comparison}{How to compare the score with \code{threshold}: one of
+\code{">="} (the default), \code{">"}, \code{"=="}, \code{"<"} or \code{"<="}.}
 }
 \value{
-A metric function returning logical scores. Trace-aware and feedback
-protocols are preserved when present on \code{metric}.
+A metric returning \code{TRUE} or \code{FALSE}. If \code{metric} returns
+feedback, the result is \code{list(score = TRUE/FALSE, feedback = )}. The
+\code{field} attribute and trace-aware and feedback classes of \code{metric} are
+kept.
 }
 \description{
-Wraps a metric to return TRUE/FALSE based on a threshold. Logical, numeric,
-feedback, and trace-aware metrics all use the package-wide metric protocol;
-feedback and trace dispatch are preserved by the wrapper.
+\code{metric_threshold()} wraps a metric so that it returns \code{TRUE} when the
+score passes \code{threshold} and \code{FALSE} otherwise. Use it where a yes/no
+judgement is needed, for example to count only answers with an F1 score
+of at least 0.8 as correct.
 }
 \examples{
-# F1 score with threshold
-metric <- metric_threshold(metric_f1(), threshold = 0.8)
-metric("the quick brown fox", "the fast brown fox")  # FALSE (0.75 < 0.8)
+f1 <- metric_f1(field = "answer")
+good_enough <- metric_threshold(f1, threshold = 0.8)
+row <- data.frame(question = "Where is the Louvre?", answer = "The Louvre is in Paris")
+
+f1(list(answer = "In Paris"), row)
+good_enough(list(answer = "In Paris"), row)
+good_enough(list(answer = "The Louvre is in Paris, France"), row)
 }
+\seealso{
+Other metrics:
+\code{\link[=as_dsprrr_metric]{as_dsprrr_metric()}},
+\code{\link[=evaluate]{evaluate()}},
+\code{\link[=metric_contains]{metric_contains()}},
+\code{\link[=metric_custom]{metric_custom()}},
+\code{\link[=metric_exact_match]{metric_exact_match()}},
+\code{\link[=metric_f1]{metric_f1()}},
+\code{\link[=metric_field_match]{metric_field_match()}},
+\code{\link[=metric_with_feedback]{metric_with_feedback()}},
+\code{\link[=metric_with_trace]{metric_with_trace()}},
+\code{\link{vitals_metrics}}
+}
+\concept{metrics}

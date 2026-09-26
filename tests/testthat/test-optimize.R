@@ -284,3 +284,48 @@ test_that("optimize_grid keeps runtime evaluations out of durable trials", {
   restored <- restore_module_config(artifact)
   expect_equal(optimization_result(restored), optimization_result(mod))
 })
+
+test_that("instructions_suffix appends to the base instructions without stacking", {
+  mod <- module(signature("text -> label", instructions = "Classify the text."))
+
+  first <- mod$copy(deep = TRUE)
+  first$apply_optimization_params(list(instructions_suffix = "Be brief."))
+  expect_identical(first$signature@instructions, "Classify the text. Be brief.")
+
+  # A later search appends to the original instructions, not the last result.
+  first$apply_optimization_params(list(instructions_suffix = "Be precise."))
+  expect_identical(
+    first$signature@instructions,
+    "Classify the text. Be precise."
+  )
+
+  # An explicit instructions value replaces them and resets the base.
+  first$apply_optimization_params(list(instructions = "Label it."))
+  expect_identical(first$signature@instructions, "Label it.")
+  first$apply_optimization_params(list(instructions_suffix = "Be brief."))
+  expect_identical(first$signature@instructions, "Label it. Be brief.")
+
+  # A suffix alone never replaces the instructions through partial matching.
+  mod$apply_optimization_params(list(instructions_suffix = "Short."))
+  expect_identical(mod$signature@instructions, "Classify the text. Short.")
+})
+
+test_that("optimize_grid() best_params can be saved", {
+  local_reset_cache()
+  llm <- new_test_chat(chat_structured = function(...) list(answer = "4"))
+  mod <- module(signature("question -> answer"))
+  data <- tibble::tibble(question = c("2+2?", "3+1?"), answer = c("4", "4"))
+
+  optimize_grid(
+    mod,
+    data,
+    metric = metric_exact_match(field = "answer"),
+    parameters = list(instructions_suffix = c("Be brief.", "Show work.")),
+    .llm = llm,
+    .cache = FALSE
+  )
+
+  expect_null(attr(mod$state$best_params, "out.attrs"))
+  path <- withr::local_tempfile(fileext = ".rds")
+  expect_no_error(save_program(mod, path))
+})

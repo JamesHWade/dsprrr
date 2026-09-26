@@ -2,27 +2,43 @@
 % Please edit documentation in R/optimizer-core.R
 \name{split_dataset}
 \alias{split_dataset}
-\title{Split Dataset into Train and Validation Sets}
+\title{Split data into training and validation sets}
 \usage{
 split_dataset(dataset, prop = 0.8, seed = NULL)
 }
 \arguments{
-\item{dataset}{A data frame to split.}
+\item{dataset}{A data frame.}
 
-\item{prop}{Proportion of data for training. Default is 0.8.}
+\item{prop}{Share of rows for training, strictly between 0 and 1 (default
+\code{0.8}).}
 
-\item{seed}{Random seed for reproducibility.}
+\item{seed}{Random seed, or \code{NULL} (the default). With a seed, the session's
+random number stream is left as it was.}
 }
 \value{
-A list with \code{train} and \code{val} data frames.
+A list with data frames \code{train} and \code{val}.
 }
 \description{
-Split a dataset into training and validation portions with optional
-seed for reproducibility.
+\code{split_dataset()} randomly assigns \code{floor(prop * nrow(dataset))} rows to a
+training set and the rest to a validation set, for example to get the
+\code{trainset} and \code{valset} that \code{\link[=compile]{compile()}} takes.
 }
 \examples{
-df <- tibble::tibble(x = 1:100)
+df <- data.frame(x = 1:10)
 split <- split_dataset(df, prop = 0.8, seed = 42)
-nrow(split$train)  # ~80
-nrow(split$val)    # ~20
+nrow(split$train)
+split$val
 }
+\seealso{
+Other optimizer building blocks:
+\code{\link{TrialLog}},
+\code{\link[=complete_trial]{complete_trial()}},
+\code{\link[=create_trial]{create_trial()}},
+\code{\link[=eval_program]{eval_program()}},
+\code{\link[=load_trial_log]{load_trial_log()}},
+\code{\link[=optimizer_control]{optimizer_control()}},
+\code{\link[=read_trials_jsonl]{read_trials_jsonl()}},
+\code{\link[=sample_dataset]{sample_dataset()}},
+\code{\link[=write_trials_jsonl]{write_trials_jsonl()}}
+}
+\concept{optimizer building blocks}

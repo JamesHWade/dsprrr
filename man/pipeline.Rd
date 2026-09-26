@@ -2,36 +2,88 @@
 % Please edit documentation in R/pipeline.R
 \name{pipeline}
 \alias{pipeline}
-\title{Pipeline Module for Sequential Module Composition}
+\alias{\%>>\%}
+\title{Chain modules into a pipeline}
 \usage{
+lhs \%>>\% rhs
+
 pipeline(...)
 }
 \arguments{
-\item{...}{Modules or steps (created with \code{step()}) to chain together}
+\item{lhs}{A module or a pipeline. A pipeline is extended with \code{rhs}.}
+
+\item{rhs}{A module. A pipeline on the right is added as a single step.}
+
+\item{...}{Modules, or steps made with \code{\link[=step]{step()}}, in the order they run.}
 }
 \value{
-A PipelineModule
+A module (an R6 object of class \code{PipelineModule}) to use with
+\code{\link[=run]{run()}}, \code{\link[=run_dataset]{run_dataset()}}, \code{\link[=evaluate]{evaluate()}} and \code{\link[=compile]{compile()}}.
 }
 \description{
-A module that chains multiple modules together, passing outputs from one
-to inputs of the next. Provides DSPy-style piping with the \verb{\%>>\%} operator.
+\code{pipeline()} builds a module that runs other modules one after another,
+feeding each step's outputs to the next step as inputs. \code{lhs \%>>\% rhs}
+chains two modules the same way, or adds a module to the end of a
+pipeline.
+}
+\details{
+The first step receives the inputs given to \code{\link[=run]{run()}}. Every later step
+receives only the outputs of the step before it, plus its own fixed inputs:
+the pipeline's inputs are not passed further down. Outputs connect to
+inputs of the same name; use \code{\link[=step]{step()}} to rename them (\code{map}), to pass on
+only some of them (\code{select}) or to give a step fixed inputs. A step whose
+inputs are not all available fails with an error that lists what was
+available.
 
-Explicitly constructs a pipeline from a sequence of modules. Use this when
-you need fine-grained control over input/output mapping between steps.
+The pipeline returns the last step's output. With
+\code{.return_format = "structured"}, its metadata adds up tokens, cost and
+latency over the steps and keeps each step's metadata in
+\code{step_metadata}. \code{\link[=compile]{compile()}} with \code{\link[=BootstrapFewShot]{BootstrapFewShot()}} optimizes the demos
+of all steps together.
 }
 \examples{
-\dontrun{
-# Simple pipeline
-p <- pipeline(mod_a, mod_b, mod_c)
-
-# With explicit mapping
-p <- pipeline(
-  mod_retrieve,
-  step(mod_answer, map = c(documents = "context")),
-  mod_summarize
+# Function-backed steps, so the example runs offline
+summarize <- module_fn("text -> summary", function(text) substr(text, 1, 30))
+translate <- module_fn(
+  "passage, language -> translation",
+  function(passage, language) paste0("[", language, "] ", passage)
 )
 
-# Run it
-result <- run(p, query = "...", .llm = llm)
+# `summary` feeds the `passage` input; `language` is fixed for this step
+p <- pipeline(
+  summarize,
+  step(translate, map = c(summary = "passage"), language = "French")
+)
+p
+run(p, text = "dsprrr turns language model calls into programs you can test.")
+
+# With \%>>\%, outputs and inputs connect by name
+shout <- module_fn("summary -> reply", function(summary) toupper(summary))
+run(summarize \%>>\% shout, text = "Matching names connect on their own.")
+
+\dontrun{
+outline <- module(signature("topic -> outline"))
+draft <- chain_of_thought("outline -> article")
+writer <- outline \%>>\% draft
+run(
+  writer,
+  topic = "Testing R code that calls language models",
+  .llm = ellmer::chat_openai(model = "gpt-6-luna")
+)
 }
 }
+\seealso{
+Other composition:
+\code{\link[=as_reward_fn]{as_reward_fn()}},
+\code{\link[=best_of_n]{best_of_n()}},
+\code{\link[=ensemble]{ensemble()}},
+\code{\link{module-graph}},
+\code{\link[=reduce_best_by_metric]{reduce_best_by_metric()}},
+\code{\link[=reduce_first]{reduce_first()}},
+\code{\link[=reduce_majority]{reduce_majority()}},
+\code{\link[=reduce_weighted_vote]{reduce_weighted_vote()}},
+\code{\link[=refine]{refine()}},
+\code{\link[=step]{step()}},
+\code{\link[=with_assertions]{with_assertions()}}
+}
+\concept{composition}

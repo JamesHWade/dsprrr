@@ -1,47 +1,7 @@
-#' ReAct Module
+#' ReAct module
 #'
-#' @description
-#' A ReAct-style module that can call tools during execution.
-#' Use this to build tool-using agents that alternate between reasoning,
-#' tool calls, and observations before producing a final structured answer.
-#'
-#' @details
-#' Create a ReAct module explicitly with
-#' `react(signature, tools = list(...))`. Passing tools to [module()] is an
-#' error, so configuration never silently changes prediction into agency.
-#' ellmer executes the tool-calling loop internally; dsprrr
-#' preserves its native turn history and tool-call IDs, enforces
-#' `max_iterations`, and then produces a structured output based on the module
-#' signature. Multiple tool calls in one assistant turn count as one iteration.
-#'
-#' @examples
-#' \dontrun{
-#' library(dsprrr)
-#' library(ellmer)
-#'
-#' search_tool <- ellmer::tool(
-#'   function(query) "Search results...",
-#'   description = "Search for information",
-#'   arguments = list(query = ellmer::type_string())
-#' )
-#'
-#' agent <- react(
-#'   signature("question -> answer"),
-#'   tools = list(search_tool),
-#'   max_iterations = 8L
-#' )
-#'
-#' result <- run(agent, question = "What is ReAct?", .llm = llm)
-#'
-#' # Batch execution
-#' questions <- tibble::tibble(question = c("Q1", "Q2"))
-#' results <- run_dataset(agent, questions, .llm = llm)
-#' }
-#'
-#' @seealso
-#' * [module()] for creating modules
-#' * [ragnar_tool()] and [create_search_tool()] for search tools
-#' * [code_act()] for tool + code execution agents
+#' The user-facing constructor and its documentation are in [react()].
 #'
 #' @name module-react
+#' @noRd
 NULL

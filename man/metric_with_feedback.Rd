@@ -2,52 +2,60 @@
 % Please edit documentation in R/metrics.R
 \name{metric_with_feedback}
 \alias{metric_with_feedback}
-\title{Create a Metric with Textual Feedback}
+\title{Metric that returns a score and feedback}
 \usage{
 metric_with_feedback(fn, field = NULL)
 }
 \arguments{
-\item{fn}{A function with signature \verb{function(prediction, expected)}
-returning a score or a \code{list(score = , feedback = )}.}
+\item{fn}{A function called as \code{fn(prediction, expected)}, where
+\code{prediction} is the output (a named list) and \code{expected} the whole data
+row, as a one-row data frame. It returns a logical or numeric score, or
+\code{list(score = , feedback = )} with \code{feedback} a single string.}
 
-\item{field}{Optional name of the column in training data containing the
-expected output (stored as the metric's \code{field} attribute, like other
-built-in metrics).}
+\item{field}{The name of the data column that holds the expected output.
+It is only stored, in the metric's \code{"field"} attribute, for optimizers
+that look it up; \code{fn} still receives the whole row and prediction.}
 }
 \value{
-A metric function classed as \code{dsprrr_feedback_metric}.
+A metric function of class \code{dsprrr_feedback_metric}.
 }
 \description{
-Wraps a metric function so it can return both a numeric score and
-textual feedback explaining the score. Feedback-aware optimizers such
-as \link{GEPA} use this feedback to guide their reflection step, mirroring
-DSPy's GEPA feedback-metric protocol.
-
-The wrapped function must return either:
-\itemize{
-\item a single numeric (or logical) score, or
-\item a list with elements \code{score} (numeric or logical) and optionally
-\code{feedback} (a single character string).
-}
-
-Feedback metrics work everywhere ordinary metrics do: \code{\link[=evaluate]{evaluate()}} and
-optimizers simply use the \code{score} element. Optimizers that understand
-feedback additionally collect the \code{feedback} strings.
+\code{metric_with_feedback()} marks a metric whose function returns textual
+feedback along with its score, as
+\code{list(score = , feedback = "what went wrong")}. Feedback-aware optimizers
+such as \code{\link[=GEPA]{GEPA()}} use the feedback to guide their reflection step, as in
+DSPy's GEPA. Everywhere else, including \code{\link[=evaluate]{evaluate()}}, only the score is
+used; \code{evaluate()} also returns the feedback in \code{feedbacks}.
 }
 \examples{
-metric <- metric_with_feedback(
+graded <- metric_with_feedback(
   function(prediction, expected) {
-    if (identical(prediction, expected)) {
+    if (identical(prediction$answer, expected$answer)) {
       list(score = 1, feedback = "Correct.")
     } else {
       list(
         score = 0,
-        feedback = paste0("Expected '", expected, "' but got '", prediction, "'.")
+        feedback = paste0("Expected '", expected$answer, "' but got '", prediction$answer, "'.")
       )
     }
   },
   field = "answer"
 )
-metric("4", "4")
-metric("5", "4")
+row <- data.frame(question = "What is 2 + 2?", answer = "4")
+graded(list(answer = "4"), row)
+graded(list(answer = "5"), row)
 }
+\seealso{
+Other metrics:
+\code{\link[=as_dsprrr_metric]{as_dsprrr_metric()}},
+\code{\link[=evaluate]{evaluate()}},
+\code{\link[=metric_contains]{metric_contains()}},
+\code{\link[=metric_custom]{metric_custom()}},
+\code{\link[=metric_exact_match]{metric_exact_match()}},
+\code{\link[=metric_f1]{metric_f1()}},
+\code{\link[=metric_field_match]{metric_field_match()}},
+\code{\link[=metric_threshold]{metric_threshold()}},
+\code{\link[=metric_with_trace]{metric_with_trace()}},
+\code{\link{vitals_metrics}}
+}
+\concept{metrics}

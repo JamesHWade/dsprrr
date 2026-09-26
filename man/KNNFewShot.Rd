@@ -2,7 +2,7 @@
 % Please edit documentation in R/teleprompter-knn.R
 \name{KNNFewShot}
 \alias{KNNFewShot}
-\title{KNNFewShot Teleprompter}
+\title{KNN few-shot: choose demonstrations by similarity at run time}
 \usage{
 KNNFewShot(
   metric = NULL,
@@ -16,88 +16,98 @@ KNNFewShot(
 )
 }
 \arguments{
-\item{metric}{Optional metric stored with the teleprompter. KNNFewShot
-selects demonstrations by embedding similarity rather than candidate
-evaluation.}
+\item{metric}{Optional. It is not used for scoring, but when it has a
+\code{field}, that column supplies the demonstrations' outputs.}
 
-\item{metric_threshold}{Minimum score required to be considered successful.
-If NULL, uses the metric's default threshold.}
+\item{metric_threshold, max_errors}{Accepted for consistency with the other
+optimizers (see \code{\link[=Teleprompter]{Teleprompter()}}); \code{KNNFewShot()} does not use them.}
 
-\item{max_errors}{Maximum number of errors allowed during optimization.
-Default is 5.}
+\item{k}{Integer number of neighbors used as demonstrations (default \code{3L}).}
 
-\item{k}{Number of nearest neighbors to use as demonstrations. Default is 3.}
+\item{vectorizer}{Required. A function that takes a character vector and
+returns a numeric matrix of embeddings, one row per string.}
 
-\item{vectorizer}{A function that takes a character vector and returns a
-numeric matrix of embeddings (one row per input). Required.}
+\item{input_text}{Optional function that turns a one-row data frame of
+inputs into the text to embed. The default pastes the signature's input
+columns together, separated by spaces.}
 
-\item{input_text}{A function that converts a training example (data frame row)
-to a character string for embedding. Default concatenates all input columns.}
+\item{cache_embeddings}{Currently has no effect: the training set is always
+embedded once, at compile time.}
 
-\item{cache_embeddings}{Whether to cache embeddings for the training set.
-Default is TRUE.}
-
-\item{merge_demos}{If TRUE, merge KNN-selected demos with any existing demos
-on the module. Default is FALSE (replace).}
+\item{merge_demos}{If \code{TRUE}, keep the module's existing demonstrations and
+add the selected ones after them. If \code{FALSE} (the default), the selected
+rows replace them.}
 }
 \value{
-A \code{KNNFewShot} teleprompter object.
+A \code{KNNFewShot} object to pass to \code{\link[=compile]{compile()}}.
 }
 \description{
-A teleprompter that uses k-nearest neighbor retrieval to dynamically select
-demonstrations at runtime based on similarity to the input query. Unlike
-\link{LabeledFewShot} which selects static demos at compile time, KNNFewShot
-selects different demos for each query based on embedding similarity.
+\code{KNNFewShot()} gives every input its own demonstrations: the \code{k} training
+rows whose embeddings are most similar to it. Compiling embeds the training
+set once, with no model calls; each run then embeds the input and picks its
+nearest rows. \code{\link[=LabeledFewShot]{LabeledFewShot()}}, by contrast, attaches one fixed set.
 }
 \details{
-KNNFewShot works by:
-\enumerate{
-\item Pre-computing embeddings for all training examples at compile time
-\item At runtime, embedding each input query
-\item Finding the k most similar training examples using cosine similarity
-\item Using those examples as demonstrations for the current query
-}
+\code{vectorizer} turns a character vector into a numeric matrix with one row
+per string. For real embeddings, wrap a provider, for example
+\code{function(x) ragnar::embed_openai(x, model = "text-embedding-3-small")}.
+Similarity is cosine similarity.
 
-This approach is particularly effective when:
-\itemize{
-\item The training set is large and diverse
-\item Different types of queries benefit from different demonstrations
-\item Semantic similarity is a good proxy for task relevance
+\code{\link[=compile]{compile()}} returns a wrapper module. Each run records the chosen rows and
+their similarity scores in \code{compiled$state$demo_selections}. Demonstration
+outputs come from the metric's \code{field} when there is one, and otherwise from
+an automatically detected label column, as in \code{\link[=LabeledFewShot]{LabeledFewShot()}}.
 }
-}
-\section{Vectorizer Function}{
-
-The \code{vectorizer} parameter should be a function that takes a character vector
-and returns a numeric matrix where each row is an embedding. Common options:
-\itemize{
-\item \code{ragnar::embed_openai()} for OpenAI embeddings
-\item Custom embedding functions using other providers
-}
-
-For testing, you can provide a deterministic vectorizer that returns
-consistent embeddings for the same inputs.
-}
-
 \examples{
-\dontrun{
-# Create a simple vectorizer (in practice, use ragnar::embed_openai or similar)
-simple_vectorizer <- function(texts) {
-  # Return random embeddings for demonstration
-  matrix(runif(length(texts) * 10), nrow = length(texts))
+# A toy vectorizer that counts letters. Use real embeddings in practice.
+letter_counts <- function(texts) {
+  t(vapply(
+    tolower(texts),
+    function(x) tabulate(utf8ToInt(x) - 96L, nbins = 26L),
+    integer(26)
+  ))
 }
 
-# Create the teleprompter
-tp <- KNNFewShot(
-  k = 3L,
-  vectorizer = simple_vectorizer,
-  input_text = function(example) example$question
+tp <- KNNFewShot(k = 2L, vectorizer = letter_counts)
+tp
+
+qa <- module(signature("question -> answer"))
+trainset <- data.frame(
+  question = c(
+    "What is 2 + 2?", "Capital of France?",
+    "What is 10 / 5?", "Capital of Peru?"
+  ),
+  answer = c("4", "Paris", "2", "Lima")
 )
+# Compiling embeds the training rows; no model is called
+compiled <- compile(qa, tp, trainset)
 
-# Compile a module
-compiled <- compile(my_module, tp, trainset, .llm = llm)
-
-# Now queries will get dynamically selected demos
-run(compiled, question = "What is 2+2?", .llm = llm)
+\dontrun{
+run(
+  compiled,
+  question = "Capital of Chile?",
+  .llm = ellmer::chat_openai(model = "gpt-6-luna")
+)
+compiled$state$demo_selections
 }
 
 }
+\seealso{
+Other teleprompters:
+\code{\link[=AutoResearch]{AutoResearch()}},
+\code{\link[=BetterTogether]{BetterTogether()}},
+\code{\link[=BootstrapFewShot]{BootstrapFewShot()}},
+\code{\link[=BootstrapFewShotWithRandomSearch]{BootstrapFewShotWithRandomSearch()}},
+\code{\link[=COPRO]{COPRO()}},
+\code{\link[=GEPA]{GEPA()}},
+\code{\link[=GridSearchTeleprompter]{GridSearchTeleprompter()}},
+\code{\link[=LabeledFewShot]{LabeledFewShot()}},
+\code{\link[=MIPROv2]{MIPROv2()}},
+\code{\link[=MetaHarness]{MetaHarness()}},
+\code{\link[=Omni]{Omni()}},
+\code{\link[=ReAnchor]{ReAnchor()}},
+\code{\link[=SIMBA]{SIMBA()}},
+\code{\link[=Teleprompter]{Teleprompter()}},
+\code{\link[=compile]{compile()}}
+}
+\concept{teleprompters}

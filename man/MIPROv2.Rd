@@ -2,7 +2,7 @@
 % Please edit documentation in R/teleprompter-mipro.R
 \name{MIPROv2}
 \alias{MIPROv2}
-\title{MIPROv2 Teleprompter}
+\title{MIPROv2: search instructions and demonstrations together}
 \usage{
 MIPROv2(
   metric = NULL,
@@ -21,57 +21,156 @@ MIPROv2(
 )
 }
 \arguments{
-\item{metric}{A metric function for evaluating predictions (required).}
+\item{metric}{A metric function (required), such as
+\code{metric_exact_match(field = "answer")}.}
 
-\item{metric_threshold}{Minimum score required for acceptance.}
+\item{metric_threshold}{Passed to the \code{\link[=BootstrapFewShot]{BootstrapFewShot()}} demonstration
+runs: the minimum score for a bootstrapped output to become a
+demonstration. \code{NULL} (the default) keeps any output that scores above 0.}
 
-\item{max_errors}{Maximum number of errors allowed during optimization.}
+\item{max_errors}{Integer; stop after this many consecutive failed
+evaluations when \code{\link[=compile]{compile()}} gets no \code{control} (default \code{5L}).}
 
-\item{task_model}{Optional ellmer Chat used to evaluate tasks. \code{NULL} uses
-the \code{.llm} supplied to \code{compile()}.}
+\item{task_model}{Optional ellmer Chat used to score candidates during the
+search. \code{NULL} (the default) uses the \code{.llm} passed to \code{\link[=compile]{compile()}}. The
+demonstration runs always use \code{.llm}, and the compiled program does not
+keep \code{task_model}.}
 
-\item{teacher_settings}{List of settings for the teacher model.}
+\item{teacher_settings}{Passed to the \code{\link[=BootstrapFewShot]{BootstrapFewShot()}} demonstration
+runs, where it is currently not applied.}
 
-\item{max_bootstrapped_demos}{Maximum number of bootstrapped demonstrations.}
+\item{max_bootstrapped_demos, max_labeled_demos}{Integer settings for the
+demonstration candidates (defaults \code{4L} and \code{4L}), with the same meaning
+as in \code{\link[=BootstrapFewShot]{BootstrapFewShot()}}.}
 
-\item{max_labeled_demos}{Maximum number of labeled demonstrations.}
+\item{auto}{Search preset: \code{"light"} (the default), \code{"medium"}, \code{"heavy"},
+or \code{NULL} to size the search with \code{num_candidates}. See Presets.}
 
-\item{auto}{Auto-tuned settings: "light", "medium", "heavy", or NULL.}
+\item{num_candidates}{Used only when \code{auto = NULL}: sets both the number of
+trials and the number of instruction candidates.}
 
-\item{num_candidates}{Optional override for number of instruction candidates.}
+\item{num_threads}{Integer number of rows scored at the same time
+(default \code{1L}). Ignored when \code{\link[=compile]{compile()}} gets a \code{control}.}
 
-\item{num_threads}{Number of threads to use for evaluation.}
+\item{seed}{Integer seed (default \code{9L}) for the candidate order, minibatches,
+tip choice and bootstrap seeds. It must be an integer such as \code{42L}; a
+double such as \code{42} currently makes compilation fail.}
 
-\item{seed}{Random seed for reproducibility.}
+\item{track_stats}{Whether to keep the trial history in
+\code{optimization_result()$trials} (default \code{TRUE}).}
 
-\item{track_stats}{Whether to track trial history.}
-
-\item{log_dir}{Directory for trial logging.}
+\item{log_dir}{Directory for a \link{TrialLog} with one trial per search step, or
+\code{NULL} (the default).}
 }
 \value{
-A \code{MIPROv2} teleprompter object.
+A \code{MIPROv2} object to pass to \code{\link[=compile]{compile()}}.
 }
 \description{
-MIPROv2 jointly optimizes instructions and few-shot demonstrations using
-a discrete Bayesian optimization loop with minibatch evaluation for a root
-Predict module. For graphs with nested predictors such as RLM, it optimizes
-child instructions only and requires \code{max_bootstrapped_demos = 0L}; nested
-demo bootstrapping fails explicitly until predictor-local evidence is
-available.
+\code{MIPROv2()} builds a few candidate demonstration sets and candidate
+instructions, then searches their combinations: most trials score a small
+minibatch of training rows, and every few trials a combination is scored on
+the full validation set. \code{\link[=compile]{compile()}} returns a copy of the program with the
+best combination.
+}
+\details{
+\subsection{Candidates}{
+\itemize{
+\item Demonstration sets: one \code{\link[=LabeledFewShot]{LabeledFewShot()}} set of \code{max_labeled_demos}
+rows, plus \code{\link[=BootstrapFewShot]{BootstrapFewShot()}} runs with different seeds. Because
+BootstrapFewShot does not currently shuffle rows, the bootstrapped sets
+are often identical.
+\item Instructions: the program's own instructions, plus variants that append a
+short dataset summary (the input and output column names) and one tip
+from a fixed list: "Be concise and accurate.", "Reason step-by-step before
+answering.", "Only use information in the inputs.", "Avoid assumptions;
+stick to the data." and "Return only the final output field." Unlike
+DSPy's MIPROv2, no model writes instructions, so there are at most six
+distinct instruction candidates.
+}
+}
+
+\subsection{Search}{
+
+Every pairing of a demonstration set and an instruction is a candidate.
+DSPy searches these with Bayesian optimization; dsprrr uses a UCB1 bandit.
+Each candidate is first tried once, in random order. After that, each trial
+picks the candidate with the highest mean score plus an exploration bonus
+of \code{sqrt(2 * log(t) / n)}, where \code{t} is the trial number and \code{n} is how
+often the candidate was tried. Most trials score a random minibatch of
+\code{trainset}; at a fixed interval (see Presets) a trial scores the whole
+\code{valset} instead, or \code{trainset} when no \code{valset} is given. The winner is
+the candidate with the best full evaluation, or, with a warning, the best
+minibatch score when no full evaluation finished.
+}
+
+\subsection{Presets}{\tabular{llllll}{
+   \code{auto} \tab Trials \tab Minibatch rows \tab Full evaluation every \tab Demo sets \tab Instructions \cr
+   \code{"light"} (default) \tab 20 \tab 5 \tab 5 trials \tab 3 \tab 5 \cr
+   \code{"medium"} \tab 50 \tab 10 \tab 10 trials \tab 5 \tab 6 \cr
+   \code{"heavy"} \tab 100 \tab 20 \tab 20 trials \tab 7 \tab 6 \cr
+   \code{NULL} \tab \code{num_candidates} (20 if \code{NULL}) \tab 10 \tab 5 trials \tab 4 \tab \code{num_candidates}, at most 6 \cr
+}
+
+
+Demo sets and instructions are upper bounds: a bootstrap run that collects
+no demonstrations adds no set. Minibatches never exceed \code{nrow(trainset)}.
+The training set needs more rows
+than \code{max_labeled_demos}: otherwise the run currently stops before the first
+trial and returns the program unchanged, with status \code{"partial"} in
+\code{\link[=optimization_result]{optimization_result()}}.
+}
+
+\subsection{Nested predictors}{
+
+For programs with nested predictors, such as an RLM, MIPROv2 tunes each
+inner predictor's instructions and keeps their demonstrations. Set
+\code{max_bootstrapped_demos = 0L} for these programs.
+}
 }
 \examples{
-
-\dontrun{
 tp <- MIPROv2(
   metric = metric_exact_match(field = "answer"),
   auto = "light",
-  max_bootstrapped_demos = 4L
+  max_labeled_demos = 2L,
+  max_bootstrapped_demos = 2L
 )
+tp
 
-qa_module <- module(signature("question -> answer"))
-trainset <- data.frame(question = "Capital of France?", answer = "Paris")
-valset <- data.frame(question = "Capital of Japan?", answer = "Tokyo")
-llm <- ellmer::chat_openai()
-compiled <- compile(qa_module, tp, trainset, valset = valset, .llm = llm)
+\dontrun{
+qa <- module(signature("question -> answer"))
+# Use a few dozen rows in practice
+trainset <- data.frame(
+  question = c(
+    "Capital of France?", "Capital of Peru?", "Capital of Chad?",
+    "Capital of Cuba?", "Capital of Laos?", "Capital of Oman?"
+  ),
+  answer = c("Paris", "Lima", "N'Djamena", "Havana", "Vientiane", "Muscat")
+)
+compiled <- compile(
+  qa,
+  tp,
+  trainset,
+  .llm = ellmer::chat_openai(model = "gpt-6-luna")
+)
+optimization_result(compiled)
 }
 }
+\seealso{
+Other teleprompters:
+\code{\link[=AutoResearch]{AutoResearch()}},
+\code{\link[=BetterTogether]{BetterTogether()}},
+\code{\link[=BootstrapFewShot]{BootstrapFewShot()}},
+\code{\link[=BootstrapFewShotWithRandomSearch]{BootstrapFewShotWithRandomSearch()}},
+\code{\link[=COPRO]{COPRO()}},
+\code{\link[=GEPA]{GEPA()}},
+\code{\link[=GridSearchTeleprompter]{GridSearchTeleprompter()}},
+\code{\link[=KNNFewShot]{KNNFewShot()}},
+\code{\link[=LabeledFewShot]{LabeledFewShot()}},
+\code{\link[=MetaHarness]{MetaHarness()}},
+\code{\link[=Omni]{Omni()}},
+\code{\link[=ReAnchor]{ReAnchor()}},
+\code{\link[=SIMBA]{SIMBA()}},
+\code{\link[=Teleprompter]{Teleprompter()}},
+\code{\link[=compile]{compile()}}
+}
+\concept{teleprompters}

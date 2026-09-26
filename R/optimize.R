@@ -1,37 +1,97 @@
-#' Grid Search Optimisation
+#' Grid search over module settings
 #'
 #' @description
-#' Optimise a DSPrrr module over a grid of candidate configurations. Accepts
-#' either an explicit `grid` data frame or a set of parameter definitions that
-#' can be expanded into a grid (named lists or tidymodels parameter sets).
+#' `optimize_grid()` evaluates a module once for every row of a grid of
+#' settings, such as different `reasoning_effort` values or instructions, and
+#' applies the best-scoring row to the module. It modifies the module in
+#' place, unlike [compile()], which returns a new program.
 #'
-#' @param module A DSPrrr module (created via [module()]).
-#' @param data Development data containing columns required by the module's
-#'   signature plus any fields consumed by the metric.
-#' @param metric Metric function applied per example. Defaults to
+#' @details
+#' Give the candidates as `grid`, a data frame with one row per candidate, or
+#' as `parameters`, which is expanded into a grid: a named list is crossed with
+#' [expand.grid()], and a tidymodels parameter set (see [module_parameters()])
+#' is expanded with `dials::grid_regular()` or `dials::grid_random()`,
+#' depending on `control`. One of the two is required.
 #'
-#'   [metric_exact_match()]. Use [as_dsprrr_metric()] to adapt yardstick/vitals
-#'   metrics.
-#' @param grid Optional data frame/tibble of candidate configurations.
-#' @param parameters Optional named list or tidymodels parameter set used to
-#'   generate a grid when `grid` is not supplied.
-#' @param objective Optimisation direction. `"maximize"` (default) selects the
-#'   highest metric value; `"minimize"` selects the lowest.
-#' @param .llm Optional ellmer chat object reused during optimisation.
-#' @param control Named list of control options. Recognised entries:
-#'   `progress` (logical), `parallel` (logical forwarded to [evaluate()]),
-#'   `evaluation_progress` (logical), `grid_type` (`"regular"` or `"random"`),
-#'   `grid_levels` (integer, for regular grids), and `grid_size` (integer, for
-#'   random grids).
-#' @param ... Additional arguments forwarded to [evaluate()].
+#' These grid columns change what the module sends:
 #'
-#' @return The optimised module (modified in place, invisibly).
+#' * Runtime settings, sent to the chat: `temperature`, `top_p`,
+#'   `reasoning_effort`, `frequency_penalty`, `presence_penalty`, `max_tokens`,
+#'   `max_output_tokens` and `service_tier`. Reasoning models restrict
+#'   sampling settings: gpt-6-luna, for example, accepts `temperature` and
+#'   `top_p` only when `reasoning_effort` is `"none"`.
+#' * `instructions` replaces the signature's instructions, and
+#'   `instructions_suffix` is appended to them.
+#' * `template` replaces the prompt template.
+#'
+#' Other columns are stored in `module$config` but do not change the prompt.
+#'
+#' Each candidate is evaluated on a copy of the module with [evaluate()], so a
+#' grid of `n` rows makes up to `n * nrow(data)` model calls. The trials are
+#' stored on the module; read them with [module_trials()], [top_trials()] or
+#' [optimization_result()].
+#'
+#' @param module A module, such as one created with [module()].
+#' @param data A data frame with the signature's input columns and the columns
+#'   the metric compares.
+#' @param metric A metric function called as `metric(prediction, expected)`.
+#'   The default, [metric_exact_match()] without a `field`, compares the one
+#'   output field that also names a column of `data`; pass `field` to choose
+#'   the column explicitly. Use [as_dsprrr_metric()] to adapt a vitals scorer.
+#' @param grid A data frame with one row per candidate, or a named list that is
+#'   expanded like `parameters`.
+#' @param parameters Used when `grid` is `NULL`: a named list of values to
+#'   cross, or a tidymodels parameter set such as the one returned by
+#'   [module_parameters()].
+#' @param objective `"maximize"` (the default) keeps the highest mean score;
+#'   `"minimize"` keeps the lowest.
+#' @param .llm Optional ellmer Chat used for every evaluation.
+#' @param control A named list of options: `progress` (a progress bar over
+#'   candidates; default `interactive()`), `evaluation_progress` (a bar inside
+#'   each evaluation; default `FALSE`), and, for tidymodels parameter sets,
+#'   `grid_type` (`"regular"`, the default, or `"random"`), `grid_levels`
+#'   (levels per parameter in a regular grid; default `3L`) and `grid_size`
+#'   (candidates in a random grid; default `max(10L, grid_levels)`). A
+#'   `parallel` entry is accepted but has no effect; pass `.concurrency`
+#'   through `...` to evaluate rows concurrently.
+#' @param ... Further arguments passed to [evaluate()], such as
+#'   `.concurrency = concurrency_control(max_active = 4L)`.
+#'
+#' @return The module, modified in place: the best row's settings are applied
+#'   and the trials are recorded. When no candidate produces a score, the
+#'   settings are left unchanged and a warning is raised.
+#' @family grid search
 #' @examples
 #' \dontrun{
-#' program <- module(signature("question -> answer"))
-#' data <- data.frame(question = "2 + 2?", answer = "4")
-#' grid <- data.frame(temperature = c(0, 0.5))
-#' optimize_grid(program, data, metric_exact_match(), grid = grid)
+#' classifier <- module(signature("text -> sentiment"))
+#' devset <- data.frame(
+#'   text = c("I love it!", "Terrible experience", "It's okay"),
+#'   sentiment = c("positive", "negative", "neutral")
+#' )
+#'
+#' optimize_grid(
+#'   classifier,
+#'   data = devset,
+#'   metric = metric_exact_match(field = "sentiment"),
+#'   grid = data.frame(reasoning_effort = c("none", "low", "medium")),
+#'   .llm = ellmer::chat_openai(model = "gpt-6-luna")
+#' )
+#'
+#' # `classifier` now carries the best setting and the trials
+#' classifier$config$reasoning_effort
+#' module_trials(classifier)
+#'
+#' # Named lists are crossed into a grid
+#' optimize_grid(
+#'   classifier,
+#'   data = devset,
+#'   metric = metric_exact_match(field = "sentiment"),
+#'   parameters = list(
+#'     reasoning_effort = c("none", "low"),
+#'     instructions_suffix = c("Answer with one word.", "Be decisive.")
+#'   ),
+#'   .llm = ellmer::chat_openai(model = "gpt-6-luna")
+#' )
 #' }
 #' @export
 optimize_grid <- function(module, ...) {
@@ -69,8 +129,8 @@ optimize_grid.Module <- function(
 
 # Internal helpers --------------------------------------------------------
 
-#' Merge optimisation control defaults
-#' @keywords internal
+#' Merge optimization control defaults
+#' @noRd
 merge_optimization_control <- function(control) {
   defaults <- list(
     progress = interactive(),
@@ -101,8 +161,8 @@ merge_optimization_control <- function(control) {
   merged
 }
 
-#' Prepare optimisation grid
-#' @keywords internal
+#' Prepare optimization grid
+#' @noRd
 prepare_candidate_grid <- function(parameters, grid, control) {
   if (!is.null(grid)) {
     if (is.list(grid) && !is.data.frame(grid)) {
@@ -132,7 +192,7 @@ prepare_candidate_grid <- function(parameters, grid, control) {
 }
 
 #' Generate grid from parameter definition
-#' @keywords internal
+#' @noRd
 generate_grid_from_parameters <- function(parameters, control) {
   if (is_dials_parameters(parameters)) {
     rlang::check_installed(
@@ -158,7 +218,7 @@ generate_grid_from_parameters <- function(parameters, control) {
 }
 
 #' Expand a named list into a grid
-#' @keywords internal
+#' @noRd
 expand_grid_from_list <- function(parameters) {
   if (length(parameters) == 0) {
     cli::cli_abort("Parameter list must contain at least one element")
@@ -173,17 +233,21 @@ expand_grid_from_list <- function(parameters) {
     expand.grid,
     c(parameters, list(stringsAsFactors = FALSE))
   )
+  # expand.grid() records its inputs in "out.attrs"; drop it so best_params
+  # stay plain values that save_program() and pins can persist.
+  attr(grid, "out.attrs") <- NULL
 
   tibble::as_tibble(grid)
 }
 
 #' Check for tidymodels parameter set
-#' @keywords internal
+#' @noRd
 is_dials_parameters <- function(x) {
   inherits(x, "param_set") || inherits(x, "parameters")
 }
 
-#' @keywords internal
+#' Enum input values as default qualitative parameters
+#' @noRd
 signature_parameter_defaults <- function(signature, prefix = "input") {
   defaults <- list()
 
@@ -209,46 +273,58 @@ signature_parameter_defaults <- function(signature, prefix = "input") {
   defaults
 }
 
-#' Suggest tidymodels parameters for a module
+#' Build a tidymodels parameter set for a module
 #'
 #' @description
-#' Construct a `dials::parameters()` set from the information available on a
-#' module. Numeric parameters (e.g., `temperature`, `top_p`) derive their ranges
-#' from observed optimisation trials (if present) or fall back to sensible
-#' defaults. Qualitative parameters (e.g., `prompt_style`) are converted to
-#' value sets.
+#' `module_parameters()` returns a `dials::parameters()` set describing values
+#' of a module that can be tuned. Pass it to [optimize_grid()] as `parameters`
+#' to search a regular or random grid over those values.
 #'
-#' For reasoning models (OpenAI o1/o3/o4-mini, GPT-5 series), `temperature` and
-#' `top_p` are automatically excluded since these models don't support them.
-#' Instead, `reasoning_effort` is included as a tunable parameter.
+#' @details
+#' Candidate parameters come from:
 #'
-#' @param module A DSPrrr module (created with [module()]).
-#' @param model Optional model name string. When provided, parameters are
-#'   filtered based on model capabilities (e.g., reasoning models exclude
-#'   `temperature`/`top_p` and include `reasoning_effort`).
-#' @param include Optional character vector restricting which parameters are
-#'   returned. Defaults to all parameters discovered in the module configuration
-#'   and optimisation trials.
-#' @param exclude Character vector of parameter names to ignore. Defaults to
-#'   internal bookkeeping fields such as `id` and `instructions`.
+#' * single values in `module$config` and `module$config$params`;
+#' * the parameters of trials recorded by [optimize_grid()];
+#' * enum inputs of the signature, as `input_<name>` with the enum levels;
+#' * runtime settings with default ranges: `temperature` and `top_p` in
+#'   `[0, 1]`, `frequency_penalty` and `presence_penalty` in `[-2, 2]`, and
+#'   `max_output_tokens` in `[32, 4096]`.
 #'
-#' @return A [`dials::parameters`] object describing the candidate tunables.
-#'   Returns an empty parameter set when no tunables are discovered.
+#' Numeric values become quantitative parameters spanning the observed range
+#' (plus or minus 0.1 around a single value); character and logical values
+#' become qualitative parameters. For a reasoning model (see
+#' [is_reasoning_model()]), `temperature` and `top_p` are dropped and
+#' `reasoning_effort` (`"low"`, `"medium"`, `"high"`) is added.
+#'
+#' Only runtime settings, `instructions`, `instructions_suffix` and `template`
+#' change what [optimize_grid()] sends to the model. Other parameters, such as
+#' `input_<name>` or internal config fields like `.module_kind`, are stored in
+#' the module's config without effect, so use `include` to keep the ones you
+#' mean to tune.
+#'
+#' @param module A module, such as one created with [module()].
+#' @param model Optional model name, such as `"gpt-6-luna"`. For a reasoning
+#'   model, `temperature` and `top_p` are replaced by `reasoning_effort`.
+#' @param include Optional character vector of parameter names to keep.
+#' @param exclude Character vector of parameter names to drop when `include` is
+#'   `NULL`. The default drops `id`, `instructions` and `instructions_suffix`.
+#'
+#' @return A `dials::parameters()` object, empty when nothing tunable is found.
+#' @family grid search
 #' @export
-#' @examples
-#' \dontrun{
-#' sig <- signature("text -> sentiment")
-#' mod <- module(sig, config = list(temperature = 0.2))
-#' optimize_grid(
-#'   mod,
-#'   data = tibble::tibble(text = "sample", target = "positive"),
-#'   parameters = list(temperature = c(0.1, 0.5))
+#' @examplesIf rlang::is_installed("dials")
+#' mod <- module(
+#'   signature("text -> sentiment"),
+#'   config = list(temperature = 0.2)
 #' )
-#' module_parameters(mod)
+#' module_parameters(mod, include = c("temperature", "top_p"))
 #'
-#' # For reasoning models, temperature is excluded
-#' module_parameters(mod, model = "o3")
-#' }
+#' # Reasoning models tune reasoning_effort instead of temperature
+#' module_parameters(
+#'   mod,
+#'   model = "gpt-6-luna",
+#'   include = c("temperature", "reasoning_effort")
+#' )
 module_parameters <- function(
   module,
   model = NULL,
@@ -416,31 +492,45 @@ module_parameters <- function(
   do.call(dials::parameters, params)
 }
 
-#' Summarise optimisation trials for a module
+#' Summarize grid search trials
 #'
 #' @description
-#' Provide a tidy summary of the optimisation trials recorded on a module.
-#' Useful for reporting best scores, average performance, and highlighting the
-#' winning parameter combination.
+#' `module_trials()` summarizes the trials that [optimize_grid()] recorded on a
+#' module: how many were run, the best trial, its score and parameters, and
+#' the mean and standard error of all trial scores. It reads only the
+#' grid-search trials in `module$state$trials`, which [optimize_grid()] and
+#' [GridSearchTeleprompter()] write. For other optimizers, use
+#' [optimization_result()] or [top_trials()].
 #'
-#' @param module A DSPrrr module that has been optimised with [optimize_grid()].
-#' @param objective Optimisation direction; `"maximize"` (default) selects the
-#'   highest score, `"minimize"` selects the lowest.
+#' @param module A module.
+#' @param objective `"maximize"` (the default) or `"minimize"`: which end of
+#'   the scores counts as best.
 #'
-#' @return A tibble with one row containing:
-#'   * `n_trials`: number of trials evaluated.
-#'   * `best_trial`: identifier of the best-performing trial.
-#'   * `best_score`: best score achieved.
-#'   * `mean_score`: mean across all scores.
-#'   * `std_error`: standard error of the scores.
-#'   * `best_params`: list-column containing the best parameter set.
-#'   * `trials`: list-column containing the full trials tibble.
+#' @return A one-row tibble with columns:
+#'   * `n_trials`: number of trials.
+#'   * `best_trial`: identifier of the best trial.
+#'   * `best_score`: its score.
+#'   * `mean_score`, `std_error`: mean and standard error of the trial scores.
+#'   * `best_params`: list-column with the best trial's parameters.
+#'   * `trials`: list-column with the full trials tibble.
 #'
+#'   Without trials, `n_trials` is 0 and the scores are `NA`. When every trial
+#'   failed, a warning is raised and the scores are `NA`.
+#' @family grid search
 #' @export
 #' @examples
+#' mod <- module(signature("text -> sentiment"))
+#' module_trials(mod)
+#'
 #' \dontrun{
-#' summary <- module_trials(my_module)
-#' summary$best_params
+#' optimize_grid(
+#'   mod,
+#'   data = devset,
+#'   metric = metric_exact_match(field = "sentiment"),
+#'   grid = data.frame(reasoning_effort = c("none", "low", "medium")),
+#'   .llm = ellmer::chat_openai(model = "gpt-6-luna")
+#' )
+#' module_trials(mod)$best_params
 #' }
 module_trials <- function(
   module,
@@ -510,45 +600,36 @@ module_trials <- function(
   )
 }
 
-#' Summarise optimisation metrics per trial
+#' Per-trial rows from a grid search
 #'
 #' @description
-#' Flatten the optimisation trials recorded on a module into a tidy data frame
-#' containing per-trial metric summaries. Useful for producing tables or
-#' visualisations comparing trial performance. When yardstick metrics are
-#' supplied, the function also computes those metrics for each trial using the
-#' stored evaluation datasets.
+#' `module_metrics()` returns one row per grid-search trial recorded on a
+#' module by [optimize_grid()] (or [GridSearchTeleprompter()]). Like
+#' [module_trials()], it reads only `module$state$trials`.
 #'
-#' @param module A DSPrrr module optimised with [optimize_grid()].
-#' @param metrics Optional yardstick metric (or metric set) to compute for each
-#'   trial.
-#' @param truth Column name (string) containing the ground-truth labels when
-#'   computing yardstick metrics.
-#' @param estimate Column name (string) containing the model predictions when
-#'   computing yardstick metrics.
-#' @param ... Additional arguments passed to yardstick metrics.
+#' @details
+#' The per-example evaluation results are not kept with the trials, so
+#' `median_score`, `std_dev`, `n_evaluated` and `n_errors` are `NA`, `scores`
+#' is empty, and the yardstick metrics requested with `metrics` are not
+#' computed: the `yardstick` column is always `NULL`. Use [module_trials()] or
+#' [top_trials()] for trial scores.
 #'
-#' @return A tibble with one row per trial containing columns:
-#'   * `trial_id` - trial identifier.
-#'   * `score` - overall score recorded for the trial.
-#'   * `mean_score`, `median_score`, `std_dev` - summary statistics across the
-#'     evaluation scores.
-#'   * `n_evaluated`, `n_errors` - counts reported by the evaluation.
-#'   * `params` - list-column with the parameters evaluated in the trial.
-#'   * `scores` - list-column with the raw per-example scores (if available).
-#'   * `yardstick` - list-column containing yardstick metric results when
-#'     requested.
+#' @param module A module.
+#' @param metrics Optional yardstick metric or metric set. Currently never
+#'   computed; see Details.
+#' @param truth,estimate Column names for the yardstick metrics. Required when
+#'   `metrics` is supplied.
+#' @param ... Passed to the yardstick metrics.
+#'
+#' @return A tibble with one row per trial and columns `trial_id`, `score`,
+#'   `mean_score` (the trial score), `median_score`, `std_dev`,
+#'   `n_evaluated`, `n_errors`, `params` (list-column of the trial's
+#'   parameters), `scores` and `yardstick`.
+#' @family grid search
 #' @export
 #' @examples
-#' \dontrun{
-#' trial_metrics <- module_metrics(my_module)
-#' yardstick_metrics <- module_metrics(
-#'   my_module,
-#'   metrics = yardstick::metric_set(yardstick::accuracy),
-#'   truth = target,
-#'   estimate = result
-#' )
-#' }
+#' # Without trials the result is an empty tibble with these columns
+#' module_metrics(module(signature("text -> sentiment")))
 module_metrics <- function(
   module,
   metrics = NULL,

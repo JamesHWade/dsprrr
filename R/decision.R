@@ -45,7 +45,7 @@
 #'   required, because a decision needs an explicit question.
 #'
 #' @return A `dsprrr_decision_spec` object for use with [with_decisions()].
-#' @seealso [with_decisions()], [decision_evidence()], [ReAnchor()]
+#' @family decisions
 #' @name decision_types
 #' @examples
 #' decision_bool(threshold = 0.7, criteria = c(true = "Service blocked"))
@@ -167,8 +167,7 @@ decision_abort <- function(message, ..., .envir = parent.frame()) {
 #'   output field name.
 #'
 #' @return A modified copy of `module`. The original is unchanged.
-#' @seealso [decision_types], [decision_evidence()], [decision_settings()],
-#'   [ReAnchor()]
+#' @family decisions
 #' @export
 #' @examples
 #' sig <- signature(
@@ -461,8 +460,21 @@ validate_decision_weights <- function(weights, values, field) {
 #'   `kind`, `threshold` (Boolean decisions), `cuts` (Score decisions, a
 #'   list-column), and `weights` (Choice decisions, a list-column of named
 #'   numeric vectors).
-#' @seealso [with_decisions()]
+#' @family decisions
 #' @export
+#' @examples
+#' sig <- signature(
+#'   inputs = list(input("ticket", description = "Customer report")),
+#'   output_type = ellmer::type_object(
+#'     urgent = ellmer::type_boolean("Is the service blocked?")
+#'   )
+#' )
+#' triage <- module(sig) |> with_decisions(urgent = decision_bool())
+#' decision_settings(triage)
+#'
+#' # A stricter threshold for the same question
+#' stricter <- triage |> with_decisions(urgent = decision_bool(threshold = 0.8))
+#' decision_settings(stricter)
 decision_settings <- function(module) {
   if (!inherits(module, "Module")) {
     cli::cli_abort("{.arg module} must be a dsprrr module")
@@ -791,8 +803,26 @@ assert_decisions_supported <- function(module, path) {
 #'   `abs(p - threshold) / max(threshold, 1 - threshold)`, not a calibrated
 #'   probability. For Score and Choice decisions it is the model's
 #'   self-reported confidence.
-#' @seealso [with_decisions()]
+#' @family decisions
 #' @export
+#' @examples
+#' \dontrun{
+#' sig <- signature(
+#'   inputs = list(input("ticket", description = "Customer report")),
+#'   output_type = ellmer::type_object(
+#'     urgent = ellmer::type_boolean("Is the service blocked?")
+#'   )
+#' )
+#' triage <- module(sig) |> with_decisions(urgent = decision_bool())
+#'
+#' result <- run(
+#'   triage,
+#'   ticket = "Checkout fails for every customer since 9am.",
+#'   .llm = ellmer::chat_openai(model = "gpt-6-luna"),
+#'   .return_format = "structured"
+#' )
+#' decision_evidence(result)
+#' }
 decision_evidence <- function(x) {
   metadata <- decision_result_metadata(x)
   rows <- list()

@@ -2,7 +2,7 @@
 % Please edit documentation in R/module-react.R
 \name{react}
 \alias{react}
-\title{Create a ReAct module}
+\title{Create a tool-using ReAct module}
 \usage{
 react(
   signature,
@@ -16,35 +16,75 @@ react(
 )
 }
 \arguments{
-\item{signature}{A Signature object or string notation defining inputs and
-outputs.}
+\item{signature}{A signature from \code{\link[=signature]{signature()}}, or a signature string.}
 
-\item{tools}{A list of ellmer ToolDef objects.}
+\item{tools}{A list of ellmer tool definitions, made with
+\code{\link[ellmer:tool]{ellmer::tool()}}, \code{\link[=ragnar_tool]{ragnar_tool()}}, \code{\link[=create_search_tool]{create_search_tool()}} or
+\code{\link[=as_ellmer_tool]{as_ellmer_tool()}}.}
 
-\item{max_iterations}{Maximum number of tool-call iterations.}
+\item{max_iterations}{Maximum number of tool-calling rounds. Several tool
+calls in one model turn count as one round. Exceeding the limit is an
+error.}
 
-\item{chat}{Optional ellmer Chat object.}
-
-\item{template}{Optional glue template for prompt generation.}
-
-\item{demos}{Optional list of demonstration examples.}
-
-\item{config}{Optional prediction configuration.}
+\item{chat, template, demos, config}{As in \code{\link[=module]{module()}}.}
 
 \item{...}{Must be empty.}
 }
 \value{
-A ReactModule executed with \code{\link[=run]{run()}}.
+A module (an R6 object of class \code{ReactModule}) to use with \code{\link[=run]{run()}}
+and \code{\link[=run_dataset]{run_dataset()}}.
 }
 \description{
-Create a tool-using module that alternates reasoning with tool calls. Tool
-use is explicit: passing tools to \code{\link[=module]{module()}} never changes a prediction
-module into a ReAct agent.
+\code{react()} builds an agent that alternates between reasoning and calling
+tools until it can answer, then returns a structured answer that follows
+the signature (the ReAct pattern).
+}
+\details{
+ellmer runs the tool-calling loop: the model's tool requests are executed
+and their results sent back, keeping ellmer's turn history and tool-call
+IDs. After the loop, one more request asks for the final answer in the
+signature's output format. ReAct calls do not use the response cache.
+
+\code{\link[=run]{run()}} accepts one input at a time for this module; use \code{\link[=run_dataset]{run_dataset()}}
+for several. With \code{.return_format = "structured"}, the metadata records
+\code{iterations}, \code{tool_calls} and \code{tools_used}.
 }
 \examples{
+lookup_population <- ellmer::tool(
+  function(city) {
+    switch(city, Paris = "2.1 million", Lyon = "0.5 million", "unknown")
+  },
+  name = "lookup_population",
+  description = "Look up the population of a French city.",
+  arguments = list(city = ellmer::type_string("City name"))
+)
+
 agent <- react(
   "question -> answer",
-  tools = list(),
-  max_iterations = 10
+  tools = list(lookup_population),
+  max_iterations = 5L
 )
+agent
+
+\dontrun{
+llm <- ellmer::chat_openai(model = "gpt-6-luna")
+run(agent, question = "How many more people live in Paris than in Lyon?", .llm = llm)
+
+questions <- data.frame(question = c("Population of Paris?", "Population of Lyon?"))
+run_dataset(agent, questions, .llm = llm)
 }
+}
+\seealso{
+Other program constructors:
+\code{\link[=chain_of_thought]{chain_of_thought()}},
+\code{\link[=code_act]{code_act()}},
+\code{\link[=flex]{flex()}},
+\code{\link[=module]{module()}},
+\code{\link[=module_fn]{module_fn()}},
+\code{\link[=multi_chain_comparison]{multi_chain_comparison()}},
+\code{\link[=program_of_thought]{program_of_thought()}},
+\code{\link[=rag_module]{rag_module()}},
+\code{\link[=rlm]{rlm()}},
+\code{\link[=rlm_module]{rlm_module()}}
+}
+\concept{program constructors}

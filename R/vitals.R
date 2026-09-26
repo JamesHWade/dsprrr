@@ -1,40 +1,48 @@
-#' Convert a dsprrr module into a vitals solver
+#' Use a dsprrr module as a vitals solver
 #'
 #' @description
-#' Creates a function compatible with vitals Tasks that executes a DSPrrr
-#' module against batches of inputs. The solver uses [run_dataset()] internally,
-#' ensuring that the module's demos, templates, and input descriptions are
-#' properly used in prompt construction.
+#' `as_vitals_solver()` wraps a module in a function that a vitals `Task` can
+#' call as its solver. The solver runs the module with [run_dataset()], so the
+#' module's demonstrations, template and input descriptions are used as usual.
+#' [as_vitals_task()] builds the whole task in one step.
 #'
-#' For multi-input modules, the solver expects the vitals `input` column to
-#' contain nested data (list of tibbles/lists) where each element has fields
-#' matching the module's signature inputs. Use [as_vitals_task()] to
-#' automatically create this structure from a flat dataset.
+#' @details
+#' vitals passes the solver a list of inputs. For a module with several
+#' inputs, each element must be a one-row data frame or list with fields named
+#' after the signature inputs; [as_vitals_task()] creates that structure from
+#' a flat data set.
 #'
-#' Batch execution is sequential unless `.concurrency` requests another
-#' backend. For structured outputs, mock Chat objects are created for vitals
-#' logging compatibility (following the same pattern as vitals'
-#' `generate_structured()`).
+#' String and enum outputs, including a single string or enum field, are
+#' returned as plain text, which string scorers such as
+#' `vitals::detect_match()` can compare. Other outputs are returned as JSON,
+#' together with per-row metadata. Rows run one after another unless
+#' `.concurrency` asks for more.
 #'
-#' @param module A DSPrrr module (e.g., created via [module()]).
-#' @param .llm An ellmer chat object. If `NULL` (default), uses the module's
-#'   stored chat or falls back to [get_default_chat()]. The chat is cloned
-#'   for each batch invocation.
-#' @param .concurrency Optional policy created by [concurrency_control()].
-#'   Omission uses sequential execution.
-#' @param ... Additional arguments forwarded to [run_dataset()].
+#' @param module A module, such as one created with [module()].
+#' @param .llm An ellmer Chat. `NULL` (the default) uses the module's own chat
+#'   or the default chat from [get_default_chat()], resolved when the solver is
+#'   created. Each batch runs on a fresh clone.
+#' @param .concurrency Optional policy from [concurrency_control()].
+#' @param ... Further arguments passed to [run_dataset()].
 #'
-#' @return A function accepting a list of input objects and returning a list
-#'   with components `result`, `solver_chat`, and optionally `solver_metadata`.
-#' @examples
-#' chat <- ellmer::chat_openai(
-#'   credentials = function() "example-key",
-#'   echo = "none"
-#' )
+#' @return A function `function(inputs, ..., solver_chat)` that returns a list
+#'   with `result` (character vector), `solver_chat` (the chats used) and, for
+#'   non-text outputs, `solver_metadata`.
+#' @family integrations
+#' @examplesIf rlang::is_installed("vitals")
 #' solver <- as_vitals_solver(
 #'   module(signature("question -> answer")),
-#'   .llm = chat
+#'   .llm = ellmer::chat_openai(model = "gpt-6-luna")
 #' )
+#'
+#' \dontrun{
+#' tsk <- vitals::Task$new(
+#'   dataset = tibble::tibble(input = "What is 2 + 2?", target = "4"),
+#'   solver = solver,
+#'   scorer = vitals::detect_includes()
+#' )
+#' tsk$eval()
+#' }
 #' @export
 as_vitals_solver <- function(
   module,
@@ -51,7 +59,7 @@ as_vitals_solver <- function(
 
   # Get signature info for extracting inputs from nested vitals format
 
-  sig_inputs <- module$signature@inputs
+  sig_inputs <- caller_input_specs(module)
   sig_input_names <- vapply(sig_inputs, function(x) x$name, character(1))
   output_type <- module$signature@output_type
 
@@ -152,32 +160,54 @@ as_vitals_solver <- function(
   }
 }
 
-#' Adapt a vitals scorer for use as a dsprrr metric
+#' Use a vitals scorer as a dsprrr metric
 #'
 #' @description
-#' Converts a vitals scorer function into a per-example metric compatible with
-#' DSPrrr compilation and evaluation. The scorer is invoked on a single-row
-#' tibble constructed from the prediction and the expected row.
+#' `as_dsprrr_metric()` turns a vitals scorer into a per-example metric that
+#' [evaluate()], [optimize_grid()] and the optimizers can call. Each call
+#' builds a one-row vitals sample from the prediction and the data row, runs
+#' the scorer, and converts its grade to a number.
 #'
-#' @param vitals_scorer A function that accepts a tibble/data frame and returns
-#'   a tibble with a `score` column (following vitals conventions).
-#' @param input_column Name of the column to populate with the example input.
-#'   If the column is absent in `expected_row`, `NA` is supplied.
-#' @param target_column Name of the column holding the ground-truth label inside
-#'   the vitals sample tibble.
-#' @param result_column Name of the column that receives the model prediction.
+#' @details
+#' The sample has three columns. The `input_column` and `target_column`
+#' columns are copied from the data column of the same name (`NA` when the row
+#' has no such column), and `result_column` holds the prediction. vitals'
+#' built-in scorers read the columns `input`, `target` and `result`, so keep
+#' the defaults with them and give your data a `target` column (and an `input`
+#' column for model-graded scorers). The other names are for scorers of your
+#' own that read different columns.
 #'
-#' @return A metric function with signature `function(prediction, expected_row)`
-#'   returning numeric values in `[0, 1]` or `NA` when the scorer output cannot
-#'   be interpreted.
+#' Grades are converted as follows: numbers are kept, `TRUE`/`FALSE` become
+#' 1/0, and `"C"`/`"correct"`/`"pass"`, `"I"`/`"incorrect"`/`"fail"` and
+#' `"P"`/`"partial"` become 1, 0 and 0.5. Anything else gives `NA` with a
+#' warning.
+#'
+#' @param vitals_scorer A scorer function that takes a samples tibble and
+#'   returns a list (or data frame) with a `score` element, such as
+#'   `vitals::detect_includes()`.
+#' @param input_column Name of the input column, in both the data and the
+#'   sample (default `"input"`).
+#' @param target_column Name of the expected-answer column, in both the data
+#'   and the sample (default `"target"`).
+#' @param result_column Name of the sample column that receives the prediction
+#'   (default `"result"`).
+#'
+#' @return A metric function `function(prediction, expected_row)` that returns
+#'   a number, usually in `[0, 1]`, or `NA`.
+#' @family integrations
+#' @family metrics
 #' @examples
+#' # A scorer written in the vitals style
 #' exact_match <- function(samples) {
-#'   tibble::tibble(
-#'     score = as.numeric(samples$result[[1]] == samples$target[[1]])
-#'   )
+#'   list(score = as.numeric(samples$result[[1]] == samples$target[[1]]))
 #' }
 #' metric <- as_dsprrr_metric(exact_match)
 #' metric("yes", data.frame(input = "Continue?", target = "yes"))
+#'
+#' @examplesIf rlang::is_installed("vitals")
+#' # A vitals scorer; the data needs a `target` column
+#' includes <- as_dsprrr_metric(vitals::detect_includes())
+#' includes("The capital is Paris.", data.frame(target = "Paris"))
 #' @export
 as_dsprrr_metric <- function(
   vitals_scorer,
@@ -261,35 +291,68 @@ as_dsprrr_metric <- function(
   }
 }
 
-#' Pre-built Vitals-backed Metrics
+#' Metrics built on vitals scorers
 #'
 #' @description
-#' These functions wrap common vitals scorers for direct use as dsprrr metrics,
-#' eliminating the need to manually call `as_dsprrr_metric()`.
+#' These functions wrap vitals scorers with [as_dsprrr_metric()] so they can
+#' be used directly as dsprrr metrics:
+#'
+#' * `metric_model_graded_qa()` and `metric_model_graded_fact()` ask a model to
+#'   grade the answer against the target.
+#' * `metric_detect_match()`, `metric_detect_includes()` and
+#'   `metric_detect_pattern()` compare strings without a model.
+#'
+#' @details
+#' The underlying vitals scorers read the expected answer from a `target`
+#' column, and the graded metrics also show the grader the question from an
+#' `input` column. Add those columns to your data, for example
+#' `transform(data, input = question, target = answer)`, and keep the default
+#' column arguments; see [as_dsprrr_metric()].
+#'
+#' The graded metrics need `scorer_chat`: outside a vitals `Task`, there is no
+#' solver chat for vitals to fall back on.
 #'
 #' @name vitals_metrics
-#' @param template Grading template (glue string with `input`, `answer`,
-#'   `criterion`, `instructions` substitutions)
-#' @param instructions Grading instructions
-#' @param grade_pattern Regex pattern to extract grade from judge response
-#' @param partial_credit Whether to allow partial credit
-#' @param scorer_chat An ellmer chat for grading (e.g., `ellmer::chat_openai()`)
-#' @param input_column Column name for input in vitals sample
-#' @param target_column Column name for target in vitals sample
-#' @param result_column Column name for result in vitals sample
+#' @param template Grading prompt template, a glue string with `input`,
+#'   `answer`, `criterion` and `instructions` fields. `NULL` uses the vitals
+#'   default.
+#' @param instructions Grading instructions. `NULL` uses the vitals default.
+#' @param grade_pattern Regular expression that extracts the grade from the
+#'   grader's reply.
+#' @param partial_credit Whether the grader may award partial credit (0.5).
+#' @param scorer_chat The ellmer Chat that grades, such as
+#'   `ellmer::chat_openai(model = "gpt-6-luna")`. Required; see Details.
+#' @param input_column,target_column,result_column Column names passed to
+#'   [as_dsprrr_metric()]. Keep the defaults for vitals scorers.
 #'
-#' @return A metric function with signature `function(prediction, expected_row)`
+#' @return A metric function `function(prediction, expected_row)`.
+#' @family metrics
+#' @family integrations
 #' @export
 #'
-#' @examples
-#' \dontrun{
-#' # Model-graded QA metric
-#' metric <- metric_model_graded_qa(scorer_chat = ellmer::chat_openai())
-#' score <- metric("Paris", data.frame(target = "Paris"))
+#' @examplesIf rlang::is_installed("vitals")
+#' # String comparisons need no model
+#' ends_with_answer <- metric_detect_match(location = "end")
+#' ends_with_answer("The answer is Paris", data.frame(target = "Paris"))
 #'
-#' # With custom grading chat
-#' metric <- metric_model_graded_fact(
-#'   scorer_chat = ellmer::chat_claude(),
+#' mentions <- metric_detect_includes()
+#' mentions("Paris is the capital", data.frame(target = "Paris"))
+#'
+#' number <- metric_detect_pattern("([0-9]+)")
+#' number("The total is 42", data.frame(target = "42"))
+#'
+#' \dontrun{
+#' # Model-graded metrics call scorer_chat once per example
+#' graded <- metric_model_graded_qa(
+#'   scorer_chat = ellmer::chat_openai(model = "gpt-6-luna")
+#' )
+#' graded(
+#'   "Paris",
+#'   data.frame(input = "What is the capital of France?", target = "Paris")
+#' )
+#'
+#' fact <- metric_model_graded_fact(
+#'   scorer_chat = ellmer::chat_anthropic(model = "claude-sonnet-4-5"),
 #'   partial_credit = TRUE
 #' )
 #' }
@@ -353,19 +416,10 @@ metric_model_graded_fact <- function(
 }
 
 #' @rdname vitals_metrics
-#' @param location Where to look for the target in the result: "end", "begin",
-#'   "any", or "exact"
-#' @param case_sensitive Whether matching is case-sensitive
+#' @param location Where to look for the target in the result: `"end"` (the
+#'   default), `"begin"`, `"any"` or `"exact"`.
+#' @param case_sensitive Whether matching is case-sensitive (default `FALSE`).
 #' @export
-#' @examples
-#' \dontrun{
-#' # String detection metrics
-#' metric <- metric_detect_match(location = "end")
-#' metric("The answer is Paris", data.frame(target = "Paris"))  # 1
-#'
-#' metric <- metric_detect_includes()
-#' metric("Paris is the capital", data.frame(target = "Paris"))  # 1
-#' }
 metric_detect_match <- function(
   location = c("end", "begin", "any", "exact"),
   case_sensitive = FALSE,
@@ -410,11 +464,10 @@ metric_detect_includes <- function(
 }
 
 #' @rdname vitals_metrics
-#' @param pattern Regex pattern with capture groups. The captured groups are
-#'   extracted from the result and checked against the target. Use parentheses
-#'   to define capture groups, e.g., `"([0-9]+)"` to extract numbers.
-#' @param all Whether all captured groups must match the target (TRUE) or
-#'   just one (FALSE, default).
+#' @param pattern Regular expression with capture groups, such as
+#'   `"([0-9]+)"`. The captured text is compared with the target.
+#' @param all Whether every captured group must match the target (`TRUE`) or
+#'   at least one (`FALSE`, the default).
 #' @export
 metric_detect_pattern <- function(
   pattern,
@@ -440,43 +493,51 @@ metric_detect_pattern <- function(
   )
 }
 
-#' Convert dsprrr cost data to vitals format
+#' Report dsprrr costs in the vitals format
 #'
 #' @description
-#' Converts dsprrr cost summaries, trace data, or session costs into a
-#' tibble matching the format returned by vitals [vitals::Task]`$get_cost()`.
-#' This enables consistent cost reporting across dsprrr and vitals workflows.
+#' `as_vitals_cost()` converts dsprrr cost information into the tibble that a
+#' vitals `Task`'s `$get_cost()` method returns, so costs from both packages
+#' can be reported together.
 #'
-#' @param x A dsprrr cost object. Can be:
-#'   - A `dsprrr_cost_summary` (from [get_cost()])
-#'   - A `dsprrr_session_cost` (from [session_cost()])
-#'   - A tibble of traces (from [export_traces()])
-#'   - A `dsprrr_evaluation` result (from [evaluate()])
-#' @param source Character string identifying the source of costs.
-#'   Defaults to `"solver"` to match vitals convention.
-#' @param ... Additional arguments (currently unused).
+#' @param x One of:
+#'   * a session summary from [session_cost()] (one row per model);
+#'   * a traces data frame, such as [export_traces()] output, with `model`,
+#'     `input_tokens`, `output_tokens` and `cost` columns (one row per model);
+#'   * a cost summary from [get_cost()] or an [evaluate()] result (a single
+#'     row with the total price, and model and token counts unknown). This
+#'     currently fails when the total cost is unknown, for example for a
+#'     model without price data.
+#' @param source Label for the `source` column (default `"solver"`, the
+#'   vitals convention; vitals also uses `"scorer"`).
+#' @param ... Unused.
 #'
-#' @return A tibble with columns matching vitals cost format:
-#'   - `source`: Character, either "solver" or "scorer"
-#'   - `provider`: Character, the API provider name
-#'   - `model`: Character, the model name
-#'   - `input`: Integer, input token count
-#'   - `output`: Integer, output token count
-#'   - `price`: Character, formatted cost string (e.g., "$0.01")
+#' @return A tibble with columns `source`, `provider` (guessed from the model
+#'   name), `model`, `input` and `output` (token counts), and `price` (text
+#'   such as `"$0.01"`).
 #'
+#' @family integrations
 #' @export
 #' @examples
-#' \dontrun{
-#' # From session cost
+#' traces <- data.frame(
+#'   model = c("gpt-6-luna", "gpt-6-luna", "claude-sonnet-4-5"),
+#'   input_tokens = c(12000L, 8000L, 20000L),
+#'   output_tokens = c(3000L, 2500L, 6000L),
+#'   cost = c(0.21, 0.15, 0.42)
+#' )
+#' as_vitals_cost(traces)
+#'
+#' # Nothing has run in this session yet
 #' as_vitals_cost(session_cost())
 #'
-#' # From evaluation result
-#' eval_result <- evaluate(mod, test_data, metric = metric_exact_match())
-#' as_vitals_cost(eval_result)
-#'
-#' # From module traces
-#' traces <- export_traces(my_module)
-#' as_vitals_cost(traces)
+#' \dontrun{
+#' result <- evaluate(
+#'   classifier,
+#'   testset,
+#'   metric = metric_exact_match(field = "sentiment"),
+#'   .llm = ellmer::chat_openai(model = "gpt-6-luna")
+#' )
+#' as_vitals_cost(result)
 #' }
 as_vitals_cost <- function(x, source = "solver", ...) {
   UseMethod("as_vitals_cost")
@@ -633,61 +694,56 @@ infer_provider_from_model <- function(model) {
   "unknown"
 }
 
-#' Create a vitals Task from a dsprrr module
+#' Build a vitals Task from a module and a data set
 #'
 #' @description
-#' Convenience function that builds a vitals [vitals::Task] from a dsprrr
-#' module and dataset. This makes it trivial to evaluate dsprrr modules
-#' using vitals infrastructure without manual solver wrapping.
-#'
-#' For multi-input modules, the function automatically nests all signature
-#' input columns into a single `input` list column that vitals expects.
-#' The solver then extracts these fields when processing each sample.
-#'
-#' @param module A DSPrrr module (e.g., created via [module()]).
-#' @param dataset A tibble/data frame with columns matching the module's
-#'   signature inputs plus a `target` column. The function will nest
-#'   signature inputs into the `input` column format vitals requires.
-#' @param scorer A vitals scorer function (e.g., `vitals::model_graded_qa()`,
-#'   `vitals::detect_match()`). Defaults to `vitals::model_graded_qa()`.
-#' @param .llm Optional ellmer chat object for the solver. When `NULL`,
-#'   each invocation will create a fresh default client.
-#' @param name Optional name for the task. Defaults to the dataset name.
-#' @param epochs Number of times to repeat each sample for statistical
-#'   significance. Defaults to 1L.
-#' @param metrics Optional named list of metric functions. Each function
-#'   takes a vector of scores and returns a single numeric value.
-#' @param dir Directory for evaluation logs. Defaults to `vitals::vitals_log_dir()`.
-#' @param .concurrency Optional policy created by [concurrency_control()].
-#'   Omission uses sequential execution.
-#' @param ... Additional arguments passed to [as_vitals_solver()].
-#'
-#' @return A vitals [vitals::Task] object ready for evaluation.
+#' `as_vitals_task()` creates a vitals `Task` that uses the module as its
+#' solver (see [as_vitals_solver()]), so you can evaluate the module with
+#' vitals' scoring, logging and viewer. Call the task's `$eval()` method to
+#' run it and `$view()` to browse the results.
 #'
 #' @details
-#' The returned Task object can be evaluated by calling its `$eval()` method,
-#' which runs the solver, scores results, computes metrics, and logs output.
-#' Use `$view()` to see results interactively.
+#' `dataset` needs one column per signature input and a `target` column. The
+#' input columns are nested into the `input` list-column that vitals expects;
+#' other columns are kept.
 #'
+#' @param module A module, such as one created with [module()].
+#' @param dataset A data frame with the signature's input columns and a
+#'   `target` column.
+#' @param scorer A vitals scorer, such as `vitals::detect_includes()`. The
+#'   default, `vitals::model_graded_qa()`, asks the solver's chat to grade.
+#' @param .llm An ellmer Chat for the solver. `NULL` (the default) uses the
+#'   module's own chat or the default chat, resolved when the task is created.
+#' @param name Task name. Defaults to the expression passed as `dataset`.
+#' @param epochs Integer number of times each sample is run (default `1L`).
+#' @param metrics Optional named list of functions that summarize a vector of
+#'   scores into one number.
+#' @param dir Directory for the evaluation logs. Defaults to
+#'   `vitals::vitals_log_dir()`.
+#' @param .concurrency Optional policy from [concurrency_control()].
+#' @param ... Further arguments passed to [as_vitals_solver()].
+#'
+#' @return A vitals `Task` object.
+#' @family integrations
 #' @export
-#' @examples
-#' \dontrun{
-#' # Single-input module
-#' mod <- module(signature("question -> answer"))
-#' test_data <- tibble::tibble(
+#' @examplesIf rlang::is_installed("vitals")
+#' qa <- module(signature("question -> answer"))
+#' test_data <- data.frame(
 #'   question = c("What is 2+2?", "Capital of France?"),
 #'   target = c("4", "Paris")
 #' )
-#' task <- as_vitals_task(mod, test_data, scorer = vitals::detect_includes())
-#'
-#' # Multi-input module
-#' mod <- module(signature("shapes, pick -> answer"))
-#' test_data <- tibble::tibble(
-#'   shapes = c("square, circle", "triangle, star"),
-#'   pick = c("square", "star"),
-#'   target = c("square", "star")
+#' tsk <- as_vitals_task(
+#'   qa,
+#'   test_data,
+#'   scorer = vitals::detect_includes(),
+#'   .llm = ellmer::chat_openai(model = "gpt-6-luna"),
+#'   dir = tempdir()
 #' )
-#' task <- as_vitals_task(mod, test_data, scorer = vitals::detect_includes())
+#' tsk
+#'
+#' \dontrun{
+#' tsk$eval()
+#' tsk$get_cost()
 #' }
 as_vitals_task <- function(
   module,
@@ -719,7 +775,7 @@ as_vitals_task <- function(
 
   # Get required input columns from module's signature
   sig_input_names <- vapply(
-    module$signature@inputs,
+    caller_input_specs(module),
     function(x) x$name,
     character(1)
   )
@@ -793,39 +849,46 @@ as_vitals_task <- function(
   )
 }
 
-#' Convert dsprrr traces to vitals samples format
+#' Convert dsprrr traces to vitals samples
 #'
 #' @description
-#' Converts dsprrr module traces to a tibble format compatible with vitals
-#' `Task$get_samples()` output. This enables viewing dsprrr traces in
-#' vitals' Inspect viewer or combining with vitals samples using `vitals_bind()`.
+#' `as_vitals_samples()` reshapes a traces data frame into the samples format
+#' that a vitals `Task`'s `$get_samples()` returns, for example to combine
+#' dsprrr runs with vitals results using `vitals::vitals_bind()`.
+#' [as_dsprrr_traces()] converts the other way.
 #'
-#' @param traces A traces tibble from [export_traces()] or module `$get_traces()`.
-#' @param input_column Column name containing the input prompts. If `NULL`,
-#'   attempts to extract from the prompt field.
-#' @param include_chats Logical; if `TRUE` and solver_chat column exists,
-#'   include chat objects. Defaults to `FALSE`.
+#' @param traces A traces data frame, such as [export_traces()] output. Export
+#'   with `include_prompts = TRUE` and `include_outputs = TRUE`; otherwise
+#'   `input` and `result` are empty.
+#' @param input_column Name of the column to use as `input`. `NULL` (the
+#'   default) uses `prompt`.
+#' @param include_chats Whether to keep a `solver_chat` column when `traces`
+#'   has one (default `FALSE`).
 #'
-#' @return A tibble with columns matching vitals samples format:
-#'   - `id`: Unique identifier for each trace
-#'   - `input`: Input prompt text
-#'   - `result`: Model output
-#'   - `solver_metadata`: List column with trace metadata (latency, tokens, cost)
-#'   - `model`: Model name used
-#'   - `epoch`: Always 1 (dsprrr doesn't use epochs)
+#' @return A tibble with columns `id` (`"trace_0001"`, ...), `input`,
+#'   `result` (list-column from the `output` column), `solver_metadata`
+#'   (list-column with latency, tokens, cost and timestamp), `model` and
+#'   `epoch` (always 1).
 #'
+#' @family integrations
 #' @export
 #' @examples
-#' \dontrun{
-#' # Export traces from a module and convert
-#' traces <- export_traces(my_module, include_outputs = TRUE)
-#' samples <- as_vitals_samples(traces)
-#'
-#' # Use with vitals_bind for combined analysis
-#' vitals::vitals_bind(
-#'   task1 = task1,
-#'   dsprrr = samples
+#' traces <- tibble::tibble(
+#'   prompt = c("question: What is 2+2?", "question: Capital of France?"),
+#'   output = list(list(answer = "4"), list(answer = "Paris")),
+#'   model = "gpt-6-luna",
+#'   latency_ms = c(820, 640),
+#'   input_tokens = c(52L, 55L),
+#'   output_tokens = c(6L, 7L),
+#'   cost = c(0.0001, 0.0001)
 #' )
+#' as_vitals_samples(traces)
+#'
+#' \dontrun{
+#' samples <- as_vitals_samples(
+#'   export_traces(classifier, include_prompts = TRUE, include_outputs = TRUE)
+#' )
+#' vitals::vitals_bind(dsprrr = samples)
 #' }
 as_vitals_samples <- function(
   traces,
@@ -912,42 +975,44 @@ as_vitals_samples <- function(
   result
 }
 
-#' Convert vitals samples to dsprrr traces format
+#' Convert vitals samples to dsprrr traces
 #'
 #' @description
-#' Converts vitals samples tibble (from `Task$get_samples()` or `vitals_bind()`)
-#' to dsprrr traces format for use with dsprrr analysis functions like
-#' [summarize_traces()].
+#' `as_dsprrr_traces()` reshapes vitals samples (from a `Task`'s
+#' `$get_samples()` or from [as_vitals_samples()]) into the traces format, so
+#' that [summarize_traces_df()] and other trace tools can analyze them.
 #'
-#' @param samples A tibble from `Task$get_samples()` or `vitals_bind()`.
-#' @param include_prompts Logical; whether to extract prompts from input column.
-#'   Defaults to `TRUE`.
-#' @param include_outputs Logical; whether to extract outputs from result column.
-#'   Defaults to `TRUE`.
+#' @details
+#' Latency, token counts, cost and timestamp are read from the
+#' `solver_metadata` (or `metadata`) list-column; missing values are `NA` and
+#' missing timestamps are set to the current time.
 #'
-#' @return A tibble with dsprrr trace columns:
-#'   - `timestamp`: Extracted from metadata or set to current time
-#'   - `latency_ms`: Extracted from metadata or NA
-#'   - `input_tokens`: Extracted from metadata or NA
-#'   - `output_tokens`: Extracted from metadata or NA
-#'   - `total_tokens`: Calculated or extracted from metadata
-#'   - `cost`: Extracted from metadata or NA
-#'   - `model`: Model name if available
-#'   - `prompt_length`: Character length of prompt
-#'   - `prompt`: Input text (if include_prompts = TRUE)
-#'   - `output`: Result (if include_outputs = TRUE)
+#' @param samples A samples tibble.
+#' @param include_prompts Whether to add a `prompt` column from `input`
+#'   (default `TRUE`).
+#' @param include_outputs Whether to add an `output` list-column from `result`
+#'   (default `TRUE`).
 #'
+#' @return A tibble with columns `timestamp`, `latency_ms`, `input_tokens`,
+#'   `output_tokens`, `total_tokens`, `cost`, `model` and `prompt_length`,
+#'   plus `prompt` and `output` when requested.
+#'
+#' @family integrations
 #' @export
 #' @examples
+#' samples <- as_vitals_samples(tibble::tibble(
+#'   prompt = "question: What is 2+2?",
+#'   output = list(list(answer = "4")),
+#'   model = "gpt-6-luna",
+#'   input_tokens = 52L,
+#'   output_tokens = 6L,
+#'   cost = 0.0001
+#' ))
+#' as_dsprrr_traces(samples)
+#'
 #' \dontrun{
-#' # Get samples from a vitals task
-#' samples <- task$get_samples()
-#'
-#' # Convert to dsprrr traces format
-#' traces <- as_dsprrr_traces(samples)
-#'
-#' # Use dsprrr analysis functions
-#' summary <- summarize_traces_df(traces)
+#' traces <- as_dsprrr_traces(tsk$get_samples())
+#' summarize_traces_df(traces)
 #' }
 as_dsprrr_traces <- function(
   samples,
@@ -1057,32 +1122,34 @@ as_dsprrr_traces <- function(
 #' Summarize a traces data frame
 #'
 #' @description
-#' Provides summary statistics for a traces data frame. This is a standalone
-#' version of [summarize_traces()] that works on a data frame rather than
-#' requiring a Module object. Useful for analyzing converted vitals samples.
+#' `summarize_traces_df()` totals tokens, cost and latency over a traces data
+#' frame. It is the data frame version of [summarize_traces()], which takes a
+#' module; use it for traces exported with [export_traces()] or converted from
+#' vitals with [as_dsprrr_traces()].
 #'
-#' @param traces A traces tibble (from [export_traces()], [as_dsprrr_traces()],
-#'   or module `$get_traces()`).
+#' @param traces A traces data frame with `input_tokens`, `output_tokens`,
+#'   `total_tokens`, `latency_ms`, `cost` and, optionally, `model` columns.
 #'
-#' @return A list with:
-#'   - `n_traces`: Number of traces
-#'   - `total_tokens`: Total tokens used across all traces
-#'   - `total_input_tokens`: Total input tokens
-#'   - `total_output_tokens`: Total output tokens
-#'   - `total_cost`: Total cost in USD
-#'   - `total_latency_ms`: Sum of latencies
-#'   - `avg_latency_ms`: Average latency per request
-#'   - `avg_tokens_per_request`: Average tokens per request
-#'   - `model_usage`: Data frame with per-model breakdown
+#' @return A `dsprrr_trace_summary` list with `n_traces`, `total_tokens`,
+#'   `total_input_tokens`, `total_output_tokens`, `total_cost`,
+#'   `total_latency_ms`, `avg_latency_ms`, `avg_tokens_per_request`,
+#'   `token_breakdown` (input, output and their ratio) and `model_usage` (a
+#'   data frame of requests per model).
 #'
+#' @family integrations
 #' @export
 #' @examples
-#' \dontrun{
-#' # Analyze traces from vitals samples
-#' traces <- as_dsprrr_traces(task$get_samples())
+#' traces <- data.frame(
+#'   model = c("gpt-6-luna", "gpt-6-luna"),
+#'   input_tokens = c(52L, 55L),
+#'   output_tokens = c(6L, 7L),
+#'   total_tokens = c(58L, 62L),
+#'   latency_ms = c(820, 640),
+#'   cost = c(0.0001, 0.0001)
+#' )
 #' summary <- summarize_traces_df(traces)
-#' print(summary)
-#' }
+#' summary$total_tokens
+#' summary$model_usage
 summarize_traces_df <- function(traces) {
   if (!is.data.frame(traces)) {
     cli::cli_abort("traces must be a data frame")

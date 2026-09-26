@@ -1405,27 +1405,34 @@ Trial <- S7::new_class(
   )
 )
 
-#' Create a Trial Record
+#' Create an optimization trial record
 #'
 #' @description
-#' Create an optimization trial record with an automatically generated ID.
+#' `create_trial()` starts a record of one optimizer trial: which optimizer
+#' ran and with which parameters. Record the evaluation with
+#' [complete_trial()] and collect records in a [TrialLog]. You need these only
+#' when writing your own optimizer; the built-in optimizers create trials
+#' themselves.
 #'
 #' @param optimizer_name Name of the optimizer.
-#' @param params List of parameters for this trial.
-#' @param trial_id Optional trial ID. If NULL, auto-generated.
-#' @param notes Optional notes.
-#' @param trace_context A named, JSON-compatible correlation context. When
-#'   omitted during [compile()], the active compilation context is inherited;
-#'   supply `list()` explicitly to clear it.
+#' @param params Named list of the parameters tried.
+#' @param trial_id Optional trial ID. `NULL` (the default) generates one from
+#'   the time and a random suffix.
+#' @param notes Optional note.
+#' @param trace_context A named, JSON-compatible list of correlation fields.
+#'   When omitted inside [compile()], the compilation's context is used;
+#'   supply `list()` to clear it.
 #'
-#' @return An optimization trial record.
+#' @return A trial record (a `Trial` S7 object) with status `"pending"`.
+#' @family optimizer building blocks
 #' @export
 #'
 #' @examples
 #' trial <- create_trial(
-#'   optimizer_name = "BootstrapFewShot",
-#'   params = list(max_demos = 4, temperature = 0.7)
+#'   optimizer_name = "my-search",
+#'   params = list(max_bootstrapped_demos = 4L, instructions = "Be brief.")
 #' )
+#' trial
 create_trial <- function(
   optimizer_name,
   params = list(),
@@ -1484,26 +1491,34 @@ start_trial <- function(trial) {
   )
 }
 
-#' Complete a Trial
+#' Record evaluation results on a trial
 #'
 #' @description
-#' Mark a trial as completed with evaluation results.
+#' `complete_trial()` copies the scores, token use, cost and timing of an
+#' evaluation from [eval_program()] into a trial record and marks it
+#' `"completed"`.
 #'
-#' @param trial A trial record created by [create_trial()].
-#' @param eval_result An EvalResult object from eval_program().
-#' @param compiled_artifact_ref Optional compiled module to persist as the best
-#'   safe program artifact when this trial wins.
-#' @param notes Optional additional notes.
+#' @param trial A trial record from [create_trial()].
+#' @param eval_result The `EvalResult` returned by [eval_program()].
+#' @param compiled_artifact_ref Optional compiled program. When this trial is
+#'   the best one in a [TrialLog] with a `log_dir`, the log saves the program
+#'   as `best_program.rds`.
+#' @param notes Optional note that replaces the trial's note.
 #'
-#' @return The updated trial record with status `"completed"`.
+#' @return The updated trial record, with status `"completed"`.
+#' @family optimizer building blocks
 #' @examples
 #' \dontrun{
 #' program <- module(signature("question -> answer"))
 #' data <- data.frame(question = "2 + 2?", answer = "4")
-#' chat <- ellmer::chat_openai()
-#' result <- eval_program(program, data, metric_exact_match(), .llm = chat)
-#' trial <- create_trial("example")
-#' complete_trial(trial, result)
+#' result <- eval_program(
+#'   program,
+#'   data,
+#'   metric_exact_match(field = "answer"),
+#'   .llm = ellmer::chat_openai(model = "gpt-6-luna")
+#' )
+#' trial <- create_trial("my-search", params = list(variant = "baseline"))
+#' complete_trial(trial, result, compiled_artifact_ref = program)
 #' }
 #' @export
 complete_trial <- function(
@@ -1799,28 +1814,50 @@ trial_log_sync_locked <- function(
   list(memory = memory_trials, persisted = persisted)
 }
 
-#' Trial Log
+#' Record optimization trials in memory or on disk
 #'
 #' @description
-#' R6 class for managing a collection of trials with optional persistence.
-#' Existing JSONL records are loaded when `log_dir` already contains a log.
-#' New trials are appended one record at a time; matching trial IDs are
-#' idempotent, while conflicting records with the same ID are rejected. The
-#' `trials.jsonl` journal is authoritative. `metadata.json`, `README.md`, and
-#' `best_program.rds` are independently refreshed, best-effort derived views;
-#' they may lag after an interruption and are rebuilt by a later successful
-#' save. On Unix, a pre-existing private log directory must be owned by the
-#' effective user with exactly mode `0700`, and every pre-existing log file must
-#' have exactly mode `0600`; special mode bits are rejected. Every existing
-#' ancestor must be owned by root or the effective user, including sticky
-#' shared parents. Before initialization or a save to another directory locks,
-#' reads, or mutates storage, dsprrr preflights every known target: the lock,
-#' journal, metadata, summary, and best-program artifact. Unsafe paths are
-#' rejected without repair or reads. Directories and files created for the
-#' current operation are enforced as owner-only. Non-symbolic regular files
-#' remain required. Windows uses the account's filesystem ACLs, which base R
-#' cannot verify as owner-only, and fails closed if stable device and file
-#' identifiers are unavailable.
+#' A `TrialLog` collects the trial records of an optimizer run (see
+#' [create_trial()]). Without `log_dir` it lives in memory. With `log_dir` it
+#' writes every trial to a JSON Lines journal, `trials.jsonl`, as it is added,
+#' so a long run can be inspected or resumed later with [load_trial_log()].
+#' Optimizers create one when you give them a `log_dir`.
+#'
+#' @details
+#' A log directory holds `trials.jsonl`, the authoritative journal, and three
+#' derived files that are refreshed after each change: `metadata.json`,
+#' `README.md` (a readable summary) and `best_program.rds` (the best trial's
+#' program, when recorded). The derived files can lag behind after an
+#' interruption; the next successful save rebuilds them. Existing records in
+#' `log_dir` are loaded when the log is created. Adding a trial whose ID is
+#' already present is a no-op when the records match and an error when they
+#' differ.
+#'
+#' ## File permissions
+#'
+#' Logs are private to the current user. On Unix, an existing log directory
+#' must be owned by the effective user with mode `0700`, existing log files
+#' must have mode `0600` without special bits, and every existing parent
+#' directory must be owned by root or the effective user. Paths that break
+#' these rules, and symbolic links, are rejected without being read or
+#' repaired. New directories and files are created owner-only. On Windows,
+#' where base R cannot verify owner-only access, the account's filesystem ACLs
+#' apply, and logging fails if stable file identifiers are unavailable.
+#'
+#' @family optimizer building blocks
+#' @examples
+#' log <- TrialLog$new("my-search")
+#' log$add_trial(create_trial("my-search", params = list(k = 2L)))
+#' log$add_trial(create_trial("my-search", params = list(k = 4L)))
+#' log$n_trials()
+#' log$as_tibble()[, c("trial_id", "status", "mean_score")]
+#'
+#' # Persist to a directory and load it again
+#' dir <- file.path(tempdir(), "trial-log-example")
+#' saved <- TrialLog$new("my-search", log_dir = dir)
+#' saved$add_trial(create_trial("my-search", params = list(k = 2L)))
+#' list.files(dir)
+#' load_trial_log(dir)
 #'
 #' @export
 TrialLog <- R6::R6Class(
@@ -2219,31 +2256,35 @@ TrialLog <- R6::R6Class(
   private = list(log_guard = NULL)
 )
 
-#' Write Trials to JSONL File
+#' Write trial records to a JSON Lines file
 #'
 #' @description
-#' Write a list of optimization trial records to a JSONL (JSON Lines) file.
-#' Each trial is written as a single JSON object on its own line. On Unix, an
-#' existing target must already be owned by the effective user with mode
-#' exactly `0600`, without special bits, and every existing ancestor must be
-#' owned by root or the effective user. Unsafe paths are rejected rather than
-#' repaired.
+#' `write_trials_jsonl()` writes trial records to a JSON Lines file, one JSON
+#' object per trial and line. [read_trials_jsonl()] reads them back.
 #'
-#' @param trials Trial records created by [create_trial()].
-#' @param path File path for the JSONL file.
-#' @param append Whether to append to existing file. Default is FALSE.
+#' @details
+#' The file follows the permission rules described in [TrialLog]: on Unix, an
+#' existing file must be owned by the current user with mode `0600`, and every
+#' existing parent directory must be owned by root or the current user. Unsafe
+#' paths are rejected rather than repaired. The directory must already exist.
 #'
-#' @return Invisibly returns the path.
+#' @param trials A list of trial records from [create_trial()] or
+#'   [complete_trial()].
+#' @param path Path of the file to write.
+#' @param append Whether to append to an existing file (default `FALSE`).
+#'
+#' @return `path`, invisibly.
+#' @family optimizer building blocks
 #' @export
 #'
 #' @examples
-#' \dontrun{
 #' trials <- list(
-#'   create_trial("BootstrapFewShot", list(k = 4)),
-#'   create_trial("BootstrapFewShot", list(k = 8))
+#'   create_trial("my-search", params = list(k = 2L)),
+#'   create_trial("my-search", params = list(k = 4L))
 #' )
-#' write_trials_jsonl(trials, "trials.jsonl")
-#' }
+#' path <- tempfile(fileext = ".jsonl")
+#' write_trials_jsonl(trials, path)
+#' readLines(path, n = 1)
 write_trials_jsonl <- function(trials, path, append = FALSE) {
   original_path <- path
   absolute <- trial_log_absolute_path(path)
@@ -2441,39 +2482,47 @@ trial_log_parse_jsonl_file <- function(path) {
   trials
 }
 
-#' Read Trials from JSONL File
+#' Read trial records from a JSON Lines file
 #'
 #' @description
-#' Read optimization trial records from a JSONL file.
+#' `read_trials_jsonl()` reads the trial records written by
+#' [write_trials_jsonl()] or kept in a [TrialLog]'s `trials.jsonl`.
 #'
-#' @param path File path for the JSONL file.
+#' @param path Path of the JSON Lines file.
 #'
-#' @return A list of optimization trial records.
+#' @return A list of trial records.
+#' @family optimizer building blocks
 #' @export
 #'
 #' @examples
-#' \dontrun{
-#' trials <- read_trials_jsonl("trials.jsonl")
-#' }
+#' path <- tempfile(fileext = ".jsonl")
+#' trials <- list(create_trial("my-search", params = list(k = 2L)))
+#' write_trials_jsonl(trials, path)
+#' trials <- read_trials_jsonl(path)
+#' trials[[1]]
 read_trials_jsonl <- function(path) {
   trial_log_parse_jsonl_file(path)
 }
 
-#' Load Trial Log from Directory
+#' Load a saved trial log
 #'
 #' @description
-#' Load a TrialLog from a directory that was previously saved.
+#' `load_trial_log()` reopens a [TrialLog] from a directory written by an
+#' optimizer's `log_dir` or by `TrialLog$new(log_dir = )`.
 #'
 #' @param log_dir Path to the log directory.
 #'
-#' @return A TrialLog object.
+#' @return A [TrialLog].
+#' @family optimizer building blocks
 #' @export
 #'
 #' @examples
-#' \dontrun{
-#' log <- load_trial_log("logs/my_optimizer/")
-#' log$as_tibble()
-#' }
+#' dir <- file.path(tempdir(), "load-trial-log-example")
+#' log <- TrialLog$new("my-search", log_dir = dir)
+#' log$add_trial(create_trial("my-search", params = list(k = 2L)))
+#'
+#' restored <- load_trial_log(dir)
+#' restored$as_tibble()[, c("trial_id", "status")]
 load_trial_log <- function(log_dir) {
   if (!dir.exists(log_dir)) {
     cli::cli_abort("Directory not found: {.path {log_dir}}")
@@ -2512,6 +2561,3 @@ print_trial <- function(x, ...) {
 
   invisible(x)
 }
-
-# Register S7 print method
-S7::method(print, Trial) <- print_trial

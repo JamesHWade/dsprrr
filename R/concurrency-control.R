@@ -1,44 +1,44 @@
-#' Control Batch Concurrency
+#' Control how batches run in parallel
 #'
 #' @description
-#' Create a validated execution policy for batch calls made by [run()] and
-#' [run_dataset()]. The policy controls the backend, the exact maximum number
-#' of active requests, error budgets, timeouts, and cancellation behavior.
+#' `concurrency_control()` creates a policy for the `.concurrency` argument of
+#' [run()], [run_dataset()] and [evaluate()]: which backend runs the rows,
+#' how many requests may be active at once, and what happens on errors and
+#' timeouts. Without a policy, rows run one after another.
 #'
-#' `backend = "auto"` is the only mode that may select a different backend.
-#' An explicitly requested backend either runs with the requested contract or
-#' fails before provider work begins.
+#' @param backend Where rows run. `"sequential"` runs them one at a time.
+#'   `"ellmer"` sends them with ellmer's parallel requests. `"mirai"` runs them
+#'   in a pool of background R processes. `"auto"` (the default) is sequential
+#'   when `max_active = 1`; otherwise it uses ellmer when the chat and the
+#'   limits allow, then mirai, then sequential. Only `"auto"` ever picks a
+#'   different backend; an explicit backend that cannot honour the policy is
+#'   an error before any request is made.
+#' @param max_active The maximum number of requests active at once: ellmer's
+#'   `max_active` or the size of the mirai pool.
+#' @param task_timeout Seconds allowed per row, or `Inf`. A finite value
+#'   needs the mirai backend.
+#' @param total_timeout Seconds allowed for the whole batch, or `Inf`. A
+#'   finite value needs the mirai backend. At the deadline, active work is
+#'   stopped, which can add a short cleanup delay.
+#' @param max_errors How many failed rows to tolerate before no new rows are
+#'   started, or `Inf`. With `0`, work stops after the first failure. With
+#'   ellmer, a wave of up to `max_active` rows that has already started
+#'   finishes first.
+#' @param cancel If `TRUE` (the default), active mirai tasks are stopped when
+#'   the error budget or a timeout is reached. If `FALSE`, no new rows start,
+#'   but rows already running finish. A total timeout always stops active
+#'   work.
 #'
-#' @param backend Execution backend. `"auto"` uses sequential execution when
-#'   `max_active = 1`, otherwise preferring ellmer when the configured Chat and
-#'   requested limits are compatible, then mirai, then sequential execution.
-#'   Explicit `"ellmer"`, `"mirai"`, and `"sequential"` requests never fall
-#'   back.
-#' @param max_active Positive integer giving the exact maximum number of active
-#'   requests. It maps to ellmer's `max_active` argument and the size of a
-#'   dsprrr-owned mirai pool.
-#' @param task_timeout Per-task timeout in seconds, or `Inf` for no timeout.
-#'   Finite task timeouts currently require the mirai backend.
-#' @param total_timeout Total batch execution timeout in seconds, or `Inf` for
-#'   no timeout. Finite total timeouts currently require the mirai backend.
-#'   Shutdown is initiated at the deadline and verification is bounded; the
-#'   native backend reset can add brief cleanup latency before [run()] returns.
-#' @param max_errors Non-negative integer error budget, or `Inf`. Zero permits
-#'   work to begin and stops new work after the first failure. With ellmer, an
-#'   already-started wave of at most `max_active` rows completes before the
-#'   budget is observed.
-#' @param cancel Logical. When `TRUE`, active mirai tasks are stopped when an
-#'   error or timeout limit is reached. When `FALSE`, no new work is scheduled,
-#'   but already-started tasks are drained before return. A total timeout always
-#'   stops active work so no task continues after [run()] returns.
+#' @details
+#' The ellmer and mirai backends do not use dsprrr's response cache (the
+#' metadata reports `cache = "bypass"`); use the sequential backend when
+#' cached responses matter. Parallel backends are available for prediction
+#' modules from [module()] and [chain_of_thought()] and for some
+#' code-running modules; for other modules, a parallel backend is an error.
 #'
-#' @return A `dsprrr_concurrency_control` object for `.concurrency` in [run()],
-#'   [run_dataset()], or [evaluate()].
-#'
-#' @details Native ellmer and mirai batch execution currently bypass dsprrr's
-#'   response cache; structured metadata reports this as `cache = "bypass"`.
-#'   Choose `backend = "sequential"` when response-cache reuse is required.
+#' @return A policy object of class `dsprrr_concurrency_control`.
 #' @export
+#' @family execution
 #'
 #' @examples
 #' control <- concurrency_control(
@@ -48,6 +48,18 @@
 #'   total_timeout = 120,
 #'   max_errors = 1L
 #' )
+#' control
+#'
+#' \dontrun{
+#' classify <- module(signature("text -> sentiment"))
+#' reviews <- data.frame(text = c("Great!", "Broken on arrival", "Fine"))
+#' run_dataset(
+#'   classify,
+#'   reviews,
+#'   .llm = ellmer::chat_openai(model = "gpt-6-luna"),
+#'   .concurrency = concurrency_control(max_active = 3L)
+#' )
+#' }
 concurrency_control <- function(
   backend = c("auto", "sequential", "ellmer", "mirai"),
   max_active = 1L,

@@ -2,49 +2,41 @@
 % Please edit documentation in R/inspect.R
 \name{get_last_prompt}
 \alias{get_last_prompt}
-\title{Get the Last Prompt}
+\title{Show the most recent prompt and response}
 \usage{
 get_last_prompt()
 }
 \value{
-A \code{dsprrr_prompt_inspection} object containing:
-\itemize{
-\item \code{prompt}: The full prompt sent to the LLM
-\item \code{response}: The LLM's response
-\item \code{model}: The model used
-\item \code{tokens_in}: Input tokens used
-\item \code{tokens_out}: Output tokens generated
-\item \code{cost}: Cost in USD (if available)
-\item \code{timestamp}: When the call was made
-\item \code{source}: The module class that originated the call
-\item \code{program_artifact_id}: Exact executable program identity, when available
-\item \code{trace_context}: Caller-supplied correlation context
-}
-
-Returns \code{NULL} if no LLM calls have been made.
+A list of class \code{dsprrr_prompt_inspection} with \code{prompt} (the full
+prompt, including the instructions), \code{response}, \code{model}, \code{tokens_in},
+\code{tokens_out}, \code{cost} (in US dollars, when known), \code{duration_s},
+\code{timestamp}, \code{source} (the module class that made the call),
+\code{program_artifact_id} and \code{trace_context}. If no call has been recorded,
+\code{NULL}, invisibly, with a message.
 }
 \description{
-Returns detailed information about the most recent LLM call, including
-the prompt sent, response received, and metadata like tokens and cost.
-Works with module-based calls.
+\code{get_last_prompt()} returns the most recent model call in the prompt
+history: the prompt that was sent, the response, and the model, tokens,
+cost and duration. Printing it shows a "Prompt Inspection" block with
+Prompt, Response and Metadata sections (long prompts and responses are cut
+at 500 characters). Use it to see exactly what a module sent.
 }
 \examples{
 \dontrun{
-# Make an LLM call
-mod <- module(signature("question -> answer"))
-run(mod, question = "What is 2+2?", .llm = ellmer::chat_openai())
-
-# Inspect what happened
+qa <- module(signature("question -> answer"))
+run(qa, question = "What is 2 + 2?", .llm = ellmer::chat_openai(model = "gpt-6-luna"))
 get_last_prompt()
-#> --- Last Prompt -----------------------------------
-#> System: Given the fields `question`, produce the fields `answer`.
-#>
-#> User: question: What is 2+2?
-#>
-#> --- Response --------------------------------------
-#> Assistant: {"answer": "4"}
-#>
-#> --- Metadata --------------------------------------
-#> Model: gpt-4o-mini | Tokens: 45 in, 12 out | Cost: $0.0001
+get_last_prompt()$prompt
 }
 }
+\seealso{
+Other inspection:
+\code{\link{accessors}},
+\code{\link[=clear_prompt_history]{clear_prompt_history()}},
+\code{\link[=clear_traces]{clear_traces()}},
+\code{\link[=export_traces]{export_traces()}},
+\code{\link[=inspect_history]{inspect_history()}},
+\code{\link[=session_cost]{session_cost()}},
+\code{\link[=summarize_traces]{summarize_traces()}}
+}
+\concept{inspection}

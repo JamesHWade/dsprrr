@@ -256,3 +256,57 @@ test_that("helper functions work correctly", {
   )
   expect_error(extract_field("not a list", "field"), "Cannot extract field")
 })
+
+test_that("field-aware metrics infer the field from a data row", {
+  row <- tibble::tibble(text = "Great!", sentiment = "positive")
+
+  expect_true(metric_exact_match()(list(sentiment = "positive"), row))
+  expect_false(metric_exact_match()(list(sentiment = "negative"), row))
+  expect_equal(metric_f1()(list(sentiment = "positive"), row), 1)
+
+  # Direct calls with plain values are compared as given
+  expect_true(metric_exact_match()("positive", "positive"))
+})
+
+test_that("field inference errors clearly when the field is ambiguous", {
+  row <- tibble::tibble(question = "q", answer = "a", reason = "r")
+
+  expect_error(
+    metric_exact_match()(list(answer = "a", reason = "r"), row),
+    class = "dsprrr_metric_field_error"
+  )
+  expect_error(
+    metric_exact_match()(list(label = "a"), row),
+    "No prediction field matches"
+  )
+  expect_error(
+    metric_exact_match()("a", row),
+    class = "dsprrr_metric_field_error"
+  )
+  expect_true(
+    metric_exact_match(field = "answer")(list(answer = "a", reason = "x"), row)
+  )
+})
+
+test_that("evaluate() scores built-in metrics without an explicit field", {
+  local_reset_cache()
+  llm <- new_test_chat(
+    chat_structured = function(...) list(sentiment = "positive")
+  )
+  mod <- module(signature("text -> sentiment"))
+  data <- tibble::tibble(
+    text = c("great", "awful"),
+    sentiment = c("positive", "negative")
+  )
+
+  result <- evaluate(
+    mod,
+    data,
+    metric = metric_exact_match(),
+    .llm = llm,
+    .cache = FALSE
+  )
+
+  expect_equal(result$scores, c(1, 0))
+  expect_equal(result$n_errors, 0)
+})

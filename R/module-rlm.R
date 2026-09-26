@@ -1,134 +1,147 @@
-#' Recursive Language Model (RLM) Module
+#' Recursive Language Model (RLM) module
 #'
 #' @description
-#' An experimental inference-time analyst for inputs whose useful evidence is
-#' too large, irregular, or unpredictable to place in one prompt. RLM keeps the
-#' inputs in an R environment and lets the model iteratively inspect summaries,
-#' run computations, and decide what to examine next.
-#'
-#' @details
-#' Each input is available under `.context`. Generated R code can use ordinary R
-#' plus `peek()`, `search()`, value-returning `llm_query()` calls, declared host
-#' tools, and `SUBMIT(...)`. RLM requires a runner whose `policy()` advertises
-#' `persistent = TRUE`; variables therefore remain available across turns within
-#' one invocation. Invalid submitted fields or types become iteration errors
-#' that the model can repair. If no valid submission is produced, the separate
-#' `extract` predictor performs one typed fallback.
-#' RLM validates explicit ellmer string, number, integer, boolean, enum, array,
-#' and object outputs. Opaque `TypeJsonSchema` nodes are rejected at
-#' construction because they cannot participate in this strict repair loop.
-#'
-#' The `generate_action` and `extract` predictors are graph-visible through
-#' [named_modules()]. GEPA can tune them; nested MIPROv2 is instruction-only
-#' with bootstrapped demos disabled. BootstrapFewShot and LabeledFewShot reject
-#' programs containing an RLM until predictor-local demonstrations are
-#' available.
-#' Model-visible execution evidence defaults to a 10,000-character head-and-tail view
-#' after any runner-level transport limit; that formatted evidence is retained
-#' in the returned trajectory. Trace state retains hashes and sizes for input
-#' objects, not their full values.
-#' Structured metadata separates logical action, recursive, and extraction
-#' counts from verified provider calls. A child-predictor cache hit contributes
-#' zero provider calls and zero current-run usage; totals remain `NA` whenever
-#' every contributing provider turn cannot be verified.
-#'
-#' For generated code, prefer a fresh sandboxed [mcp_repl_runner()] factory.
-#' Its managed transport is intentionally bounded and is best for compact,
-#' JSON-compatible context. Its default policy disables network access but
-#' allows writes within the configured workspace. Declared host tools execute
-#' in the dsprrr host process, outside that guest sandbox. This backend requires
-#' the suggested `mcptools` package and Posit's external `mcp-repl` executable.
-#' For large data frames or richer local R objects,
-#' `r_code_runner(persistent = TRUE)` can stage context once, but it is
-#' trusted-input-only: the child process retains the host user's file, network,
-#' and environment permissions.
-#'
-#' Supply exactly one runtime source. A caller-owned `runner` is reused and
-#' never closed by dsprrr. An `interpreter_factory` creates one invocation-owned
-#' runner which dsprrr shuts down on success, error, or interrupt. Factory-backed
-#' RLM supports [run_async()] and isolated [run_dataset()] execution; token
-#' streaming is unavailable. A direct [run()] call always stages each supplied
-#' value as one REPL variable, regardless of its R length. Use [run_dataset()]
-#' for multiple invocations, with list-columns for data frames, vectors, lists,
-#' matrices, or other rich per-row values.
-#'
-#' @examples
-#' \dontrun{
-#' analyst <- rlm_module(
-#'   signature = "document, question -> answer",
-#'   interpreter_factory = function() mcp_repl_runner(timeout = 30)
-#' )
-#' compact_doc <- "Section 1: ...\nSection 2: ..."
-#' result <- run(
-#'   analyst,
-#'   document = compact_doc,
-#'   question = "What evidence supports the conclusion?",
-#'   .llm = ellmer::chat_openai()
-#' )
-#' }
+#' A module that explores its inputs with model-written R code. Documented
+#' with [rlm_module()].
 #'
 #' @name module-rlm
+#' @noRd
 NULL
 
-
-#' Create a Recursive Language Model (RLM) Module
+#' Create an RLM module that explores its inputs with R code
 #'
 #' @description
-#' Create an RLM whose implementation can adaptively explore R objects at
-#' inference time. Use RLM when the inspection path is not known in advance;
-#' use ordinary R when that path becomes stable, or Flex when labeled examples
-#' should discover a reusable implementation.
+#' `r lifecycle::badge("experimental")`
 #'
-#' @param signature A Signature object or string notation defining inputs/outputs
-#'   with explicit ellmer string, number, integer, boolean, enum, array, or
-#'   object output types. Opaque `TypeJsonSchema` outputs are unsupported.
-#' @param runner Optional caller-owned code runner implementing `execute()` and
-#'   `policy()`. Its policy must declare `persistent = TRUE`. It is retained,
-#'   never automatically shut down, and must not be shared concurrently. For the
-#'   trusted callr backend, use `r_code_runner(persistent = TRUE)`.
-#' @param interpreter_factory Optional zero-argument function returning a fresh
-#'   runner with `execute()`, `policy()`, optional `start()`, and idempotent
-#'   terminal `shutdown()`. Its policy must advertise
-#'   `persistent = TRUE` for RLM.
-#'   Supply exactly one of `runner` and `interpreter_factory`.
-#' @param max_iterations Maximum REPL iterations before fallback (default 20)
-#' @param max_llm_calls Maximum recursive LLM calls allowed (default 50)
-#' @param max_output_chars Maximum model-visible characters per execution output.
-#'   Longer output is shown as a head-and-tail excerpt. Default 10000.
-#' @param sub_lm Optional ellmer Chat for recursive queries. `NULL` inherits the
-#'   invocation's outer Chat. Set `max_llm_calls = 0` to disable recursion.
-#' @param verbose Logical. Print execution progress (default FALSE)
-#' @param tools Named list of user-defined host functions or ellmer ToolDef
-#'   objects. Guest code emits an
-#'   invocation-bound request, dsprrr validates it and invokes the original
-#'   function in the host,
-#'   and the guest is replayed with the response. Closures are never deparsed or
-#'   serialized into generated code. These tools execute in the host process,
-#'   outside the guest runner sandbox, with the host's permissions. ToolDef
-#'   schemas guide generation; the callable must still enforce semantic
-#'   constraints beyond the bridge's lossless JSON-compatible value checks.
-#'   A protocol safety ceiling permits at most 1,000 host-tool calls in one
-#'   generated R step.
-#' @param config Optional prediction configuration.
-#' @param chat Optional ellmer Chat object.
-#' @param generate_action Optional advanced action predictor.
-#' @param extract Optional advanced extraction predictor.
+#' `rlm_module()` creates a recursive language model (RLM) module for inputs
+#' whose useful evidence is too large, irregular or unpredictable to fit in one
+#' prompt. The inputs stay in an R session. In each step the model writes R
+#' code to inspect them, the runner executes it, and the model decides what to
+#' look at next, until it submits an answer. [rlm()] runs a one-off
+#' investigation.
+#'
+#' Use RLM when the inspection path is not known in advance. Use ordinary R
+#' once that path is stable, or [flex()] when labeled examples should discover
+#' a reusable implementation.
+#'
+#' @details
+#' ## What the generated code can use
+#'
+#' Each input is available under `.context`. Besides ordinary R, the code can
+#' call:
+#'
+#' * `SUBMIT(...)` to finish with the output values, by position or by name.
+#' * `peek(var, start, end)` to look at a slice of a string (characters) or a
+#'   vector (elements).
+#' * `search(var, pattern)` to search a variable with a regular expression.
+#' * `llm_query(query, context_slice)` and
+#'   `llm_query_batched(queries, slices)` to ask a model a sub-question and
+#'   get the answer back as a value. These count against `max_llm_calls`.
+#' * The functions supplied in `tools`.
+#'
+#' Sub-queries and tools run in the host R process, not in the runner: the
+#' generated code pauses, dsprrr handles the request, and the code is replayed
+#' with the response. Variables persist across steps within one call, so the
+#' runner's `policy()` must declare `persistent = TRUE`. Invalid submissions
+#' become errors that the model can repair. If no valid submission is made in
+#' `max_iterations` steps, the `extract` predictor makes one final typed
+#' attempt.
+#'
+#' RLM checks string, number, integer, boolean, enum, array and object
+#' outputs. Opaque `TypeJsonSchema` outputs are rejected when the module is
+#' created, because they cannot be checked in the repair loop.
+#'
+#' ## Runners
+#'
+#' Supply exactly one of `runner` and `interpreter_factory`. For model-written
+#' code, prefer a factory that returns a fresh sandboxed [mcp_repl_runner()].
+#' That transport is bounded and works best for compact, JSON-compatible
+#' inputs; its default sandbox disables network access but allows writes in
+#' the workspace. It needs the suggested mcptools package and Posit's
+#' `mcp-repl` executable. For large data frames or other rich R objects,
+#' `r_code_runner(persistent = TRUE)` can stage the inputs once, but it runs
+#' with your permissions, so use it for trusted input only. `tools` always run
+#' in the host process with your permissions.
+#'
+#' A `runner` you supply is reused and never shut down by dsprrr; a runner from
+#' `interpreter_factory` belongs to one call and is shut down when it ends.
+#' [run_async()] and isolated [run_dataset()] execution work with a factory;
+#' token streaming is unavailable. A direct [run()] call stages each input as
+#' one variable, whatever its length. For several investigations, use
+#' [run_dataset()] with list-columns for data frames, vectors, lists or other
+#' rich values.
+#'
+#' ## Optimization and traces
+#'
+#' The `generate_action` and `extract` predictors appear in [named_modules()],
+#' so [GEPA()] can tune them and [MIPROv2()] can tune their instructions (with
+#' `max_bootstrapped_demos = 0L`). [BootstrapFewShot()] and [LabeledFewShot()]
+#' reject programs that contain an RLM.
+#'
+#' The model sees at most `max_output_chars` characters of each execution
+#' result, as a head-and-tail excerpt, and that view is kept in the returned
+#' trajectory. Traces keep hashes and sizes of the inputs, not their values.
+#' Structured metadata counts action, recursive and extraction calls
+#' separately from verified provider calls. A cache hit counts as zero provider
+#' calls, and totals are `NA` when any provider turn cannot be verified.
+#'
+#' @param signature A [signature()] object or a signature string. Outputs must
+#'   use explicit string, number, integer, boolean, enum, array or object
+#'   types.
+#' @param runner A persistent code runner you own, such as
+#'   `r_code_runner(persistent = TRUE)`. Its policy must declare
+#'   `persistent = TRUE`, and it must not be used by two calls at the same
+#'   time.
+#' @param interpreter_factory A function with no arguments that returns a
+#'   fresh persistent runner for each call, such as
+#'   `function() mcp_repl_runner()`.
+#' @param max_iterations Integer maximum number of code steps before the
+#'   fallback extraction (default `20L`).
+#' @param max_llm_calls Integer maximum number of sub-queries (default `50L`).
+#'   Use `0L` to disable them.
+#' @param max_output_chars Maximum number of characters of each execution
+#'   result shown to the model (default `10000L`).
+#' @param sub_lm Optional ellmer Chat for sub-queries. `NULL` uses the chat of
+#'   the call.
+#' @param verbose Whether to print progress (default `FALSE`).
+#' @param tools Named list of R functions or ellmer tools that the generated
+#'   code can call. They run in the host process with your permissions. The
+#'   generated code sends a request that dsprrr checks before calling the
+#'   function; arguments are limited to JSON-compatible values (logical,
+#'   integer, double, character, `NULL` and nested lists), and one step may
+#'   make at most 1,000 tool calls. Tool definitions guide the model, but the
+#'   function must still check its arguments.
+#' @param config Optional module configuration, such as runtime settings.
+#' @param chat Optional ellmer Chat stored on the module.
+#' @param generate_action Optional replacement for the predictor that writes
+#'   the code (advanced).
+#' @param extract Optional replacement for the fallback extraction predictor
+#'   (advanced).
 #' @param ... Must be empty.
 #'
-#' @return An RLMModule object
+#' @return An RLM module.
 #'
 #' @export
-#' @examples
+#' @family program constructors
+#' @family code execution
+#' @examplesIf rlang::is_installed("callr")
+#' # Trusted input only: r_code_runner() runs with your permissions
+#' runner <- r_code_runner(persistent = TRUE)
+#' analyst <- rlm_module("document, question -> answer", runner = runner)
+#' analyst
+#' runner$shutdown()
+#'
 #' \dontrun{
+#' # A fresh sandboxed session for each call
 #' analyst <- rlm_module(
 #'   "document, question -> answer",
 #'   interpreter_factory = function() mcp_repl_runner(timeout = 30)
 #' )
-#' result <- run(
+#' run(
 #'   analyst,
 #'   document = "Owner: team-a\nObligation: rotate keys quarterly",
 #'   question = "Which obligations have no owner?",
-#'   .llm = ellmer::chat_openai()
+#'   .llm = ellmer::chat_openai(model = "gpt-6-luna")
 #' )
 #' }
 rlm_module <- function(
@@ -3101,83 +3114,78 @@ answer possible with what was discovered.
 )
 
 
-#' Run a Recursive Language Model in one call
+#' Run a recursive language model (RLM) in one call
 #'
 #' @description
-#' Run a one-off RLM investigation. By default this creates a fresh managed
-#' [mcp_repl_runner()] for the invocation. Its default OS sandbox disables
-#' network access but permits writes inside the allowed workspace. Pass
-#' `.runner` or `.interpreter_factory` to select another execution backend. For
-#' repeated use, optimization, or explicit lifecycle control, create an
-#' [rlm_module()] instead. The managed default requires the suggested
-#' `mcptools` package and Posit's external `mcp-repl` executable; see
-#' [mcp_repl_runner()] for setup and transport limits.
+#' `rlm()` runs a one-off RLM investigation: it builds an [rlm_module()], runs
+#' it on the inputs in `...`, and returns the result. By default each call gets
+#' a fresh managed [mcp_repl_runner()], whose sandbox disables network access
+#' but allows writes in its workspace; this needs the suggested mcptools
+#' package and Posit's `mcp-repl` executable. Pass `.runner` or
+#' `.interpreter_factory` to use another backend. For repeated use,
+#' optimization or control over the runner's lifetime, create an
+#' [rlm_module()] instead.
 #'
-#' @param signature A Signature object or string notation defining inputs/outputs
-#'   (e.g., `"question -> answer"`)
-#' @param ... Named signature inputs and [run()] controls such as
-#'   `.return_format`. Every supplied input is one scalar REPL variable,
-#'   including vectors, lists, matrices, and data frames. To run multiple
-#'   investigations, create an [rlm_module()] and call [run_dataset()]; store
-#'   rich per-row values in list-columns.
-#' @param .llm An ellmer Chat object. If `NULL`, uses the default Chat from
+#' @param signature A [signature()] object or a signature string such as
+#'   `"question -> answer"`.
+#' @param ... Named inputs, plus [run()] options such as `.return_format`.
+#'   Each input is staged as one variable, including vectors, lists, matrices
+#'   and data frames. For several investigations, create an [rlm_module()] and
+#'   use [run_dataset()] with list-columns.
+#' @param .llm An ellmer Chat. `NULL` uses the default chat from
 #'   [get_default_chat()].
-#' @param .timeout Numeric. Maximum execution time in seconds per code
-#'   evaluation for the implicit managed MCP runner. Explicit runners and
-#'   factories own their timeout settings. Default 30.
-#' @param .max_iterations Integer. Maximum REPL iterations before fallback.
-#'   Default 20.
-#' @param .max_llm_calls Integer. Maximum recursive LLM calls allowed.
-#'   Default 50.
-#' @param .max_output_chars Maximum model-visible characters per execution
-#'   output. Default 10000.
-#' @param .sub_lm Optional ellmer Chat for recursive `llm_query()` calls.
-#'   `NULL` inherits `.llm`; use `.max_llm_calls = 0` to disable recursion.
-#' @param .tools Named list of user-defined R functions or ellmer ToolDef
-#'   objects available in the REPL. They execute in the dsprrr host process,
-#'   outside the guest runner sandbox.
-#' @param .verbose Logical. Print execution progress. Default `FALSE`.
-#' @param .runner Optional caller-owned runner. Supply at most one of this and
-#'   `.interpreter_factory`. Its policy must advertise `persistent = TRUE`.
-#' @param .interpreter_factory Optional zero-argument factory for a fresh,
-#'   invocation-owned runner. When both execution arguments are `NULL`, a
-#'   managed `mcp_repl_runner()` factory is used. Custom factories must return
-#'   a runner whose policy advertises `persistent = TRUE`.
+#' @param .timeout Maximum execution time per code step, in seconds, for the
+#'   default managed runner (default 30). Runners you supply use their own
+#'   timeout.
+#' @param .max_iterations Integer maximum number of code steps before the
+#'   fallback extraction (default `20L`).
+#' @param .max_llm_calls Integer maximum number of sub-queries (default `50L`).
+#' @param .max_output_chars Maximum number of characters of each execution
+#'   result shown to the model (default `10000L`).
+#' @param .sub_lm Optional ellmer Chat for `llm_query()` sub-queries. `NULL`
+#'   uses `.llm`; set `.max_llm_calls = 0L` to disable sub-queries.
+#' @param .tools Named list of R functions or ellmer tools that the generated
+#'   code can call. They run in the host R process, outside the sandbox.
+#' @param .verbose Whether to print progress (default `FALSE`).
+#' @param .runner Optional persistent runner you own. Supply at most one of
+#'   this and `.interpreter_factory`.
+#' @param .interpreter_factory Optional function with no arguments that returns
+#'   a fresh persistent runner for the call. When both this and `.runner` are
+#'   `NULL`, a managed [mcp_repl_runner()] is used.
 #'
-#' @return With `.return_format = "simple"` (the default), the output record
-#'   according to the signature. With `.return_format = "structured"`, a
-#'   `dsprrr_result` containing `output`, `chat`, and `metadata`.
+#' @return With `.return_format = "simple"` (the default), a named list with
+#'   the signature's outputs. With `.return_format = "structured"`, a
+#'   `dsprrr_result` with `output`, `chat` and `metadata`.
 #'
 #' @export
+#' @family program constructors
+#' @family code execution
 #' @examples
 #' \dontrun{
 #' result <- rlm(
 #'   "document, question -> answer",
 #'   document = "Owner: team-a\nObligation: rotate keys quarterly",
 #'   question = "What are the main themes?",
-#'   .llm = ellmer::chat_openai(),
+#'   .llm = ellmer::chat_openai(model = "gpt-6-luna"),
 #'   .max_iterations = 4L,
 #'   .max_llm_calls = 0L
 #' )
 #'
-#' # Large or rich local R objects require explicit trusted execution.
+#' # Rich local R objects need a trusted runner that can stage them
 #' sessions <- data.frame(
 #'   release = c("2.3.9", "2.4.0"),
 #'   converted = c(TRUE, FALSE)
 #' )
 #' local_runner <- r_code_runner(persistent = TRUE)
-#' result <- rlm("sessions, question -> answer", sessions = sessions,
+#' result <- rlm(
+#'   "sessions, question -> answer",
+#'   sessions = sessions,
 #'   question = "Where did conversion fall?",
-#'   .llm = ellmer::chat_openai(),
-#'   .runner = local_runner)
+#'   .llm = ellmer::chat_openai(model = "gpt-6-luna"),
+#'   .runner = local_runner
+#' )
 #' local_runner$shutdown()
 #' }
-#'
-#' @seealso
-#' * [rlm_module()] for creating reusable RLM modules
-#' * [r_code_runner()] for configuring the code execution backend
-#' * [mcp_repl_runner()] for managed sandboxed execution
-#' * [run()] for executing modules
 rlm <- function(
   signature,
   ...,

@@ -739,3 +739,59 @@ test_that("with_assertions(best_of_n(mod)) nests without a crash (dsprrr-wx6)", 
   # assertion passes on the first outer attempt; inner best_of_n runs twice
   expect_equal(sort(seen$ids), c("1.1", "1.2"))
 })
+
+test_that("refine() runs through run() when the signature declares feedback", {
+  local_reset_cache()
+  prompts <- character()
+  llm <- new_test_chat(
+    chat_structured = function(prompt, ...) {
+      prompts <<- c(prompts, prompt)
+      if (length(prompts) == 1) {
+        list(answer = "Paris is the capital")
+      } else {
+        list(answer = "Paris")
+      }
+    }
+  )
+  one_word <- function(pred, inputs) {
+    as.numeric(length(strsplit(pred$answer, "\\s+")[[1]]) == 1)
+  }
+  qa <- module(signature("question, feedback -> answer"))
+  refined <- refine(
+    qa,
+    N = 3L,
+    reward_fn = one_word,
+    feedback_template = "Your answer '{prediction}' was too long."
+  )
+
+  result <- run(refined, question = "Capital of France?", .llm = llm)
+
+  expect_equal(result$answer, "Paris")
+  expect_length(prompts, 2)
+  expect_match(prompts[[1]], "No feedback yet.", fixed = TRUE)
+  expect_match(prompts[[2]], "was too long", fixed = TRUE)
+})
+
+test_that("refine() adds feedback to the prompt when the signature omits it", {
+  local_reset_cache()
+  prompts <- character()
+  llm <- new_test_chat(
+    chat_structured = function(prompt, ...) {
+      prompts <<- c(prompts, prompt)
+      list(answer = if (length(prompts) == 1) "two words" else "one")
+    }
+  )
+  one_word <- function(pred, inputs) {
+    as.numeric(length(strsplit(pred$answer, "\\s+")[[1]]) == 1)
+  }
+  refined <- refine(
+    module(signature("question -> answer")),
+    N = 2L,
+    reward_fn = one_word
+  )
+
+  result <- run(refined, question = "Pick a word", .llm = llm)
+
+  expect_equal(result$answer, "one")
+  expect_match(prompts[[2]], "feedback:", fixed = TRUE)
+})

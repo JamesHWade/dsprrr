@@ -15,7 +15,7 @@ ReAnchor(
 }
 \arguments{
 \item{metric}{A metric function \verb{function(prediction, expected_row)}, such
-as \code{\link[=metric_exact_match]{metric_exact_match()}}. Required.}
+as \code{metric_exact_match(field = "match")}. Required.}
 
 \item{metric_threshold, max_errors}{Inherited teleprompter settings. They are
 not used by \code{ReAnchor}.}
@@ -23,13 +23,14 @@ not used by \code{ReAnchor}.}
 \item{fields}{Optional character vector naming the output fields to
 calibrate. \code{NULL} (the default) calibrates every compatible field.}
 
-\item{folds}{Maximum number of folds for the held-out acceptance check.}
+\item{folds}{Integer maximum number of folds for the held-out acceptance
+check (default \code{5L}, at least \code{2L}).}
 
-\item{max_candidates}{Maximum number of candidate settings tried per search
-step.}
+\item{max_candidates}{Integer maximum number of candidate settings tried
+per search step (default \code{40L}, at least \code{3L}).}
 }
 \value{
-A \code{ReAnchor} teleprompter for use with \code{\link[=compile]{compile()}}.
+A \code{ReAnchor} object to pass to \code{\link[=compile]{compile()}}.
 }
 \description{
 \ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
@@ -43,24 +44,24 @@ the model.
 \details{
 Compilation runs in four steps.
 \enumerate{
-\item \strong{Baseline.} The module runs on \code{trainset} as given, and the metric
-scores each row.
-\item \strong{Evidence.} Every compatible output is switched to evidence decoding.
+\item Baseline: the module runs on \code{trainset} as given, and the metric scores
+each row.
+\item Evidence: every compatible output is switched to evidence decoding.
 That includes fields already configured with \code{\link[=with_decisions]{with_decisions()}}, plus
 described \code{type_boolean()} and \code{type_enum()} outputs, which become
 \code{\link[=decision_bool]{decision_bool()}} and \code{\link[=decision_choice]{decision_choice()}} decisions. The module runs
 once more and records the probabilities behind each decision.
-\item \strong{Fitting.} Every setting is searched locally against that recorded
-evidence, so the search makes \strong{no further provider calls}. A setting
-anywhere between two neighbouring observed values makes the same
+\item Fitting: every setting is searched locally against that recorded
+evidence, so the search makes no further provider calls. A setting
+anywhere between two neighboring observed values makes the same
 decisions, so the candidates are the midpoints of those gaps: between
 P(TRUE) values for a threshold, between mean level indexes for a cut, and
 between the points where an option's pick flips for a weight (on a log
 scale). At most \code{max_candidates} gaps are tried per step, thinned to
 evenly spaced quantiles. Among equal scores, the candidate in the widest
 gap wins.
-\item \strong{Acceptance.} A new setting replaces the current one only if it scores
-strictly better \emph{and} passes a fold check. The check splits \code{trainset}
+\item Acceptance: a new setting replaces the current one only if it scores
+strictly better and passes a fold check. The check splits \code{trainset}
 into up to \code{folds} parts. For each part, it picks a setting on the other
 parts and scores that pick on the held-out part. The combined held-out
 score must beat the current setting's. The fully fitted module must pass
@@ -84,6 +85,8 @@ number of candidates tried, and the fold-check outcomes. Use
 \code{\link[=decision_settings]{decision_settings()}} to see the resulting settings.
 }
 \examples{
+ReAnchor(metric = metric_exact_match(field = "match"), folds = 3L)
+
 \dontrun{
 sig <- signature(
   inputs = list(input("pair", description = "Two product listings")),
@@ -98,12 +101,35 @@ tuned <- compile(
   ReAnchor(metric = metric_exact_match(field = "match")),
   trainset,
   valset = valset,
-  .llm = ellmer::chat_openai(model = "gpt-4.1-mini")
+  .llm = ellmer::chat_openai(model = "gpt-6-luna")
 )
 decision_settings(tuned)
 optimization_result(tuned)$extensions$re_anchor
 }
 }
 \seealso{
-\code{\link[=with_decisions]{with_decisions()}}, \code{\link[=decision_settings]{decision_settings()}}, \code{\link[=decision_evidence]{decision_evidence()}}
+Other teleprompters:
+\code{\link[=AutoResearch]{AutoResearch()}},
+\code{\link[=BetterTogether]{BetterTogether()}},
+\code{\link[=BootstrapFewShot]{BootstrapFewShot()}},
+\code{\link[=BootstrapFewShotWithRandomSearch]{BootstrapFewShotWithRandomSearch()}},
+\code{\link[=COPRO]{COPRO()}},
+\code{\link[=GEPA]{GEPA()}},
+\code{\link[=GridSearchTeleprompter]{GridSearchTeleprompter()}},
+\code{\link[=KNNFewShot]{KNNFewShot()}},
+\code{\link[=LabeledFewShot]{LabeledFewShot()}},
+\code{\link[=MIPROv2]{MIPROv2()}},
+\code{\link[=MetaHarness]{MetaHarness()}},
+\code{\link[=Omni]{Omni()}},
+\code{\link[=SIMBA]{SIMBA()}},
+\code{\link[=Teleprompter]{Teleprompter()}},
+\code{\link[=compile]{compile()}}
+
+Other decisions:
+\code{\link[=decision_evidence]{decision_evidence()}},
+\code{\link[=decision_settings]{decision_settings()}},
+\code{\link{decision_types}},
+\code{\link[=with_decisions]{with_decisions()}}
 }
+\concept{decisions}
+\concept{teleprompters}

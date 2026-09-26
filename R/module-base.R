@@ -1,7 +1,7 @@
 #' R6 Module Base Class
 #'
 #' @description
-#' Base class for all DSPrrr modules. Provides core functionality for
+#' Base class for all dsprrr modules. Provides core functionality for
 #' stateful LLM modules with signatures, configuration, and mutable state.
 #'
 #' @keywords internal
@@ -59,6 +59,14 @@ Module <- R6::R6Class(
     #' @return Tibble with output, trace, metadata columns
     forward = function(batch, .llm = NULL, trace = TRUE, ...) {
       cli::cli_abort("forward() must be implemented by subclass")
+    },
+
+    #' @description
+    #' Names of signature inputs the module fills in itself (for example the
+    #' retrieved context of a RAG module), so callers need not supply them.
+    #' @return A character vector.
+    supplied_inputs = function() {
+      character()
     },
 
     #' @description
@@ -144,7 +152,8 @@ Module <- R6::R6Class(
         missing = if (inherits(self, "FlexModule")) "ignore" else "error",
         extra = if (inherits(self, "FlexModule")) "error" else "warn",
         type = if (inherits(self, "FlexModule")) "error" else "warn",
-        context = "inputs"
+        context = "inputs",
+        supplied = self$supplied_inputs()
       )
 
       input_contract <- module_input_contract(self, inputs)
@@ -1466,37 +1475,30 @@ run_factory_interpreter_batch <- function(
 #' @noRd
 `%||%` <- function(x, y) if (is.null(x)) y else x
 
-#' Predict Method for Modules (tidymodels-style)
+#' Predict with a module on new data
 #'
 #' @description
-#' S3 predict method for dsprrr Modules, providing a tidymodels-familiar
-#' interface. This is an alternative to `run_dataset()` that matches the
-#' pattern used by parsnip and other tidymodels packages.
+#' `predict()` on a module is [run_dataset()] under the name tidymodels users
+#' expect: `predict(module, new_data)` is `run_dataset(module, new_data)`.
 #'
-#' @param object A dsprrr Module object
-#' @param new_data A data frame or tibble with columns matching the module's
-#'   signature inputs
-#' @param .llm Optional ellmer Chat object. When supplied, it takes precedence
-#'   over the Chat stored on `object` and the package default.
-#' @param ... Additional arguments passed to `run_dataset()`
+#' @param object A module, such as one created with [module()].
+#' @param new_data A data frame with one column per signature input.
+#' @param .llm An ellmer Chat to use instead of the one stored on `object` or
+#'   the default chat.
+#' @param ... Passed to [run_dataset()], for example `.return_format`,
+#'   `.concurrency` or `.cache`.
 #'
-#' @return A tibble with the input columns plus prediction results.
-#'   The output column is named according to the signature's output field.
+#' @return A tibble with the columns of `new_data` plus a `result`
+#'   list-column holding each row's output as a named list, exactly as
+#'   returned by [run_dataset()].
 #'
 #' @export
+#' @family execution
 #' @examples
-#' \dontrun{
-#' # Create a module
-#' mod <- signature("text -> sentiment") |>
-#'   module( chat = chat_openai())
-#'
-#' # Use predict() like parsnip models
-#' new_data <- tibble::tibble(text = c("Great!", "Terrible"))
-#' predict(mod, new_data)
-#'
-#' # Equivalent to run_dataset()
-#' run_dataset(mod, new_data, .llm = mod$chat)
-#' }
+#' shout <- module_fn("text -> reply", function(text) toupper(text))
+#' predictions <- predict(shout, data.frame(text = c("great", "terrible")))
+#' predictions
+#' vapply(predictions$result, function(r) r$reply, character(1))
 predict.Module <- function(object, new_data, .llm = NULL, ...) {
   if (!is.data.frame(new_data)) {
     cli::cli_abort("{.arg new_data} must be a data frame or tibble")

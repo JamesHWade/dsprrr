@@ -1,30 +1,59 @@
-#' Callable Module
+#' Wrap an R function as a module
 #'
 #' @description
-#' `module_fn()` wraps an ordinary R function in a dsprrr Module. This gives
-#' custom callables the same `run()` and `evaluate()` surface as built-in
-#' modules without requiring users to subclass dsprrr internals.
+#' `module_fn()` turns an ordinary R function into a module, so it can be used
+#' with [run()], [run_dataset()], [evaluate()] and [pipeline()] like any other.
+#' Use it for rule-based baselines, for steps that call other code or
+#' services, or for your own logic around several model calls.
 #'
-#' @param signature A signature object created by [signature()], or a signature
-#'   string.
-#' @param forward Function called with named signature inputs. If the function
-#'   accepts `.llm` or `...`, the active chat object is passed as `.llm`.
-#'   Return a named list matching the signature output fields, or a scalar when
-#'   the signature has exactly one output field. `forward` is invoked once per
-#'   row; use [run_dataset()] or [evaluate()] to process multi-row datasets.
-#' @param chat Optional ellmer Chat object stored on the module.
-#' @param name Optional module name stored in `config$name`.
-#' @param config Optional configuration metadata.
+#' @param signature A signature from [signature()], or a signature string.
+#' @param forward A function called once per input row with the inputs as
+#'   named arguments. If it has a `.llm` argument or `...`, it also receives a
+#'   chat as `.llm`: the one passed to [run()], else the module's chat, else
+#'   the scoped or default chat, else `NULL` (no chat is auto-detected from
+#'   API keys). It returns a named list with the signature's output fields,
+#'   or a single value when there is one output field. Missing or unknown
+#'   fields, and values of the wrong type, are an error.
+#' @param chat An ellmer Chat stored on the module and passed to `forward` as
+#'   `.llm`.
+#' @param name Optional module name, stored in `config$name`.
+#' @param config Optional list of settings stored on the module.
 #'
-#' @return An R6 `FnModule` object inheriting from the internal Module base class.
+#' @details
+#' Function-backed modules record traces but not token counts or costs.
+#' [compile()] and the optimizers refuse them, because there is no prompt to
+#' optimize.
+#'
+#' @return A module (an R6 object of class `FnModule`).
 #' @export
+#' @family program constructors
 #'
 #' @examples
-#' summarizer <- module_fn(
+#' truncate <- module_fn(
 #'   "text -> summary",
-#'   function(text, ...) list(summary = substr(text, 1, 20))
+#'   function(text) substr(text, 1, 20)
 #' )
-#' run(summarizer, text = "A long piece of text")
+#' run(truncate, text = "A long piece of text that needs a summary")
+#'
+#' # Return a named list for several outputs
+#' stats <- module_fn(
+#'   "text -> n_words: int, n_chars: int",
+#'   function(text) {
+#'     list(n_words = length(strsplit(text, "\\s+")[[1]]), n_chars = nchar(text))
+#'   }
+#' )
+#' run(stats, text = "Four words right here")
+#'
+#' \dontrun{
+#' # Take `.llm` to call a model yourself
+#' translate <- module_fn(
+#'   "text -> translation",
+#'   function(text, .llm) {
+#'     .llm$chat(paste("Translate to French:", text), echo = "none")
+#'   }
+#' )
+#' run(translate, text = "Good morning", .llm = ellmer::chat_openai(model = "gpt-6-luna"))
+#' }
 module_fn <- function(
   signature,
   forward,

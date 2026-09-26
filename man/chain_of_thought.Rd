@@ -2,7 +2,7 @@
 % Please edit documentation in R/signature-transforms.R
 \name{chain_of_thought}
 \alias{chain_of_thought}
-\title{Create a Chain-of-Thought Module}
+\title{Create a chain-of-thought module}
 \usage{
 chain_of_thought(
   x,
@@ -15,34 +15,50 @@ chain_of_thought(
 )
 }
 \arguments{
-\item{x}{A signature object created by \code{\link[=signature]{signature()}}, or string notation.}
+\item{x}{A signature from \code{\link[=signature]{signature()}}, or a signature string.}
 
-\item{prefix}{Character. The prefix for the reasoning field.}
+\item{prefix}{Start of the reasoning field's description; see
+\code{\link[=with_reasoning]{with_reasoning()}}.}
 
-\item{chat}{Optional ellmer Chat object.}
-
-\item{template}{Optional glue template.}
-
-\item{demos}{Optional demonstration examples.}
-
-\item{config}{Optional prediction configuration.}
+\item{chat, template, demos, config}{As in \code{\link[=module]{module()}}.}
 
 \item{...}{Must be empty.}
 }
 \value{
-A PredictModule with reasoning enabled
+A prediction module, as from \code{\link[=module]{module()}}. \code{\link[=run]{run()}} returns the
+reasoning along with the other outputs, for example
+\code{list(reasoning = "...", answer = "...")}.
 }
 \description{
-Convenience function that creates a PredictModule with chain-of-thought
-reasoning enabled. This is equivalent to calling \code{with_reasoning()} on
-a signature and then creating a module from it.
+\code{chain_of_thought()} is \code{module(with_reasoning(x))}: a prediction module
+whose output starts with a \code{reasoning} field, so the model reasons step by
+step before it gives the other outputs.
 }
 \examples{
-# Create a chain-of-thought QA module
-mod <- chain_of_thought("question -> answer")
+solver <- chain_of_thought("question -> answer: float")
+solver
 
-# Use it like any other module
-# result <- run(mod, question = "What is 15 * 24?", .llm = llm)
-# result$reasoning contains step-by-step reasoning
-# result$answer contains the final answer
+\dontrun{
+result <- run(
+  solver,
+  question = "What is 15 * 24?",
+  .llm = ellmer::chat_openai(model = "gpt-6-luna")
+)
+result$reasoning
+result$answer
 }
+}
+\seealso{
+Other program constructors:
+\code{\link[=code_act]{code_act()}},
+\code{\link[=flex]{flex()}},
+\code{\link[=module]{module()}},
+\code{\link[=module_fn]{module_fn()}},
+\code{\link[=multi_chain_comparison]{multi_chain_comparison()}},
+\code{\link[=program_of_thought]{program_of_thought()}},
+\code{\link[=rag_module]{rag_module()}},
+\code{\link[=react]{react()}},
+\code{\link[=rlm]{rlm()}},
+\code{\link[=rlm_module]{rlm_module()}}
+}
+\concept{program constructors}

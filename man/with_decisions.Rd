@@ -63,6 +63,10 @@ triage <- module(sig) |>
 decision_settings(triage)
 }
 \seealso{
-\link{decision_types}, \code{\link[=decision_evidence]{decision_evidence()}}, \code{\link[=decision_settings]{decision_settings()}},
-\code{\link[=ReAnchor]{ReAnchor()}}
+Other decisions:
+\code{\link[=ReAnchor]{ReAnchor()}},
+\code{\link[=decision_evidence]{decision_evidence()}},
+\code{\link[=decision_settings]{decision_settings()}},
+\code{\link{decision_types}}
 }
+\concept{decisions}

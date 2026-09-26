@@ -2,36 +2,58 @@
 % Please edit documentation in R/optimize.R
 \name{module_trials}
 \alias{module_trials}
-\title{Summarise optimisation trials for a module}
+\title{Summarize grid search trials}
 \usage{
 module_trials(module, objective = c("maximize", "minimize"))
 }
 \arguments{
-\item{module}{A DSPrrr module that has been optimised with \code{\link[=optimize_grid]{optimize_grid()}}.}
+\item{module}{A module.}
 
-\item{objective}{Optimisation direction; \code{"maximize"} (default) selects the
-highest score, \code{"minimize"} selects the lowest.}
+\item{objective}{\code{"maximize"} (the default) or \code{"minimize"}: which end of
+the scores counts as best.}
 }
 \value{
-A tibble with one row containing:
+A one-row tibble with columns:
 \itemize{
-\item \code{n_trials}: number of trials evaluated.
-\item \code{best_trial}: identifier of the best-performing trial.
-\item \code{best_score}: best score achieved.
-\item \code{mean_score}: mean across all scores.
-\item \code{std_error}: standard error of the scores.
-\item \code{best_params}: list-column containing the best parameter set.
-\item \code{trials}: list-column containing the full trials tibble.
+\item \code{n_trials}: number of trials.
+\item \code{best_trial}: identifier of the best trial.
+\item \code{best_score}: its score.
+\item \code{mean_score}, \code{std_error}: mean and standard error of the trial scores.
+\item \code{best_params}: list-column with the best trial's parameters.
+\item \code{trials}: list-column with the full trials tibble.
 }
+
+Without trials, \code{n_trials} is 0 and the scores are \code{NA}. When every trial
+failed, a warning is raised and the scores are \code{NA}.
 }
 \description{
-Provide a tidy summary of the optimisation trials recorded on a module.
-Useful for reporting best scores, average performance, and highlighting the
-winning parameter combination.
+\code{module_trials()} summarizes the trials that \code{\link[=optimize_grid]{optimize_grid()}} recorded on a
+module: how many were run, the best trial, its score and parameters, and
+the mean and standard error of all trial scores. It reads only the
+grid-search trials in \code{module$state$trials}, which \code{\link[=optimize_grid]{optimize_grid()}} and
+\code{\link[=GridSearchTeleprompter]{GridSearchTeleprompter()}} write. For other optimizers, use
+\code{\link[=optimization_result]{optimization_result()}} or \code{\link[=top_trials]{top_trials()}}.
 }
 \examples{
+mod <- module(signature("text -> sentiment"))
+module_trials(mod)
+
 \dontrun{
-summary <- module_trials(my_module)
-summary$best_params
+optimize_grid(
+  mod,
+  data = devset,
+  metric = metric_exact_match(field = "sentiment"),
+  grid = data.frame(reasoning_effort = c("none", "low", "medium")),
+  .llm = ellmer::chat_openai(model = "gpt-6-luna")
+)
+module_trials(mod)$best_params
 }
 }
+\seealso{
+Other grid search:
+\code{\link[=GridSearchTeleprompter]{GridSearchTeleprompter()}},
+\code{\link[=module_metrics]{module_metrics()}},
+\code{\link[=module_parameters]{module_parameters()}},
+\code{\link[=optimize_grid]{optimize_grid()}}
+}
+\concept{grid search}

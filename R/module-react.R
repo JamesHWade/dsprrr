@@ -533,31 +533,61 @@ ReactModule <- R6::R6Class(
 )
 
 
-#' Create a ReAct module
+#' Create a tool-using ReAct module
 #'
 #' @description
-#' Create a tool-using module that alternates reasoning with tool calls. Tool
-#' use is explicit: passing tools to [module()] never changes a prediction
-#' module into a ReAct agent.
+#' `react()` builds an agent that alternates between reasoning and calling
+#' tools until it can answer, then returns a structured answer that follows
+#' the signature (the ReAct pattern).
 #'
-#' @param signature A Signature object or string notation defining inputs and
-#'   outputs.
-#' @param tools A list of ellmer ToolDef objects.
-#' @param max_iterations Maximum number of tool-call iterations.
-#' @param chat Optional ellmer Chat object.
-#' @param template Optional glue template for prompt generation.
-#' @param demos Optional list of demonstration examples.
-#' @param config Optional prediction configuration.
+#' @param signature A signature from [signature()], or a signature string.
+#' @param tools A list of ellmer tool definitions, made with
+#'   [ellmer::tool()], [ragnar_tool()], [create_search_tool()] or
+#'   [as_ellmer_tool()].
+#' @param max_iterations Maximum number of tool-calling rounds. Several tool
+#'   calls in one model turn count as one round. Exceeding the limit is an
+#'   error.
+#' @param chat,template,demos,config As in [module()].
 #' @param ... Must be empty.
 #'
-#' @return A ReactModule executed with [run()].
+#' @details
+#' ellmer runs the tool-calling loop: the model's tool requests are executed
+#' and their results sent back, keeping ellmer's turn history and tool-call
+#' IDs. After the loop, one more request asks for the final answer in the
+#' signature's output format. ReAct calls do not use the response cache.
+#'
+#' [run()] accepts one input at a time for this module; use [run_dataset()]
+#' for several. With `.return_format = "structured"`, the metadata records
+#' `iterations`, `tool_calls` and `tools_used`.
+#'
+#' @return A module (an R6 object of class `ReactModule`) to use with [run()]
+#'   and [run_dataset()].
 #' @export
+#' @family program constructors
 #' @examples
+#' lookup_population <- ellmer::tool(
+#'   function(city) {
+#'     switch(city, Paris = "2.1 million", Lyon = "0.5 million", "unknown")
+#'   },
+#'   name = "lookup_population",
+#'   description = "Look up the population of a French city.",
+#'   arguments = list(city = ellmer::type_string("City name"))
+#' )
+#'
 #' agent <- react(
 #'   "question -> answer",
-#'   tools = list(),
-#'   max_iterations = 10
+#'   tools = list(lookup_population),
+#'   max_iterations = 5L
 #' )
+#' agent
+#'
+#' \dontrun{
+#' llm <- ellmer::chat_openai(model = "gpt-6-luna")
+#' run(agent, question = "How many more people live in Paris than in Lyon?", .llm = llm)
+#'
+#' questions <- data.frame(question = c("Population of Paris?", "Population of Lyon?"))
+#' run_dataset(agent, questions, .llm = llm)
+#' }
 react <- function(
   signature,
   tools = list(),

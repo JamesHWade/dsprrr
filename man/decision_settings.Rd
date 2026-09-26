@@ -21,6 +21,25 @@ numeric vectors).
 Lists the effective numeric settings of every decision output configured
 with \code{\link[=with_decisions]{with_decisions()}}, including values fitted by \code{\link[=ReAnchor]{ReAnchor()}}.
 }
+\examples{
+sig <- signature(
+  inputs = list(input("ticket", description = "Customer report")),
+  output_type = ellmer::type_object(
+    urgent = ellmer::type_boolean("Is the service blocked?")
+  )
+)
+triage <- module(sig) |> with_decisions(urgent = decision_bool())
+decision_settings(triage)
+
+# A stricter threshold for the same question
+stricter <- triage |> with_decisions(urgent = decision_bool(threshold = 0.8))
+decision_settings(stricter)
+}
 \seealso{
+Other decisions:
+\code{\link[=ReAnchor]{ReAnchor()}},
+\code{\link[=decision_evidence]{decision_evidence()}},
+\code{\link{decision_types}},
 \code{\link[=with_decisions]{with_decisions()}}
 }
+\concept{decisions}

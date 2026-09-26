@@ -2,7 +2,7 @@
 % Please edit documentation in R/module-multichain.R
 \name{multi_chain_comparison}
 \alias{multi_chain_comparison}
-\title{Create a MultiChainComparison Module}
+\title{Compare several reasoning chains and synthesize an answer}
 \usage{
 multi_chain_comparison(
   signature,
@@ -16,40 +16,84 @@ multi_chain_comparison(
 )
 }
 \arguments{
-\item{signature}{Signature for the task, either string notation or Signature object}
+\item{signature}{A signature from \code{\link[=signature]{signature()}}, or a signature string.}
 
-\item{inner_module}{Optional pre-created inner module. If NULL, creates
-a ChainOfThought module from the signature.}
+\item{inner_module}{The module that produces each attempt. The default is
+\code{chain_of_thought(signature)}.}
 
-\item{M}{Number of reasoning chains to generate (default 3)}
+\item{M}{Number of attempts.}
 
-\item{temperature}{Temperature for attempt diversity (default 0.7)}
+\item{temperature}{Temperature applied to the attempts, to make them
+differ; \code{NULL} sends none. Reasoning models may reject a temperature:
+gpt-6-luna accepts it only with \code{reasoning_effort = "none"}.}
 
-\item{comparison_template}{Optional custom template for comparison prompt}
+\item{comparison_template}{A glue template for the comparison prompt. It
+can use \code{{M}}, \code{{attempts_text}} (each attempt's output fields under an
+"=== Attempt i ===" heading) and input fields such as \code{{question}}. The
+default shows the attempts but not the original inputs.}
 
-\item{config}{Optional prediction configuration.}
-
-\item{chat}{Optional ellmer Chat object.}
+\item{config, chat}{As in \code{\link[=module]{module()}}.}
 
 \item{...}{Must be empty.}
 }
 \value{
-A MultiChainComparisonModule object
+A module (an R6 object of class \code{MultiChainComparisonModule}).
 }
 \description{
-Factory function to create a MultiChainComparison module that generates
-M reasoning chains and synthesizes the best answer.
+\code{multi_chain_comparison()} builds a module that runs an inner module \code{M}
+times, then makes one more call that reads all the attempts and writes a
+final answer with its own reasoning (DSPy's MultiChainComparison).
+}
+\details{
+Each \code{\link[=run]{run()}} makes \code{M + 1} model calls. A failed attempt gives a warning
+and is left out; the module fails only if every attempt fails. The final
+output has a \code{reasoning} field followed by the signature's output fields.
+The returned module's \code{get_attempts()} method lists the attempts of the
+last run.
+
+With the response cache on, identical attempts are served from the cache,
+so pass \code{.cache = FALSE} to \code{\link[=run]{run()}} to get \code{M} independent attempts.
 }
 \examples{
-# Basic usage
-mcc <- multi_chain_comparison("question -> answer", M = 3)
+mcc <- multi_chain_comparison("question -> answer", M = 3L)
+mcc
 
-# With custom inner module
-cot <- chain_of_thought("question -> answer")
-mcc <- multi_chain_comparison(
+# Let the comparison step see the question too
+mcc_with_question <- multi_chain_comparison(
   "question -> answer",
-  inner_module = cot,
-  M = 5,
-  temperature = 0.8
+  M = 3L,
+  comparison_template = paste(
+    "Question: {question}",
+    "Here are {M} attempts:",
+    "{attempts_text}",
+    "Write the best final answer.",
+    sep = "\n\n"
+  )
+)
+
+\dontrun{
+run(
+  mcc_with_question,
+  question = "A bat and a ball cost $1.10. The bat costs $1 more. What does the ball cost?",
+  .llm = ellmer::chat_openai(
+    model = "gpt-6-luna",
+    params = ellmer::params(reasoning_effort = "none")
+  ),
+  .cache = FALSE
 )
 }
+}
+\seealso{
+Other program constructors:
+\code{\link[=chain_of_thought]{chain_of_thought()}},
+\code{\link[=code_act]{code_act()}},
+\code{\link[=flex]{flex()}},
+\code{\link[=module]{module()}},
+\code{\link[=module_fn]{module_fn()}},
+\code{\link[=program_of_thought]{program_of_thought()}},
+\code{\link[=rag_module]{rag_module()}},
+\code{\link[=react]{react()}},
+\code{\link[=rlm]{rlm()}},
+\code{\link[=rlm_module]{rlm_module()}}
+}
+\concept{program constructors}

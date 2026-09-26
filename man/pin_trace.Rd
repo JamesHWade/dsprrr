@@ -2,7 +2,7 @@
 % Please edit documentation in R/orchestration.R
 \name{pin_trace}
 \alias{pin_trace}
-\title{Pin Module Traces}
+\title{Pin a module's traces to a pins board}
 \usage{
 pin_trace(
   board,
@@ -15,47 +15,62 @@ pin_trace(
 )
 }
 \arguments{
-\item{board}{A pins board object}
+\item{board}{A pins board.}
 
-\item{name}{Character name for the pin}
+\item{name}{Name of the pin.}
 
-\item{module}{A DSPrrr module with recorded traces}
+\item{module}{A module that has been run.}
 
-\item{include_prompts}{Logical; include full prompts (default FALSE)}
+\item{include_prompts}{Whether to include the full prompts (default
+\code{FALSE}).}
 
-\item{include_outputs}{Logical; include full outputs (default FALSE)}
+\item{include_outputs}{Whether to include the full outputs (default
+\code{FALSE}).}
 
-\item{description}{Optional description for the pin}
+\item{description}{Optional pin description.}
 
-\item{...}{Additional arguments passed to \code{pins::pin_write()}}
+\item{...}{Further arguments passed to \code{pins::pin_write()}.}
 }
 \value{
-The pin name (invisibly)
+\code{name}, invisibly.
 }
 \description{
-Save module execution traces to a pins board. Traces include timing,
-token usage, and optionally the full prompts and outputs.
+\code{pin_trace()} saves a module's execution traces (timing, token use, cost
+and, optionally, prompts and outputs) to a pins board, together with a
+summary from \code{\link[=summarize_traces]{summarize_traces()}}. Use it to keep a record of a run for
+later analysis.
+}
+\details{
+The pin is a list with \code{traces} (from \code{\link[=export_traces]{export_traces()}}), \code{summary} and
+\code{metadata} (module class, number of traces, creation time and the include
+flags). A module without traces is not pinned; a warning is raised instead.
 }
 \examples{
 \dontrun{
 board <- pins::board_folder("pins")
+classifier <- module(signature("text -> sentiment"))
+run(
+  classifier,
+  text = c("Great!", "Terrible."),
+  .llm = ellmer::chat_openai(model = "gpt-6-luna")
+)
 
-# Run some predictions to generate traces
-results <- run(mod, text = test_texts, .llm = llm)
-
-# Save traces for later analysis
-pin_trace(board, "experiment-2024-01-traces", mod,
-          include_prompts = TRUE,
-          description = "Production run traces")
+pin_trace(
+  board,
+  "sentiment-traces",
+  classifier,
+  include_prompts = TRUE,
+  description = "Production run traces"
+)
+pins::pin_read(board, "sentiment-traces")$summary
 }
 }
 \seealso{
-Other orchestration:
-\code{\link{orchestration}},
+Other persistence:
+\code{\link[=export_module_code]{export_module_code()}},
 \code{\link[=pin_module_config]{pin_module_config()}},
 \code{\link[=pin_vitals_log]{pin_vitals_log()}},
-\code{\link[=restore_module_config]{restore_module_config()}},
-\code{\link[=use_dsprrr_template]{use_dsprrr_template()}},
-\code{\link[=validate_workflow]{validate_workflow()}}
+\code{\link{program-artifact}},
+\code{\link[=restore_module_config]{restore_module_config()}}
 }
-\concept{orchestration}
+\concept{persistence}

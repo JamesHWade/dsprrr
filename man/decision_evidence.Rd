@@ -30,6 +30,30 @@ self-reported confidence.
 
 Extracts the decoded evidence for decision outputs from structured results.
 }
+\examples{
+\dontrun{
+sig <- signature(
+  inputs = list(input("ticket", description = "Customer report")),
+  output_type = ellmer::type_object(
+    urgent = ellmer::type_boolean("Is the service blocked?")
+  )
+)
+triage <- module(sig) |> with_decisions(urgent = decision_bool())
+
+result <- run(
+  triage,
+  ticket = "Checkout fails for every customer since 9am.",
+  .llm = ellmer::chat_openai(model = "gpt-6-luna"),
+  .return_format = "structured"
+)
+decision_evidence(result)
+}
+}
 \seealso{
+Other decisions:
+\code{\link[=ReAnchor]{ReAnchor()}},
+\code{\link[=decision_settings]{decision_settings()}},
+\code{\link{decision_types}},
 \code{\link[=with_decisions]{with_decisions()}}
 }
+\concept{decisions}

@@ -2,7 +2,7 @@
 % Please edit documentation in R/orchestration.R
 \name{pin_module_config}
 \alias{pin_module_config}
-\title{Pin a Module Configuration}
+\title{Pin a program to a pins board}
 \usage{
 pin_module_config(
   board,
@@ -16,64 +16,64 @@ pin_module_config(
 )
 }
 \arguments{
-\item{board}{A pins board object (e.g., from \code{pins::board_folder()})}
+\item{board}{A pins board, such as \code{pins::board_folder("pins")}.}
 
-\item{name}{Character name for the pin}
+\item{name}{Name of the pin.}
 
-\item{module}{A DSPrrr module whose configuration should be saved}
+\item{module}{The program to save.}
 
-\item{description}{Optional description for the pin}
+\item{description}{Optional pin description. The default is
+\code{"dsprrr program artifact: <name>"}.}
 
-\item{versioned}{Logical; whether to version the pin (default TRUE)}
+\item{versioned}{Whether pins keeps earlier versions (default \code{TRUE}).}
 
-\item{...}{Additional arguments passed to \code{pins::pin_write()}}
+\item{...}{Further arguments passed to \code{pins::pin_write()}.}
 
-\item{registry}{Named runtime registry; see \link{program-artifact}.}
+\item{registry}{Named runtime registry; see \code{\link[=program_artifact]{program_artifact()}}.}
 
-\item{trusted}{Whether trusted runtime values may be embedded. The default is
-\code{FALSE}.}
+\item{trusted}{Whether runtime values may be embedded (default \code{FALSE});
+see \code{\link[=program_artifact]{program_artifact()}}.}
 }
 \value{
-The pin name (invisibly)
+\code{name}, invisibly.
 }
 \description{
-Save a complete module program artifact to a pins board for later retrieval.
-This uses the versioned manifest documented in \link{program-artifact}, including
-nested programs and shared module identity.
+\code{pin_module_config()} saves a complete program, including nested modules,
+demonstrations and optimization results, to a pins board as an \code{.rds} pin.
+Read it back with \code{pins::pin_read()} and rebuild the program with
+\code{\link[=restore_module_config]{restore_module_config()}}.
 }
 \details{
-The pinned configuration includes:
-\itemize{
-\item Signature specification (inputs, output type, instructions)
-\item Module configuration (temperature, prompt_style, etc.)
-\item Optimization state (best parameters, trials summary)
-\item Metadata (module type, creation timestamp, package version)
-}
+The pin holds the program artifact described in \code{\link[=program_artifact]{program_artifact()}}:
+signatures, configuration, demonstrations, optimization results and the
+structure of composed programs. Chats, credentials, caches and traces are
+not saved. Functions such as tools or retrievers are saved only as names in
+\code{registry}, or embedded with \code{trusted = TRUE}.
 }
 \examples{
-\dontrun{
-# Create a board and pin a module configuration
-board <- pins::board_folder("pins")
+\dontshow{if (rlang::is_installed("pins")) withAutoprint(\{ # examplesIf}
+classifier <- module(signature("text -> sentiment"))
+trainset <- data.frame(
+  text = c("I love it!", "Terrible experience", "It's okay"),
+  sentiment = c("positive", "negative", "neutral")
+)
+compiled <- compile(classifier, LabeledFewShot(k = 2L), trainset)
 
-mod <- signature("text -> sentiment") |>
-  module() |>
-  optimize_grid(data = devset, metric = metric_exact_match())
+board <- pins::board_temp()
+pin_module_config(board, "sentiment-classifier", compiled)
 
-pin_module_config(board, "sentiment-classifier-v1", mod,
-                  description = "Optimized sentiment classifier")
-
-# Later, retrieve and reconstruct the module
-config <- pins::pin_read(board, "sentiment-classifier-v1")
-restored_mod <- restore_module_config(config)
-}
+# Later, or in another session
+artifact <- pins::pin_read(board, "sentiment-classifier")
+restored <- restore_module_config(artifact)
+length(restored$demos)
+\dontshow{\}) # examplesIf}
 }
 \seealso{
-Other orchestration:
-\code{\link{orchestration}},
+Other persistence:
+\code{\link[=export_module_code]{export_module_code()}},
 \code{\link[=pin_trace]{pin_trace()}},
 \code{\link[=pin_vitals_log]{pin_vitals_log()}},
-\code{\link[=restore_module_config]{restore_module_config()}},
-\code{\link[=use_dsprrr_template]{use_dsprrr_template()}},
-\code{\link[=validate_workflow]{validate_workflow()}}
+\code{\link{program-artifact}},
+\code{\link[=restore_module_config]{restore_module_config()}}
 }
-\concept{orchestration}
+\concept{persistence}

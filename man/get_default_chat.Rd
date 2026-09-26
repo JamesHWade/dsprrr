@@ -2,32 +2,81 @@
 % Please edit documentation in R/chat-default.R
 \name{get_default_chat}
 \alias{get_default_chat}
-\title{Get the Default Chat}
+\alias{set_default_chat}
+\alias{clear_default_chat}
+\title{Get, set or clear the default chat}
 \usage{
 get_default_chat(create = TRUE)
+
+set_default_chat(chat)
+
+clear_default_chat()
 }
 \arguments{
-\item{create}{Logical. If \code{TRUE} (default), create a Chat from environment
-variables if none is explicitly set. If \code{FALSE}, return \code{NULL} when no
-default is available.}
+\item{create}{If \code{TRUE} (the default), create a chat from an API key when
+none is set (step 5), and error if that fails. If \code{FALSE}, return \code{NULL}
+instead of creating one.}
+
+\item{chat}{An ellmer Chat, or \code{NULL} to remove the default set earlier.}
 }
 \value{
-An ellmer Chat object, or \code{NULL} if \code{create = FALSE} and no
-default is available.
+\code{get_default_chat()} returns an ellmer Chat, or \code{NULL} when
+\code{create = FALSE} and none is set. \code{set_default_chat()} returns the
+previous default (or \code{NULL}) invisibly, and \code{clear_default_chat()}
+returns \code{NULL} invisibly.
 }
 \description{
-Retrieves the default Chat object for dsprrr operations. If no default
-is set, attempts to auto-detect from environment variables.
+\code{get_default_chat()} returns the ellmer Chat that dsprrr uses when neither
+the call nor the module names one. \code{set_default_chat()} sets it for the
+rest of the session; \code{\link[=dsp_configure]{dsp_configure()}} does the same from a provider name.
+\code{clear_default_chat()} forgets a chat that was created from an API key, so
+the next call detects one again, for example after you change the key.
+}
+\details{
+\subsection{How dsprrr chooses a chat}{
+
+Each model call uses the first of these that is available:
+\enumerate{
+\item The \code{.llm} argument of \code{\link[=run]{run()}}, \code{\link[=run_dataset]{run_dataset()}}, \code{\link[=evaluate]{evaluate()}},
+\code{\link[=compile]{compile()}} and the other functions that call models.
+\item The chat stored on the module, from the \code{chat} argument of \code{\link[=module]{module()}}
+and the other constructors.
+\item A chat set for a block of code with \code{\link[=with_lm]{with_lm()}} or \code{\link[=local_lm]{local_lm()}}.
+\item The default chat set with \code{set_default_chat()} or \code{\link[=dsp_configure]{dsp_configure()}}
+(stored in \code{options(dsprrr.default_chat)}).
+\item A chat created from the first API key found in the environment:
+\code{OPENAI_API_KEY} gives \code{\link[ellmer:chat_openai]{ellmer::chat_openai()}}, \code{ANTHROPIC_API_KEY}
+gives \code{\link[ellmer:chat_anthropic]{ellmer::chat_anthropic()}} and \code{GOOGLE_API_KEY} gives
+\code{\link[ellmer:chat_google_gemini]{ellmer::chat_google_gemini()}}, each with the provider's default model.
+It is created once, with a message naming the provider and model (set
+\code{options(dsprrr.quiet = TRUE)} to silence it), and reused until
+\code{clear_default_chat()}.
+}
+
+If none is available, the call fails with an error that explains how to
+set one up. \code{get_default_chat()} returns the first of steps 3 to 5.
+}
 }
 \examples{
-\dontrun{
-# Set a default chat
-set_default_chat(ellmer::chat_openai())
+# Building a chat makes no request, so this runs without an API key
+luna <- ellmer::chat_openai(model = "gpt-6-luna")
+previous <- set_default_chat(luna)
+get_default_chat()$get_model()
 
-# Get the default chat
-chat <- get_default_chat()
+# Restore the previous default (here: none)
+set_default_chat(previous)
 
-# Check if a default is available without creating one
-chat <- get_default_chat(create = FALSE)
+# Forget a chat detected from an API key
+clear_default_chat()
 }
+\seealso{
+Other configuration:
+\code{\link[=cache_stats]{cache_stats()}},
+\code{\link[=clear_cache]{clear_cache()}},
+\code{\link[=configure_cache]{configure_cache()}},
+\code{\link[=dsp_configure]{dsp_configure()}},
+\code{\link[=dsprrr_sitrep]{dsprrr_sitrep()}},
+\code{\link[=is_reasoning_model]{is_reasoning_model()}},
+\code{\link[=with_lm]{with_lm()}}
 }
+\concept{configuration}

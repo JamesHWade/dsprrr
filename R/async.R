@@ -1,51 +1,55 @@
-#' Asynchronous Module Operations
+#' Asynchronous and streaming execution
 #'
-#' @description
-#' Functions for running modules asynchronously using promises.
-#' Useful for parallel execution or non-blocking operations.
-#' The direct provider paths support ordinary `PredictModule` objects.
-#' ProgramOfThought, CodeAct, and RLM modules may also use [run_async()] when
-#' configured with `interpreter_factory`: the complete workflow runs in an
-#' isolated mirai process with one invocation-owned interpreter. Their
-#' constructor-bound caller-owned runners and all specialized streaming paths
-#' remain rejected.
+#' The user-facing functions are [run_async()], [stream_async()],
+#' [run_stream()] and [stream_listener()].
 #'
 #' @name async
+#' @noRd
 NULL
 
 #' Run a module asynchronously
 #'
 #' @description
-#' Executes a module and returns a promise that resolves to the result.
-#' Useful for running multiple modules in parallel.
-#' Ordinary `PredictModule` objects use the provider's native async path.
-#' ProgramOfThought, CodeAct, and RLM modules use an isolated background process
-#' when configured with `interpreter_factory`. Caller-owned runners are rejected
-#' because they cannot be safely shared across concurrent invocations.
+#' `run_async()` starts one call of a module and returns a promise instead of
+#' waiting for the result, so a Shiny app or other event loop stays
+#' responsive and several calls can be in flight at once. Handle the result
+#' with the promises package, for example `promises::then()`.
 #'
-#' @param module A dsprrr Module object
-#' @param ... Named inputs matching the module's signature
-#' @param .llm Optional ellmer Chat object
-#' @param .trace_context A named JSON-compatible correlation context. The
-#'   returned async handle carries the verified fields in its
-#'   `dsprrr_trace_context` attribute.
+#' @param module A prediction module from [module()] or [chain_of_thought()],
+#'   or a [program_of_thought()], [code_act()] or [rlm_module()] module
+#'   configured with `interpreter_factory`.
+#' @param ... Inputs named after the signature's input fields (single
+#'   values).
+#' @param .llm An ellmer Chat; see [run()] for how it is chosen when
+#'   omitted. Give concurrent calls separate chats, for example with
+#'   `llm$clone()`.
+#' @param .trace_context A named, JSON-compatible list, as in [run()]. The
+#'   promise carries it in its `dsprrr_trace_context` attribute.
 #'
-#' @return A promise that resolves to the structured output
+#' @details
+#' Prediction modules call ellmer's `chat_structured_async()` directly: the
+#' call does not use the response cache and records no trace or prompt
+#' history. Code-running modules run their whole workflow in a separate mirai
+#' process with a fresh interpreter; modules bound to a caller-owned `runner`
+#' are rejected, because one runner cannot serve concurrent calls. Other
+#' modules, such as [react()] or pipelines, are rejected; use [run()].
+#'
+#' @return A promise that resolves to the module's output, the same value
+#'   that [run()] returns by default.
 #'
 #' @export
+#' @family execution
 #' @examples
 #' \dontrun{
-#' # Run multiple modules in parallel
-#' promises <- list(
-#'   run_async(mod1, question = "Q1"),
-#'   run_async(mod2, question = "Q2"),
-#'   run_async(mod3, question = "Q3")
-#' )
+#' llm <- ellmer::chat_openai(model = "gpt-6-luna")
+#' summarize <- module(signature("text -> summary"))
 #'
-#' # Wait for all to complete
-#' promises::promise_all(.list = promises) |>
+#' first <- run_async(summarize, text = "First article ...", .llm = llm$clone())
+#' second <- run_async(summarize, text = "Second article ...", .llm = llm$clone())
+#'
+#' promises::promise_all(first, second) |>
 #'   promises::then(function(results) {
-#'     # Process results
+#'     vapply(results, function(r) r$summary, character(1))
 #'   })
 #' }
 run_async <- function(module, ..., .llm = NULL, .trace_context = list()) {
@@ -88,9 +92,14 @@ run_async <- function(module, ..., .llm = NULL, .trace_context = list()) {
   # Use ellmer's async method. Decision fields request evidence and are
   # decoded when the promise resolves.
   decisions <- module_decisions(module)
-  result <- llm$chat_structured_async(
-    request$payload,
-    type = decision_request_type(module$signature@output_type, decisions)
+  result <- do.call(
+    llm$chat_structured_async,
+    c(
+      prompt_parts(request$payload),
+      list(
+        type = decision_request_type(module$signature@output_type, decisions)
+      )
+    )
   )
   if (length(decisions) > 0L) {
     rlang::check_installed("promises", reason = "for asynchronous execution")
@@ -253,28 +262,42 @@ run_factory_interpreter_async <- function(module, inputs, .llm = NULL) {
   )
 }
 
-#' Stream module output asynchronously
+#' Stream a module's text output asynchronously
 #'
 #' @description
-#' Streams text output from a module asynchronously.
-#' Returns a promise that resolves to an async generator.
-#' Only ordinary `PredictModule` objects are supported. Modules and composites
-#' with specialized `forward()` semantics are rejected before provider work;
-#' use [run()] for their complete workflows.
+#' `stream_async()` sends a module's prompt to the model and returns ellmer's
+#' async generator of text chunks, for use inside an asynchronous function
+#' (for example with the coro package). The response is plain streamed text:
+#' the signature's output types are not applied. For per-field callbacks and
+#' structured results, use [run_stream()].
 #'
-#' @param module A dsprrr Module object
-#' @param ... Named inputs matching the module's signature
-#' @param .llm Optional ellmer Chat object
+#' @param module A prediction module from [module()] or [chain_of_thought()].
+#'   Other modules are rejected before any request; use [run()] for them.
+#' @param ... Inputs named after the signature's input fields.
+#' @param .llm An ellmer Chat; see [run()] for how it is chosen when
+#'   omitted.
 #'
-#' @return A promise that resolves to an async generator
+#' @details
+#' The generator comes from ellmer's `Chat$stream_async()`. The call does not
+#' use the response cache and records no trace.
+#'
+#' @return An async generator that yields the response text in chunks.
 #'
 #' @export
+#' @family execution
 #' @examples
 #' \dontrun{
-#' stream_async(mod, question = "Write a story") |>
-#'   promises::then(function(gen) {
-#'     # Process async generator
-#'   })
+#' storyteller <- module(signature("topic -> story"))
+#' chunks <- stream_async(
+#'   storyteller,
+#'   topic = "a lighthouse keeper",
+#'   .llm = ellmer::chat_openai(model = "gpt-6-luna")
+#' )
+#'
+#' print_chunks <- coro::async(function(generator) {
+#'   for (chunk in coro::await_each(generator)) cat(chunk)
+#' })
+#' print_chunks(chunks)
 #' }
 stream_async <- function(module, ..., .llm = NULL) {
   if (!inherits(module, "Module")) {
@@ -290,33 +313,39 @@ stream_async <- function(module, ..., .llm = NULL) {
   llm$stream_async(request$payload)
 }
 
-#' Create a Stream Listener for a Module Output Field
+#' Listen to one output field while streaming
 #'
 #' @description
-#' Creates a listener that receives streamed content for a specific output
-#' field during [run_stream()]. This mirrors DSPy's `StreamListener`:
-#' attach a callback to the field you care about (e.g., `"answer"`) and it
-#' fires as content for that field is produced — token by token when the
-#' field can be token-streamed, or once with the complete value otherwise.
+#' `stream_listener()` attaches a callback to an output field for
+#' [run_stream()], like DSPy's `StreamListener`. The callback receives the
+#' field's text as it is produced: chunk by chunk when the field can be
+#' streamed, otherwise once with the complete value.
 #'
 #' @details
-#' Token-level streaming is available when a module's output is a single
-#' string field. In that case dsprrr streams the response as plain text and
-#' treats the accumulated text as the field's value. Modules with multiple
-#' or non-string output fields run normally and fire each matching listener
-#' once with the completed value (chunked streaming of structured output is
-#' not supported by the underlying structured-output API).
+#' A field can be streamed chunk by chunk when it is the only output field of
+#' its module and is a string. Fields of modules with several outputs, or
+#' non-string outputs, arrive once, when the module finishes, because
+#' structured output cannot be streamed.
 #'
-#' @param field Name of the output field to listen to (a single string).
-#' @param callback A function called with each chunk of text (a single
-#'   string). For non-streamable fields, called once with the full value.
+#' @param field The name of the output field, such as `"answer"`.
+#' @param callback A function called with one string: each chunk of text, or
+#'   the complete value of a field that cannot be streamed.
 #'
-#' @return A `dsprrr_stream_listener` object for use with [run_stream()].
+#' @return A listener (class `dsprrr_stream_listener`) for the `listeners`
+#'   argument of [run_stream()].
 #' @export
+#' @family execution
 #' @examples
+#' show_answer <- stream_listener("answer", function(chunk) cat(chunk))
+#'
 #' \dontrun{
-#' listener <- stream_listener("answer", function(chunk) cat(chunk))
-#' run_stream(mod, question = "Tell me a story", listeners = list(listener))
+#' storyteller <- module(signature("question -> answer"))
+#' run_stream(
+#'   storyteller,
+#'   question = "Tell me a short story about a lighthouse.",
+#'   .llm = ellmer::chat_openai(model = "gpt-6-luna"),
+#'   listeners = show_answer
+#' )
 #' }
 stream_listener <- function(field, callback) {
   if (!is.character(field) || length(field) != 1 || !nzchar(field)) {
@@ -332,69 +361,61 @@ stream_listener <- function(field, callback) {
   )
 }
 
-#' Run a Module with Streaming Listeners and Status Events
+#' Run a module with streaming callbacks
 #'
 #' @description
-#' Executes a module (or pipeline) while streaming output to per-field
-#' listeners and emitting status events. This is dsprrr's analogue of
-#' DSPy's `streamify()`: use it to surface intermediate progress and
-#' incremental output in Shiny apps or console tools.
+#' `run_stream()` runs a module or pipeline like [run()], but sends output
+#' text to [stream_listener()] callbacks as it is produced and reports
+#' progress through `on_status`. It is dsprrr's counterpart to DSPy's
+#' `streamify()`, for showing progress in Shiny apps or at the console. In a
+#' pipeline, listeners fire for matching fields at every step, not only the
+#' last.
 #'
-#' For pipelines, a status event is emitted as each step starts and ends,
-#' and listeners fire for matching fields at any step — not just the final
-#' one.
+#' @param module A module or a pipeline from [pipeline()].
+#' @param ... Inputs named after the signature's input fields.
+#' @param .llm An ellmer Chat; see [run()] for how it is chosen when
+#'   omitted.
+#' @param listeners A [stream_listener()], or a list of them.
+#' @param on_status A function called with a list for each progress event
+#'   (see below), or `NULL`.
 #'
 #' @details
-#' ## Streaming behavior
+#' ## Streaming
 #'
-#' - Modules whose output is a single string field are token-streamed:
-#'   matching listeners receive text chunks as they arrive, and the
-#'   accumulated text becomes the field's value. Token streaming uses the
-#'   provider's text mode and requires the `coro` package.
-#' - Modules with multiple or non-string output fields run normally;
-#'   matching listeners fire once with the completed value.
-#' - Streaming execution does not record traces and bypasses the response
-#'   cache.
+#' A prediction module (from [module()] or [chain_of_thought()]) whose only
+#' output field is a string is streamed chunk by chunk when a listener asks
+#' for that field; the collected text becomes the field's value. This needs
+#' the coro package. Any other module runs normally, and matching listeners
+#' receive the complete value once. When coro is installed, a listener on the
+#' single string field of a module that is not a prediction module (such as
+#' [module_fn()] or [react()]) is an error, raised before any request is
+#' made.
 #'
-#' ## Specialized modules
-#'
-#' One-shot fallback execution uses each module's own `forward()` method, so it
-#' remains available to specialized modules when no matching token listener is
-#' active or the output is not token-streamable. Actual token streaming uses a
-#' direct provider path and is limited to ordinary `PredictModule` steps.
-#' Unsupported token-stream requests are rejected before provider work.
+#' Streaming runs do not use the response cache and record no traces.
 #'
 #' ## Status events
 #'
-#' When `on_status` is provided, it is called with a list describing each
-#' event:
-#' - `type`: one of `"step_start"`, `"field_start"`, `"field_end"`,
-#'   `"field_complete"`, `"step_end"`
-#' - `step`, `n_steps`: position within the pipeline (both `1` for a
-#'   single module)
-#' - `module`: class name of the executing module
-#' - `field`: the output field name (field events only)
+#' `on_status` receives lists with these elements:
+#' - `type`: `"step_start"`, `"field_start"`, `"field_end"` (around streamed
+#'   text), `"field_complete"` (a field delivered in one piece) or
+#'   `"step_end"`.
+#' - `step` and `n_steps`: the step's position in a pipeline; both are 1 for a
+#'   single module.
+#' - `module`: the class of the module running the step.
+#' - `field`: the output field, for field events.
 #'
-#' @param module A dsprrr Module or pipeline.
-#' @param ... Named inputs matching the module's signature.
-#' @param .llm Optional ellmer Chat object.
-#' @param listeners A [stream_listener()] or list of them.
-#' @param on_status Optional function called with status event lists.
-#'
-#' @return The final output (named list for structured outputs, character
-#'   for plain string outputs), invisibly.
+#' @return The output, invisibly, in the same form as [run()] returns it.
 #' @export
+#' @family execution
 #' @examples
 #' \dontrun{
-#' sig <- signature("question -> answer")
-#' mod <- module(sig)
-#'
+#' writer <- module(signature("question -> answer"))
 #' run_stream(
-#'   mod,
-#'   question = "Tell me a story",
-#'   .llm = ellmer::chat_openai(),
+#'   writer,
+#'   question = "Tell me a short story about a lighthouse.",
+#'   .llm = ellmer::chat_openai(model = "gpt-6-luna"),
 #'   listeners = stream_listener("answer", function(chunk) cat(chunk)),
-#'   on_status = function(ev) message("[", ev$type, "] step ", ev$step)
+#'   on_status = function(event) message("[", event$type, "] step ", event$step)
 #' )
 #' }
 run_stream <- function(

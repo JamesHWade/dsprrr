@@ -2,53 +2,126 @@
 % Please edit documentation in R/teleprompter.R
 \name{GridSearchTeleprompter}
 \alias{GridSearchTeleprompter}
-\title{GridSearchTeleprompter}
+\title{Grid search over instructions and demos}
+\usage{
+\special{GridSearchTeleprompter(
+  metric = NULL,
+  metric_threshold = NULL,
+  max_errors = 5L,
+  variants = tibble::tibble(id = 1L, instructions = NA_character_,
+    template = NA_character_),
+  k = 2L,
+  eval_sample_size = 50L,
+  verbose = TRUE
+)}
+}
 \arguments{
-\item{metric}{A metric function for evaluating predictions, such as
-\code{\link[=metric_exact_match]{metric_exact_match()}}. Required when compiling.}
+\item{metric}{A metric function such as
+\code{metric_exact_match(field = "sentiment")}. Required when compiling.}
 
-\item{metric_threshold}{Minimum score required to be considered successful.
-If NULL, uses the metric's default threshold.}
+\item{metric_threshold, max_errors}{Accepted for consistency with the other
+optimizers (see \code{\link[=Teleprompter]{Teleprompter()}}); grid search does not use them.}
 
-\item{max_errors}{Maximum number of errors allowed during optimization.
-Default is 5.}
+\item{variants}{A data frame with one row per variant and an \code{id} column;
+see Details. The default is a single variant that keeps the module's
+instructions and template.}
 
-\item{variants}{A data frame containing variant configurations to test.
-Must have an 'id' column. Other columns define parameter values.
-Default is a tibble with one row containing NA values for instructions and template.}
+\item{k}{Integer number of demonstrations attached to every variant
+(default \code{2L}). Use \code{0L} for none.}
 
-\item{k}{Number of examples to include in few-shot prompts. Default is 2.}
+\item{eval_sample_size}{Integer cap on the number of held-out scoring rows
+when no \code{valset} is given (default \code{50L}).}
 
-\item{eval_sample_size}{Number of examples to use for evaluation during
-grid search. Default is 50.}
-
-\item{verbose}{Whether to print progress messages. Default is TRUE.}
+\item{verbose}{Whether to show a progress bar (default \code{TRUE}).}
 }
 \value{
-A \code{GridSearchTeleprompter} object.
+A \code{GridSearchTeleprompter} object to pass to \code{\link[=compile]{compile()}}.
 }
 \description{
-A teleprompter that performs grid search over different instruction
-and template variants to find the best performing configuration.
+\code{GridSearchTeleprompter()} tries each row of a \code{variants} table (different
+instructions, prompt templates or settings) on one module, scores every
+variant with \code{metric}, and returns a copy of the module with the best
+variant applied. All variants share one set of \code{k} demonstrations drawn from
+the training set.
+}
+\details{
+Each row of \code{variants} is one candidate. These columns have an effect:
+\itemize{
+\item \code{id} (required) labels the variant.
+\item \code{instructions} replaces the signature's instructions (\code{NA} keeps them).
+\item \code{instructions_suffix} is appended to the original instructions.
+\item \code{template} replaces the prompt template.
+\item Runtime settings such as \code{temperature} or \code{top_p} are sent to the chat.
+}
+
+Other columns are stored in the module's \code{config} but do not change the
+prompt.
+
+When you pass \code{valset} to \code{\link[=compile]{compile()}}, variants are scored on it and the
+demonstrations are drawn from all of \code{trainset}. Without \code{valset},
+\code{min(eval_sample_size, ceiling(0.2 * nrow(trainset)))} random rows of
+\code{trainset} are held out for scoring and the demonstrations come from the
+remaining rows. The drawn demonstrations replace any the module already had.
+The split and the draw use R's random number generator without a fixed
+seed, so call \code{\link[=set.seed]{set.seed()}} first for reproducible results.
+
+The search runs \code{\link[=optimize_grid]{optimize_grid()}} on a copy of the module, so the scores of
+all variants are available from \code{\link[=optimization_result]{optimization_result()}} and \code{\link[=top_trials]{top_trials()}}.
 }
 \examples{
-# Search over two instruction variants
 variants <- data.frame(
-  id = c("terse", "detailed"),
-  instructions = c("Be concise.", "Explain your reasoning step by step.")
+  id = c("terse", "explicit"),
+  instructions = c(
+    "Answer with one word.",
+    "Label the sentiment of the text as positive, negative or neutral."
+  )
 )
 tp <- GridSearchTeleprompter(
+  metric = metric_exact_match(field = "sentiment"),
   variants = variants,
-  metric = metric_exact_match(field = "sentiment")
+  k = 1L
 )
+tp@variants
 
 \dontrun{
-# Compile picks the variant that scores best on the training set
 classifier <- module(signature("text -> sentiment"))
 trainset <- data.frame(
-  text = c("I love it!", "Terrible experience"),
-  sentiment = c("positive", "negative")
+  text = c("I love it!", "Terrible experience", "It's okay", "Works well"),
+  sentiment = c("positive", "negative", "neutral", "positive")
 )
-optimized <- compile(classifier, tp, trainset)
+set.seed(1)
+optimized <- compile(
+  classifier,
+  tp,
+  trainset,
+  .llm = ellmer::chat_openai(model = "gpt-6-luna")
+)
+top_trials(optimized)
 }
 }
+\seealso{
+Other teleprompters:
+\code{\link[=AutoResearch]{AutoResearch()}},
+\code{\link[=BetterTogether]{BetterTogether()}},
+\code{\link[=BootstrapFewShot]{BootstrapFewShot()}},
+\code{\link[=BootstrapFewShotWithRandomSearch]{BootstrapFewShotWithRandomSearch()}},
+\code{\link[=COPRO]{COPRO()}},
+\code{\link[=GEPA]{GEPA()}},
+\code{\link[=KNNFewShot]{KNNFewShot()}},
+\code{\link[=LabeledFewShot]{LabeledFewShot()}},
+\code{\link[=MIPROv2]{MIPROv2()}},
+\code{\link[=MetaHarness]{MetaHarness()}},
+\code{\link[=Omni]{Omni()}},
+\code{\link[=ReAnchor]{ReAnchor()}},
+\code{\link[=SIMBA]{SIMBA()}},
+\code{\link[=Teleprompter]{Teleprompter()}},
+\code{\link[=compile]{compile()}}
+
+Other grid search:
+\code{\link[=module_metrics]{module_metrics()}},
+\code{\link[=module_parameters]{module_parameters()}},
+\code{\link[=module_trials]{module_trials()}},
+\code{\link[=optimize_grid]{optimize_grid()}}
+}
+\concept{grid search}
+\concept{teleprompters}

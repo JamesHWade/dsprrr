@@ -391,10 +391,23 @@ PredictModule <- R6::R6Class(
         self$config$current_variant <- params$id
       }
 
-      if (!is.null(params$instructions) && !is.na(params$instructions)) {
+      # Exact lookups: `params$instructions` would partially match an
+      # `instructions_suffix` column and replace the instructions with it.
+      instructions <- params[["instructions", exact = TRUE]]
+      if (!is.null(instructions) && !is.na(instructions)) {
+        self$signature <- with_instructions(self$signature, instructions)
+        self$config$base_instructions <- NULL
+      }
+
+      suffix <- params[["instructions_suffix", exact = TRUE]]
+      if (!is.null(suffix) && !is.na(suffix)) {
+        # Append to the instructions the module had before any suffix, as
+        # GridSearchTeleprompter does, so repeated searches do not stack.
+        base <- self$config$base_instructions %||% self$signature@instructions
+        self$config$base_instructions <- base
         self$signature <- with_instructions(
           self$signature,
-          params$instructions
+          paste(base, suffix)
         )
       }
 

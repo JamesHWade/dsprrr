@@ -2,24 +2,50 @@
 % Please edit documentation in R/parsnip.R
 \name{temperature}
 \alias{temperature}
-\title{Temperature Parameter for dials}
+\title{Temperature parameter for dials}
 \usage{
 temperature(range = c(0, 1), trans = NULL)
 }
 \arguments{
-\item{range}{Range of temperature values (default c(0, 1)).}
+\item{range}{Range of values (default \code{c(0, 1)}).}
 
-\item{trans}{Transformation (default NULL for identity).}
+\item{trans}{Optional transformation from the scales package; \code{NULL} (the
+default) means none.}
 }
 \value{
-A dials parameter object.
+A dials quantitative parameter.
 }
 \description{
-Creates a dials parameter object for LLM temperature.
+\code{temperature()} creates a dials parameter for a model's sampling
+temperature, for tuning \code{\link[=llm_predict]{llm_predict()}} specifications or building grids
+for \code{\link[=optimize_grid]{optimize_grid()}}. Reasoning models restrict it: gpt-6-luna, for
+example, accepts \code{temperature} only when its reasoning effort is \code{"none"}.
 }
 \examples{
-\dontrun{
+\dontshow{if (rlang::is_installed("dials")) withAutoprint(\{ # examplesIf}
 temperature()
 temperature(range = c(0.1, 0.9))
+dials::grid_regular(temperature(), levels = 3)
+\dontshow{\}) # examplesIf}
 }
+\seealso{
+Other integrations:
+\code{\link[=as_dsprrr_metric]{as_dsprrr_metric()}},
+\code{\link[=as_dsprrr_traces]{as_dsprrr_traces()}},
+\code{\link[=as_ellmer_tool]{as_ellmer_tool()}},
+\code{\link[=as_vitals_cost]{as_vitals_cost()}},
+\code{\link[=as_vitals_samples]{as_vitals_samples()}},
+\code{\link[=as_vitals_solver]{as_vitals_solver()}},
+\code{\link[=as_vitals_task]{as_vitals_task()}},
+\code{\link[=create_search_tool]{create_search_tool()}},
+\code{\link[=llm_predict]{llm_predict()}},
+\code{\link[=ragnar_tool]{ragnar_tool()}},
+\code{\link[=reasoning_effort]{reasoning_effort()}},
+\code{\link[=register_dsprrr_engine]{register_dsprrr_engine()}},
+\code{\link[=summarize_traces_df]{summarize_traces_df()}},
+\code{\link[=top_p]{top_p()}},
+\code{\link[=use_dsprrr_template]{use_dsprrr_template()}},
+\code{\link[=validate_workflow]{validate_workflow()}},
+\code{\link{vitals_metrics}}
 }
+\concept{integrations}

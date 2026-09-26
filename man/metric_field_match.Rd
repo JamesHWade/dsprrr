@@ -2,27 +2,45 @@
 % Please edit documentation in R/metrics.R
 \name{metric_field_match}
 \alias{metric_field_match}
-\title{Create a Field Equality Metric}
+\title{Metric that compares several output fields}
 \usage{
 metric_field_match(fields, require_all = TRUE)
 }
 \arguments{
-\item{fields}{Character vector of field names to compare}
+\item{fields}{Names of the fields to compare.}
 
-\item{require_all}{Logical, whether all fields must match (AND) or any (OR)}
+\item{require_all}{If \code{TRUE} (the default), every field must match; if
+\code{FALSE}, one match is enough.}
 }
 \value{
-A function with signature function(prediction, expected) -> logical
+A function \verb{function(prediction, expected)} returning \code{TRUE} or
+\code{FALSE}. A field missing from either side is an error.
 }
 \description{
-Creates a metric that checks equality of multiple fields in
-structured outputs.
+\code{metric_field_match()} makes a metric that compares several fields of the
+prediction with the columns of the same names in the expected row.
+Values must be exactly equal (numbers may differ in storage type only).
 }
 \examples{
-# Check multiple fields
-metric <- metric_field_match(c("sentiment", "confidence"))
-metric(
-  list(sentiment = "positive", confidence = 0.9),
-  list(sentiment = "positive", confidence = 0.9)
-)  # TRUE
+both <- metric_field_match(c("city", "country"))
+row <- data.frame(question = "Where is the Louvre?", city = "Paris", country = "France")
+both(list(city = "Paris", country = "France"), row)
+both(list(city = "Paris", country = "Belgium"), row)
+
+either <- metric_field_match(c("city", "country"), require_all = FALSE)
+either(list(city = "Paris", country = "Belgium"), row)
 }
+\seealso{
+Other metrics:
+\code{\link[=as_dsprrr_metric]{as_dsprrr_metric()}},
+\code{\link[=evaluate]{evaluate()}},
+\code{\link[=metric_contains]{metric_contains()}},
+\code{\link[=metric_custom]{metric_custom()}},
+\code{\link[=metric_exact_match]{metric_exact_match()}},
+\code{\link[=metric_f1]{metric_f1()}},
+\code{\link[=metric_threshold]{metric_threshold()}},
+\code{\link[=metric_with_feedback]{metric_with_feedback()}},
+\code{\link[=metric_with_trace]{metric_with_trace()}},
+\code{\link{vitals_metrics}}
+}
+\concept{metrics}

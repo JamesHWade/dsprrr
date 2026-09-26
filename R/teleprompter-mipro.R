@@ -3,51 +3,128 @@
 # Implements a lightweight MIPROv2 optimizer with demo bootstrapping,
 # instruction candidate generation, and discrete BO over combinations.
 
-#' MIPROv2 Teleprompter
+#' MIPROv2: search instructions and demonstrations together
 #'
 #' @include teleprompter.R teleprompter-bootstrap.R optimizer-core.R
 #' @include optimizer-logging.R optimizer-discrete-bo.R
 #'
 #' @description
-#' MIPROv2 jointly optimizes instructions and few-shot demonstrations using
-#' a discrete Bayesian optimization loop with minibatch evaluation for a root
-#' Predict module. For graphs with nested predictors such as RLM, it optimizes
-#' child instructions only and requires `max_bootstrapped_demos = 0L`; nested
-#' demo bootstrapping fails explicitly until predictor-local evidence is
-#' available.
+#' `MIPROv2()` builds a few candidate demonstration sets and candidate
+#' instructions, then searches their combinations: most trials score a small
+#' minibatch of training rows, and every few trials a combination is scored on
+#' the full validation set. [compile()] returns a copy of the program with the
+#' best combination.
 #'
-#' @param metric A metric function for evaluating predictions (required).
-#' @param task_model Optional ellmer Chat used to evaluate tasks. `NULL` uses
-#'   the `.llm` supplied to `compile()`.
-#' @param teacher_settings List of settings for the teacher model.
-#' @param max_bootstrapped_demos Maximum number of bootstrapped demonstrations.
-#' @param max_labeled_demos Maximum number of labeled demonstrations.
-#' @param auto Auto-tuned settings: "light", "medium", "heavy", or NULL.
-#' @param num_candidates Optional override for number of instruction candidates.
-#' @param num_threads Number of threads to use for evaluation.
-#' @param max_errors Maximum number of errors allowed during optimization.
-#' @param seed Random seed for reproducibility.
-#' @param track_stats Whether to track trial history.
-#' @param log_dir Directory for trial logging.
-#' @param metric_threshold Minimum score required for acceptance.
+#' @details
+#' ## Candidates
 #'
-#' @return A `MIPROv2` teleprompter object.
+#' * Demonstration sets: one [LabeledFewShot()] set of `max_labeled_demos`
+#'   rows, plus [BootstrapFewShot()] runs with different seeds. Because
+#'   BootstrapFewShot does not currently shuffle rows, the bootstrapped sets
+#'   are often identical.
+#' * Instructions: the program's own instructions, plus variants that append a
+#'   short dataset summary (the input and output column names) and one tip
+#'   from a fixed list: "Be concise and accurate.", "Reason step-by-step before
+#'   answering.", "Only use information in the inputs.", "Avoid assumptions;
+#'   stick to the data." and "Return only the final output field." Unlike
+#'   DSPy's MIPROv2, no model writes instructions, so there are at most six
+#'   distinct instruction candidates.
+#'
+#' ## Search
+#'
+#' Every pairing of a demonstration set and an instruction is a candidate.
+#' DSPy searches these with Bayesian optimization; dsprrr uses a UCB1 bandit.
+#' Each candidate is first tried once, in random order. After that, each trial
+#' picks the candidate with the highest mean score plus an exploration bonus
+#' of `sqrt(2 * log(t) / n)`, where `t` is the trial number and `n` is how
+#' often the candidate was tried. Most trials score a random minibatch of
+#' `trainset`; at a fixed interval (see Presets) a trial scores the whole
+#' `valset` instead, or `trainset` when no `valset` is given. The winner is
+#' the candidate with the best full evaluation, or, with a warning, the best
+#' minibatch score when no full evaluation finished.
+#'
+#' ## Presets
+#'
+#' | `auto` | Trials | Minibatch rows | Full evaluation every | Demo sets | Instructions |
+#' |---|---|---|---|---|---|
+#' | `"light"` (default) | 20 | 5 | 5 trials | 3 | 5 |
+#' | `"medium"` | 50 | 10 | 10 trials | 5 | 6 |
+#' | `"heavy"` | 100 | 20 | 20 trials | 7 | 6 |
+#' | `NULL` | `num_candidates` (20 if `NULL`) | 10 | 5 trials | 4 | `num_candidates`, at most 6 |
+#'
+#' Demo sets and instructions are upper bounds: a bootstrap run that collects
+#' no demonstrations adds no set. Minibatches never exceed `nrow(trainset)`.
+#' The training set needs more rows
+#' than `max_labeled_demos`: otherwise the run currently stops before the first
+#' trial and returns the program unchanged, with status `"partial"` in
+#' [optimization_result()].
+#'
+#' ## Nested predictors
+#'
+#' For programs with nested predictors, such as an RLM, MIPROv2 tunes each
+#' inner predictor's instructions and keeps their demonstrations. Set
+#' `max_bootstrapped_demos = 0L` for these programs.
+#'
+#' @param metric A metric function (required), such as
+#'   `metric_exact_match(field = "answer")`.
+#' @param metric_threshold Passed to the [BootstrapFewShot()] demonstration
+#'   runs: the minimum score for a bootstrapped output to become a
+#'   demonstration. `NULL` (the default) keeps any output that scores above 0.
+#' @param max_errors Integer; stop after this many consecutive failed
+#'   evaluations when [compile()] gets no `control` (default `5L`).
+#' @param task_model Optional ellmer Chat used to score candidates during the
+#'   search. `NULL` (the default) uses the `.llm` passed to [compile()]. The
+#'   demonstration runs always use `.llm`, and the compiled program does not
+#'   keep `task_model`.
+#' @param teacher_settings Passed to the [BootstrapFewShot()] demonstration
+#'   runs, where it is currently not applied.
+#' @param max_bootstrapped_demos,max_labeled_demos Integer settings for the
+#'   demonstration candidates (defaults `4L` and `4L`), with the same meaning
+#'   as in [BootstrapFewShot()].
+#' @param auto Search preset: `"light"` (the default), `"medium"`, `"heavy"`,
+#'   or `NULL` to size the search with `num_candidates`. See Presets.
+#' @param num_candidates Used only when `auto = NULL`: sets both the number of
+#'   trials and the number of instruction candidates.
+#' @param num_threads Integer number of rows scored at the same time
+#'   (default `1L`). Ignored when [compile()] gets a `control`.
+#' @param seed Integer seed (default `9L`) for the candidate order, minibatches,
+#'   tip choice and bootstrap seeds. It must be an integer such as `42L`; a
+#'   double such as `42` currently makes compilation fail.
+#' @param track_stats Whether to keep the trial history in
+#'   `optimization_result()$trials` (default `TRUE`).
+#' @param log_dir Directory for a [TrialLog] with one trial per search step, or
+#'   `NULL` (the default).
+#'
+#' @return A `MIPROv2` object to pass to [compile()].
+#' @family teleprompters
 #' @export
 #'
 #' @examples
-#'
-#' \dontrun{
 #' tp <- MIPROv2(
 #'   metric = metric_exact_match(field = "answer"),
 #'   auto = "light",
-#'   max_bootstrapped_demos = 4L
+#'   max_labeled_demos = 2L,
+#'   max_bootstrapped_demos = 2L
 #' )
+#' tp
 #'
-#' qa_module <- module(signature("question -> answer"))
-#' trainset <- data.frame(question = "Capital of France?", answer = "Paris")
-#' valset <- data.frame(question = "Capital of Japan?", answer = "Tokyo")
-#' llm <- ellmer::chat_openai()
-#' compiled <- compile(qa_module, tp, trainset, valset = valset, .llm = llm)
+#' \dontrun{
+#' qa <- module(signature("question -> answer"))
+#' # Use a few dozen rows in practice
+#' trainset <- data.frame(
+#'   question = c(
+#'     "Capital of France?", "Capital of Peru?", "Capital of Chad?",
+#'     "Capital of Cuba?", "Capital of Laos?", "Capital of Oman?"
+#'   ),
+#'   answer = c("Paris", "Lima", "N'Djamena", "Havana", "Vientiane", "Muscat")
+#' )
+#' compiled <- compile(
+#'   qa,
+#'   tp,
+#'   trainset,
+#'   .llm = ellmer::chat_openai(model = "gpt-6-luna")
+#' )
+#' optimization_result(compiled)
 #' }
 MIPROv2 <- S7::new_class(
   "MIPROv2",

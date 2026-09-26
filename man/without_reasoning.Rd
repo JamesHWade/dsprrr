@@ -2,24 +2,36 @@
 % Please edit documentation in R/signature-transforms.R
 \name{without_reasoning}
 \alias{without_reasoning}
-\title{Remove Chain-of-Thought from a Signature}
+\title{Remove the reasoning field from a signature}
 \usage{
 without_reasoning(sig, reasoning_field = "reasoning")
 }
 \arguments{
-\item{sig}{A signature object, typically created with \code{\link[=with_reasoning]{with_reasoning()}}.}
+\item{sig}{A signature from \code{\link[=signature]{signature()}}, usually one returned by
+\code{\link[=with_reasoning]{with_reasoning()}}.}
 
-\item{reasoning_field}{Character. Name of reasoning field to remove.}
+\item{reasoning_field}{Name of the field to remove.}
 }
 \value{
-A new signature object without the reasoning field.
+A new signature without the field, or \code{sig} unchanged if it has no
+such field. If no output field would remain, the output becomes a single
+string field named \code{answer}.
 }
 \description{
-Reverses the \code{with_reasoning()} transform by removing the reasoning field
-from the output type. Useful for comparing reasoning vs non-reasoning
-module performance.
+\code{without_reasoning()} drops the reasoning field that \code{\link[=with_reasoning]{with_reasoning()}}
+added, for example to compare a module with and without chain-of-thought.
+The instructions are kept as they are.
 }
 \examples{
-cot_sig <- with_reasoning("question -> answer")
-plain_sig <- without_reasoning(cot_sig)
+cot <- with_reasoning("question -> answer")
+without_reasoning(cot)
 }
+\seealso{
+Other signatures:
+\code{\link[=has_reasoning]{has_reasoning()}},
+\code{\link[=input]{input()}},
+\code{\link[=signature]{signature()}},
+\code{\link[=with_instructions]{with_instructions()}},
+\code{\link[=with_reasoning]{with_reasoning()}}
+}
+\concept{signatures}

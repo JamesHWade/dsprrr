@@ -2,41 +2,39 @@
 % Please edit documentation in R/optimizer-accessors.R
 \name{best_params}
 \alias{best_params}
-\title{Extract Best Parameters from a Module}
+\title{Best parameters found by an optimizer}
 \usage{
 best_params(module, flatten = TRUE)
 }
 \arguments{
-\item{module}{A DSPrrr module that has been optimized.}
+\item{module}{A module returned by \code{\link[=compile]{compile()}} or modified by
+\code{\link[=optimize_grid]{optimize_grid()}}.}
 
-\item{flatten}{Logical; if TRUE (default), return a simple named list.
-If FALSE, return the parameters as stored (may include nested structure).}
+\item{flatten}{If \code{TRUE} (the default), length-one list elements are
+unwrapped to plain values. If \code{FALSE}, the parameters are returned as
+stored.}
 }
 \value{
-A named list of the best parameters, or NULL if the module
-has not been optimized.
+A named list of parameters. For a module that has not been
+optimized, \code{NULL} with a warning.
 }
 \description{
-Get the best parameter configuration from an optimized module.
-This is the parameter set that achieved the highest (or lowest, for
-minimization) score during optimization.
+\code{best_params()} returns the winning parameter values recorded by \code{\link[=compile]{compile()}}
+or \code{\link[=optimize_grid]{optimize_grid()}}, such as the best \code{temperature} of a grid search or the
+number of demonstrations chosen by \code{\link[=LabeledFewShot]{LabeledFewShot()}}. It reads
+\code{optimization_result(module)$best_params}.
 }
 \examples{
-if (FALSE) {
-mod <- module(signature("text -> sentiment"))
-optimize_grid(
-  mod,
-  data = train_data,
-  metric = metric_exact_match(),
-  parameters = list(temperature = c(0.3, 0.7, 1.0))
+classifier <- module(signature("text -> sentiment"))
+trainset <- data.frame(
+  text = c("I love it!", "Terrible experience", "It's okay"),
+  sentiment = c("positive", "negative", "neutral")
 )
-best_params(mod)
-# $temperature
-# [1] 0.7
-}
+compiled <- compile(classifier, LabeledFewShot(k = 2L), trainset)
+best_params(compiled)
 }
 \seealso{
-Other optimizer accessors:
+Other optimization results:
 \code{\link[=apply_best_config]{apply_best_config()}},
 \code{\link[=best_demos]{best_demos()}},
 \code{\link[=config_diff]{config_diff()}},
@@ -45,4 +43,4 @@ Other optimizer accessors:
 \code{\link[=optimization_summary]{optimization_summary()}},
 \code{\link[=top_trials]{top_trials()}}
 }
-\concept{optimizer accessors}
+\concept{optimization results}

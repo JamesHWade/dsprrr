@@ -2,29 +2,35 @@
 % Please edit documentation in R/cache.R
 \name{cache_stats}
 \alias{cache_stats}
-\title{Get Cache Statistics}
+\title{Report response-cache statistics}
 \usage{
 cache_stats()
 }
 \value{
-A list with cache statistics:
-\itemize{
-\item \code{enabled}: Logical, whether caching is enabled
-\item \code{hits}: Integer, number of cache hits
-\item \code{misses}: Integer, number of cache misses
-\item \code{hit_rate}: Numeric, proportion of requests served from cache
-\item \code{memory_entries}: Integer, entries in memory cache (if available)
-\item \code{disk_entries}: Integer, entries in disk cache (if available)
-}
+A list of class \code{dsprrr_cache_stats} with \code{enabled}, \code{hits},
+\code{misses}, \code{hit_rate} (hits as a share of all requests), and
+\code{memory_entries} and \code{disk_entries} once those tiers are in use. If the
+disk cache failed its privacy checks, also \code{degraded = TRUE} and
+\code{degraded_reason}. Printing it gives a short report.
 }
 \description{
-Get statistics about cache usage including hit rate, entry counts,
-and sizes.
+\code{cache_stats()} reports whether caching is on, how many requests were
+served from the cache (hits) or sent to the model (misses) since the
+cache was last cleared, and how many responses each tier holds.
 }
 \examples{
-\dontrun{
-# Check cache performance
 stats <- cache_stats()
+stats
 stats$hit_rate
 }
+\seealso{
+Other configuration:
+\code{\link[=clear_cache]{clear_cache()}},
+\code{\link[=configure_cache]{configure_cache()}},
+\code{\link[=dsp_configure]{dsp_configure()}},
+\code{\link[=dsprrr_sitrep]{dsprrr_sitrep()}},
+\code{\link[=get_default_chat]{get_default_chat()}},
+\code{\link[=is_reasoning_model]{is_reasoning_model()}},
+\code{\link[=with_lm]{with_lm()}}
 }
+\concept{configuration}

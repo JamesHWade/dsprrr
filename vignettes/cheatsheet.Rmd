@@ -1,654 +1,437 @@
 ---
-title: "Quick Reference"
-output:
-  rmarkdown::html_vignette:
-    includes:
-      in_header: mermaid.html
+title: "Quick reference"
+output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Quick Reference}
+  %\VignetteIndexEntry{Quick reference}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
 
 ```{r}
 #| include: false
-# Skip evaluation during R CMD check or CI (cassettes may not match current code)
-# This prevents build failures when VCR cassettes are stale
-in_check <- nzchar(Sys.getenv("_R_CHECK_PACKAGE_NAME_")) ||
-            identical(Sys.getenv("NOT_CRAN"), "false")
-
-should_eval <- !in_check && dsprrr:::eval_vignette()
-
-knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>",
-  eval = should_eval
-)
-
-# Only set up VCR if we're actually evaluating
-if (should_eval) {
-  # Ensure no cassettes are left over from previous vignettes
-  if (!is.null(vcr::current_cassette())) {
-    try(vcr::eject_cassette(), silent = TRUE)
-  }
-
-  # Configure vcr to match only on method + uri (not body)
-  vcr::vcr_configure(
-    dir = "_vcr",
-    filter_request_headers = c("Authorization", "x-api-key"),
-    match_requests_on = c("method", "uri")
-  )
-
-  vcr::setup_knitr()
-}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", eval = FALSE)
 ```
 
-A quick reference for common dsprrr operations.
+Copyable snippets for everyday dsprrr work, grouped by task. Chunks that need
+no model ran when this page was built, so their output is real. Chunks that
+call a model show the code only. When a call fails, look up the message in
+[Troubleshooting](troubleshooting.html).
 
-## Setup & Configuration
-
-```{r setup}
+```{r}
+#| eval: true
+#| message: false
 library(dsprrr)
-library(ellmer)
 ```
 
-### Configure Default LLM
+| Task | Functions | Returns |
+|------|-----------|---------|
+| Describe the task | `signature()` | a `Signature` |
+| Build a program | `module()`, `chain_of_thought()`, `react()`, ... | a module |
+| Run it | `run()`, `run_dataset()`, `run_async()`, `run_stream()` | a named list, a tibble, a promise, the final output |
+| Score it | `evaluate()` with a metric | a list with `mean_score`, `scores`, `n_errors` |
+| Improve it | `compile()` with a teleprompter | a new module (the input is unchanged) |
+| | `optimize_grid()` | the same module, changed in place |
+| Look inside | `get_last_prompt()`, `inspect_history()`, `summarize_traces()`, `session_cost()` | a prompt record, a tibble, summary lists |
+| Keep it | `save_program()`, `load_program()`, `pin_module_config()` | a file or pin, a module |
 
-```{r configure}
-#| eval: false
-# Auto-detect from environment variables (OPENAI_API_KEY, ANTHROPIC_API_KEY, etc.)
-dsp_configure()
+## Configure a model
 
-# Explicitly set provider and model
-dsp_configure(provider = "openai", model = "gpt-4o-mini")
-dsp_configure(provider = "anthropic", model = "claude-3-5-sonnet-latest")
+```{r}
+qa <- module(signature("question -> answer"))
 
-# With additional parameters
-dsp_configure(provider = "openai", model = "gpt-4o", temperature = 0.7)
-```
+# Pass a chat to one call
+chat <- ellmer::chat_openai(model = "gpt-6-luna")
+run(qa, question = "What is the capital of France?", .llm = chat)
 
-### Check Configuration Status
+# Or set a default for the session
+dsp_configure(provider = "openai", model = "gpt-6-luna") # or "anthropic", "google"
+set_default_chat(ellmer::chat_anthropic(model = "claude-sonnet-4-5")) # any ellmer chat
+run(qa, question = "What is the capital of France?")
 
-```{r sitrep}
-#| eval: false
-dsprrr_sitrep()
-#> dsprrr Configuration
-#> ────────────────────────────────────────
-#> Default Chat: ✓ Active
-#>   Provider: OpenAI
-#>   Model: gpt-4o-mini
-```
-
-### Default Chat Management
-
-```{r default-chat}
-#| eval: false
-# Set a specific Chat as default
-set_default_chat(chat_openai(model = "gpt-4o"))
-
-# Get the current default Chat
-chat <- get_default_chat()
-
-# Clear the default (requires explicit .llm in calls)
-clear_default_chat()
-```
-
-### Scoped LLM Override
-
-```{r scoped-lm}
-#| eval: false
-# Temporarily use a different LLM for a block
-claude <- chat_claude()
-with_lm(claude, {
-  run(module(signature("question -> answer")), question = "What is 2+2?")
-  run(module(signature("text -> summary")), text = "Long article...")
-})
-
-# Function-scoped LLM (auto-cleans up on exit)
-my_analysis <- function(data) {
-  local_lm(chat_claude())
-  run(module(signature("data -> summary")), data = data)
+# Use a chat only inside a block or a function
+with_lm(chat, run(qa, question = "What is the capital of France?"))
+ask <- function(question) {
+  local_lm(chat) # reverts when ask() returns
+  run(qa, question = question)
 }
+
+dsprrr_sitrep() # default chat, API keys, cache status
 ```
 
-### Response Caching
+Called without arguments, `dsp_configure()` uses the first key it finds among
+`OPENAI_API_KEY`, `ANTHROPIC_API_KEY` and `GOOGLE_API_KEY`. When several chats
+are set, dsprrr uses the first of: the `.llm` argument, the module's own chat
+(`module(sig, chat = chat)`), `with_lm()` or `local_lm()`, and the default.
+[Models, providers and streaming](models-and-providers.html) covers providers in
+detail.
 
-```{r caching}
-#| eval: false
-# Caching is enabled by default (memory + disk)
-# The disk tier uses a platform-specific per-user cache directory
-configure_cache(
-  enable_disk = TRUE,
-  disk_private = TRUE,
-  memory_max_entries = 1000L
+Sampling parameters can be set for the default chat, on a chat you build, or
+for one module. gpt-6-luna reasons by default and accepts `temperature` only
+with `reasoning_effort = "none"`.
+
+```{r}
+dsp_configure(
+  provider = "openai",
+  model = "gpt-6-luna",
+  temperature = 0,
+  params = ellmer::params(reasoning_effort = "none")
 )
-
-# View cache performance
-cache_stats()
-#> Hit rate: 75%
-#> Memory entries: 42
-
-# Clear caches
-clear_cache("all")    # Both memory and disk
-clear_cache("memory") # Memory only
-
-# Disable caching globally via environment variable
-# DSPRRR_CACHE_ENABLED=false
+chat <- ellmer::chat_openai(
+  model = "gpt-6-luna",
+  params = ellmer::params(reasoning_effort = "none", temperature = 0)
+)
+qa_quick <- module(
+  signature("question -> answer"),
+  config = list(reasoning_effort = "low")
+)
 ```
 
-Disk envelopes can contain raw request content, model outputs, and semantic
-conversation turns. On Unix, dsprrr verifies owner-only directory (`0700`) and
-file (`0600`) modes. On Windows, the per-user cache inherits account ACLs that
-base R cannot verify. Administrators, extended ACLs, and network filesystems
-remain outside this guarantee. On shared workstations, keep the default path;
-in CI, disable caching or set a job-specific `DSPRRR_CACHE_PATH`.
+## Define signatures
 
-If you explicitly configure a project-local path such as `.dsprrr_cache`, keep
-it in `.gitignore`. Set `disk_private = FALSE` only when every cache reader and
-writer is trusted; writable shared RDS caches can be poisoned. Existing
-project-local caches must already meet the exact private-mode contract; remove
-or review them before reuse.
-
----
-
-## API Quick Reference
-
-| Function | Purpose | Returns |
-|----------|---------|---------|
-| `signature()` | Define input/output schema | Typed signature object |
-| `module()` | Create a reusable typed module | Module object |
-| `run()` | Execute module on single input | Named output record(s) |
-| `run_dataset()` | Execute on data frame | tibble with outputs |
-| `evaluate()` | Compute metrics on test data | Evaluation result |
-| `compile()` | Optimize with teleprompter | Compiled module |
-| `with_lm()` | Scoped LLM override for code block | Block result |
-| `local_lm()` | Function-scoped LLM override | Previous LLM |
-| `configure_cache()` | Set cache options | Previous config |
-| `cache_stats()` | View cache hit rate and size | Stats list |
-| `get_last_prompt()` | Inspect last prompt sent | Prompt text |
-| `export_traces()` | Inspect a module's execution traces | Trace tibble |
-
----
-
-## Signature Notation
-
-Signatures define what goes in and what comes out.
-
-### Basic Format
-
-```
-inputs -> outputs
-```
-
-### Input Types
-
-| Notation | Meaning |
-|----------|---------|
-| `question` | Single string input |
-| `context, question` | Multiple inputs |
-| `items: list[string]` | Typed list input |
-
-### Output Types
-
-| Notation | R/ellmer Type | Use Case |
-|----------|---------------|----------|
-| `answer` | `type_string()` | Free-form text |
-| `answer: string` | `type_string()` | Explicit string |
-| `score: int` | `type_integer()` | Whole numbers |
-| `score: float` | `type_number()` | Decimal numbers |
-| `score: number[0, 100]` | `type_number()` | Bounded numbers |
-| `valid: bool` | `type_boolean()` | True/false |
-
-### Constrained Types
-
-| Notation | Description |
-|----------|-------------|
-| `sentiment: enum('pos', 'neg', 'neutral')` | Fixed choices |
-| `label: Literal['a', 'b', 'c']` | Python-style enum |
-| `summary: string[50, 200]` | String with length hints |
-
-### Collection Types
-
-| Notation | Description |
-|----------|-------------|
-| `tags: list[string]` | List of strings |
-| `items: array(string)` | Array notation |
-| `words: string[]` | Bracket notation |
-| `data: dict[string, int]` | Dictionary/map |
-
-### Optional Types
-
-| Notation | Description |
-|----------|-------------|
-| `note: Optional[string]` | May be null |
-
-### Multiple Outputs
-
-```{r multi-output}
-# Multiple output fields
-sig <- signature("question -> answer, confidence: float")
-
-# With different types
-sig <- signature("text -> sentiment: enum('pos', 'neg'), score: float")
-```
-
-### With Instructions
-
-```{r instructions}
+```{r}
+#| eval: true
 sig <- signature(
-  "context, question -> answer",
-  instructions = "Answer based only on the provided context. Be concise."
+  "review: str, stars: int -> sentiment: enum('positive', 'negative', 'neutral'), confidence: float",
+  instructions = "Classify the sentiment of a product review."
+)
+sig
+```
+
+| Write | Meaning |
+|-------|---------|
+| `a, b -> x, y` | inputs `a` and `b`, outputs `x` and `y` |
+| `answer` | a string (fields without a type are strings) |
+| `name: str` or `string` | string |
+| `n: int` or `integer` | integer |
+| `score: float` or `number` | number |
+| `flag: bool` or `boolean` | `TRUE` or `FALSE` |
+| `label: enum('a', 'b')` or `Literal['a', 'b']` | one of the listed values |
+| `note: Optional[str]` | a field that may be left out |
+| `tags: list[str]`, `array(str)` or `str[]` | a vector of values of the inner type |
+| `counts: dict[str, int]` | an object with free-form keys (value types are not enforced) |
+
+Bounds such as `number[0, 100]` parse as a plain number: the bounds are dropped,
+so check ranges in R. `signature()` also ignores arguments it does not know, so
+a misspelled `instructions` disappears without a warning.
+
+For descriptions or nested outputs, build the signature from `input()` and
+ellmer types:
+
+```{r}
+#| eval: true
+review_sig <- signature(
+  inputs = list(input("review", description = "Customer review text")),
+  output_type = ellmer::type_object(
+    sentiment = ellmer::type_enum(c("positive", "negative", "neutral")),
+    aspects = ellmer::type_array(
+      ellmer::type_string(),
+      description = "Product aspects the review mentions"
+    )
+  ),
+  instructions = "Classify the review and list the aspects it mentions."
 )
 ```
 
----
+## Build modules
 
-## Creating Modules
+| Constructor | Use it when |
+|-------------|-------------|
+| `module(sig)` | one structured prediction per call |
+| `chain_of_thought(sig)` | the model should reason first; adds a `reasoning` output |
+| `multi_chain_comparison(sig, M = 3L)` | several reasoning attempts are compared and merged |
+| `react(sig, tools = list(...))` | the model calls R functions as tools |
+| `program_of_thought(sig, interpreter_factory = r_code_runner)` | the model writes R code whose result answers the question |
+| `code_act(sig, tools = list(...), interpreter_factory = r_code_runner)` | tools and R code in one agent |
+| `rlm_module(sig, interpreter_factory = ...)` | the model explores large inputs in an R session |
+| `flex(sig)` | experimental: an optimizer may rewrite the whole program |
+| `module_fn(sig, forward)` | plain R code with the module interface |
+| `best_of_n(mod, N = 5L, reward_fn = f)` | sample several answers and keep the one with the highest reward |
+| `refine(mod, N = 3L, reward_fn = f)` | retry with feedback until the reward passes |
+| `ensemble(list(mod_a, mod_b))` | vote across modules |
+| `with_assertions(mod, list(...))` | retry when checks on the output fail |
+| `pipeline()`, `%>>%`, `step()` | chain modules |
 
-### Build and Run a Module
+`module()` takes a `Signature` object; the other constructors also accept a
+signature string. [Choose a module type](advanced-modules.html) compares them.
 
-```{r module-quick}
-#| cassette: true
-# With explicit Chat
-chat <- chat_openai(model = "gpt-5-mini")
-answerer <- module(signature("question -> answer"))
-run(answerer, question = "What is 2+2?", .llm = chat)
+```{r}
+#| eval: true
+qa <- module(signature("question -> answer"))
+cot <- chain_of_thought("question -> answer")
+mcc <- multi_chain_comparison("question -> answer", M = 3L)
+
+get_weather <- function(city) paste("Sunny in", city)
+weather_tool <- ellmer::tool(
+  get_weather,
+  description = "Get today's weather for a city.",
+  arguments = list(city = ellmer::type_string("City name"))
+)
+agent <- react("question -> answer", tools = list(weather_tool))
+
+# r_code_runner() (needs callr) runs code in a separate R process.
+# It is not a sandbox: use it only with trusted input.
+pot <- program_of_thought("question -> answer", interpreter_factory = r_code_runner)
+actor <- code_act(
+  "question -> answer",
+  tools = list(weather_tool),
+  interpreter_factory = r_code_runner
+)
+analyst <- rlm_module(
+  "document, question -> answer",
+  interpreter_factory = function() r_code_runner(persistent = TRUE)
+)
+
+word_count <- module_fn(
+  "text -> n_words: int",
+  function(text) list(n_words = lengths(strsplit(text, "\\s+")))
+)
+run(word_count, text = "Signatures describe the task")
+
+under_100 <- function(prediction, inputs) as.numeric(nchar(prediction$answer) <= 100)
+best <- best_of_n(qa, N = 5L, reward_fn = under_100)
+refined <- refine(qa, N = 3L, reward_fn = under_100)
+voted <- ensemble(list(qa, cot), reduce_fn = reduce_majority(field = "answer"))
+checked <- with_assertions(
+  qa,
+  list(assert_output(~ nchar(.x$answer) <= 100, "Keep the answer under 100 characters."))
+)
+
+program <- flex("question -> answer")
 ```
 
-The auto-detected form (when you have a default Chat configured):
+Pipelines pass outputs forward by name. The first step receives the pipeline
+inputs; every later step receives only the previous step's outputs plus the
+fixed inputs given to `step()`. In `map`, the names are upstream fields and the
+values are this step's inputs. `select` keeps only the named output fields of a
+step. See [Chain modules into pipelines](chaining-modules.html).
 
-```{r module-default-chat}
-#| eval: false
-# With auto-detected Chat (uses configured default)
-run(answerer, question = "What is 2+2?")
+```{r}
+summarize <- module(signature("article -> summary"))
+headline <- module(signature("summary -> headline"))
+news <- summarize %>>% headline # `summary` flows into the second step
+
+explain <- module(signature("text, audience -> explanation"))
+for_kids <- pipeline(
+  summarize,
+  step(explain, map = c(summary = "text"), audience = "children")
+)
+run(for_kids, article = "The council approved a bike lane on Main Street.", .llm = chat)
 ```
 
-### Reuse the Same Module
+## Run
 
-```{r reuse-module}
-#| cassette: true
-chat <- chat_openai(model = "gpt-5-mini")
+```{r}
+#| eval: true
+reviews <- tibble::tibble(
+  text = c("I love it", "Arrived broken", "Great value", "Not great, returned it"),
+  sentiment = c("positive", "negative", "positive", "negative")
+)
+```
+
+```{r}
 classifier <- module(
   signature("text -> sentiment: enum('positive', 'negative', 'neutral')")
 )
 
-# Use repeatedly
-run(classifier, text = "Love it!", .llm = chat)
-run(classifier, text = "Hate it!", .llm = chat)
-```
+# One call returns a named list
+result <- run(classifier, text = "I love it", .llm = chat)
+result$sentiment
 
-### Full Control: `signature()` + `module()`
+# Vector inputs run as a batch: one named list per element
+run(classifier, text = c("I love it", "Arrived broken"), .llm = chat)
 
-```{r full-module}
-# For optimization and complex configurations
-sig <- signature("context, question -> answer")
-mod <- module(sig)
+# A data frame, row by row: the input columns plus a `result` list-column
+run_dataset(classifier, reviews, .llm = chat)
+run_dataset(classifier, reviews, .llm = chat, .return_format = "structured") # adds .error, .metadata, .chat
 
-# With custom template
-mod <- module(
-  sig,
-  template = "Context:\n{context}\n\nQuestion: {question}"
+# Per-call options
+run(classifier, text = "I love it", .llm = chat, .cache = FALSE) # skip the cache
+run(classifier, text = "I love it", .llm = chat, .return_format = "structured") # output, chat, metadata
+run_dataset(classifier, reviews, .llm = chat, .concurrency = concurrency_control(max_active = 4L))
+
+# Asynchronous: a promise that resolves to the named list
+run_async(classifier, text = "I love it", .llm = chat) |>
+  promises::then(\(result) print(result$sentiment))
+
+# Streaming: callbacks receive text as it arrives
+run_stream(
+  qa,
+  question = "Explain recursion in two sentences.",
+  .llm = chat,
+  listeners = stream_listener("answer", \(chunk) cat(chunk))
 )
 ```
 
----
+Token streaming needs the coro package and a module with a single string
+output; other modules run normally and the listener fires once with the full
+value.
 
-## Module Types Decision Tree
+## Evaluate
 
-```mermaid
-flowchart TB
-  Start["What do you need?"]
-  Start -->|Simple text in/out| Predict["type = predict (PredictModule)"]
-  Predict --> PredictUse["Q&A, classification, summarization, extraction"]
-  Start -->|Tool use / multi-step reasoning| React["type = react (ReactModule)"]
-  React --> ReactUse["Agents, search, calculations, API calls"]
-  Start -->|Exact computation| POT["type = program_of_thought"]
-  Start -->|Tools plus R code| CodeAct["type = codeact"]
-  Start -->|Explore large context| RLM["type = rlm"]
-  Start -->|Optimize how the task executes| Flex["type = flex (experimental)"]
+A metric is called as `metric(prediction, expected)`. Most built-in metrics
+compare one field, and `field` names both the output field and the data
+column:
+
+```{r}
+#| eval: true
+prediction <- list(sentiment = "positive", answer = "Paris is the capital of France.")
+expected <- list(sentiment = "Positive", answer = "Paris, France")
+
+metric_exact_match(field = "sentiment")(prediction, expected)
+metric_exact_match(field = "sentiment", ignore_case = TRUE)(prediction, expected)
+metric_f1(field = "answer")(prediction, expected)
+metric_threshold(metric_f1(field = "answer"), threshold = 0.8)(prediction, expected)
+metric_contains("Paris", field = "answer")(prediction, expected) # ignores `expected`
 ```
 
-| Type | Class | Use Case |
-|------|-------|----------|
-| `"predict"` | `PredictModule` | Standard text generation |
-| `"react"` | `ReactModule` | Tool-calling agents |
-| `"chain_of_thought"` | `PredictModule` | Step-by-step reasoning |
-| `"multichain"` | `MultiChainComparisonModule` | Compare several reasoning chains |
-| `"program_of_thought"` | `ProgramOfThoughtModule` | Generate and execute R code |
-| `"codeact"` | `CodeActModule` | Combine tools and R code |
-| `"rlm"` | `RLMModule` | Explore large context through a REPL |
-| `"flex"` | `FlexModule` | Optimize predictor, R-logic, and tool strategy (experimental) |
+Inside `evaluate()`, `prediction` is the run result and `expected` is the data
+row, so a custom metric reads fields from both:
 
-### Code Runner Ownership
+```{r}
+#| eval: true
+within_one_star <- function(prediction, expected) {
+  abs(prediction$stars - expected$stars) <= 1
+}
+within_one_star(list(stars = 4L), tibble::tibble(stars = 5L))
+```
 
-```{r code-runner-ownership}
-#| eval: false
-# Caller-owned and reused; the backend controls state persistence
-pot <- program_of_thought("question -> answer", runner = runner)
+A `module_fn()` baseline scores without a model:
 
-# Fresh invocation-owned runner; dsprrr shuts it down exactly once
-pot <- program_of_thought(
-  "question -> answer",
-  interpreter_factory = function() r_code_runner(timeout = 30)
+```{r}
+#| eval: true
+keyword_baseline <- module_fn("text -> sentiment", function(text) {
+  positive <- grepl("love|great", text, ignore.case = TRUE)
+  list(sentiment = if (positive) "positive" else "negative")
+})
+baseline <- evaluate(
+  keyword_baseline,
+  reviews,
+  metric = metric_exact_match(field = "sentiment")
 )
+baseline$mean_score
+baseline$scores
 ```
 
-Supply exactly one of `runner` and `interpreter_factory`. The factory is
-zero-argument and is supported by ProgramOfThought, CodeAct, and RLM. dsprrr
-never shuts down a directly supplied runner; persistence and reset support are
-backend-specific.
-
-### Experimental Flex
-
-```{r flex-cheatsheet}
-#| eval: false
-program <- flex("question -> answer")
-program$module_src       # Validated, read-only JSON
-program$bind(candidate)  # Validate and replace transactionally
-
-code_program <- flex(
-  "question -> answer",
-  module_src = "forward <- function(question) Prediction(answer = question)",
-  interpreter_factory = function() mcp_repl_runner(timeout = 30),
-  source_format = "r"
-)
-```
-
-Use JSON Flex for a bounded Predict/Chain-of-Thought graph. Use executable Flex
-when GEPA may need R control flow, dynamic predictors, or named tools; generated
-source requires a fresh sandboxed interpreter. See [Flex: Optimize the Whole
-Program](flex-optimization.html).
-
----
-
-## Running Modules
-
-### Single Execution
-
-```{r run-single}
-#| eval: false
-# Using run()
-result <- run(mod, question = "What is R?", .llm = chat_openai())
-
-# Using predict method
-result <- run(mod, question = "What is R?")
-```
-
-### Batch Processing
-
-```{r run-batch}
-#| eval: false
-# Vector inputs
-results <- run(mod, text = c("Great!", "Awful!", "Meh"))
-
-# Data frame
-new_data <- data.frame(text = c("A", "B", "C"))
-results <- predict(mod, new_data = new_data)
-
-# run_dataset for full control
-results <- run_dataset(mod, dataset, .llm = llm)
-```
-
-### Show Prompt
-
-```{r show-prompt}
-#| eval: false
-# See the prompt being sent
-result <- run(mod, question = "Test", .llm = llm, .show_prompt = TRUE)
-```
-
----
-
-## Metrics & Evaluation
-
-### Built-in Metrics
-
-| Metric | Use Case |
-|--------|----------|
-| `metric_exact_match()` | Exact string equality |
-| `metric_f1()` | Token overlap similarity |
-| `metric_contains()` | Output contains expected substring |
-| `metric_field_match(fields)` | Match specific output fields |
-| `metric_threshold(metric, 0.8)` | Apply threshold to any metric |
-| `metric_custom(fn)` | Custom scoring function |
-
-### Metric Selection Guide
-
-```mermaid
-flowchart TB
-  Start["What are you measuring?"]
-  Start -->|Exact correctness| Exact["metric_exact_match()"]
-  Exact --> ExactUse["Facts, names, simple answers"]
-  Start -->|Approximate match| F1["metric_f1() or metric_threshold(metric_f1(), 0.8)"]
-  F1 --> F1Use["Paraphrased answers, spelling tolerance"]
-  Start -->|Contains key info| Contains["metric_contains()"]
-  Contains --> ContainsUse["Important terms must appear"]
-  Start -->|Specific fields| Field["metric_field_match(c('answer', 'score'))"]
-  Field --> FieldUse["Multi-field outputs"]
-  Start -->|Custom logic| Custom["metric_custom(my_scorer_fn)"]
-  Custom --> CustomUse["Domain-specific evaluation"]
-```
-
-### Metric by Task Type
-
-| Task | Recommended Metric | Why |
-|------|-------------------|-----|
-| Classification | `metric_exact_match()` | Answer must be exactly right |
-| Extraction | `metric_exact_match(field = "...")` | Extract specific field |
-| Generation | `metric_f1()` | Partial credit for overlap |
-| Yes/No questions | `metric_exact_match(ignore_case = TRUE)` | "Yes" = "yes" |
-| Contains keyword | `metric_contains()` | Answer includes key info |
-| Complex evaluation | Custom function | Domain-specific logic |
-
-### Running Evaluation
-
-```{r evaluate}
-#| eval: false
-# Basic evaluation
-result <- evaluate(mod, testset, metric = metric_exact_match(), .llm = llm)
-result$mean_score
-#> 0.85
-
-# Evaluate an inline module
+```{r}
 result <- evaluate(
-  module(signature("question -> answer")),
-  testset,
-  metric = metric_exact_match(),
-  .llm = llm
+  classifier,
+  reviews,
+  metric = metric_exact_match(field = "sentiment"),
+  .llm = chat
 )
+result$mean_score
+result$n_errors # rows where the call or the metric failed; they score 0
 ```
 
----
+The full list of metrics, including `metric_field_match()`,
+`metric_custom()` and `metric_with_feedback()`, is in
+[Metrics and evaluation](concepts-why-metrics-matter.html). To score with
+vitals, see [Evaluate with vitals](vitals-recipes.html).
 
-## Optimization
+## Optimize
 
-### Grid Search
+`trainset` below is a data frame with the same columns as `reviews`, usually a
+few dozen rows or more.
 
-```{r grid-search}
-#| eval: false
-# Search over parameters
-optimize_grid(  mod,
-  data = train_data,
-  metric = metric_exact_match(),
-  .llm = llm,
-  parameters = list(
-    prompt_style = c("concise", "detailed"),
-    temperature = c(0.0, 0.3, 0.7)
+```{r}
+# compile() returns a new module; `classifier` is unchanged
+few_shot <- classifier |> compile(LabeledFewShot(k = 4L), trainset)
+bootstrapped <- classifier |>
+  compile(
+    BootstrapFewShot(
+      metric = metric_exact_match(field = "sentiment"),
+      max_bootstrapped_demos = 4L
+    ),
+    trainset,
+    .llm = chat
   )
+
+# optimize_grid() changes the module in place
+optimize_grid(
+  classifier,
+  data = trainset,
+  metric = metric_exact_match(field = "sentiment"),
+  parameters = list(
+    reasoning_effort = c("none", "low"),
+    instructions_suffix = c("", "Reply with the label only.")
+  ),
+  .llm = chat
 )
-
-# Check results
-module_trials(mod)
-module_metrics(mod)
+module_trials(classifier)
 ```
 
-### Teleprompters
+Integer settings need an `L` suffix: `k = 4L` works, `k = 4` is an error.
+`compile()` does not accept `module_fn()` programs.
 
-```{r teleprompters}
-#| eval: false
-# Few-shot learning
-tp <- LabeledFewShot(k = 4L, metric = metric_exact_match())
-compiled <- compile(mod, tp, trainset, .llm = llm)
+| Teleprompter | What it changes | Example |
+|--------------|-----------------|---------|
+| `LabeledFewShot` | demos: `k` training rows drawn at random (seeded); no model calls | `LabeledFewShot(k = 4L)` |
+| `BootstrapFewShot` | demos: runs the program on training rows and keeps those that pass the metric; handles pipelines jointly | `BootstrapFewShot(metric = m, max_bootstrapped_demos = 4L)` |
+| `BootstrapFewShotWithRandomSearch` | demos: several bootstrapped candidates, keeps the best | `BootstrapFewShotWithRandomSearch(metric = m, num_candidate_programs = 8L)` |
+| `KNNFewShot` | demos picked per input by embedding similarity | `KNNFewShot(k = 3L, vectorizer = embed)` |
+| `GridSearchTeleprompter` | tries instruction or template variants (instructions are appended) | `GridSearchTeleprompter(variants = variants, metric = m)` |
+| `COPRO` | instructions, by coordinate ascent over model-written candidates | `COPRO(metric = m, breadth = 5L, depth = 2L)` |
+| `MIPROv2` | instructions and demos, chosen with a UCB1 bandit | `MIPROv2(metric = m, auto = "light")` |
+| `SIMBA` | rules and demos learned from hard examples (simplified) | `SIMBA(metric = m, max_steps = 4L)` |
+| `GEPA` | instructions or Flex source, by reflecting on failures; reads `metric_with_feedback()` feedback | `GEPA(metric = m, generations = 5L)` |
+| `BetterTogether` | runs several teleprompters in sequence | `BetterTogether(metric = m, p = BootstrapFewShot(metric = m), g = GEPA(metric = m), default_strategy = "p -> g")` |
+| `Omni` | experimental: explores several teleprompters and continues from the best | `Omni(metric = m, explorers = list(...), continuation = GEPA(metric = m))` |
+| `ReAnchor` | experimental: fits the thresholds, cuts and weights of `with_decisions()` outputs | `ReAnchor(metric = m)` |
 
-# Grid search teleprompter
-variants <- data.frame(
-  id = c("concise", "thorough"),
-  instructions = c("Be concise", "Be thorough")
-)
-tp <- GridSearchTeleprompter(
-  variants = variants,
-  metric = metric_exact_match()
-)
-compiled <- compile(mod, tp, trainset, .llm = llm)
+[Choose an optimizer](advanced-optimization.html) explains when to use each.
+The experimental `AutoResearch()` and `MetaHarness()` are covered in
+[Agentic optimization harnesses](agentic-optimization-harnesses.html).
+
+## Inspect
+
+```{r}
+get_last_prompt() # the last prompt and response, with model, tokens and cost
+inspect_history(n = 5) # a tibble of the last five calls
+summarize_traces(classifier) # calls, tokens, cost and latency for one module
+export_traces(classifier, include_prompts = TRUE, include_outputs = TRUE)
+session_cost() # tokens and estimated cost for the whole session
 ```
 
----
+For a debugging routine and the meaning of common errors, see
+[Troubleshooting](troubleshooting.html).
 
-## Debugging & Inspection
+## Cache
 
-### Inspect Last Call
+Identical requests (same model, parameters, prompt and output type) are
+answered from a memory and disk cache. The first cache hit in a session prints
+"Using cached LLM responses".
 
-```{r last-prompt}
-#| eval: false
-# Get the last prompt sent
-get_last_prompt()
-#> ── Last Prompt ──
-#> Model: gpt-4o-mini via OpenAI
-#> Input tokens: 45
-#>
-#> Question: What is 2+2?
+```{r}
+#| eval: true
+configure_cache(enable_disk = FALSE) # memory only, for this session
+cache_stats()
+clear_cache()
 ```
 
-### Prompt History
-
-```{r history}
-#| eval: false
-# View recent prompts
-inspect_history(n = 5)
-
-# Clear history
-clear_prompt_history()
+```{r}
+run(qa, question = "Suggest a name for a cat.", .llm = chat, .cache = FALSE) # one call
+configure_cache(enable = FALSE) # the rest of the session
 ```
 
-### Module Inspection
+In CI, set the environment variable `DSPRRR_CACHE_ENABLED=false`. The disk
+cache holds prompts and responses, so dsprrr uses it only when the directory is
+private to you; see [Troubleshooting](troubleshooting.html) if it is rejected.
 
-```{r mod-inspect}
-#| eval: false
-# Detailed module state
-mod$inspect()
+## Save and reload
 
-# Latest module trace
-tail(export_traces(mod, include_outputs = TRUE), 1)
+```{r}
+save_program(few_shot, "sentiment-classifier.rds")
+classifier <- load_program("sentiment-classifier.rds")
+
+board <- pins::board_folder("pins")
+pin_module_config(board, "sentiment-classifier", few_shot)
+classifier <- restore_module_config(pins::pin_read(board, "sentiment-classifier"))
+
+use_dsprrr_template("targets", path = "my_project") # a targets pipeline to start from
 ```
 
-### Traces
-
-```{r traces}
-#| eval: false
-# Get all traces from a module
-traces <- mod$get_traces()
-
-# Export to tibble
-export_traces(mod)
-
-# Summary statistics
-summarize_traces(mod)
-
-# Clear traces
-clear_traces(mod)
-```
-
----
-
-## Production
-
-### Save/Restore Configuration
-
-```{r persistence}
-#| eval: false
-# Save optimized config to pins board
-pin_module_config(board, "my-classifier-v1", mod)
-
-# Restore later
-artifact <- pins::pin_read(board, "my-classifier-v1")
-mod <- restore_module_config(artifact)
-```
-
-### Vitals Integration
-
-```{r vitals}
-#| eval: false
-# Convert module to vitals solver
-solver <- as_vitals_solver(mod)
-
-# Use with vitals::eval_task()
-library(vitals)
-result <- eval_task(my_task, solver)
-
-# Convert vitals scorer to dsprrr metric
-my_metric <- as_dsprrr_metric(vitals_scorer)
-```
-
-### Project Template
-
-```{r template}
-#| eval: false
-# Create production-ready project structure
-use_dsprrr_template("my_project")
-
-# Validate a module and its evaluation data
-validate_workflow(mod, data = test_data, board = board)
-```
-
----
-
-## Common Patterns
-
-### RAG (Retrieval-Augmented Generation)
-
-```{r rag}
-#| eval: false
-sig <- signature(
-  "context, question -> answer",
-  instructions = "Answer based only on the provided context."
-)
-mod <- module(sig)
-
-# Use with retrieved context
-result <- run(mod,
-  context = retrieved_docs,
-  question = user_query,
-  .llm = llm
-)
-```
-
-### Classification
-
-```{r classification}
-#| eval: false
-classifier <- module(signature("text -> label: enum('spam', 'not_spam')"))
-
-labels <- run_dataset(classifier, tibble::tibble(text = emails), .llm = chat)
-```
-
-### Extraction
-
-```{r extraction}
-#| eval: false
-extractor <- module(
-  signature("text -> entities: list[string], summary: string")
-)
-
-result <- run(extractor, text = document, .llm = chat)
-result$entities
-result$summary
-```
-
-### Chain of Thought (via instructions)
-
-```{r cot}
-sig <- signature(
-  "problem -> answer",
-  instructions = "Think step by step. Show your reasoning before the final answer."
-)
-```
+Saved programs keep the signature, demos and configuration. Chats are never
+saved, so pass `.llm` or set a default after loading; tools and other R
+functions need a `registry` (see `?save_program`).
+[Tutorial 6: Save and reuse a module](tutorial-deploy-to-production.html) walks
+through the full workflow.

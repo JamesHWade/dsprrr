@@ -2,53 +2,76 @@
 % Please edit documentation in R/chat-default.R
 \name{with_lm}
 \alias{with_lm}
-\title{Execute Code with a Scoped LM Override}
+\alias{local_lm}
+\title{Use a chat for a block of code}
 \usage{
 with_lm(lm, code)
+
+local_lm(lm, .env = parent.frame())
 }
 \arguments{
-\item{lm}{An ellmer Chat object to use as the default LLM within the block.}
+\item{lm}{An ellmer Chat. For \code{local_lm()}, \code{NULL} removes any scoped chat
+until the calling function returns.}
 
-\item{code}{An expression to evaluate with the scoped LLM.}
+\item{code}{Code to evaluate with \code{lm} as the scoped chat.}
+
+\item{.env}{The environment whose exit ends the scope: by default, the
+function that calls \code{local_lm()} (cleanup uses \code{\link[withr:defer]{withr::defer()}}).}
 }
 \value{
-The result of evaluating \code{code}.
+\code{with_lm()} returns the value of \code{code}. \code{local_lm()} returns the
+previous scoped chat (or \code{NULL}) invisibly.
 }
 \description{
-Temporarily sets a default LLM for all dsprrr operations within a code block.
-Similar to DSPy's \code{dspy.context(lm=lm)} context manager. When the block exits
-(normally or due to an error), the previous LM is restored.
+\code{with_lm()} evaluates \code{code} with \code{lm} as the chat for every dsprrr call in
+it that does not name one, like DSPy's \code{dspy.context(lm = ...)}.
+\code{local_lm()} does the same until the calling function returns. Either way,
+the previous chat is restored afterwards, also after an error.
 }
 \details{
-The scoped LM has higher priority than \code{options(dsprrr.default_chat)} and
-auto-detection, but lower priority than an explicit \code{.llm} parameter.
-
-Resolution order (highest to lowest):
-\enumerate{
-\item Explicit \code{.llm} parameter
-\item Scoped LM from \code{with_lm()} / \code{local_lm()}
-\item Module's stored \verb{$chat}
-\item \code{options(dsprrr.default_chat)}
-\item Auto-detection from environment variables
-}
+The scoped chat ranks below the \code{.llm} argument and below a chat stored on
+the module, and above the default chat; see \code{\link[=get_default_chat]{get_default_chat()}} for the
+full order. A module created with a \code{chat} argument therefore keeps using
+its own chat inside \code{with_lm()}. Blocks can be nested; the innermost chat
+wins.
 }
 \examples{
-\dontrun{
-# Use Claude for a specific block
-claude <- ellmer::chat_claude()
-result <- with_lm(claude, {
-  run(module(signature("question -> answer")), question = "What is 2+2?")
-  run(module(signature("text -> summary")), text = "Long article...")
-})
+# Building chats makes no request, so this runs without an API key
+fast <- ellmer::chat_openai(
+  model = "gpt-6-luna",
+  params = ellmer::params(reasoning_effort = "low")
+)
+careful <- ellmer::chat_openai(
+  model = "gpt-6-luna",
+  params = ellmer::params(reasoning_effort = "high")
+)
 
-# Nested contexts work correctly
-gpt4 <- ellmer::chat_openai(model = "gpt-4o")
-with_lm(gpt4, {
-  run(mod1, text = "outer uses gpt4")
-  with_lm(claude, {
-    run(mod2, text = "inner uses claude")
-  })
-  run(mod3, text = "back to gpt4")
-})
+with_lm(fast, identical(get_default_chat(), fast))
+with_lm(fast, with_lm(careful, identical(get_default_chat(), careful)))
+
+review <- function() {
+  local_lm(careful)
+  # every dsprrr call from here to the end of the function uses `careful`
+  identical(get_default_chat(), careful)
+}
+review()
+
+# Outside the block and the function, no scoped chat is left
+identical(get_default_chat(create = FALSE), careful)
+
+\dontrun{
+summarize <- module(signature("text -> summary"))
+with_lm(fast, run(summarize, text = "A long article ..."))
 }
 }
+\seealso{
+Other configuration:
+\code{\link[=cache_stats]{cache_stats()}},
+\code{\link[=clear_cache]{clear_cache()}},
+\code{\link[=configure_cache]{configure_cache()}},
+\code{\link[=dsp_configure]{dsp_configure()}},
+\code{\link[=dsprrr_sitrep]{dsprrr_sitrep()}},
+\code{\link[=get_default_chat]{get_default_chat()}},
+\code{\link[=is_reasoning_model]{is_reasoning_model()}}
+}
+\concept{configuration}

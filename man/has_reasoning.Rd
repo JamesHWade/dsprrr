@@ -2,28 +2,33 @@
 % Please edit documentation in R/signature-transforms.R
 \name{has_reasoning}
 \alias{has_reasoning}
-\title{Check if a Signature has Chain-of-Thought}
+\title{Test whether a signature has a reasoning field}
 \usage{
 has_reasoning(sig, reasoning_field = "reasoning")
 }
 \arguments{
-\item{sig}{A signature object created by \code{\link[=signature]{signature()}}.}
+\item{sig}{A signature from \code{\link[=signature]{signature()}}.}
 
-\item{reasoning_field}{Character. Name of reasoning field to check for.}
+\item{reasoning_field}{Name of the field to look for.}
 }
 \value{
-Logical. TRUE if signature has chain-of-thought reasoning.
+\code{TRUE} or \code{FALSE}. Anything other than a signature gives \code{FALSE}.
 }
 \description{
-Tests whether a signature has been transformed with \code{with_reasoning()}.
-Checks for the presence of a reasoning field in the output type.
+\code{has_reasoning()} checks whether a signature's output has a field named
+\code{reasoning_field}, as added by \code{\link[=with_reasoning]{with_reasoning()}}.
 }
 \examples{
 sig <- signature("question -> answer")
 has_reasoning(sig)
-# FALSE
-
-cot_sig <- with_reasoning(sig)
-has_reasoning(cot_sig)
-# TRUE
+has_reasoning(with_reasoning(sig))
 }
+\seealso{
+Other signatures:
+\code{\link[=input]{input()}},
+\code{\link[=signature]{signature()}},
+\code{\link[=with_instructions]{with_instructions()}},
+\code{\link[=with_reasoning]{with_reasoning()}},
+\code{\link[=without_reasoning]{without_reasoning()}}
+}
+\concept{signatures}

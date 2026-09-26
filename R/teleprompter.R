@@ -1,21 +1,55 @@
-#' Teleprompter Base Class
+#' Arguments shared by all optimizers
 #'
 #' @description
-#' Base S7 class for optimization strategies (teleprompters). Teleprompters
-#' are responsible for optimizing modules by adjusting their prompts,
-#' demonstrations, or other parameters based on training data.
+#' `Teleprompter()` is the parent class of every optimizer in dsprrr
+#' ("teleprompter" is DSPy's original name for an optimizer). You never
+#' compile with it directly: create one of the optimizers below and pass it to
+#' [compile()]. This page documents the three arguments that every optimizer
+#' accepts.
 #'
-#' @param metric Optional metric function for evaluating predictions. Subclasses
-#'   that evaluate candidates document whether a metric is required.
-#' @param metric_threshold Minimum score required to be considered successful.
-#'   If NULL, uses the metric's default threshold.
-#' @param max_errors Maximum number of errors allowed during optimization.
-#'   Default is 5.
+#' @details
+#' Most optimizers store counts as S7 integer properties, so write `5L` rather
+#' than `5`. A double fails with an error such as
+#' `@max_errors must be <integer>, not <double>`.
 #'
-#' @return A `Teleprompter` optimization strategy object.
+#' ## Optimizers at a glance
+#'
+#' | Optimizer | What it changes |
+#' |---|---|
+#' | [LabeledFewShot()] | Demos: `k` training rows. No model calls. |
+#' | [KNNFewShot()] | Demos: the training rows most similar to each input, chosen at run time. |
+#' | [BootstrapFewShot()] | Demos: training rows plus the program's own outputs that pass the metric. |
+#' | [BootstrapFewShotWithRandomSearch()] | Demos: the best of several bootstrap candidates on a validation set. |
+#' | [GridSearchTeleprompter()] | Instructions, template or settings, from a table of variants. |
+#' | [COPRO()] | Instructions, rewritten by a model over several rounds. |
+#' | [MIPROv2()] | Instructions and demos, searched together. |
+#' | [SIMBA()] | Instruction rules and demos taken from hard examples. |
+#' | [GEPA()] | Instructions (and Flex source) evolved by reflecting on failures. |
+#' | [ReAnchor()] | Thresholds, cuts and weights of decision outputs. |
+#' | [BetterTogether()], [Omni()] | Run other optimizers in sequence or in competition. |
+#' | [AutoResearch()], [MetaHarness()] | An agent proposes and tests program edits. |
+#'
+#' To sweep runtime settings such as `reasoning_effort` on a module in place,
+#' use [optimize_grid()] instead.
+#'
+#' @param metric A metric function called as `metric(prediction, expected)`,
+#'   such as `metric_exact_match(field = "answer")`, or `NULL`. Optimizers that
+#'   score candidates require one.
+#' @param metric_threshold A score between 0 and 1, or `NULL` (the default).
+#'   Only some optimizers use it, and each optimizer's page says how.
+#' @param max_errors Integer error budget (default `5L`). The optimizers that
+#'   run under [optimizer_control()] (the two bootstrap optimizers, COPRO,
+#'   MIPROv2, SIMBA, GEPA, AutoResearch and MetaHarness) stop after this many
+#'   consecutive failed evaluations when [compile()] is not given a `control`
+#'   object.
+#'
+#' @return A `Teleprompter` object.
+#' @family teleprompters
 #' @examples
 #' Teleprompter()
 #'
+#' # Counts must be integers
+#' try(Teleprompter(max_errors = 5))
 #' @export
 Teleprompter <- S7::new_class(
   "Teleprompter",
@@ -67,40 +101,53 @@ compile_default <- function(teleprompter, program, trainset, ...) {
   ))
 }
 
-#' LabeledFewShot Teleprompter
+#' Labeled few-shot: add training rows as demonstrations
 #'
 #' @description
-#' A simple teleprompter that adds labeled examples from the training set
-#' as demonstrations to the module. This is the simplest form of few-shot
-#' learning. The target must be a root Predict module; programs with nested
-#' predictors (including RLM) are rejected because root examples do not define
-#' predictor-local demonstrations.
+#' `LabeledFewShot()` compiles a Predict module by attaching `k` rows of the
+#' training set as few-shot demonstrations. It makes no model calls and scores
+#' nothing, which makes it a fast, offline baseline for the other optimizers.
 #'
-#' @param metric Optional metric stored with the teleprompter. LabeledFewShot
-#'   selects labeled demonstrations without evaluating candidate programs.
-#' @param metric_threshold Minimum score required to be considered successful.
-#'   If NULL, uses the metric's default threshold.
-#' @param max_errors Maximum number of errors allowed during optimization.
-#'   Default is 5.
-#' @param k Number of examples to include in few-shot prompts. Default is 4.
-#' @param sample Whether to randomly sample examples. Default is TRUE.
-#' @param seed Random seed for reproducibility. Default is 123.
+#' @details
+#' Rows are drawn at random (or the first `k` rows are taken when
+#' `sample = FALSE`); nothing checks whether they are good examples. A
+#' demonstration's inputs come from the columns named after the signature
+#' inputs. Its output comes from the metric's `field` when the metric has one,
+#' otherwise from the first column named `output`, `label`, `answer`,
+#' `response`, `result` or `y`, otherwise from the first non-input column.
 #'
-#' @return A `LabeledFewShot` teleprompter object.
+#' The program must be a Predict module, such as one from [module()] or
+#' [chain_of_thought()]. Other programs, including pipelines and RLM modules,
+#' are rejected because training rows do not match the signatures of their
+#' inner predictors. [BootstrapFewShot()] compiles pipelines.
+#'
+#' @param metric Optional. It is not used for scoring, but when it has a
+#'   `field` (as in `metric_exact_match(field = "sentiment")`), that column
+#'   supplies the demonstrations' outputs.
+#' @param metric_threshold,max_errors Accepted for consistency with the other
+#'   optimizers (see [Teleprompter()]); `LabeledFewShot()` does not use them.
+#' @param k Integer number of demonstrations (default `4L`). When the training
+#'   set has fewer rows, all of them are used.
+#' @param sample If `TRUE` (the default), draw `k` rows at random. If `FALSE`,
+#'   take the first `k` rows.
+#' @param seed Integer seed for the random draw (default `123L`). It is passed
+#'   to [set.seed()], which also resets the session's random number stream.
+#'
+#' @return A `LabeledFewShot` object to pass to [compile()].
+#' @family teleprompters
 #' @examples
-#' # A teleprompter that adds 2 labeled training examples as demonstrations
-#' tp <- LabeledFewShot(k = 2L, seed = 42L)
-#' tp@k
-#'
-#' \dontrun{
-#' # Compile a module with few-shot demos drawn from the training set
 #' classifier <- module(signature("text -> sentiment"))
 #' trainset <- data.frame(
-#'   text = c("I love it!", "Terrible experience", "It's okay"),
-#'   sentiment = c("positive", "negative", "neutral")
+#'   text = c("I love it!", "Terrible experience", "It's okay", "Works well"),
+#'   sentiment = c("positive", "negative", "neutral", "positive")
 #' )
-#' optimized <- compile(classifier, tp, trainset)
-#' }
+#'
+#' tp <- LabeledFewShot(k = 2L)
+#' tp
+#'
+#' # Compiling makes no model calls and leaves `classifier` unchanged
+#' compiled <- compile(classifier, tp, trainset)
+#' best_demos(compiled, as_tibble = TRUE)
 #' @export
 LabeledFewShot <- S7::new_class(
   "LabeledFewShot",
@@ -217,48 +264,95 @@ compile_labeled <- function(teleprompter, program, trainset, .llm = NULL, ...) {
   optimized
 }
 
-#' GridSearchTeleprompter
+#' Grid search over instructions and demos
 #'
 #' @description
-#' A teleprompter that performs grid search over different instruction
-#' and template variants to find the best performing configuration.
+#' `GridSearchTeleprompter()` tries each row of a `variants` table (different
+#' instructions, prompt templates or settings) on one module, scores every
+#' variant with `metric`, and returns a copy of the module with the best
+#' variant applied. All variants share one set of `k` demonstrations drawn from
+#' the training set.
 #'
-#' @param metric A metric function for evaluating predictions, such as
-#'   [metric_exact_match()]. Required when compiling.
-#' @param metric_threshold Minimum score required to be considered successful.
-#'   If NULL, uses the metric's default threshold.
-#' @param max_errors Maximum number of errors allowed during optimization.
-#'   Default is 5.
-#' @param variants A data frame containing variant configurations to test.
-#'   Must have an 'id' column. Other columns define parameter values.
-#'   Default is a tibble with one row containing NA values for instructions and template.
-#' @param k Number of examples to include in few-shot prompts. Default is 2.
-#' @param eval_sample_size Number of examples to use for evaluation during
-#'   grid search. Default is 50.
-#' @param verbose Whether to print progress messages. Default is TRUE.
+#' @details
+#' Each row of `variants` is one candidate. These columns have an effect:
 #'
-#' @return A `GridSearchTeleprompter` object.
+#' * `id` (required) labels the variant.
+#' * `instructions` replaces the signature's instructions (`NA` keeps them).
+#' * `instructions_suffix` is appended to the original instructions.
+#' * `template` replaces the prompt template.
+#' * Runtime settings such as `temperature` or `top_p` are sent to the chat.
+#'
+#' Other columns are stored in the module's `config` but do not change the
+#' prompt.
+#'
+#' When you pass `valset` to [compile()], variants are scored on it and the
+#' demonstrations are drawn from all of `trainset`. Without `valset`,
+#' `min(eval_sample_size, ceiling(0.2 * nrow(trainset)))` random rows of
+#' `trainset` are held out for scoring and the demonstrations come from the
+#' remaining rows. The drawn demonstrations replace any the module already had.
+#' The split and the draw use R's random number generator without a fixed
+#' seed, so call [set.seed()] first for reproducible results.
+#'
+#' The search runs [optimize_grid()] on a copy of the module, so the scores of
+#' all variants are available from [optimization_result()] and [top_trials()].
+#'
+#' @param metric A metric function such as
+#'   `metric_exact_match(field = "sentiment")`. Required when compiling.
+#' @param metric_threshold,max_errors Accepted for consistency with the other
+#'   optimizers (see [Teleprompter()]); grid search does not use them.
+#' @param variants A data frame with one row per variant and an `id` column;
+#'   see Details. The default is a single variant that keeps the module's
+#'   instructions and template.
+#' @param k Integer number of demonstrations attached to every variant
+#'   (default `2L`). Use `0L` for none.
+#' @param eval_sample_size Integer cap on the number of held-out scoring rows
+#'   when no `valset` is given (default `50L`).
+#' @param verbose Whether to show a progress bar (default `TRUE`).
+#'
+#' @return A `GridSearchTeleprompter` object to pass to [compile()].
+#' @family teleprompters
+#' @family grid search
 #' @examples
-#' # Search over two instruction variants
 #' variants <- data.frame(
-#'   id = c("terse", "detailed"),
-#'   instructions = c("Be concise.", "Explain your reasoning step by step.")
+#'   id = c("terse", "explicit"),
+#'   instructions = c(
+#'     "Answer with one word.",
+#'     "Label the sentiment of the text as positive, negative or neutral."
+#'   )
 #' )
 #' tp <- GridSearchTeleprompter(
+#'   metric = metric_exact_match(field = "sentiment"),
 #'   variants = variants,
-#'   metric = metric_exact_match(field = "sentiment")
+#'   k = 1L
 #' )
+#' tp@variants
 #'
 #' \dontrun{
-#' # Compile picks the variant that scores best on the training set
 #' classifier <- module(signature("text -> sentiment"))
 #' trainset <- data.frame(
-#'   text = c("I love it!", "Terrible experience"),
-#'   sentiment = c("positive", "negative")
+#'   text = c("I love it!", "Terrible experience", "It's okay", "Works well"),
+#'   sentiment = c("positive", "negative", "neutral", "positive")
 #' )
-#' optimized <- compile(classifier, tp, trainset)
+#' set.seed(1)
+#' optimized <- compile(
+#'   classifier,
+#'   tp,
+#'   trainset,
+#'   .llm = ellmer::chat_openai(model = "gpt-6-luna")
+#' )
+#' top_trials(optimized)
 #' }
-#' @usage NULL
+#' @usage
+#' \special{GridSearchTeleprompter(
+#'   metric = NULL,
+#'   metric_threshold = NULL,
+#'   max_errors = 5L,
+#'   variants = tibble::tibble(id = 1L, instructions = NA_character_,
+#'     template = NA_character_),
+#'   k = 2L,
+#'   eval_sample_size = 50L,
+#'   verbose = TRUE
+#' )}
 #' @export
 GridSearchTeleprompter <- S7::new_class(
   "GridSearchTeleprompter",

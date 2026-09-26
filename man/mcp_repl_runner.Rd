@@ -2,7 +2,7 @@
 % Please edit documentation in R/mcp-repl-runner.R
 \name{mcp_repl_runner}
 \alias{mcp_repl_runner}
-\title{Posit mcp-repl Code Runner}
+\title{Run R code in an operating-system sandbox with mcp-repl}
 \usage{
 mcp_repl_runner(
   repl = NULL,
@@ -16,90 +16,102 @@ mcp_repl_runner(
 )
 }
 \arguments{
-\item{repl}{Optional function implementing the mcp-repl \code{repl} tool.}
+\item{repl}{Optional function implementing the mcp-repl \code{repl} tool; see
+Details.}
 
-\item{command}{Path or command name for the \code{mcp-repl} executable.}
+\item{command}{Path or name of the \code{mcp-repl} executable.}
 
-\item{interpreter}{Interpreter passed to mcp-repl. Currently only \code{"r"} is
-supported by this runner.}
+\item{interpreter}{Interpreter passed to mcp-repl. Only \code{"r"} is
+supported.}
 
-\item{sandbox}{mcp-repl sandbox policy. Defaults to \code{"workspace-write"}.
-\code{"inherit-codex"} is rejected because \code{\link[mcptools:mcp_tools]{mcptools::mcp_tools()}} does not
-currently propagate the required Codex sandbox metadata.}
+\item{sandbox}{Sandbox policy, \code{"workspace-write"} (the default).
+\code{"inherit-codex"} is rejected because \code{mcptools::mcp_tools()} does not
+pass on the Codex sandbox metadata it needs.}
 
-\item{timeout}{Maximum execution time in seconds.}
+\item{timeout}{Maximum execution time per call, in seconds (default 30).}
 
-\item{max_output_chars}{Maximum number of output characters returned to the
-optimizer.}
+\item{max_output_chars}{Maximum number of output characters returned per
+call (default \code{100000L}).}
 
-\item{oversized_output}{mcp-repl oversized-output mode. RLM previews fail
-closed. Executable Flex accepts only one bounded current-step frame in a
-plain file preview. dsprrr attempts to reset active pager state before
-returning a failure.}
+\item{oversized_output}{mcp-repl's mode for oversized output (default
+\code{"files"}). RLM rejects file previews; executable Flex accepts one bounded
+message in a plain file preview. dsprrr tries to reset an active pager
+before reporting a failure.}
 
-\item{extra_args}{Reserved for future vetted mcp-repl options. It must be
-empty because arbitrary server flags can weaken the managed sandbox policy.}
+\item{extra_args}{Reserved for future vetted mcp-repl options and must be
+empty, because arbitrary server flags could weaken the sandbox.}
 }
 \value{
-An \code{McpReplRunner} implementing the dsprrr code-runner protocol.
+An \code{McpReplRunner} object implementing the runner interface
+described in \code{\link[=r_code_runner]{r_code_runner()}}: \verb{$execute()}, \verb{$policy()}, \verb{$reset()}
+and \verb{$shutdown()}.
 }
 \description{
-Creates a dsprrr code runner backed by Posit's
-\href{https://github.com/posit-dev/mcp-repl}{\code{mcp-repl}} MCP server.
-\code{mcp-repl} keeps a long-lived R session and enforces its sandbox with
-operating-system primitives. This makes it suitable for code proposed by an
-optimizer or language model.
+\code{mcp_repl_runner()} creates a code runner backed by Posit's
+\href{https://github.com/posit-dev/mcp-repl}{\code{mcp-repl}} MCP server. \code{mcp-repl}
+keeps a long-lived R session and enforces a sandbox with operating-system
+primitives, so it is suitable for code written by a model or an optimizer.
+Use it with \code{\link[=rlm_module]{rlm_module()}}, \code{\link[=code_act]{code_act()}}, \code{\link[=program_of_thought]{program_of_thought()}} and the
+agentic optimizers \code{\link[=AutoResearch]{AutoResearch()}} and \code{\link[=MetaHarness]{MetaHarness()}}.
 
-For nonce-bound RLM submit/query traffic, dsprrr caps each encoded control
-frame at 3,000 bytes so it stays below mcp-repl's inline-output threshold.
-If mcp-repl nevertheless returns a file-preview or active-pager marker (for
-example because user code printed a large value first), the runner fails the
-iteration instead of accepting an unverifiable partial control frame. These
-markers are plain text in the upstream protocol, so detection is necessarily
-conservative and can only fail closed; dsprrr never follows a disclosed
-sandbox file path from the host process.
-
-Executable Flex decodes one bounded current-step frame from raw output before
-display truncation. It may also recover that frame from a plain file preview.
-The frame remains untrusted and is still subject to Flex's host-side request,
-budget, and output validation. Ambiguous previews, pagers, bundles, and MCP
-errors fail closed. Host-generated requests that exceed the wire bound are
-compressed before transport and rejected before sending if they still do not
-fit.
+It needs the suggested mcptools package (1.0.1 or later) and the external
+\code{mcp-repl} executable.
 }
 \details{
-By default, \code{mcp_repl_runner()} starts \code{mcp-repl} through
-\code{\link[mcptools:mcp_tools]{mcptools::mcp_tools()}} with:
-\itemize{
-\item the R interpreter;
-\item the \code{workspace-write} sandbox;
-\item network access disabled by the sandbox; and
-\item oversized output written to sandbox-visible files.
+\subsection{Sandbox}{
+
+By default, the runner starts \code{mcp-repl} through \code{mcptools::mcp_tools()}
+with the R interpreter and the \code{workspace-write} sandbox: network access is
+disabled, writes are allowed inside the workspace, and oversized output is
+written to files the sandbox can see. \code{sandbox = "off"} is not accepted,
+because this runner promises an enforced sandbox; use \code{\link[=r_code_runner]{r_code_runner()}} for
+trusted input without a sandbox.
 }
 
-The sandbox is deliberately on by default. It disables network access but
-the \code{workspace-write} policy still permits mutation inside allowed workspace
-paths. Setting \code{sandbox = "off"} is rejected because this runner advertises
-an enforced sandbox. Use \code{\link[=r_code_runner]{r_code_runner()}} explicitly for trusted-input-only
-subprocess isolation.
+\subsection{Your own connection}{
 
-Supplying \code{repl} is useful for an externally managed MCP connection and for
-deterministic tests. It must be a function with the mcp-repl tool contract:
-\code{repl(input, timeout_ms)}. Because dsprrr did not launch that function's
-server, its runner policy is deliberately marked unverified and it is
-rejected by optimizers that require an OS sandbox. Calling \verb{$shutdown()}
-makes the wrapper terminal but does not close that caller-managed connection.
+\code{repl} accepts a function with the mcp-repl tool contract,
+\code{repl(input, timeout_ms)}, for an MCP connection you manage or for tests.
+Because dsprrr did not start that server, it cannot vouch for the sandbox:
+the runner is marked unverified and optimizers that require a sandbox
+reject it. \verb{$shutdown()} then ends the runner but leaves your connection
+open. A runner that dsprrr starts shuts down only the transport it started.
+}
 
-A managed runner captures and shuts down only the mcp-repl transport it starts.
-Some supported mcptools versions do not expose public per-server teardown,
-so dsprrr uses a guarded compatibility shim and fails setup if deterministic
-ownership cannot be captured. This path is tested against mcptools 1.0.1.
+\subsection{Output limits}{
+
+RLM exchanges control messages with the guest session, capped at 3,000
+bytes each so they stay below mcp-repl's inline-output limit. If mcp-repl
+still replies with a file preview or a pager (for example because the code
+printed a large value first), the iteration fails rather than accepting a
+partial message; dsprrr never follows a file path reported by the sandbox.
+Executable Flex programs read one bounded message per step and can recover
+it from a plain file preview; anything ambiguous fails. Host requests that
+are too large are compressed and, if still too large, rejected before
+sending.
+}
 }
 \examples{
 \dontrun{
 runner <- mcp_repl_runner()
-runner$execute("mean(1:10)")
+runner$policy()$sandboxed
+runner$execute("mean(1:10)")$result
 runner$reset()
 runner$shutdown()
+
+# Give each RLM call a fresh sandboxed session
+analyst <- rlm_module(
+  "document, question -> answer",
+  interpreter_factory = function() mcp_repl_runner(timeout = 30)
+)
 }
 }
+\seealso{
+Other code execution:
+\code{\link[=code_act]{code_act()}},
+\code{\link[=program_of_thought]{program_of_thought()}},
+\code{\link[=r_code_runner]{r_code_runner()}},
+\code{\link[=rlm]{rlm()}},
+\code{\link[=rlm_module]{rlm_module()}}
+}
+\concept{code execution}

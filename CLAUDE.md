@@ -361,7 +361,7 @@ test_that("integration test with cassette", {
   skip_if_not(file.exists(cassette_file), "VCR cassette not recorded")
 
   vcr::local_cassette("my-test")
-  llm <- ellmer::chat_openai(model = "gpt-4o-mini")
+  llm <- ellmer::chat_openai(model = "gpt-6-luna")
   # ... test code
 })
 ```
@@ -548,8 +548,9 @@ Suggested:
 ## Known Issues
 
 - For internal S7 classes with complex default values, use `@noRd` instead of `@keywords internal` to avoid R CMD check codoc mismatch warnings
-- Instruction-level optimizers (MIPROv2, GEPA, COPRO) operate on single
-  modules; only BootstrapFewShot compiles pipelines jointly
+- COPRO and SIMBA operate on single modules. MIPROv2 and GEPA tune each
+  predictor's instructions across multi-predictor programs, and
+  BootstrapFewShot compiles pipelines jointly
 
 ## Issue Tracking with Kata
 
@@ -773,8 +774,11 @@ git worktree prune
 - **PLAN.md**: Detailed roadmap with milestones and task tracking
 - **VITALS_INTEGRATION.md**: Documentation for vitals package integration
 - **inst/scripts/record-cassettes.R**: Helper script for re-recording VCR cassettes
-- **vignettes/**: User-facing tutorials
-  - `getting-started.Rmd`: Introduction and basic usage
-  - `compilation-optimization.Rmd`: Optimization workflow
-  - `vitals-integration.Rmd`: Vitals bridge usage
-  - `orchestration.Rmd`: Production workflow patterns
+- **vignettes/**: User-facing articles; `_pkgdown.yml` groups them for the site
+  - `tutorial-*.Rmd`: the six-step learning path (Tutorial 1 is "Get started")
+  - `compilation-optimization.Rmd`, `advanced-optimization.Rmd`: optimization
+  - `vitals-recipes.Rmd`: vitals bridge usage
+  - `orchestration.Rmd`: targets/Quarto workflows
+  - `articles/`: site-only articles (RLM, Flex, Omni, agentic harnesses)
+  - `_vcr/`: recorded LLM responses replayed when pkgdown builds the site;
+    `dsprrr:::eval_vignette()` decides when chunks run

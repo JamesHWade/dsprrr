@@ -2,7 +2,7 @@
 % Please edit documentation in R/optimizer-core.R
 \name{eval_program}
 \alias{eval_program}
-\title{Evaluate a Program on a Dataset}
+\title{Evaluate a program with per-example detail}
 \usage{
 eval_program(
   program,
@@ -16,81 +16,88 @@ eval_program(
 )
 }
 \arguments{
-\item{program}{A DSPrrr module to evaluate.}
+\item{program}{A module or composed program.}
 
-\item{dataset}{A data frame containing test examples.}
+\item{dataset}{A data frame with the signature's input columns and the
+columns the metric compares.}
 
-\item{metric}{A metric function for scoring predictions.}
+\item{metric}{A metric function called as \code{metric(prediction, expected)},
+such as \code{metric_exact_match(field = "answer")}.}
 
-\item{.llm}{Optional ellmer Chat object for LLM calls.}
+\item{.llm}{Optional ellmer Chat.}
 
-\item{control}{An object created by \code{\link[=optimizer_control]{optimizer_control()}}, or \code{NULL} for
-defaults.}
+\item{control}{An \code{\link[=optimizer_control]{optimizer_control()}} object, or \code{NULL} for the defaults.
+Its \code{num_threads} sets how many rows run at the same time and \code{progress}
+whether to show a progress bar.}
 
-\item{epochs}{Integer; number of times to repeat evaluation for statistical
-significance. Defaults to 1L. When > 1, computes std and confidence intervals.}
+\item{epochs}{Integer number of times each row is evaluated (default \code{1L}).}
 
-\item{...}{Additional arguments passed to \code{\link[=evaluate]{evaluate()}}.}
+\item{...}{Further arguments passed to \code{\link[=evaluate]{evaluate()}}.}
 
-\item{.trace_context}{A named JSON-compatible correlation context copied to
-the returned \code{EvalResult} and all program execution traces.}
+\item{.trace_context}{A named, JSON-compatible list of correlation fields
+(such as an experiment ID) copied to the result and to every execution
+trace.}
 }
 \value{
-An EvalResult object containing:
+An \code{EvalResult} S7 object. Read its properties with \code{@}:
 \itemize{
-\item \code{examples}: tibble with per-example row_id, score, error, predicted,
-feedback (textual feedback from feedback-aware metrics, see
-\code{\link[=metric_with_feedback]{metric_with_feedback()}}), and input columns (prefixed with input_*)
-\item \code{mean_score}: mean score across successful evaluations
-\item \code{std_error}: standard error of per-example scores (SD / sqrt(n))
-\item \code{n_evaluated}: number of successful evaluations
-\item \code{n_errors}: number of failed evaluations
-\item \code{total_tokens}: total tokens used
-\item \code{total_cost}: total cost in USD
-\item \code{total_latency_ms}: total time in milliseconds
-\item \code{trace_context}: the validated correlation context for this evaluation
-}
-
-When \code{epochs > 1}, additional fields:
-\itemize{
-\item \code{epochs}: number of epochs run
-\item \code{epoch_scores}: list of score vectors, one per epoch
-\item \code{score_std}: standard deviation of mean scores across epochs
-\item \code{ci_lower}, \code{ci_upper}: 95\% confidence interval bounds
+\item \code{examples}: a tibble with one row per example and columns \code{row_id},
+\code{score}, \code{error}, \code{predicted}, \code{feedback} (from metrics made with
+\code{\link[=metric_with_feedback]{metric_with_feedback()}}), \code{program_trace}, and one \verb{input_<name>}
+column per input.
+\item \code{mean_score}, \code{std_error}: mean score of the successful rows and its
+standard error.
+\item \code{n_evaluated}, \code{n_errors}: counts of successful and failed rows.
+\item \code{input_tokens}, \code{output_tokens}, \code{total_tokens}, \code{total_cost},
+\code{provider_calls}, \code{metric_calls}: usage totals (\code{NA} when unknown).
+\item \code{total_latency_ms}, \code{start_time}, \code{end_time}: timing.
+\item \code{epochs}, \code{epoch_scores}, \code{score_std}, \code{ci_lower}, \code{ci_upper}: with
+\code{epochs} above 1, the per-epoch scores, their standard deviation and a
+95\% confidence interval.
+\item \code{trace_context}: the correlation fields.
 }
 }
 \description{
-Standard evaluation function for optimizers. Executes a module on a dataset,
-applies a metric to each example, and returns detailed per-example results
-plus aggregated statistics.
-
-This is the core evaluation function used by all optimizers. It wraps
-\code{\link[=evaluate]{evaluate()}} with enhanced output including:
-\itemize{
-\item Per-example timing and error information
-\item Aggregated cost tracking
-\item Standard error computation
-\item Multi-epoch evaluation for statistical significance (when epochs > 1)
+\code{eval_program()} runs a program on a dataset, scores every row with a
+metric, and returns an \code{EvalResult} with per-example scores, errors,
+predictions and feedback, plus totals for tokens, cost and time. It is the
+evaluation the optimizers use internally. Use it when you build your own
+optimizer or need the same detail; for everyday evaluation, \code{\link[=evaluate]{evaluate()}} is
+simpler.
 }
+\details{
+The program is copied before it runs, so its traces are not changed. With
+\code{epochs} above 1, every row is evaluated that many times, and the result
+also reports the spread of the per-epoch mean scores.
 }
 \examples{
 \dontrun{
-sig <- signature("question -> answer")
-mod <- module(sig)
-
-dataset <- tibble::tibble(
+qa <- module(signature("question -> answer"))
+dataset <- data.frame(
   question = c("What is 2+2?", "What is 3+3?"),
   answer = c("4", "6")
 )
 
 result <- eval_program(
-  mod,
+  qa,
   dataset,
   metric = metric_exact_match(field = "answer"),
-  .llm = ellmer::chat_openai()
+  .llm = ellmer::chat_openai(model = "gpt-6-luna")
 )
-
 result@mean_score
 result@examples
 }
 }
+\seealso{
+Other optimizer building blocks:
+\code{\link{TrialLog}},
+\code{\link[=complete_trial]{complete_trial()}},
+\code{\link[=create_trial]{create_trial()}},
+\code{\link[=load_trial_log]{load_trial_log()}},
+\code{\link[=optimizer_control]{optimizer_control()}},
+\code{\link[=read_trials_jsonl]{read_trials_jsonl()}},
+\code{\link[=sample_dataset]{sample_dataset()}},
+\code{\link[=split_dataset]{split_dataset()}},
+\code{\link[=write_trials_jsonl]{write_trials_jsonl()}}
+}
+\concept{optimizer building blocks}

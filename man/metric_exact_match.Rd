@@ -2,36 +2,52 @@
 % Please edit documentation in R/metrics.R
 \name{metric_exact_match}
 \alias{metric_exact_match}
-\title{Create an Exact Match Metric}
+\title{Exact-match metric}
 \usage{
 metric_exact_match(field = NULL, ignore_case = FALSE, normalize = TRUE)
 }
 \arguments{
-\item{field}{Optional field name to extract from structured outputs}
+\item{field}{Name of the output field to compare. \code{evaluate()},
+\code{optimize_grid()} and \code{compile()} pass the whole data row as \code{expected};
+when \code{field} is \code{NULL}, the metric compares the one prediction field that
+is also a column of that row, and errors if there is not exactly one.}
 
-\item{ignore_case}{Logical, whether to ignore case when comparing}
+\item{ignore_case}{If \code{TRUE}, compare without regard to case.}
 
-\item{normalize}{Logical, whether to normalize whitespace}
+\item{normalize}{If \code{TRUE} (the default), trim white space at both ends and
+collapse runs of white space before comparing.}
 }
 \value{
-A function with signature function(prediction, expected) -> logical
+A function \verb{function(prediction, expected)} returning \code{TRUE} or
+\code{FALSE}, for \code{\link[=evaluate]{evaluate()}}, \code{\link[=compile]{compile()}} and the optimizers. \code{field} is
+stored in its \code{"field"} attribute.
 }
 \description{
-Creates a metric function that checks for exact string match between
-predicted and expected values. Can optionally extract a specific field
-from structured outputs.
+\code{metric_exact_match()} makes a metric that is \code{TRUE} when the prediction
+equals the expected value, compared as text, and \code{FALSE} otherwise.
 }
 \examples{
-# Simple exact match
-metric <- metric_exact_match()
-metric("hello", "hello")  # TRUE
-metric("hello", "world")  # FALSE
+match_sentiment <- metric_exact_match(field = "sentiment")
 
-# Field extraction for structured outputs
-metric <- metric_exact_match(field = "sentiment")
-metric(list(sentiment = "positive"), list(sentiment = "positive"))  # TRUE
+# How evaluate() calls it: the prediction, then the whole data row
+row <- data.frame(text = "Great!", sentiment = "positive")
+match_sentiment(list(sentiment = "positive"), row)
+match_sentiment(list(sentiment = "negative"), row)
 
-# Case insensitive matching
-metric <- metric_exact_match(ignore_case = TRUE)
-metric("Hello", "hello")  # TRUE
+# Called directly on two values
+metric_exact_match(ignore_case = TRUE)("Paris ", "paris")
 }
+\seealso{
+Other metrics:
+\code{\link[=as_dsprrr_metric]{as_dsprrr_metric()}},
+\code{\link[=evaluate]{evaluate()}},
+\code{\link[=metric_contains]{metric_contains()}},
+\code{\link[=metric_custom]{metric_custom()}},
+\code{\link[=metric_f1]{metric_f1()}},
+\code{\link[=metric_field_match]{metric_field_match()}},
+\code{\link[=metric_threshold]{metric_threshold()}},
+\code{\link[=metric_with_feedback]{metric_with_feedback()}},
+\code{\link[=metric_with_trace]{metric_with_trace()}},
+\code{\link{vitals_metrics}}
+}
+\concept{metrics}

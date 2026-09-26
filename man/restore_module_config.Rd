@@ -2,43 +2,59 @@
 % Please edit documentation in R/orchestration.R
 \name{restore_module_config}
 \alias{restore_module_config}
-\title{Restore a Module from Pinned Configuration}
+\title{Rebuild a program from a saved artifact}
 \usage{
 restore_module_config(config, registry = list(), trusted = FALSE)
 }
 \arguments{
-\item{config}{A configuration list (from \code{pins::pin_read()})}
+\item{config}{A program artifact, for example from \code{pins::pin_read()}.}
 
-\item{registry}{Named runtime registry used to resolve stored IDs.}
+\item{registry}{Named runtime registry used to resolve saved function names;
+see \code{\link[=program_artifact]{program_artifact()}}.}
 
-\item{trusted}{Whether embedded runtime values may be restored. The default
-is \code{FALSE}.}
+\item{trusted}{Whether embedded runtime values may be restored (default
+\code{FALSE}); see \code{\link[=program_artifact]{program_artifact()}}.}
 }
 \value{
-A DSPrrr module with the restored configuration
+The restored program.
 }
 \description{
-Reconstruct a module from a previously pinned configuration. This allows
-you to load optimized modules in new sessions or different projects.
+\code{restore_module_config()} rebuilds a program from a program artifact, such
+as one read from a pin written by \code{\link[=pin_module_config]{pin_module_config()}} or created by
+\code{\link[=program_artifact]{program_artifact()}}. The restored program has the saved signatures,
+configuration and demonstrations but no chat; pass one at run time.
 }
 \examples{
-\dontrun{
-# Read pinned config and restore module
-board <- pins::board_folder("pins")
-config <- pins::pin_read(board, "sentiment-classifier-v1")
-mod <- restore_module_config(config)
+\dontshow{if (rlang::is_installed("pins")) withAutoprint(\{ # examplesIf}
+classifier <- module(signature("text -> sentiment"))
+trainset <- data.frame(
+  text = c("I love it!", "Terrible experience", "It's okay"),
+  sentiment = c("positive", "negative", "neutral")
+)
+compiled <- compile(classifier, LabeledFewShot(k = 2L), trainset)
 
-# Use the restored module
-result <- run(mod, text = "This is great!", .llm = llm)
+board <- pins::board_temp()
+pin_module_config(board, "sentiment-classifier", compiled)
+
+artifact <- pins::pin_read(board, "sentiment-classifier")
+restored <- restore_module_config(artifact)
+restored$is_compiled()
+
+\dontrun{
+run(
+  restored,
+  text = "This is great!",
+  .llm = ellmer::chat_openai(model = "gpt-6-luna")
+)
 }
+\dontshow{\}) # examplesIf}
 }
 \seealso{
-Other orchestration:
-\code{\link{orchestration}},
+Other persistence:
+\code{\link[=export_module_code]{export_module_code()}},
 \code{\link[=pin_module_config]{pin_module_config()}},
 \code{\link[=pin_trace]{pin_trace()}},
 \code{\link[=pin_vitals_log]{pin_vitals_log()}},
-\code{\link[=use_dsprrr_template]{use_dsprrr_template()}},
-\code{\link[=validate_workflow]{validate_workflow()}}
+\code{\link{program-artifact}}
 }
-\concept{orchestration}
+\concept{persistence}

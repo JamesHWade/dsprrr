@@ -2,7 +2,7 @@
 % Please edit documentation in R/module-rlm.R
 \name{rlm_module}
 \alias{rlm_module}
-\title{Create a Recursive Language Model (RLM) Module}
+\title{Create an RLM module that explores its inputs with R code}
 \usage{
 rlm_module(
   signature,
@@ -22,75 +22,177 @@ rlm_module(
 )
 }
 \arguments{
-\item{signature}{A Signature object or string notation defining inputs/outputs
-with explicit ellmer string, number, integer, boolean, enum, array, or
-object output types. Opaque \code{TypeJsonSchema} outputs are unsupported.}
+\item{signature}{A \code{\link[=signature]{signature()}} object or a signature string. Outputs must
+use explicit string, number, integer, boolean, enum, array or object
+types.}
 
-\item{runner}{Optional caller-owned code runner implementing \code{execute()} and
-\code{policy()}. Its policy must declare \code{persistent = TRUE}. It is retained,
-never automatically shut down, and must not be shared concurrently. For the
-trusted callr backend, use \code{r_code_runner(persistent = TRUE)}.}
+\item{runner}{A persistent code runner you own, such as
+\code{r_code_runner(persistent = TRUE)}. Its policy must declare
+\code{persistent = TRUE}, and it must not be used by two calls at the same
+time.}
 
-\item{interpreter_factory}{Optional zero-argument function returning a fresh
-runner with \code{execute()}, \code{policy()}, optional \code{start()}, and idempotent
-terminal \code{shutdown()}. Its policy must advertise
-\code{persistent = TRUE} for RLM.
-Supply exactly one of \code{runner} and \code{interpreter_factory}.}
+\item{interpreter_factory}{A function with no arguments that returns a
+fresh persistent runner for each call, such as
+\code{function() mcp_repl_runner()}.}
 
-\item{max_iterations}{Maximum REPL iterations before fallback (default 20)}
+\item{max_iterations}{Integer maximum number of code steps before the
+fallback extraction (default \code{20L}).}
 
-\item{max_llm_calls}{Maximum recursive LLM calls allowed (default 50)}
+\item{max_llm_calls}{Integer maximum number of sub-queries (default \code{50L}).
+Use \code{0L} to disable them.}
 
-\item{max_output_chars}{Maximum model-visible characters per execution output.
-Longer output is shown as a head-and-tail excerpt. Default 10000.}
+\item{max_output_chars}{Maximum number of characters of each execution
+result shown to the model (default \code{10000L}).}
 
-\item{sub_lm}{Optional ellmer Chat for recursive queries. \code{NULL} inherits the
-invocation's outer Chat. Set \code{max_llm_calls = 0} to disable recursion.}
+\item{sub_lm}{Optional ellmer Chat for sub-queries. \code{NULL} uses the chat of
+the call.}
 
-\item{verbose}{Logical. Print execution progress (default FALSE)}
+\item{verbose}{Whether to print progress (default \code{FALSE}).}
 
-\item{tools}{Named list of user-defined host functions or ellmer ToolDef
-objects. Guest code emits an
-invocation-bound request, dsprrr validates it and invokes the original
-function in the host,
-and the guest is replayed with the response. Closures are never deparsed or
-serialized into generated code. These tools execute in the host process,
-outside the guest runner sandbox, with the host's permissions. ToolDef
-schemas guide generation; the callable must still enforce semantic
-constraints beyond the bridge's lossless JSON-compatible value checks.
-A protocol safety ceiling permits at most 1,000 host-tool calls in one
-generated R step.}
+\item{tools}{Named list of R functions or ellmer tools that the generated
+code can call. They run in the host process with your permissions. The
+generated code sends a request that dsprrr checks before calling the
+function; arguments are limited to JSON-compatible values (logical,
+integer, double, character, \code{NULL} and nested lists), and one step may
+make at most 1,000 tool calls. Tool definitions guide the model, but the
+function must still check its arguments.}
 
-\item{config}{Optional prediction configuration.}
+\item{config}{Optional module configuration, such as runtime settings.}
 
-\item{chat}{Optional ellmer Chat object.}
+\item{chat}{Optional ellmer Chat stored on the module.}
 
-\item{generate_action}{Optional advanced action predictor.}
+\item{generate_action}{Optional replacement for the predictor that writes
+the code (advanced).}
 
-\item{extract}{Optional advanced extraction predictor.}
+\item{extract}{Optional replacement for the fallback extraction predictor
+(advanced).}
 
 \item{...}{Must be empty.}
 }
 \value{
-An RLMModule object
+An RLM module.
 }
 \description{
-Create an RLM whose implementation can adaptively explore R objects at
-inference time. Use RLM when the inspection path is not known in advance;
-use ordinary R when that path becomes stable, or Flex when labeled examples
-should discover a reusable implementation.
+\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
+
+\code{rlm_module()} creates a recursive language model (RLM) module for inputs
+whose useful evidence is too large, irregular or unpredictable to fit in one
+prompt. The inputs stay in an R session. In each step the model writes R
+code to inspect them, the runner executes it, and the model decides what to
+look at next, until it submits an answer. \code{\link[=rlm]{rlm()}} runs a one-off
+investigation.
+
+Use RLM when the inspection path is not known in advance. Use ordinary R
+once that path is stable, or \code{\link[=flex]{flex()}} when labeled examples should discover
+a reusable implementation.
+}
+\details{
+\subsection{What the generated code can use}{
+
+Each input is available under \code{.context}. Besides ordinary R, the code can
+call:
+\itemize{
+\item \code{SUBMIT(...)} to finish with the output values, by position or by name.
+\item \code{peek(var, start, end)} to look at a slice of a string (characters) or a
+vector (elements).
+\item \code{search(var, pattern)} to search a variable with a regular expression.
+\item \code{llm_query(query, context_slice)} and
+\code{llm_query_batched(queries, slices)} to ask a model a sub-question and
+get the answer back as a value. These count against \code{max_llm_calls}.
+\item The functions supplied in \code{tools}.
+}
+
+Sub-queries and tools run in the host R process, not in the runner: the
+generated code pauses, dsprrr handles the request, and the code is replayed
+with the response. Variables persist across steps within one call, so the
+runner's \code{policy()} must declare \code{persistent = TRUE}. Invalid submissions
+become errors that the model can repair. If no valid submission is made in
+\code{max_iterations} steps, the \code{extract} predictor makes one final typed
+attempt.
+
+RLM checks string, number, integer, boolean, enum, array and object
+outputs. Opaque \code{TypeJsonSchema} outputs are rejected when the module is
+created, because they cannot be checked in the repair loop.
+}
+
+\subsection{Runners}{
+
+Supply exactly one of \code{runner} and \code{interpreter_factory}. For model-written
+code, prefer a factory that returns a fresh sandboxed \code{\link[=mcp_repl_runner]{mcp_repl_runner()}}.
+That transport is bounded and works best for compact, JSON-compatible
+inputs; its default sandbox disables network access but allows writes in
+the workspace. It needs the suggested mcptools package and Posit's
+\code{mcp-repl} executable. For large data frames or other rich R objects,
+\code{r_code_runner(persistent = TRUE)} can stage the inputs once, but it runs
+with your permissions, so use it for trusted input only. \code{tools} always run
+in the host process with your permissions.
+
+A \code{runner} you supply is reused and never shut down by dsprrr; a runner from
+\code{interpreter_factory} belongs to one call and is shut down when it ends.
+\code{\link[=run_async]{run_async()}} and isolated \code{\link[=run_dataset]{run_dataset()}} execution work with a factory;
+token streaming is unavailable. A direct \code{\link[=run]{run()}} call stages each input as
+one variable, whatever its length. For several investigations, use
+\code{\link[=run_dataset]{run_dataset()}} with list-columns for data frames, vectors, lists or other
+rich values.
+}
+
+\subsection{Optimization and traces}{
+
+The \code{generate_action} and \code{extract} predictors appear in \code{\link[=named_modules]{named_modules()}},
+so \code{\link[=GEPA]{GEPA()}} can tune them and \code{\link[=MIPROv2]{MIPROv2()}} can tune their instructions (with
+\code{max_bootstrapped_demos = 0L}). \code{\link[=BootstrapFewShot]{BootstrapFewShot()}} and \code{\link[=LabeledFewShot]{LabeledFewShot()}}
+reject programs that contain an RLM.
+
+The model sees at most \code{max_output_chars} characters of each execution
+result, as a head-and-tail excerpt, and that view is kept in the returned
+trajectory. Traces keep hashes and sizes of the inputs, not their values.
+Structured metadata counts action, recursive and extraction calls
+separately from verified provider calls. A cache hit counts as zero provider
+calls, and totals are \code{NA} when any provider turn cannot be verified.
+}
 }
 \examples{
+\dontshow{if (rlang::is_installed("callr")) withAutoprint(\{ # examplesIf}
+# Trusted input only: r_code_runner() runs with your permissions
+runner <- r_code_runner(persistent = TRUE)
+analyst <- rlm_module("document, question -> answer", runner = runner)
+analyst
+runner$shutdown()
+
 \dontrun{
+# A fresh sandboxed session for each call
 analyst <- rlm_module(
   "document, question -> answer",
   interpreter_factory = function() mcp_repl_runner(timeout = 30)
 )
-result <- run(
+run(
   analyst,
   document = "Owner: team-a\nObligation: rotate keys quarterly",
   question = "Which obligations have no owner?",
-  .llm = ellmer::chat_openai()
+  .llm = ellmer::chat_openai(model = "gpt-6-luna")
 )
 }
+\dontshow{\}) # examplesIf}
 }
+\seealso{
+Other program constructors:
+\code{\link[=chain_of_thought]{chain_of_thought()}},
+\code{\link[=code_act]{code_act()}},
+\code{\link[=flex]{flex()}},
+\code{\link[=module]{module()}},
+\code{\link[=module_fn]{module_fn()}},
+\code{\link[=multi_chain_comparison]{multi_chain_comparison()}},
+\code{\link[=program_of_thought]{program_of_thought()}},
+\code{\link[=rag_module]{rag_module()}},
+\code{\link[=react]{react()}},
+\code{\link[=rlm]{rlm()}}
+
+Other code execution:
+\code{\link[=code_act]{code_act()}},
+\code{\link[=mcp_repl_runner]{mcp_repl_runner()}},
+\code{\link[=program_of_thought]{program_of_thought()}},
+\code{\link[=r_code_runner]{r_code_runner()}},
+\code{\link[=rlm]{rlm()}}
+}
+\concept{code execution}
+\concept{program constructors}

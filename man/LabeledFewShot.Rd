@@ -2,7 +2,7 @@
 % Please edit documentation in R/teleprompter.R
 \name{LabeledFewShot}
 \alias{LabeledFewShot}
-\title{LabeledFewShot Teleprompter}
+\title{Labeled few-shot: add training rows as demonstrations}
 \usage{
 LabeledFewShot(
   metric = NULL,
@@ -14,43 +14,73 @@ LabeledFewShot(
 )
 }
 \arguments{
-\item{metric}{Optional metric stored with the teleprompter. LabeledFewShot
-selects labeled demonstrations without evaluating candidate programs.}
+\item{metric}{Optional. It is not used for scoring, but when it has a
+\code{field} (as in \code{metric_exact_match(field = "sentiment")}), that column
+supplies the demonstrations' outputs.}
 
-\item{metric_threshold}{Minimum score required to be considered successful.
-If NULL, uses the metric's default threshold.}
+\item{metric_threshold, max_errors}{Accepted for consistency with the other
+optimizers (see \code{\link[=Teleprompter]{Teleprompter()}}); \code{LabeledFewShot()} does not use them.}
 
-\item{max_errors}{Maximum number of errors allowed during optimization.
-Default is 5.}
+\item{k}{Integer number of demonstrations (default \code{4L}). When the training
+set has fewer rows, all of them are used.}
 
-\item{k}{Number of examples to include in few-shot prompts. Default is 4.}
+\item{sample}{If \code{TRUE} (the default), draw \code{k} rows at random. If \code{FALSE},
+take the first \code{k} rows.}
 
-\item{sample}{Whether to randomly sample examples. Default is TRUE.}
-
-\item{seed}{Random seed for reproducibility. Default is 123.}
+\item{seed}{Integer seed for the random draw (default \code{123L}). It is passed
+to \code{\link[=set.seed]{set.seed()}}, which also resets the session's random number stream.}
 }
 \value{
-A \code{LabeledFewShot} teleprompter object.
+A \code{LabeledFewShot} object to pass to \code{\link[=compile]{compile()}}.
 }
 \description{
-A simple teleprompter that adds labeled examples from the training set
-as demonstrations to the module. This is the simplest form of few-shot
-learning. The target must be a root Predict module; programs with nested
-predictors (including RLM) are rejected because root examples do not define
-predictor-local demonstrations.
+\code{LabeledFewShot()} compiles a Predict module by attaching \code{k} rows of the
+training set as few-shot demonstrations. It makes no model calls and scores
+nothing, which makes it a fast, offline baseline for the other optimizers.
+}
+\details{
+Rows are drawn at random (or the first \code{k} rows are taken when
+\code{sample = FALSE}); nothing checks whether they are good examples. A
+demonstration's inputs come from the columns named after the signature
+inputs. Its output comes from the metric's \code{field} when the metric has one,
+otherwise from the first column named \code{output}, \code{label}, \code{answer},
+\code{response}, \code{result} or \code{y}, otherwise from the first non-input column.
+
+The program must be a Predict module, such as one from \code{\link[=module]{module()}} or
+\code{\link[=chain_of_thought]{chain_of_thought()}}. Other programs, including pipelines and RLM modules,
+are rejected because training rows do not match the signatures of their
+inner predictors. \code{\link[=BootstrapFewShot]{BootstrapFewShot()}} compiles pipelines.
 }
 \examples{
-# A teleprompter that adds 2 labeled training examples as demonstrations
-tp <- LabeledFewShot(k = 2L, seed = 42L)
-tp@k
-
-\dontrun{
-# Compile a module with few-shot demos drawn from the training set
 classifier <- module(signature("text -> sentiment"))
 trainset <- data.frame(
-  text = c("I love it!", "Terrible experience", "It's okay"),
-  sentiment = c("positive", "negative", "neutral")
+  text = c("I love it!", "Terrible experience", "It's okay", "Works well"),
+  sentiment = c("positive", "negative", "neutral", "positive")
 )
-optimized <- compile(classifier, tp, trainset)
+
+tp <- LabeledFewShot(k = 2L)
+tp
+
+# Compiling makes no model calls and leaves `classifier` unchanged
+compiled <- compile(classifier, tp, trainset)
+best_demos(compiled, as_tibble = TRUE)
 }
+\seealso{
+Other teleprompters:
+\code{\link[=AutoResearch]{AutoResearch()}},
+\code{\link[=BetterTogether]{BetterTogether()}},
+\code{\link[=BootstrapFewShot]{BootstrapFewShot()}},
+\code{\link[=BootstrapFewShotWithRandomSearch]{BootstrapFewShotWithRandomSearch()}},
+\code{\link[=COPRO]{COPRO()}},
+\code{\link[=GEPA]{GEPA()}},
+\code{\link[=GridSearchTeleprompter]{GridSearchTeleprompter()}},
+\code{\link[=KNNFewShot]{KNNFewShot()}},
+\code{\link[=MIPROv2]{MIPROv2()}},
+\code{\link[=MetaHarness]{MetaHarness()}},
+\code{\link[=Omni]{Omni()}},
+\code{\link[=ReAnchor]{ReAnchor()}},
+\code{\link[=SIMBA]{SIMBA()}},
+\code{\link[=Teleprompter]{Teleprompter()}},
+\code{\link[=compile]{compile()}}
 }
+\concept{teleprompters}

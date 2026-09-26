@@ -2,53 +2,48 @@
 % Please edit documentation in R/optimize.R
 \name{module_metrics}
 \alias{module_metrics}
-\title{Summarise optimisation metrics per trial}
+\title{Per-trial rows from a grid search}
 \usage{
 module_metrics(module, metrics = NULL, truth = NULL, estimate = NULL, ...)
 }
 \arguments{
-\item{module}{A DSPrrr module optimised with \code{\link[=optimize_grid]{optimize_grid()}}.}
+\item{module}{A module.}
 
-\item{metrics}{Optional yardstick metric (or metric set) to compute for each
-trial.}
+\item{metrics}{Optional yardstick metric or metric set. Currently never
+computed; see Details.}
 
-\item{truth}{Column name (string) containing the ground-truth labels when
-computing yardstick metrics.}
+\item{truth, estimate}{Column names for the yardstick metrics. Required when
+\code{metrics} is supplied.}
 
-\item{estimate}{Column name (string) containing the model predictions when
-computing yardstick metrics.}
-
-\item{...}{Additional arguments passed to yardstick metrics.}
+\item{...}{Passed to the yardstick metrics.}
 }
 \value{
-A tibble with one row per trial containing columns:
-\itemize{
-\item \code{trial_id} - trial identifier.
-\item \code{score} - overall score recorded for the trial.
-\item \code{mean_score}, \code{median_score}, \code{std_dev} - summary statistics across the
-evaluation scores.
-\item \code{n_evaluated}, \code{n_errors} - counts reported by the evaluation.
-\item \code{params} - list-column with the parameters evaluated in the trial.
-\item \code{scores} - list-column with the raw per-example scores (if available).
-\item \code{yardstick} - list-column containing yardstick metric results when
-requested.
-}
+A tibble with one row per trial and columns \code{trial_id}, \code{score},
+\code{mean_score} (the trial score), \code{median_score}, \code{std_dev},
+\code{n_evaluated}, \code{n_errors}, \code{params} (list-column of the trial's
+parameters), \code{scores} and \code{yardstick}.
 }
 \description{
-Flatten the optimisation trials recorded on a module into a tidy data frame
-containing per-trial metric summaries. Useful for producing tables or
-visualisations comparing trial performance. When yardstick metrics are
-supplied, the function also computes those metrics for each trial using the
-stored evaluation datasets.
+\code{module_metrics()} returns one row per grid-search trial recorded on a
+module by \code{\link[=optimize_grid]{optimize_grid()}} (or \code{\link[=GridSearchTeleprompter]{GridSearchTeleprompter()}}). Like
+\code{\link[=module_trials]{module_trials()}}, it reads only \code{module$state$trials}.
+}
+\details{
+The per-example evaluation results are not kept with the trials, so
+\code{median_score}, \code{std_dev}, \code{n_evaluated} and \code{n_errors} are \code{NA}, \code{scores}
+is empty, and the yardstick metrics requested with \code{metrics} are not
+computed: the \code{yardstick} column is always \code{NULL}. Use \code{\link[=module_trials]{module_trials()}} or
+\code{\link[=top_trials]{top_trials()}} for trial scores.
 }
 \examples{
-\dontrun{
-trial_metrics <- module_metrics(my_module)
-yardstick_metrics <- module_metrics(
-  my_module,
-  metrics = yardstick::metric_set(yardstick::accuracy),
-  truth = target,
-  estimate = result
-)
+# Without trials the result is an empty tibble with these columns
+module_metrics(module(signature("text -> sentiment")))
 }
+\seealso{
+Other grid search:
+\code{\link[=GridSearchTeleprompter]{GridSearchTeleprompter()}},
+\code{\link[=module_parameters]{module_parameters()}},
+\code{\link[=module_trials]{module_trials()}},
+\code{\link[=optimize_grid]{optimize_grid()}}
 }
+\concept{grid search}

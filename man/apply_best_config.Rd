@@ -2,45 +2,43 @@
 % Please edit documentation in R/optimizer-accessors.R
 \name{apply_best_config}
 \alias{apply_best_config}
-\title{Apply Best Configuration from One Module to Another}
+\title{Copy optimized settings to another module}
 \usage{
 apply_best_config(source, target = NULL, include = c("all", "params", "demos"))
 }
 \arguments{
-\item{source}{A compiled DSPrrr module with optimization results.}
+\item{source}{An optimized module, returned by \code{\link[=compile]{compile()}} or modified by
+\code{\link[=optimize_grid]{optimize_grid()}}.}
 
-\item{target}{A DSPrrr module to apply the configuration to.
-If NULL, a copy of the source module is created.}
+\item{target}{The module to update. It is modified in place. If \code{NULL}, a
+fresh copy of \code{source} is created and updated.}
 
-\item{include}{Character vector specifying what to copy:
-\itemize{
-\item "params": Best parameter values (temperature, etc.)
-\item "demos": Few-shot demonstration examples
-\item "all": Both params and demos (default)
-}}
+\item{include}{What to copy: \code{"all"} (the default), \code{"params"} (the best
+parameters, such as \code{temperature}) or \code{"demos"} (the demonstrations).}
 }
 \value{
-The target module with the applied configuration (modified in place
-if target was provided, otherwise a new module).
+The updated target module, invisibly.
 }
 \description{
-Copy the optimized configuration (best parameters, demos, etc.) from
-a compiled module to a new or existing module. Useful for transferring
-optimization results to a fresh module instance.
+\code{apply_best_config()} copies the best parameters, the demonstrations and
+the optimization result from an optimized module to another module, for
+example to reuse a compiled configuration on a module with a different
+chat.
 }
 \examples{
-if (FALSE) {
-# Transfer optimization from one module to another
-optimized <- optimize_grid(mod, data, metric, parameters)
-new_mod <- module(signature)
-apply_best_config(optimized, new_mod)
+classifier <- module(signature("text -> sentiment"))
+trainset <- data.frame(
+  text = c("I love it!", "Terrible experience", "It's okay"),
+  sentiment = c("positive", "negative", "neutral")
+)
+compiled <- compile(classifier, LabeledFewShot(k = 2L), trainset)
 
-# Create a fresh copy with the optimized config
-fresh <- apply_best_config(optimized, target = NULL)
-}
+fresh <- module(signature("text -> sentiment"))
+apply_best_config(compiled, fresh, include = "demos")
+length(fresh$demos)
 }
 \seealso{
-Other optimizer accessors:
+Other optimization results:
 \code{\link[=best_demos]{best_demos()}},
 \code{\link[=best_params]{best_params()}},
 \code{\link[=config_diff]{config_diff()}},
@@ -49,4 +47,4 @@ Other optimizer accessors:
 \code{\link[=optimization_summary]{optimization_summary()}},
 \code{\link[=top_trials]{top_trials()}}
 }
-\concept{optimizer accessors}
+\concept{optimization results}

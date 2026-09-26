@@ -5,7 +5,7 @@
 \alias{assert_output}
 \alias{suggest_output}
 \alias{assertion_set}
-\title{Assertions for Output Validation}
+\title{Define output assertions}
 \usage{
 assert_output(condition, message = "Assertion failed", field = NULL)
 
@@ -14,71 +14,62 @@ suggest_output(condition, message = "Suggestion not met", field = NULL)
 assertion_set(...)
 }
 \arguments{
-\item{condition}{A formula or function that takes the output and returns TRUE/FALSE.
-For formulas, use \code{.x} to reference the output (e.g., \code{~ nchar(.x$answer) <= 100}).}
+\item{condition}{A function, or a formula using \code{.x} such as
+\code{~ nchar(.x$answer) <= 100}, that takes the output (or the \code{field}) and
+returns \code{TRUE} or \code{FALSE}.}
 
-\item{message}{Error message to display when the assertion fails.}
+\item{message}{The message shown when the check fails. \code{\link[=with_assertions]{with_assertions()}}
+also sends it back to the model on a retry, so phrase it as an
+instruction.}
 
-\item{field}{Optional. The specific output field to validate. If NULL, the entire
-output is passed to the condition.}
+\item{field}{The output field passed to \code{condition}. With \code{NULL} (the
+default), the whole output is passed.}
 
-\item{...}{Output assertions created by \code{\link[=assert_output]{assert_output()}} or
-\code{\link[=suggest_output]{suggest_output()}}, or one list of such assertions.}
+\item{...}{For \code{assertion_set()}: assertions made with \code{assert_output()},
+\code{suggest_output()} or the \verb{assert_*()} helpers, or one list of them. An
+empty set gives a warning.}
 }
 \value{
-An output assertion for \code{\link[=assertion_set]{assertion_set()}} or \code{\link[=with_assertions]{with_assertions()}}.
-
-An assertion set for \code{\link[=with_assertions]{with_assertions()}}.
+\code{assert_output()} and \code{suggest_output()} return an assertion, and
+\code{assertion_set()} a set of assertions, for \code{\link[=with_assertions]{with_assertions()}}.
 }
 \description{
-Use \code{\link[=assert_output]{assert_output()}} and \code{\link[=suggest_output]{suggest_output()}} to define output validation
-constraints, then combine them with \code{\link[=assertion_set]{assertion_set()}}. Hard assertions
-trigger retries when they fail, while soft suggestions log warnings and
-allow execution to continue.
-
-Define validation constraints for module outputs. Hard assertions (\code{assert_output})
-trigger retries when they fail, while soft suggestions (\code{suggest_output}) log
-warnings but allow execution to continue.
+Assertions are checks on a module's output. \code{assert_output()} makes a hard
+assertion: when it fails, \code{\link[=with_assertions]{with_assertions()}} retries the module with
+feedback. \code{suggest_output()} makes a soft one: a failure only gives a
+warning. \code{assertion_set()} groups assertions. The \verb{assert_*()} helpers,
+such as \code{\link[=assert_length]{assert_length()}}, build common conditions for you.
 }
 \details{
-\subsection{Backtracking Behavior}{
-
-When wrapped with \code{with_assertions()}, modules will:
-\enumerate{
-\item Run the module normally
-\item Evaluate all assertions against the output
-\item If hard assertions fail and retries remain, inject feedback and retry
-\item If max retries exceeded, raise an error (or warning if configured)
-\item Soft suggestions always log but never trigger retries
-}
-}
-
-\subsection{Condition Functions}{
-
-Conditions can be specified as:
-\itemize{
-\item \strong{Formulas}: \code{~ nchar(.x$answer) <= 100} - \code{.x} is the output
-\item \strong{Functions}: \code{function(x) nchar(x$answer) <= 100}
-}
-}
+A condition is a function, or a formula using \code{.x}, that receives the
+output (a named list) or, with \code{field}, that field's value, and returns
+\code{TRUE} or \code{FALSE}. A condition that errors, returns \code{NA} or returns
+anything other than a single logical value counts as failed and gives a
+warning; so does a \code{field} that is missing from the output.
 }
 \examples{
-\dontrun{
-# Hard assertion - must be satisfied
-assert_output(~ nchar(.x$answer) <= 100, "Answer must be 100 chars or less")
+short <- assert_output(~ nchar(.x$answer) <= 100, "Keep the answer under 100 characters")
+short
 
-# Soft suggestion - logs warning but continues
-suggest_output(~ grepl("^[A-Z]", .x$answer), "Should start with capital")
-
-# Field-specific assertion
-assert_output(~ nchar(.x) <= 50, "Too long", field = "summary")
-}
-
-\dontrun{
-assertions <- assertion_set(
-  assert_output(~ nchar(.x$answer) <= 100, "Too long"),
-  suggest_output(~ grepl("^[A-Z]", .x$answer), "Should capitalize")
+capitalized <- suggest_output(
+  ~ grepl("^[A-Z]", .x),
+  "Start with a capital letter",
+  field = "answer"
 )
-}
 
+assertion_set(short, capitalized)
 }
+\seealso{
+Other assertions:
+\code{\link[=assert_contains]{assert_contains()}},
+\code{\link[=assert_custom]{assert_custom()}},
+\code{\link[=assert_length]{assert_length()}},
+\code{\link[=assert_matches]{assert_matches()}},
+\code{\link[=assert_not_contains]{assert_not_contains()}},
+\code{\link[=assert_not_empty]{assert_not_empty()}},
+\code{\link[=assert_not_matches]{assert_not_matches()}},
+\code{\link[=assert_one_of]{assert_one_of()}},
+\code{\link[=assert_range]{assert_range()}},
+\code{\link[=with_assertions]{with_assertions()}}
+}
+\concept{assertions}

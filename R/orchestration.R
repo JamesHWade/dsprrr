@@ -1,61 +1,60 @@
-#' Orchestration Helpers for Production Workflows
+#' Orchestration helpers
 #'
-#' @description
-#' Functions for persisting module configurations, traces, and evaluation results
-#' using the pins package. These helpers enable reproducible LLM workflows by
-#' saving and loading module state across sessions.
+#' Pins, workflow templates and workflow checks. Each function is documented
+#' on its own page.
 #'
 #' @name orchestration
-#' @family orchestration
+#' @noRd
 NULL
 
 # ---- Module Configuration Persistence ----
 
-#' Pin a Module Configuration
+#' Pin a program to a pins board
 #'
 #' @description
-#' Save a complete module program artifact to a pins board for later retrieval.
-#' This uses the versioned manifest documented in [program-artifact], including
-#' nested programs and shared module identity.
-#'
-#' @param board A pins board object (e.g., from `pins::board_folder()`)
-#' @param name Character name for the pin
-#' @param module A DSPrrr module whose configuration should be saved
-#' @param description Optional description for the pin
-#' @param versioned Logical; whether to version the pin (default TRUE)
-#' @param registry Named runtime registry; see [program-artifact].
-#' @param trusted Whether trusted runtime values may be embedded. The default is
-#'   `FALSE`.
-#' @param ... Additional arguments passed to `pins::pin_write()`
-#'
-#' @return The pin name (invisibly)
+#' `pin_module_config()` saves a complete program, including nested modules,
+#' demonstrations and optimization results, to a pins board as an `.rds` pin.
+#' Read it back with `pins::pin_read()` and rebuild the program with
+#' [restore_module_config()].
 #'
 #' @details
-#' The pinned configuration includes:
-#' - Signature specification (inputs, output type, instructions)
-#' - Module configuration (temperature, prompt_style, etc.)
-#' - Optimization state (best parameters, trials summary)
-#' - Metadata (module type, creation timestamp, package version)
+#' The pin holds the program artifact described in [program_artifact()]:
+#' signatures, configuration, demonstrations, optimization results and the
+#' structure of composed programs. Chats, credentials, caches and traces are
+#' not saved. Functions such as tools or retrievers are saved only as names in
+#' `registry`, or embedded with `trusted = TRUE`.
+#'
+#' @param board A pins board, such as `pins::board_folder("pins")`.
+#' @param name Name of the pin.
+#' @param module The program to save.
+#' @param description Optional pin description. The default is
+#'   `"dsprrr program artifact: <name>"`.
+#' @param versioned Whether pins keeps earlier versions (default `TRUE`).
+#' @param ... Further arguments passed to `pins::pin_write()`.
+#' @param registry Named runtime registry; see [program_artifact()].
+#' @param trusted Whether runtime values may be embedded (default `FALSE`);
+#'   see [program_artifact()].
+#'
+#' @return `name`, invisibly.
 #'
 #' @export
-#' @family orchestration
+#' @family persistence
 #'
-#' @examples
-#' \dontrun{
-#' # Create a board and pin a module configuration
-#' board <- pins::board_folder("pins")
+#' @examplesIf rlang::is_installed("pins")
+#' classifier <- module(signature("text -> sentiment"))
+#' trainset <- data.frame(
+#'   text = c("I love it!", "Terrible experience", "It's okay"),
+#'   sentiment = c("positive", "negative", "neutral")
+#' )
+#' compiled <- compile(classifier, LabeledFewShot(k = 2L), trainset)
 #'
-#' mod <- signature("text -> sentiment") |>
-#'   module() |>
-#'   optimize_grid(data = devset, metric = metric_exact_match())
+#' board <- pins::board_temp()
+#' pin_module_config(board, "sentiment-classifier", compiled)
 #'
-#' pin_module_config(board, "sentiment-classifier-v1", mod,
-#'                   description = "Optimized sentiment classifier")
-#'
-#' # Later, retrieve and reconstruct the module
-#' config <- pins::pin_read(board, "sentiment-classifier-v1")
-#' restored_mod <- restore_module_config(config)
-#' }
+#' # Later, or in another session
+#' artifact <- pins::pin_read(board, "sentiment-classifier")
+#' restored <- restore_module_config(artifact)
+#' length(restored$demos)
 pin_module_config <- function(
   board,
   name,
@@ -101,31 +100,46 @@ pin_module_config <- function(
 }
 
 
-#' Restore a Module from Pinned Configuration
+#' Rebuild a program from a saved artifact
 #'
 #' @description
-#' Reconstruct a module from a previously pinned configuration. This allows
-#' you to load optimized modules in new sessions or different projects.
+#' `restore_module_config()` rebuilds a program from a program artifact, such
+#' as one read from a pin written by [pin_module_config()] or created by
+#' [program_artifact()]. The restored program has the saved signatures,
+#' configuration and demonstrations but no chat; pass one at run time.
 #'
-#' @param config A configuration list (from `pins::pin_read()`)
-#' @param registry Named runtime registry used to resolve stored IDs.
-#' @param trusted Whether embedded runtime values may be restored. The default
-#'   is `FALSE`.
+#' @param config A program artifact, for example from `pins::pin_read()`.
+#' @param registry Named runtime registry used to resolve saved function names;
+#'   see [program_artifact()].
+#' @param trusted Whether embedded runtime values may be restored (default
+#'   `FALSE`); see [program_artifact()].
 #'
-#' @return A DSPrrr module with the restored configuration
+#' @return The restored program.
 #'
 #' @export
-#' @family orchestration
+#' @family persistence
 #'
-#' @examples
+#' @examplesIf rlang::is_installed("pins")
+#' classifier <- module(signature("text -> sentiment"))
+#' trainset <- data.frame(
+#'   text = c("I love it!", "Terrible experience", "It's okay"),
+#'   sentiment = c("positive", "negative", "neutral")
+#' )
+#' compiled <- compile(classifier, LabeledFewShot(k = 2L), trainset)
+#'
+#' board <- pins::board_temp()
+#' pin_module_config(board, "sentiment-classifier", compiled)
+#'
+#' artifact <- pins::pin_read(board, "sentiment-classifier")
+#' restored <- restore_module_config(artifact)
+#' restored$is_compiled()
+#'
 #' \dontrun{
-#' # Read pinned config and restore module
-#' board <- pins::board_folder("pins")
-#' config <- pins::pin_read(board, "sentiment-classifier-v1")
-#' mod <- restore_module_config(config)
-#'
-#' # Use the restored module
-#' result <- run(mod, text = "This is great!", .llm = llm)
+#' run(
+#'   restored,
+#'   text = "This is great!",
+#'   .llm = ellmer::chat_openai(model = "gpt-6-luna")
+#' )
 #' }
 restore_module_config <- function(
   config,
@@ -149,36 +163,52 @@ restore_module_config <- function(
 
 # ---- Trace Persistence ----
 
-#' Pin Module Traces
+#' Pin a module's traces to a pins board
 #'
 #' @description
-#' Save module execution traces to a pins board. Traces include timing,
-#' token usage, and optionally the full prompts and outputs.
+#' `pin_trace()` saves a module's execution traces (timing, token use, cost
+#' and, optionally, prompts and outputs) to a pins board, together with a
+#' summary from [summarize_traces()]. Use it to keep a record of a run for
+#' later analysis.
 #'
-#' @param board A pins board object
-#' @param name Character name for the pin
-#' @param module A DSPrrr module with recorded traces
-#' @param include_prompts Logical; include full prompts (default FALSE)
-#' @param include_outputs Logical; include full outputs (default FALSE)
-#' @param description Optional description for the pin
-#' @param ... Additional arguments passed to `pins::pin_write()`
+#' @details
+#' The pin is a list with `traces` (from [export_traces()]), `summary` and
+#' `metadata` (module class, number of traces, creation time and the include
+#' flags). A module without traces is not pinned; a warning is raised instead.
 #'
-#' @return The pin name (invisibly)
+#' @param board A pins board.
+#' @param name Name of the pin.
+#' @param module A module that has been run.
+#' @param include_prompts Whether to include the full prompts (default
+#'   `FALSE`).
+#' @param include_outputs Whether to include the full outputs (default
+#'   `FALSE`).
+#' @param description Optional pin description.
+#' @param ... Further arguments passed to `pins::pin_write()`.
+#'
+#' @return `name`, invisibly.
 #'
 #' @export
-#' @family orchestration
+#' @family persistence
 #'
 #' @examples
 #' \dontrun{
 #' board <- pins::board_folder("pins")
+#' classifier <- module(signature("text -> sentiment"))
+#' run(
+#'   classifier,
+#'   text = c("Great!", "Terrible."),
+#'   .llm = ellmer::chat_openai(model = "gpt-6-luna")
+#' )
 #'
-#' # Run some predictions to generate traces
-#' results <- run(mod, text = test_texts, .llm = llm)
-#'
-#' # Save traces for later analysis
-#' pin_trace(board, "experiment-2024-01-traces", mod,
-#'           include_prompts = TRUE,
-#'           description = "Production run traces")
+#' pin_trace(
+#'   board,
+#'   "sentiment-traces",
+#'   classifier,
+#'   include_prompts = TRUE,
+#'   description = "Production run traces"
+#' )
+#' pins::pin_read(board, "sentiment-traces")$summary
 #' }
 pin_trace <- function(
   board,
@@ -239,35 +269,50 @@ pin_trace <- function(
 
 # ---- Vitals Log Persistence ----
 
-#' Pin Vitals Evaluation Log
+#' Pin evaluation results to a pins board
 #'
 #' @description
-#' Save evaluation results from a vitals Task run to a pins board.
-#' This enables tracking model performance over time and across experiments.
+#' `pin_vitals_log()` saves evaluation results to a pins board so you can
+#' track a module's performance across runs and experiments.
 #'
-#' @param board A pins board object
-#' @param name Character name for the pin
-#' @param eval_result Evaluation result from `evaluate()` or a vitals Task
-#' @param module Optional module that was evaluated (for additional metadata)
-#' @param description Optional description for the pin
-#' @param ... Additional arguments passed to `pins::pin_write()`
+#' @details
+#' For an [evaluate()] result, the pin keeps the mean score, per-example
+#' scores, counts, predictions and metadata. Any other list or data frame,
+#' such as the samples from a vitals `Task`'s `$get_samples()`, is stored as it
+#' is under `data`. A vitals `Task` object itself is not a list and is
+#' rejected. The pin also records the dsprrr version, the time and, when
+#' `module` is given, the module's class, compiled status and inputs.
 #'
-#' @return The pin name (invisibly)
+#' @param board A pins board.
+#' @param name Name of the pin.
+#' @param eval_result An [evaluate()] result, or a list or data frame of
+#'   results.
+#' @param module Optional module that was evaluated, for metadata.
+#' @param description Optional pin description.
+#' @param ... Further arguments passed to `pins::pin_write()`.
+#'
+#' @return `name`, invisibly.
 #'
 #' @export
-#' @family orchestration
+#' @family persistence
 #'
 #' @examples
 #' \dontrun{
 #' board <- pins::board_folder("pins")
 #'
-#' # Evaluate module on test set
-#' eval_result <- evaluate(mod, test_data, metric = metric_exact_match())
-#'
-#' # Pin the evaluation results
-#' pin_vitals_log(board, "sentiment-eval-v1", eval_result,
-#'                module = mod,
-#'                description = "Test set evaluation")
+#' eval_result <- evaluate(
+#'   classifier,
+#'   testset,
+#'   metric = metric_exact_match(field = "sentiment"),
+#'   .llm = ellmer::chat_openai(model = "gpt-6-luna")
+#' )
+#' pin_vitals_log(
+#'   board,
+#'   "sentiment-eval",
+#'   eval_result,
+#'   module = classifier,
+#'   description = "Test set evaluation"
+#' )
 #' }
 pin_vitals_log <- function(
   board,
@@ -338,29 +383,29 @@ pin_vitals_log <- function(
 
 # ---- Workflow Templates ----
 
-#' Use dsprrr Workflow Templates
+#' Copy a workflow template into a project
 #'
 #' @description
-#' Copy workflow templates (targets pipeline, Quarto report) to your project.
-#' These templates provide starting points for production LLM workflows.
+#' `use_dsprrr_template()` copies starter files for running dsprrr in a
+#' pipeline: a targets pipeline (`_targets.R`) that prepares data, optimizes
+#' and evaluates a module and pins the results, and a Quarto report
+#' (`report.qmd`). Edit the copies to fit your project.
 #'
-#' @param template Which template to use: "targets", "quarto", or "all"
-#' @param path Destination directory (default: current directory)
-#' @param overwrite Logical; overwrite existing files (default FALSE)
+#' @param template `"targets"`, `"quarto"` or `"all"`.
+#' @param path Directory to copy into (default: the working directory). It is
+#'   created if needed.
+#' @param overwrite Whether to replace existing files (default `FALSE`).
+#'   Existing files are otherwise skipped with a warning.
 #'
-#' @return Character vector of created file paths (invisibly)
+#' @return The paths of the created files, invisibly.
 #'
 #' @export
-#' @family orchestration
+#' @family integrations
 #'
 #' @examples
-#' \dontrun{
-#' # Copy the targets pipeline template
-#' use_dsprrr_template("targets")
-#'
-#' # Copy all templates
-#' use_dsprrr_template("all", path = "workflows/")
-#' }
+#' project <- file.path(tempdir(), "my-project")
+#' use_dsprrr_template("targets", path = project)
+#' list.files(project)
 use_dsprrr_template <- function(
   template = c("targets", "quarto", "all"),
   path = ".",
@@ -419,26 +464,34 @@ use_dsprrr_template <- function(
 
 # ---- Workflow Validation ----
 
-#' Validate Workflow Configuration
+#' Check a module and its data before a run
 #'
 #' @description
-#' Check that a workflow has all required components configured correctly.
-#' Useful for validating pipelines before running expensive LLM operations.
+#' `validate_workflow()` runs quick checks before an expensive batch run or
+#' pipeline step: that `module` is a dsprrr module, how many inputs its
+#' signature has, that `data` has a column for every input, and that `board`
+#' is a pins board. It prints one line per check and makes no model calls.
 #'
-#' @param module A DSPrrr module to validate
-#' @param data Optional data to validate against the module's signature
-#' @param board Optional pins board to check for accessibility
+#' @param module The module to check.
+#' @param data Optional data frame to check against the signature's inputs.
+#' @param board Optional pins board. Only its class is checked; the board is
+#'   not accessed.
 #'
-#' @return A list with validation results (invisibly). Prints a summary.
+#' @return Invisibly, a list with `valid` (`FALSE` when the module, data or
+#'   board check fails) and `checks` (one list per check with `passed` and
+#'   `message`).
 #'
 #' @export
-#' @family orchestration
+#' @family integrations
 #'
 #' @examples
-#' \dontrun{
-#' mod <- signature("text -> sentiment") |> module()
-#' validate_workflow(mod, data = test_data)
-#' }
+#' classifier <- module(signature("text -> sentiment"))
+#' reviews <- data.frame(text = c("Great!", "Awful."))
+#' validate_workflow(classifier, data = reviews)
+#'
+#' # A missing input column fails the check
+#' result <- validate_workflow(classifier, data = data.frame(review = "Great!"))
+#' result$valid
 validate_workflow <- function(module, data = NULL, board = NULL) {
   results <- list(
     valid = TRUE,
@@ -469,7 +522,7 @@ validate_workflow <- function(module, data = NULL, board = NULL) {
   # Check data compatibility
   if (!is.null(data) && inherits(module, "Module")) {
     required_cols <- vapply(
-      module$signature@inputs,
+      caller_input_specs(module),
       function(x) x$name,
       character(1)
     )

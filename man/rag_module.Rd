@@ -2,7 +2,7 @@
 % Please edit documentation in R/module-rag.R
 \name{rag_module}
 \alias{rag_module}
-\title{Create a RAG Module}
+\title{Create a retrieval-augmented generation module}
 \usage{
 rag_module(
   signature,
@@ -15,51 +15,93 @@ rag_module(
 )
 }
 \arguments{
-\item{signature}{A signature string or Signature object defining inputs/outputs.}
+\item{signature}{A signature from \code{\link[=signature]{signature()}}, or a signature string,
+such as \code{"question -> answer"}.}
 
-\item{store}{Optional ragnar store for document retrieval.}
+\item{store}{A ragnar store (see \code{\link[=ragnar_tool]{ragnar_tool()}} for how to build one),
+searched with \code{ragnar::ragnar_retrieve(store, query, top_k = k)}.}
 
-\item{retriever}{Optional custom retriever function. Should accept \verb{(query, k)}
-and return a character vector of documents.}
+\item{retriever}{A function called as \code{retriever(query, k = k)} that
+returns a character vector of documents. It takes precedence over
+\code{store} (with a warning if both are given).}
 
-\item{k}{Number of documents to retrieve (default 5).}
+\item{k}{Number of documents to retrieve.}
 
-\item{context_format}{Field name for the context in the prompt (default
-"relevant_context"). This field is automatically added to inputs.}
+\item{context_format}{Name under which the retrieved text appears in the
+prompt.}
 
-\item{config}{Optional configuration list.}
+\item{config}{A list of settings. \code{fail_on_retrieval_error = TRUE} turns
+retrieval errors into errors; by default they give a warning and the
+model sees "No relevant context found.".}
 
-\item{chat}{Optional ellmer Chat object.}
+\item{chat}{An ellmer Chat stored on the module.}
 }
 \value{
-A RAGModule object.
+A module (an R6 object of class \code{RAGModule}).
 }
 \description{
-Factory function to create a Retrieval-Augmented Generation module.
-RAG modules automatically retrieve relevant context from a document store
-before generating responses.
+\code{rag_module()} builds a module that, on every call, retrieves documents
+related to the input, adds them to the prompt, and asks the model to
+answer from them. Retrieval comes from a ragnar store or from any R
+function you supply.
+}
+\details{
+The query is the first of the inputs \code{query}, \code{question}, \code{text}, \code{input}
+or \code{prompt}, or else the first non-empty string input. The retrieved
+documents are numbered (\verb{[1] ...}) and added at the end of the prompt,
+under a \verb{# Retrieved context} heading and the label \code{context_format}.
+
+The context is added whether or not the signature declares a
+\code{context_format} input, and callers never pass it to \code{\link[=run]{run()}}. If the
+signature does declare it, as in \code{"question, relevant_context -> answer"},
+the retrieved text is currently written into the prompt twice.
+
+With \code{.return_format = "structured"}, the metadata records the \code{query}
+and the \code{retrieved_context}.
 }
 \examples{
+docs <- c(
+  "The Eiffel Tower is 330 metres tall.",
+  "The Louvre is the most visited museum in the world.",
+  "Paris has 20 arrondissements."
+)
+# A keyword retriever, so the example needs no embeddings
+keyword_retriever <- function(query, k) {
+  words <- tolower(strsplit(query, "\\\\W+")[[1]])
+  hits <- vapply(
+    docs,
+    function(doc) sum(words \%in\% tolower(strsplit(doc, "\\\\W+")[[1]])),
+    numeric(1)
+  )
+  unname(head(docs[order(-hits)], k))
+}
+keyword_retriever("How tall is the Eiffel Tower?", k = 2)
+
+rag <- rag_module("question -> answer", retriever = keyword_retriever, k = 2L)
+rag
+
 \dontrun{
-# With ragnar store
-store <- ragnar::ragnar_store_create(documents)
-mod <- rag_module(
-  "question, relevant_context -> answer",
-  store = store,
-  k = 3
+run(
+  rag,
+  question = "How tall is the Eiffel Tower?",
+  .llm = ellmer::chat_openai(model = "gpt-6-luna")
 )
 
-result <- run(mod, question = "What is the capital of France?")
-
-# With custom retriever
-my_retriever <- function(query, k) {
-  # Custom retrieval logic
-  c("Document 1 content", "Document 2 content")
-}
-
-mod <- rag_module(
-  "query, relevant_context -> response",
-  retriever = my_retriever
-)
+# With a ragnar store, built as shown in ?ragnar_tool
+rag_store <- rag_module("question -> answer", store = store, k = 3L)
 }
 }
+\seealso{
+Other program constructors:
+\code{\link[=chain_of_thought]{chain_of_thought()}},
+\code{\link[=code_act]{code_act()}},
+\code{\link[=flex]{flex()}},
+\code{\link[=module]{module()}},
+\code{\link[=module_fn]{module_fn()}},
+\code{\link[=multi_chain_comparison]{multi_chain_comparison()}},
+\code{\link[=program_of_thought]{program_of_thought()}},
+\code{\link[=react]{react()}},
+\code{\link[=rlm]{rlm()}},
+\code{\link[=rlm_module]{rlm_module()}}
+}
+\concept{program constructors}

@@ -2,29 +2,81 @@
 % Please edit documentation in R/teleprompter.R
 \name{Teleprompter}
 \alias{Teleprompter}
-\title{Teleprompter Base Class}
+\title{Arguments shared by all optimizers}
 \usage{
 Teleprompter(metric = NULL, metric_threshold = NULL, max_errors = 5L)
 }
 \arguments{
-\item{metric}{Optional metric function for evaluating predictions. Subclasses
-that evaluate candidates document whether a metric is required.}
+\item{metric}{A metric function called as \code{metric(prediction, expected)},
+such as \code{metric_exact_match(field = "answer")}, or \code{NULL}. Optimizers that
+score candidates require one.}
 
-\item{metric_threshold}{Minimum score required to be considered successful.
-If NULL, uses the metric's default threshold.}
+\item{metric_threshold}{A score between 0 and 1, or \code{NULL} (the default).
+Only some optimizers use it, and each optimizer's page says how.}
 
-\item{max_errors}{Maximum number of errors allowed during optimization.
-Default is 5.}
+\item{max_errors}{Integer error budget (default \code{5L}). The optimizers that
+run under \code{\link[=optimizer_control]{optimizer_control()}} (the two bootstrap optimizers, COPRO,
+MIPROv2, SIMBA, GEPA, AutoResearch and MetaHarness) stop after this many
+consecutive failed evaluations when \code{\link[=compile]{compile()}} is not given a \code{control}
+object.}
 }
 \value{
-A \code{Teleprompter} optimization strategy object.
+A \code{Teleprompter} object.
 }
 \description{
-Base S7 class for optimization strategies (teleprompters). Teleprompters
-are responsible for optimizing modules by adjusting their prompts,
-demonstrations, or other parameters based on training data.
+\code{Teleprompter()} is the parent class of every optimizer in dsprrr
+("teleprompter" is DSPy's original name for an optimizer). You never
+compile with it directly: create one of the optimizers below and pass it to
+\code{\link[=compile]{compile()}}. This page documents the three arguments that every optimizer
+accepts.
+}
+\details{
+Most optimizers store counts as S7 integer properties, so write \code{5L} rather
+than \code{5}. A double fails with an error such as
+\verb{@max_errors must be <integer>, not <double>}.
+\subsection{Optimizers at a glance}{\tabular{ll}{
+   Optimizer \tab What it changes \cr
+   \code{\link[=LabeledFewShot]{LabeledFewShot()}} \tab Demos: \code{k} training rows. No model calls. \cr
+   \code{\link[=KNNFewShot]{KNNFewShot()}} \tab Demos: the training rows most similar to each input, chosen at run time. \cr
+   \code{\link[=BootstrapFewShot]{BootstrapFewShot()}} \tab Demos: training rows plus the program's own outputs that pass the metric. \cr
+   \code{\link[=BootstrapFewShotWithRandomSearch]{BootstrapFewShotWithRandomSearch()}} \tab Demos: the best of several bootstrap candidates on a validation set. \cr
+   \code{\link[=GridSearchTeleprompter]{GridSearchTeleprompter()}} \tab Instructions, template or settings, from a table of variants. \cr
+   \code{\link[=COPRO]{COPRO()}} \tab Instructions, rewritten by a model over several rounds. \cr
+   \code{\link[=MIPROv2]{MIPROv2()}} \tab Instructions and demos, searched together. \cr
+   \code{\link[=SIMBA]{SIMBA()}} \tab Instruction rules and demos taken from hard examples. \cr
+   \code{\link[=GEPA]{GEPA()}} \tab Instructions (and Flex source) evolved by reflecting on failures. \cr
+   \code{\link[=ReAnchor]{ReAnchor()}} \tab Thresholds, cuts and weights of decision outputs. \cr
+   \code{\link[=BetterTogether]{BetterTogether()}}, \code{\link[=Omni]{Omni()}} \tab Run other optimizers in sequence or in competition. \cr
+   \code{\link[=AutoResearch]{AutoResearch()}}, \code{\link[=MetaHarness]{MetaHarness()}} \tab An agent proposes and tests program edits. \cr
+}
+
+
+To sweep runtime settings such as \code{reasoning_effort} on a module in place,
+use \code{\link[=optimize_grid]{optimize_grid()}} instead.
+}
 }
 \examples{
 Teleprompter()
 
+# Counts must be integers
+try(Teleprompter(max_errors = 5))
 }
+\seealso{
+Other teleprompters:
+\code{\link[=AutoResearch]{AutoResearch()}},
+\code{\link[=BetterTogether]{BetterTogether()}},
+\code{\link[=BootstrapFewShot]{BootstrapFewShot()}},
+\code{\link[=BootstrapFewShotWithRandomSearch]{BootstrapFewShotWithRandomSearch()}},
+\code{\link[=COPRO]{COPRO()}},
+\code{\link[=GEPA]{GEPA()}},
+\code{\link[=GridSearchTeleprompter]{GridSearchTeleprompter()}},
+\code{\link[=KNNFewShot]{KNNFewShot()}},
+\code{\link[=LabeledFewShot]{LabeledFewShot()}},
+\code{\link[=MIPROv2]{MIPROv2()}},
+\code{\link[=MetaHarness]{MetaHarness()}},
+\code{\link[=Omni]{Omni()}},
+\code{\link[=ReAnchor]{ReAnchor()}},
+\code{\link[=SIMBA]{SIMBA()}},
+\code{\link[=compile]{compile()}}
+}
+\concept{teleprompters}

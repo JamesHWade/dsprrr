@@ -1,39 +1,53 @@
-#' Create a ragnar Search Tool for ReAct Modules
+#' Search a ragnar store from a tool-using module
 #'
 #' @description
-#' Creates an ellmer-compatible tool that searches a ragnar document store.
-#' This tool can be used with ReAct modules or registered with ellmer Chat
-#' objects for agentic document retrieval.
+#' `ragnar_tool()` wraps a ragnar document store as an ellmer tool that takes
+#' a search query and returns the `k` best-matching chunks as text. Give it to
+#' [react()] so the agent can search your documents while it reasons, or
+#' register it on an ellmer Chat. [rag_module()] is the alternative that
+#' retrieves once, before every call.
 #'
-#' @param store A ragnar store created with `ragnar::ragnar_store_create()`.
-#' @param k Number of documents to retrieve per search (default 5).
-#' @param name Tool name (default "search_knowledge").
-#' @param description Tool description for the LLM.
+#' @param store A ragnar store, built with `ragnar::ragnar_store_create()`,
+#'   `ragnar::ragnar_store_insert()` and `ragnar::ragnar_store_build_index()`.
+#' @param k Number of chunks to return per search.
+#' @param name Tool name shown to the model.
+#' @param description Tool description shown to the model. The default says
+#'   it searches the knowledge base and returns the top `k` documents.
 #'
-#' @return A function suitable for use with ReAct modules or
-#'   `ellmer::Chat$register_tool()`.
+#' @details
+#' Results are numbered (`[Result 1]`, `[Result 2]`, ...) and separated by
+#' `---`. A search error is returned to the model as text instead of
+#' stopping the conversation. Requires the ragnar package.
+#'
+#' @return An ellmer tool definition (see [ellmer::tool()]) for [react()]
+#'   modules or `Chat$register_tool()`. It can also be called directly with a
+#'   query string.
 #'
 #' @export
+#' @family integrations
 #' @examples
 #' \dontrun{
 #' # Create a ragnar store from documents
 #' library(ragnar)
 #' store <- ragnar_store_create(
-#'   documents = my_docs,
-#'   embedding_fn = embed_openai()
+#'   embed = \\(x) embed_openai(x, model = "text-embedding-3-small")
 #' )
+#' for (i in seq_along(my_docs)) {
+#'   doc <- MarkdownDocument(my_docs[[i]], origin = paste0("doc-", i))
+#'   ragnar_store_insert(store, markdown_chunk(doc))
+#' }
+#' ragnar_store_build_index(store)
 #'
 #' # Create a search tool
-#' search_tool <- ragnar_tool(store, k = 3)
+#' search_tool <- ragnar_tool(store, k = 3L)
+#' search_tool("How do I configure the cache?")
 #'
-#' # Use with ReAct module
-#' react_mod <- react(
-#'   signature("question -> answer"),
-#'   tools = list(search_tool)
-#' )
+#' # Use with a ReAct module
+#' agent <- react("question -> answer", tools = list(search_tool))
+#' run(agent, question = "How do I turn caching off?", .llm = ellmer::chat_openai(model = "gpt-6-luna"))
 #'
-#' # Or register with ellmer Chat
-#' chat <- ellmer::chat_openai()
+#' # Or register it on an ellmer Chat
+#' chat <- ellmer::chat_openai(model = "gpt-6-luna")
 #' chat$register_tool(search_tool)
 #' }
 ragnar_tool <- function(
@@ -42,108 +56,100 @@ ragnar_tool <- function(
   name = "search_knowledge",
   description = NULL
 ) {
-  # Check ragnar availability
   rlang::check_installed("ragnar", reason = "for ragnar_tool()")
 
-  if (is.null(description)) {
-    description <- paste(
+  k <- as.integer(k)
+  description <- description %||%
+    paste(
       "Search the knowledge base for relevant information.",
       "Returns the top",
       k,
       "most relevant documents.",
       "Use this tool to find facts, context, or supporting information."
     )
-  }
 
-  # Capture store in closure
-  captured_store <- store
-  captured_k <- as.integer(k)
-
-  # Create the tool function
-  tool_fn <- function(query) {
+  search <- function(query) {
     if (is.null(query) || !nzchar(query)) {
       return("Error: Please provide a search query.")
     }
-
     results <- tryCatch(
-      {
-        ragnar::ragnar_retrieve(captured_store, query, k = captured_k)
-      },
-      error = function(e) {
-        return(paste("Search error:", e$message))
-      }
+      ragnar::ragnar_retrieve(store, query, top_k = k),
+      error = function(e) paste("Search error:", conditionMessage(e))
     )
-
-    # Format results for LLM consumption
-    if (is.data.frame(results)) {
-      # Extract text content
-      if ("text" %in% names(results)) {
-        docs <- results$text
-      } else if ("content" %in% names(results)) {
-        docs <- results$content
-      } else {
-        docs <- apply(results, 1, function(row) {
-          paste(names(row), ":", row, collapse = "; ")
-        })
-      }
-
-      # Include metadata if available
-      formatted <- vapply(
-        seq_along(docs),
-        function(i) {
-          header <- paste0("[Result ", i, "]")
-
-          # Add source if available
-          if ("source" %in% names(results)) {
-            header <- paste0(header, " (", results$source[i], ")")
-          }
-
-          paste0(header, "\n", docs[i])
-        },
-        character(1)
-      )
-
-      paste(formatted, collapse = "\n\n---\n\n")
-    } else if (is.character(results)) {
-      paste(results, collapse = "\n\n")
-    } else {
-      "No results found."
-    }
+    format_search_results(results)
   }
 
-  # Attach metadata for tool registration
-  attr(tool_fn, "name") <- name
-  attr(tool_fn, "description") <- description
-  attr(tool_fn, "arguments") <- list(
-    query = list(
-      type = "string",
-      description = "The search query to find relevant documents"
-    )
+  ellmer::tool(
+    search,
+    description = description,
+    arguments = list(
+      query = ellmer::type_string(
+        "The search query to find relevant documents"
+      )
+    ),
+    name = name
   )
-
-  class(tool_fn) <- c("ragnar_tool", "dsprrr_tool", "function")
-
-  tool_fn
 }
 
-#' Create a Semantic Search Tool from Documents
+#' Format retrieved documents for an LLM
+#' @noRd
+format_search_results <- function(results) {
+  if (is.character(results)) {
+    return(paste(results, collapse = "\n\n"))
+  }
+  if (!is.data.frame(results) || nrow(results) == 0) {
+    return("No results found.")
+  }
+
+  docs <- if ("text" %in% names(results)) {
+    results$text
+  } else if ("content" %in% names(results)) {
+    results$content
+  } else {
+    apply(results, 1, function(row) {
+      paste(names(row), ":", row, collapse = "; ")
+    })
+  }
+
+  formatted <- vapply(
+    seq_along(docs),
+    function(i) {
+      header <- paste0("[Result ", i, "]")
+      if ("source" %in% names(results)) {
+        header <- paste0(header, " (", results$source[i], ")")
+      }
+      paste0(header, "\n", docs[i])
+    },
+    character(1)
+  )
+
+  paste(formatted, collapse = "\n\n---\n\n")
+}
+
+#' Build a search tool from a set of documents
 #'
 #' @description
-#' Convenience function that creates a ragnar store from documents and wraps
-#' it in a search tool in one step.
+#' `create_search_tool()` builds a ragnar store from documents (one chunked
+#' document per element, embedded with `embedding_fn`), indexes it and wraps
+#' it with [ragnar_tool()], in one step. Embedding the documents calls the
+#' embedding provider.
 #'
-#' @param documents Character vector of documents, or a data frame with a
-#'   'text' or 'content' column.
-#' @param embedding_fn Embedding function from ragnar (e.g.,
-#'   `ragnar::embed_openai()`).
-#' @param k Number of documents to retrieve per search (default 5).
-#' @param name Tool name (default "search_documents").
-#' @param description Optional tool description.
-#' @param ... Additional arguments passed to `ragnar::ragnar_store_create()`.
+#' @param documents A character vector of documents, or a data frame with a
+#'   `text` or `content` column.
+#' @param embedding_fn An embedding function, passed to
+#'   `ragnar::ragnar_store_create()` as `embed`, for example
+#'   `\(x) ragnar::embed_openai(x, model = "text-embedding-3-small")`.
+#' @param k Number of chunks to return per search.
+#' @param name Tool name shown to the model.
+#' @param description Tool description shown to the model; see
+#'   [ragnar_tool()].
+#' @param ... Passed to `ragnar::ragnar_store_create()`, for example
+#'   `location` to keep the store in a file instead of in memory.
 #'
-#' @return A search tool function.
+#' @return An ellmer tool definition, as returned by [ragnar_tool()].
 #'
 #' @export
+#' @family integrations
 #' @examples
 #' \dontrun{
 #' # Create tool directly from documents
@@ -155,7 +161,7 @@ ragnar_tool <- function(
 #'
 #' search_tool <- create_search_tool(
 #'   documents = docs,
-#'   embedding_fn = ragnar::embed_openai(),
+#'   embedding_fn = \\(x) ragnar::embed_openai(x, model = "text-embedding-3-small"),
 #'   k = 2
 #' )
 #'
@@ -172,20 +178,36 @@ create_search_tool <- function(
 ) {
   rlang::check_installed("ragnar", reason = "for create_search_tool()")
 
-  # Create ragnar store
+  if (is.data.frame(documents)) {
+    text_col <- intersect(c("text", "content"), names(documents))
+    if (length(text_col) == 0) {
+      cli::cli_abort(
+        "{.arg documents} needs a {.field text} or {.field content} column."
+      )
+    }
+    documents <- documents[[text_col[[1]]]]
+  }
+
+  # Build an in-memory store (or wherever `...` points ragnar), one document
+  # per entry, then index it for retrieval.
   store <- tryCatch(
     {
-      ragnar::ragnar_store_create(
-        documents = documents,
-        embedding_fn = embedding_fn,
-        ...
-      )
+      store <- ragnar::ragnar_store_create(embed = embedding_fn, ...)
+      for (i in seq_along(documents)) {
+        doc <- ragnar::MarkdownDocument(
+          as.character(documents[[i]]),
+          origin = paste0("document-", i)
+        )
+        ragnar::ragnar_store_insert(store, ragnar::markdown_chunk(doc))
+      }
+      ragnar::ragnar_store_build_index(store)
+      store
     },
     error = function(e) {
       cli::cli_abort(
         c(
           "Failed to create ragnar store",
-          "x" = e$message
+          "x" = conditionMessage(e)
         ),
         parent = e
       )
@@ -198,16 +220,4 @@ create_search_tool <- function(
     name = name,
     description = description
   )
-}
-
-#' Print method for ragnar_tool
-#' @param x A ragnar_tool object
-#' @param ... Additional arguments (unused)
-#' @export
-print.ragnar_tool <- function(x, ...) {
-  cli::cli_h3("Ragnar Search Tool")
-  cli::cli_text("{.field Name}: {attr(x, 'name')}")
-  cli::cli_text("{.field Description}: {attr(x, 'description')}")
-
-  invisible(x)
 }

@@ -1,9 +1,59 @@
-#' Pipeline Module for Sequential Module Composition
+#' Chain modules into a pipeline
 #'
 #' @description
-#' A module that chains multiple modules together, passing outputs from one
-#' to inputs of the next. Provides DSPy-style piping with the `%>>%` operator.
+#' `pipeline()` builds a module that runs other modules one after another,
+#' feeding each step's outputs to the next step as inputs. `lhs %>>% rhs`
+#' chains two modules the same way, or adds a module to the end of a
+#' pipeline.
 #'
+#' @details
+#' The first step receives the inputs given to [run()]. Every later step
+#' receives only the outputs of the step before it, plus its own fixed inputs:
+#' the pipeline's inputs are not passed further down. Outputs connect to
+#' inputs of the same name; use [step()] to rename them (`map`), to pass on
+#' only some of them (`select`) or to give a step fixed inputs. A step whose
+#' inputs are not all available fails with an error that lists what was
+#' available.
+#'
+#' The pipeline returns the last step's output. With
+#' `.return_format = "structured"`, its metadata adds up tokens, cost and
+#' latency over the steps and keeps each step's metadata in
+#' `step_metadata`. [compile()] with [BootstrapFewShot()] optimizes the demos
+#' of all steps together.
+#'
+#' @return A module (an R6 object of class `PipelineModule`) to use with
+#'   [run()], [run_dataset()], [evaluate()] and [compile()].
+#' @family composition
+#' @examples
+#' # Function-backed steps, so the example runs offline
+#' summarize <- module_fn("text -> summary", function(text) substr(text, 1, 30))
+#' translate <- module_fn(
+#'   "passage, language -> translation",
+#'   function(passage, language) paste0("[", language, "] ", passage)
+#' )
+#'
+#' # `summary` feeds the `passage` input; `language` is fixed for this step
+#' p <- pipeline(
+#'   summarize,
+#'   step(translate, map = c(summary = "passage"), language = "French")
+#' )
+#' p
+#' run(p, text = "dsprrr turns language model calls into programs you can test.")
+#'
+#' # With %>>%, outputs and inputs connect by name
+#' shout <- module_fn("summary -> reply", function(summary) toupper(summary))
+#' run(summarize %>>% shout, text = "Matching names connect on their own.")
+#'
+#' \dontrun{
+#' outline <- module(signature("topic -> outline"))
+#' draft <- chain_of_thought("outline -> article")
+#' writer <- outline %>>% draft
+#' run(
+#'   writer,
+#'   topic = "Testing R code that calls language models",
+#'   .llm = ellmer::chat_openai(model = "gpt-6-luna")
+#' )
+#' }
 #' @name pipeline
 NULL
 
@@ -153,7 +203,7 @@ PipelineModule <- R6::R6Class(
 
         # Validate inputs against module signature
         required_inputs <- vapply(
-          step@module$signature@inputs,
+          caller_input_specs(step@module),
           function(x) x$name,
           character(1)
         )
@@ -307,7 +357,7 @@ PipelineModule <- R6::R6Class(
         merged_inputs <- modifyList(mapped_inputs, step@static_inputs)
 
         required_inputs <- vapply(
-          step@module$signature@inputs,
+          caller_input_specs(step@module),
           function(x) x$name,
           character(1)
         )
@@ -493,7 +543,7 @@ PipelineModule <- R6::R6Class(
 
       for (i in seq_along(steps)) {
         step <- steps[[i]]
-        module_inputs <- step@module$signature@inputs
+        module_inputs <- caller_input_specs(step@module)
 
         for (inp in module_inputs) {
           input_name <- inp$name
@@ -635,28 +685,10 @@ PipelineModule <- R6::R6Class(
 # Pipe Operator
 # =============================================================================
 
-#' Pipe Operator for Module Composition
-#'
-#' @description
-#' Chains modules together into a pipeline. The output of the left module
-#' flows into the input of the right module. When field names match between
-#' output and input, they are automatically connected.
-#'
-#' @param lhs A Module or PipelineModule
-#' @param rhs A Module or PipelineModule.
-#'
-#' @return A PipelineModule combining both modules
-#'
+#' @rdname pipeline
+#' @param lhs A module or a pipeline. A pipeline is extended with `rhs`.
+#' @param rhs A module. A pipeline on the right is added as a single step.
 #' @export
-#' @examples
-#' \dontrun{
-#' # Simple chaining - automatic field matching
-#' qa_pipeline <- mod_parse %>>% mod_answer %>>% mod_format
-#'
-#' # Run the pipeline
-#' result <- run(qa_pipeline, text = "What is 2+2?", .llm = llm)
-#'
-#' }
 `%>>%` <- function(lhs, rhs) {
   if (inherits(rhs, "Module")) {
     rhs_step <- PipelineStep(module = rhs)
@@ -690,32 +722,9 @@ PipelineModule <- R6::R6Class(
 # Pipeline Constructor
 # =============================================================================
 
-#' Create a Pipeline from Modules
-#'
-#' @description
-#' Explicitly constructs a pipeline from a sequence of modules. Use this when
-#' you need fine-grained control over input/output mapping between steps.
-#'
-#' @param ... Modules or steps (created with `step()`) to chain together
-#'
-#' @return A PipelineModule
-#'
+#' @rdname pipeline
+#' @param ... Modules, or steps made with [step()], in the order they run.
 #' @export
-#' @examples
-#' \dontrun{
-#' # Simple pipeline
-#' p <- pipeline(mod_a, mod_b, mod_c)
-#'
-#' # With explicit mapping
-#' p <- pipeline(
-#'   mod_retrieve,
-#'   step(mod_answer, map = c(documents = "context")),
-#'   mod_summarize
-#' )
-#'
-#' # Run it
-#' result <- run(p, query = "...", .llm = llm)
-#' }
 pipeline <- function(...) {
   args <- list(...)
 
@@ -741,43 +750,51 @@ pipeline <- function(...) {
 }
 
 
-#' Create a Pipeline Step with Mappings
+#' Configure one pipeline step
 #'
 #' @description
-#' Wraps a module with input/output mapping configuration for use in `pipeline()`.
+#' `step()` wraps a module for [pipeline()] when its inputs do not line up
+#' with the previous step's outputs by name, when only some of its outputs
+#' should go on to the next step, or when it needs fixed inputs.
 #'
-#' @param module A Module object
-#' @param map Named character vector mapping upstream output fields to this
-#'   module's input fields. Format: `c(output_field = "input_field")`.
-#' @param select Character vector of output field names to pass forward.
-#'   If empty, all fields are passed.
-#' @param ... Static inputs to inject (name = value pairs)
+#' @param module The module to run at this step.
+#' @param map A named character vector (or list) that renames fields coming
+#'   from the previous step. Names are the previous step's output fields and
+#'   values are this module's input fields: `map = c(summary = "passage")`
+#'   passes the upstream `summary` as `passage`. In the first step, `map`
+#'   renames the pipeline's inputs.
+#' @param select Names of this step's output fields to pass to the next step.
+#'   By default all of them are passed. For the last step, `select` also
+#'   limits what the pipeline returns.
+#' @param ... Fixed inputs for this step, as `name = value`: values for input
+#'   fields of `module` that stay the same on every call. They are inputs,
+#'   not settings, so something like `system_prompt = "Be brief"` would
+#'   reach the prompt as an extra input field. They override mapped values
+#'   with the same name.
 #'
-#' @return A PipelineStep object for use in `pipeline()`
+#' @return A pipeline step (an S7 object of class `PipelineStep`) to pass to
+#'   [pipeline()].
 #'
 #' @export
+#' @family composition
 #' @examples
-#' \dontrun{
-#' # Map 'documents' from upstream to 'context' input
-#' pipeline(
-#'   mod_retrieve,
-#'   step(mod_answer, map = c(documents = "context")),
-#'   mod_format
+#' summarize <- module_fn("text -> summary", function(text) substr(text, 1, 30))
+#' translate <- module_fn(
+#'   "passage, language -> translation, n_chars: int",
+#'   function(passage, language) {
+#'     list(translation = paste0("[", language, "] ", passage), n_chars = nchar(passage))
+#'   }
 #' )
+#' shout <- module_fn("translation -> reply", function(translation) toupper(translation))
 #'
-#' # Select only certain output fields
-#' pipeline(
-#'   mod_analyze,
-#'   step(mod_format, select = c("summary", "score")),
-#'   mod_present
+#' p <- pipeline(
+#'   summarize,
+#'   # `summary` becomes `passage`, `language` is fixed, and only
+#'   # `translation` goes on to `shout`
+#'   step(translate, map = c(summary = "passage"), select = "translation", language = "French"),
+#'   shout
 #' )
-#'
-#' # Inject static inputs
-#' pipeline(
-#'   mod_retrieve,
-#'   step(mod_answer, system_prompt = "Be concise")
-#' )
-#' }
+#' run(p, text = "dsprrr turns language model calls into programs.")
 step <- function(module, map = list(), select = character(0), ...) {
   if (!inherits(module, "Module")) {
     cli::cli_abort(c(
