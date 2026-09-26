@@ -236,10 +236,78 @@ test_that("runtime Chat parameters are isolated on an independent clone", {
   expect_false(identical(configured, chat))
   expect_identical(configured$get_turns(), list("prior turn"))
   expect_identical(chat$get_model_object()@extra_args, list(existing = TRUE))
+  expect_null(chat$get_model_object()@params$temperature)
+  # Standard ellmer params go through Model@params; others stay extra args
+  expect_identical(configured$get_model_object()@params$temperature, 0.2)
   expect_identical(
     configured$get_model_object()@extra_args,
-    list(existing = TRUE, temperature = 0.2)
+    list(existing = TRUE)
   )
+
+  custom <- dsprrr:::apply_chat_params(chat, list(custom_flag = TRUE))
+  expect_identical(
+    custom$get_model_object()@extra_args,
+    list(existing = TRUE, custom_flag = TRUE)
+  )
+})
+
+test_that("module reasoning_effort reaches OpenAI as reasoning.effort", {
+  local_reset_cache()
+  bodies <- list()
+  local_mocked_bindings(
+    req_perform = function(req) {
+      bodies[[length(bodies) + 1L]] <<- req$body$data
+      body <- list(
+        id = "resp_1",
+        object = "response",
+        created_at = 1L,
+        status = "completed",
+        model = "gpt-6-luna",
+        output = list(list(
+          id = "msg_1",
+          type = "message",
+          status = "completed",
+          role = "assistant",
+          content = list(list(
+            type = "output_text",
+            annotations = list(),
+            logprobs = list(),
+            text = '{"answer":"ok"}'
+          ))
+        )),
+        usage = list(
+          input_tokens = 5L,
+          input_tokens_details = list(cached_tokens = 0L),
+          output_tokens = 2L,
+          output_tokens_details = list(reasoning_tokens = 0L),
+          total_tokens = 7L
+        ),
+        service_tier = "default",
+        metadata = list()
+      )
+      getFromNamespace("response", "httr2")(
+        headers = list(`content-type` = "application/json"),
+        body = charToRaw(jsonlite::toJSON(
+          body,
+          auto_unbox = TRUE,
+          null = "null"
+        ))
+      )
+    },
+    .package = "ellmer"
+  )
+  chat <- suppressWarnings(
+    ellmer::chat_openai(api_key = "dummy-key", model = "gpt-6-luna")
+  )
+  mod <- module(
+    signature("question -> answer"),
+    config = list(params = list(reasoning_effort = "low"))
+  )
+
+  run(mod, question = "Why?", .llm = chat, .cache = FALSE)
+
+  expect_identical(bodies[[1]]$reasoning$effort, "low")
+  expect_null(bodies[[1]]$reasoning_effort)
 })
 
 test_that("runtime Chat parameters fail closed when cloning fails", {

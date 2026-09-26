@@ -2840,8 +2840,8 @@ test_that("provider fingerprints include Model params without deprecated props",
       dsprrr:::apply_chat_params(chat, list(temperature = 0))
     )
   )
-  expect_identical(cold$get_model_object()@extra_args$temperature, 0)
-  expect_null(chat$get_model_object()@extra_args$temperature)
+  expect_identical(cold$get_model_object()@params$temperature, 0)
+  expect_null(chat$get_model_object()@params$temperature)
 })
 
 test_that("evaluate() epochs after the first get fresh responses", {

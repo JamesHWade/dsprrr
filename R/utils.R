@@ -491,6 +491,7 @@ is_reasoning_model <- function(model_name) {
   reasoning_patterns <- c(
     "^o[0-9]", # o1, o3, o4-mini
     "^gpt-5", # gpt-5 series
+    "^gpt-6", # gpt-6 series (reasoning on by default)
     "-reasoning", # explicit reasoning suffix
     "reasoning" # generic reasoning indicator
   )

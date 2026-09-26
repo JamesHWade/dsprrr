@@ -730,13 +730,23 @@ apply_chat_params <- function(chat, params) {
     )
   }
 
+  # Standard ellmer parameters go through the Model's params so ellmer
+  # translates them for each provider (OpenAI's Responses API expects
+  # `reasoning.effort`, not `reasoning_effort`). Anything else is sent
+  # verbatim as an extra request argument.
+  standard <- names(params) %in% setdiff(names(formals(ellmer::params)), "...")
+  model_params <- model@params %||% list()
+  for (name in names(params)[standard]) {
+    model_params[[name]] <- params[[name]]
+  }
   existing_args <- model@extra_args %||% list()
-  for (name in names(params)) {
+  for (name in names(params)[!standard]) {
     existing_args[[name]] <- params[[name]]
   }
 
   tryCatch(
     {
+      model@params <- model_params
       model@extra_args <- existing_args
       private <- cloned$.__enclos_env__$private
       private$model <- model

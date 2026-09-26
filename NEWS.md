@@ -277,6 +277,13 @@ First development changelog. dsprrr is experimental; the API may change.
   epoch 1 from the response cache, so `score_std` and `ci_95` collapsed to 0
   unless `.cache = FALSE` was set.
 
+* Runtime parameters set on a module (`config$params`, `optimize_grid()`
+  grids, `reasoning_effort()`) now go through ellmer's standard `params`, so
+  ellmer sends them in each provider's format. `reasoning_effort` used to be
+  sent as a top-level field that OpenAI's Responses API does not accept; it is
+  now sent as `reasoning.effort`. Parameters ellmer does not know are still
+  sent verbatim. `is_reasoning_model()` recognizes the gpt-6 family.
+
 * `optimize_grid(parameters = )` no longer leaves `expand.grid()`'s
   `out.attrs` attribute on `best_params`, which made `save_program()` and
   `pin_module_config()` fail on grid-searched modules. Printing
