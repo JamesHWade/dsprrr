@@ -231,6 +231,16 @@ test_that("ReAnchor rejects programs it cannot calibrate", {
   expect_error(
     compile(
       module(flag_signature()),
+      ReAnchor(metric = flag_metric),
+      data[1, ],
+      .llm = mock$chat
+    ),
+    class = "dsprrr_reanchor_error",
+    regexp = "at least two rows"
+  )
+  expect_error(
+    compile(
+      module(flag_signature()),
       ReAnchor(),
       data,
       .llm = mock$chat
@@ -299,4 +309,66 @@ test_that("ReAnchor fits only the requested fields", {
   expect_identical(settings$threshold[settings$field == "other"], 0.4)
   fitted <- optimization_result(tuned)$extensions$re_anchor$fitted
   expect_identical(vapply(fitted, `[[`, character(1), "field"), "flag")
+})
+
+test_that("ReAnchor reaches Choice weights beyond fixed bounds", {
+  data <- data.frame(
+    text = paste0("t", 1:8),
+    team = rep(c("billing", "technical"), each = 4)
+  )
+  mock <- new_decision_chat(function(input, field, field_type) {
+    technical <- data$team[data$text == input] == "technical"
+    list(
+      probabilities = if (technical) {
+        list(billing = 0.9999, technical = 0.0001)
+      } else {
+        list(billing = 1, technical = 0)
+      },
+      confidence = 0.5
+    )
+  })
+  mod <- module(signature(
+    inputs = list(input("text")),
+    output_type = ellmer::type_object(
+      team = ellmer::type_enum(c("billing", "technical"), "Which team?")
+    )
+  )) |>
+    with_decisions(team = decision_choice())
+  metric <- function(prediction, expected) {
+    as.numeric(prediction$team == expected$team[[1]])
+  }
+
+  tuned <- compile(mod, ReAnchor(metric = metric), data, .llm = mock$chat)
+
+  weights <- decision_settings(tuned)$weights[[1]]
+  expect_gt(weights[["technical"]] / weights[["billing"]], 9999)
+  expect_equal(optimization_result(tuned)$best_score, 1)
+})
+
+test_that("ReAnchor gives trace metrics the evaluate() trace and current decisions", {
+  data <- flag_data()
+  mock <- flag_chat(data)
+  mod <- module(flag_signature()) |> with_decisions(flag = decision_bool())
+  seen <- new.env(parent = emptyenv())
+  seen$mismatch <- 0L
+  seen$events <- integer()
+  metric <- metric_with_trace(function(prediction, expected, program_trace) {
+    seen$events <- c(seen$events, length(program_trace$events))
+    record <- program_trace$metadata$decisions$flag
+    if (!identical(record$value, prediction$flag)) {
+      seen$mismatch <- seen$mismatch + 1L
+    }
+    as.numeric(identical(prediction$flag, expected$flag[[1]]))
+  })
+
+  evaluate(mod, data, metric, .llm = mock$chat, .progress = FALSE)
+  evaluate_events <- seen$events
+  seen$events <- integer()
+
+  tuned <- compile(mod, ReAnchor(metric = metric), data, .llm = mock$chat)
+
+  expect_identical(seen$mismatch, 0L)
+  expect_true(all(evaluate_events > 0L))
+  expect_true(all(seen$events == evaluate_events[[1]]))
+  expect_equal(optimization_result(tuned)$best_score, 1)
 })

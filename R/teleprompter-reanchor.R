@@ -148,8 +148,13 @@ compile_reanchor <- function(
   if (!is.function(metric)) {
     reanchor_abort("{.cls ReAnchor} requires a {.arg metric} function")
   }
-  if (nrow(trainset) == 0L) {
-    reanchor_abort("{.arg trainset} must contain at least one row")
+  if (nrow(trainset) < 2L) {
+    # The held-out fold check needs at least one row to fit on and another
+    # to score, so a single row could never accept a new setting.
+    reanchor_abort(c(
+      "{.arg trainset} must contain at least two rows",
+      "i" = "ReAnchor accepts a setting only after a held-out fold check."
+    ))
   }
   if (!is.null(valset) && nrow(valset) == 0L) {
     valset <- NULL
@@ -328,6 +333,7 @@ reanchor_plan <- function(module, fields = NULL) {
 #' Run a module over a data frame and score every row
 #' @noRd
 reanchor_evaluate <- function(module, data, metric, .llm) {
+  trace_count_before <- evaluation_trace_cursor(module)
   results <- run_dataset(
     module,
     data,
@@ -344,22 +350,37 @@ reanchor_evaluate <- function(module, data, metric, .llm) {
       "i" = "ReAnchor stops at the first program error so every candidate is scored on the same rows."
     ))
   }
+  # Metrics see the same row-aligned trace events as they would in evaluate().
+  events <- attr(results, "dsprrr_row_trace_events", exact = TRUE)
+  if (!is.list(events) || length(events) != nrow(results)) {
+    events <- align_evaluation_trace_events(
+      new_evaluation_trace_events(module, trace_count_before),
+      nrow(results)
+    )
+  }
   run <- list(
     outputs = results$result,
     metadata = results$.metadata,
+    events = events,
     evidence = lapply(results$.metadata, function(item) item$decisions)
   )
-  run$scores <- reanchor_score_outputs(run$outputs, run$metadata, data, metric)
+  run$scores <- reanchor_score_outputs(
+    run$outputs,
+    run$metadata,
+    run$events,
+    data,
+    metric
+  )
   run
 }
 
 #' @noRd
-reanchor_score_outputs <- function(outputs, metadata, data, metric) {
+reanchor_score_outputs <- function(outputs, metadata, events, data, metric) {
   scores <- vapply(
     seq_along(outputs),
     function(i) {
       trace <- new_program_trace(
-        events = list(),
+        events = events[[i]] %||% list(),
         metadata = metadata[[i]],
         row_id = i,
         epoch = 1L
@@ -379,22 +400,25 @@ reanchor_score_outputs <- function(outputs, metadata, data, metric) {
 #' Re-decode recorded evidence with new settings and score it
 #' @noRd
 reanchor_rescore <- function(run, decisions, data, metric) {
-  outputs <- lapply(seq_along(run$outputs), function(i) {
-    output <- run$outputs[[i]]
+  outputs <- run$outputs
+  metadata <- run$metadata
+  for (i in seq_along(outputs)) {
     for (field in names(decisions)) {
       if (is.null(run$evidence[[i]][[field]])) {
         # An omitted optional decision has nothing to re-decode.
         next
       }
-      output[[field]] <- decision_decode_field(
+      record <- decision_decode_field(
         run$evidence[[i]][[field]],
         decisions[[field]],
         field
-      )$value
+      )
+      outputs[[i]][[field]] <- record$value
+      # Keep trace metadata consistent with the candidate's decoded values.
+      metadata[[i]]$decisions[[field]] <- record
     }
-    output
-  })
-  reanchor_score_outputs(outputs, run$metadata, data, metric)
+  }
+  reanchor_score_outputs(outputs, metadata, run$events, data, metric)
 }
 
 #' Example indexes split into up to `k` parts, the same way on every run
@@ -602,11 +626,13 @@ reanchor_fit_field <- function(
         rival <- max(best[others] * p[others])
         if (p[[label]] > 0 && rival > 0) rival / p[[label]] else NULL
       }))
+      # Bracket every observed flip point so any pick can be reached.
+      flips <- flips[is.finite(flips)]
       low <- 1e-3
       high <- 1e3
       if (length(flips) > 0L) {
-        low <- max(low, min(flips) / 4)
-        high <- min(high, max(flips) * 4)
+        low <- min(flips) / 4
+        high <- max(flips) * 4
       }
       tried <- list()
       if (low < high) {
