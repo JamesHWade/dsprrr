@@ -268,6 +268,12 @@ First development changelog. dsprrr is experimental; the API may change.
   them; `annotations = list()` gives none, and annotations you pass are used
   as given.
 
+* `react()` now rejects tools with duplicate names, and a ReAct module's
+  `$add_tool()` rejects a name it already has. ellmer registers tools on a
+  chat by name, so a second tool with the same name silently replaced the
+  first while the module still listed both. `$add_tool(tool, replace = TRUE)`
+  replaces a tool deliberately.
+
 * `metric_exact_match()` and `metric_f1()` now work without `field` in
   `evaluate()`, `optimize_grid()`, and `compile()`. Those functions pass the
   whole data row as `expected`, so every row used to fail with "Metric must

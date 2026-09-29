@@ -20,7 +20,9 @@ react(
 
 \item{tools}{A list of ellmer tool definitions, made with
 \code{\link[ellmer:tool]{ellmer::tool()}}, \code{\link[=ragnar_tool]{ragnar_tool()}}, \code{\link[=create_search_tool]{create_search_tool()}} or
-\code{\link[=as_ellmer_tool]{as_ellmer_tool()}}.}
+\code{\link[=as_ellmer_tool]{as_ellmer_tool()}}. Their names must be unique. The module's
+\verb{$add_tool(tool, replace = FALSE)} adds one later; with \code{replace = TRUE}
+it replaces the tool of the same name.}
 
 \item{max_iterations}{Maximum number of tool-calling rounds. Several tool
 calls in one model turn count as one round. Exceeding the limit is an
