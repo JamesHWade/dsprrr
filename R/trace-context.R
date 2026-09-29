@@ -420,3 +420,81 @@ trace_context_annotate_module_traces <- function(
   module$state$traces <- traces
   invisible(module)
 }
+
+# Agent runtimes -----------------------------------------------------------
+
+#' The run context dsprrr passes to a chat that records runs
+#'
+#' An agent runtime that implements the ellmer Chat protocol, such as a deputy
+#' Agent, takes `run_context` in its structured-request methods and records
+#' each call as a run. dsprrr passes its trace fields there under one `dsprrr`
+#' entry, so the runtime's records name the program and trace context that
+#' made the call. A plain ellmer Chat has no `run_context` argument and is
+#' called as before.
+#' @noRd
+chat_run_context <- function(llm, method = "chat_structured") {
+  fn <- tryCatch(llm[[method]], error = function(e) NULL)
+  if (!is.function(fn) || !"run_context" %in% names(formals(fn))) {
+    return(NULL)
+  }
+  fields <- trace_context_fields()
+  context <- list()
+  if (!is.na(fields$program_artifact_id)) {
+    context$program_artifact_id <- fields$program_artifact_id
+  }
+  if (length(fields$trace_context) > 0L) {
+    context$trace_context <- fields$trace_context
+  }
+  if (length(context) == 0L) {
+    return(NULL)
+  }
+  list(dsprrr = context)
+}
+
+#' Identifiers of the latest run a chat that records runs made
+#'
+#' A deputy Agent's `last_run()` returns the result of its latest run. The
+#' receipt keeps its identifiers, so a dsprrr trace can be matched with the
+#' agent's own records. `NULL` for a chat without `last_run()`, or one that has
+#' not run.
+#' @noRd
+chat_run_receipt <- function(llm) {
+  last_run <- tryCatch(llm[["last_run"]], error = function(e) NULL)
+  if (!is.function(last_run)) {
+    return(NULL)
+  }
+  run <- tryCatch(last_run(), error = function(e) NULL)
+  if (is.null(run)) {
+    return(NULL)
+  }
+  field <- function(name) {
+    value <- tryCatch(do.call(`$`, list(run, name)), error = function(e) NULL)
+    if (is.character(value) && length(value) == 1L && !is.na(value)) value
+  }
+  receipt <- list(
+    run_id = field("run_id"),
+    agent_id = field("agent_id"),
+    session_id = field("session_id"),
+    stop_reason = field("stop_reason")
+  )
+  receipt <- Filter(Negate(is.null), receipt)
+  if (is.null(receipt$run_id)) NULL else receipt
+}
+
+#' The receipt of the run a call made, if it made a new one
+#'
+#' `before` is the run id recorded before the call. A cache hit, or a call that
+#' failed before the agent started a run, leaves the latest run unchanged, and
+#' then there is no receipt.
+#' @noRd
+chat_new_run_receipt <- function(llm, before) {
+  receipt <- chat_run_receipt(llm)
+  if (is.null(receipt) || identical(receipt$run_id, before)) {
+    return(NULL)
+  }
+  receipt
+}
+
+chat_last_run_id <- function(llm) {
+  chat_run_receipt(llm)$run_id
+}

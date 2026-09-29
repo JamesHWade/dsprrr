@@ -86,6 +86,13 @@ First development changelog. dsprrr is experimental; the API may change.
 
 ## New features
 
+* Modules run through an agent runtime that follows ellmer's Chat protocol,
+  such as a deputy `Agent`, are now correlated with the agent's runs. dsprrr
+  passes the program ID and `.trace_context` to the agent as
+  `run_context$dsprrr`, and records the agent's run (`run_id`, `agent_id`,
+  `session_id` and `stop_reason`) as `agent_run` in each call's metadata and
+  trace. Plain ellmer Chats are called as before.
+
 * Experimental calibrated decision outputs, following DSPy 3.4's decision
   types. `with_decisions()` attaches `decision_bool()`, `decision_score()`, or
   `decision_choice()` to described boolean and enum outputs of a Predict

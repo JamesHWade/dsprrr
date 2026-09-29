@@ -19,7 +19,8 @@
 #'   \item{`.llm`}{An ellmer Chat to use for this call. It takes precedence
 #'     over the chat stored on the module, a chat set with [with_lm()] or
 #'     [local_lm()], and the default chat; see [get_default_chat()] for the
-#'     full order.}
+#'     full order. An agent that follows ellmer's Chat protocol, such as a
+#'     deputy `Agent`, also works; see `vignette("models-and-providers")`.}
 #'   \item{`.cache`}{`NULL` (the default) follows [configure_cache()].
 #'     `FALSE` skips the response cache for this call. `TRUE` uses it when
 #'     caching is enabled globally and has no effect otherwise.}
@@ -1275,6 +1276,7 @@ process_batch_item <- function(
 
   started_at <- Sys.time()
   turns_before <- batch_chat_turns(llm)
+  run_before <- chat_last_run_id(llm)
   cache_state <- new.env(parent = emptyenv())
   cache_state$status <- "unknown"
   cache_observer <- function(status, ...) {
@@ -1317,6 +1319,9 @@ process_batch_item <- function(
   if (is.null(error) && !is.null(decoded$decisions)) {
     metadata$decisions <- decoded$decisions
   }
+  # A chat that records runs, such as a deputy Agent, made this call as one of
+  # its runs, including a run that ended in an error.
+  metadata$agent_run <- chat_new_run_receipt(llm, run_before)
 
   if (!is.null(error)) {
     return(create_error_result(

@@ -203,6 +203,45 @@ assistant$chat("Is this review positive? 'I love this product!'")
 `output = "json"` hands the result back as JSON text. The default, `"auto"`,
 returns an R list, which ellmer 0.5.0 converts with a deprecation warning.
 
+A prediction module's tool is marked read-only and closed-world, because it
+only sends its inputs to its Chat's provider. Agent runtimes that check tool
+annotations use this: [deputy](https://jameshwade.github.io/deputy/), for
+example, runs the tool in its default `"standard"` permission mode without web
+access, and in `"readonly"` mode when you list it in `tool_allowlist`. Tools
+from modules that can run your functions or tools, such as `module_fn()` or
+`react()`, carry no annotations unless you pass them.
+
+## Run modules through an agent runtime
+
+An agent runtime that follows ellmer's Chat protocol can be the Chat a module
+uses. With a deputy `Agent`, each call is one of the agent's runs, so its
+permissions, hooks and usage limits apply, and its system prompt frames the
+request. `evaluate()` and the optimizers run each row on an independent copy
+of the agent, as they do with any Chat:
+
+```{r}
+agent <- deputy::Agent$new(
+  chat = ellmer::chat_openai(model = "gpt-6-luna"),
+  system_prompt = "Classify customer reviews for the support team.",
+  usage_limits = deputy::UsageLimits(max_requests = 3)
+)
+result <- run(
+  classify,
+  text = "Arrived broken.",
+  .llm = agent,
+  .trace_context = list(request_id = "r-42"),
+  .return_format = "structured"
+)
+result$metadata$agent_run
+```
+
+dsprrr passes the program's ID and your `.trace_context` to the agent under
+`run_context$dsprrr`, and records the agent's run in the call's metadata and
+trace as `agent_run` (its `run_id`, `agent_id`, `session_id` and
+`stop_reason`), so each trace can be matched with the agent's own records.
+Responses from an agent are never cached, because the agent's hooks and limits
+must see every call.
+
 ## Timeouts and retries
 
 ellmer applies both. Set them with options before you make calls:
