@@ -246,6 +246,18 @@ First development changelog. dsprrr is experimental; the API may change.
 
 ## Bug fixes
 
+* `mcp_repl_runner()` now runs code that takes longer than about 4 seconds.
+  mcptools waits only about 4 seconds for a reply, but `timeout` (30 seconds
+  by default) was passed to mcp-repl as its wait, so a slower reply was
+  dropped: the runner failed with "unsupported response type: NULL" and could
+  not be reused, and on a connection shared with another runner the late
+  reply could answer the next request. Each request now waits at most 3
+  seconds; dsprrr collects the output of longer code until it finishes, and
+  code still running after `timeout` seconds is interrupted and returned as a
+  timeout error. A missing reply, an interrupt that does not stop the code,
+  or an interrupted request makes the runner unusable, so a late reply can
+  never answer a later request.
+
 * `metric_exact_match()` and `metric_f1()` now work without `field` in
   `evaluate()`, `optimize_grid()`, and `compile()`. Those functions pass the
   whole data row as `expected`, so every row used to fail with "Metric must

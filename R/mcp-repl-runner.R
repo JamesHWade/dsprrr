@@ -30,6 +30,19 @@
 #' reject it. `$shutdown()` then ends the runner but leaves your connection
 #' open. A runner that dsprrr starts shuts down only the transport it started.
 #'
+#' ## Long-running code
+#'
+#' mcptools waits only about 4 seconds for each reply from mcp-repl, so dsprrr
+#' asks mcp-repl to wait at most 3 seconds per request. Code that runs longer
+#' keeps running: mcp-repl reports it as busy, and dsprrr collects the rest of
+#' its output with further requests until it finishes, then returns all of it
+#' together, without mcp-repl's busy status lines. Code still running after
+#' `timeout` seconds is interrupted, as with Ctrl-C, and `$execute()` returns
+#' a timeout error; the session and its variables are kept. If the interrupt
+#' does not stop the code, or mcp-repl does not reply in time, the runner
+#' cannot be used again, so that a late reply can never be read as the answer
+#' to a later request.
+#'
 #' ## Output limits
 #'
 #' RLM exchanges control messages with the guest session, capped at 3,000
@@ -50,7 +63,9 @@
 #' @param sandbox Sandbox policy, `"workspace-write"` (the default).
 #'   `"inherit-codex"` is rejected because `mcptools::mcp_tools()` does not
 #'   pass on the Codex sandbox metadata it needs.
-#' @param timeout Maximum execution time per call, in seconds (default 30).
+#' @param timeout Maximum time for one `$execute()` or `$reset()` call, in
+#'   seconds (default 30). Code still running after it is interrupted and
+#'   reported as a timeout error; see Details.
 #' @param max_output_chars Maximum number of output characters returned per
 #'   call (default `100000L`).
 #' @param oversized_output mcp-repl's mode for oversized output (default
@@ -655,44 +670,42 @@ McpReplRunner <- R6::R6Class(
         )
         return(result)
       }
-      timeout_ms <- mcp_repl_timeout_ms(self$timeout)
       started_at <- Sys.time()
-      response <- tryCatch(
-        # mcptools-generated wrappers reconstruct their call from
-        # match.call(). Pass realized values so expressions that mention the
-        # R6 `self` binding are not re-evaluated outside this method frame.
-        do.call(
-          self$repl,
-          list(input = input, timeout_ms = timeout_ms)
-        ),
-        error = function(e) e
-      )
+      reply <- private$exchange(input, interrupt = TRUE)
       duration_ms <- as.numeric(
         difftime(Sys.time(), started_at, units = "secs")
       ) *
         1000
 
-      if (inherits(response, "error")) {
-        private$mark_terminal(conditionMessage(response))
+      raw_text <- reply$text
+      text <- mcp_repl_truncate(raw_text, self$max_output_chars)
+      if (!is.null(reply$failure)) {
+        # exchange() has already made the session terminal.
         return(mcp_repl_error_result(
-          conditionMessage(response),
+          reply$failure,
+          stdout = text,
           duration_ms = duration_ms,
           error_type = "interpreter"
         ))
       }
-
-      normalized <- mcp_repl_normalize_response(response)
-      raw_text <- normalized$text
-      text <- mcp_repl_truncate(raw_text, self$max_output_chars)
-      if (!is.null(normalized$error)) {
-        if (identical(normalized$error_type, "interpreter")) {
-          private$mark_terminal(normalized$error)
-        }
+      if (reply$timed_out) {
         return(mcp_repl_error_result(
-          normalized$error,
+          paste0(
+            "Execution timed out after ",
+            self$timeout,
+            " seconds and was interrupted"
+          ),
           stdout = text,
           duration_ms = duration_ms,
-          error_type = normalized$error_type
+          error_type = "execution"
+        ))
+      }
+      if (reply$execution_error) {
+        return(mcp_repl_error_result(
+          mcp_repl_execution_error(raw_text),
+          stdout = text,
+          duration_ms = duration_ms,
+          error_type = "execution"
         ))
       }
 
@@ -793,31 +806,19 @@ McpReplRunner <- R6::R6Class(
 
     reset = function() {
       private$assert_usable()
-      timeout_ms <- mcp_repl_timeout_ms(self$timeout)
-      response <- tryCatch(
-        do.call(
-          self$repl,
-          list(input = "\u0004", timeout_ms = timeout_ms)
-        ),
-        error = function(e) e
-      )
-      if (inherits(response, "error")) {
-        private$mark_terminal(conditionMessage(response))
-        cli::cli_abort(
-          c(
-            "Could not reset the mcp-repl session",
-            "x" = conditionMessage(response)
-          ),
-          class = "dsprrr_mcp_repl_reset_error"
-        )
+      # A session that is still busy after `timeout` is not known to be fresh,
+      # so the reset fails and the runner becomes terminal.
+      reply <- private$exchange("\u0004", interrupt = FALSE)
+      reason <- reply$failure
+      if (is.null(reason) && reply$execution_error) {
+        reason <- mcp_repl_execution_error(reply$text)
       }
-      normalized <- mcp_repl_normalize_response(response)
-      if (!is.null(normalized$error)) {
-        private$mark_terminal(normalized$error)
+      if (!is.null(reason)) {
+        private$mark_terminal(reason)
         cli::cli_abort(
           c(
             "Could not reset the mcp-repl session",
-            "x" = normalized$error
+            "x" = reason
           ),
           class = "dsprrr_mcp_repl_reset_error"
         )
@@ -930,17 +931,160 @@ McpReplRunner <- R6::R6Class(
       invisible(NULL)
     },
 
+    call_repl = function(input, timeout_ms) {
+      tryCatch(
+        # mcptools-generated wrappers reconstruct their call from
+        # match.call(). Pass realized values so expressions that mention the
+        # R6 `self` binding are not re-evaluated outside this method frame.
+        do.call(
+          self$repl,
+          list(input = input, timeout_ms = timeout_ms)
+        ),
+        interrupt = function(condition) {
+          # The abandoned reply could still arrive and answer a later request.
+          private$mark_terminal("An mcp-repl request was interrupted")
+          stop(condition)
+        },
+        error = function(e) e
+      )
+    },
+
+    # Sends `input`, then polls with empty input while mcp-repl reports the
+    # cell busy, until it is idle or `self$timeout` has elapsed. No request
+    # waits longer than `.mcp_repl_call_timeout_ms`. Returns the output of all
+    # replies without busy status lines. A cell still busy at the deadline is
+    # interrupted when `interrupt` is TRUE. Any outcome that could leave a
+    # reply or a running cell behind marks the session terminal and is
+    # returned as `failure`, so it can never answer a later request.
+    exchange = function(input, interrupt = TRUE) {
+      deadline <- mcp_repl_clock() + self$timeout
+      timeout_ms <- mcp_repl_call_timeout_ms(self$timeout)
+      pieces <- character()
+      execution_error <- FALSE
+      outcome <- function(failure = NULL, timed_out = FALSE) {
+        if (!is.null(failure)) {
+          private$mark_terminal(failure)
+        }
+        list(
+          text = mcp_repl_join_output(pieces),
+          failure = failure,
+          timed_out = timed_out,
+          execution_error = execution_error
+        )
+      }
+
+      repeat {
+        response <- private$call_repl(input, timeout_ms)
+        if (inherits(response, "error")) {
+          return(outcome(failure = conditionMessage(response)))
+        }
+        normalized <- mcp_repl_normalize_response(response)
+        status <- mcp_repl_busy_status(normalized$text)
+        pieces <- c(pieces, status$output)
+        if (identical(normalized$error_type, "interpreter")) {
+          return(outcome(failure = normalized$error))
+        }
+        # An error reported by any reply is an error of the whole cell, as it
+        # would be in a single reply.
+        execution_error <- execution_error ||
+          identical(normalized$error_type, "execution")
+        if (!status$busy) {
+          return(outcome())
+        }
+        remaining <- deadline - mcp_repl_clock()
+        if (remaining <= 0) {
+          break
+        }
+        input <- ""
+        timeout_ms <- mcp_repl_call_timeout_ms(remaining)
+      }
+
+      if (!interrupt) {
+        return(outcome(
+          failure = paste0(
+            "mcp-repl was still busy after ",
+            self$timeout,
+            " seconds"
+          )
+        ))
+      }
+      not_stopped <- paste0(
+        "Execution exceeded the ",
+        self$timeout,
+        "-second timeout and could not be interrupted: "
+      )
+      response <- private$call_repl("\u0003", .mcp_repl_call_timeout_ms)
+      if (inherits(response, "error")) {
+        return(outcome(
+          failure = paste0(not_stopped, conditionMessage(response))
+        ))
+      }
+      normalized <- mcp_repl_normalize_response(response)
+      status <- mcp_repl_busy_status(normalized$text)
+      pieces <- c(pieces, status$output)
+      if (identical(normalized$error_type, "interpreter")) {
+        return(outcome(failure = paste0(not_stopped, normalized$error)))
+      }
+      if (status$busy) {
+        return(outcome(
+          failure = paste0(not_stopped, "mcp-repl still reports it busy")
+        ))
+      }
+      # mcp-repl reports the interpreter idle again; an interrupted cell may
+      # report that as an error, which the timeout result already covers.
+      outcome(timed_out = TRUE)
+    },
+
     finalize = function() {
       try(self$shutdown(), silent = TRUE)
     }
   )
 )
 
-mcp_repl_timeout_ms <- function(timeout) {
+# mcptools 1.0.2 and 1.0.3 read a stdio reply for about 4 seconds (20 polls of
+# 0.2 s), then give up and return NULL; they do not check the JSON-RPC id, so a
+# reply that arrives later is read as the answer to the next request. mcp-repl
+# answers shortly before `timeout_ms` with a busy status while the code keeps
+# running, so capping every request at 3 seconds keeps each reply inside that
+# window with room for transport and scheduling delays.
+.mcp_repl_call_timeout_ms <- 3000L
+
+# mcp-repl's reply carries a status line with this text while the code is
+# still running; a later request with empty input collects the rest of the
+# output. Matched as a fixed string, so the delimiters around it do not matter.
+.mcp_repl_busy_marker <- "repl status: busy"
+
+# `seconds` is the time left for the whole call; one request waits at most
+# `.mcp_repl_call_timeout_ms`.
+mcp_repl_call_timeout_ms <- function(seconds) {
   as.integer(min(
-    .Machine$integer.max,
-    max(1, ceiling(timeout * 1000))
+    .mcp_repl_call_timeout_ms,
+    max(1, ceiling(seconds * 1000))
   ))
+}
+
+mcp_repl_clock <- function() {
+  proc.time()[["elapsed"]]
+}
+
+# Whether a reply reports a busy cell, and its output without the status
+# line(s). Where mcp-repl splits the output between replies is not specified,
+# so trailing newlines before the status are dropped and replies are joined
+# with one newline (see mcp_repl_join_output()).
+mcp_repl_busy_status <- function(text) {
+  lines <- strsplit(text, "\n", fixed = TRUE)[[1L]]
+  busy_lines <- grepl(.mcp_repl_busy_marker, lines, fixed = TRUE)
+  if (!any(busy_lines)) {
+    return(list(busy = FALSE, output = text))
+  }
+  list(
+    busy = TRUE,
+    output = sub("\n+$", "", paste(lines[!busy_lines], collapse = "\n"))
+  )
+}
+
+mcp_repl_join_output <- function(pieces) {
+  paste(pieces[nzchar(pieces)], collapse = "\n")
 }
 
 .mcp_repl_request_limit_bytes <- 7000L
@@ -996,6 +1140,9 @@ mcp_repl_input <- function(code, context) {
 }
 
 mcp_repl_request_bytes <- function(input) {
+  # Sizes the request that would carry `input`; nothing is sent. The largest
+  # integers stand in for the id and `timeout_ms` so the bound holds for any
+  # value of either.
   request <- list(
     jsonrpc = "2.0",
     id = .Machine$integer.max,
@@ -1150,6 +1297,15 @@ mcp_repl_inline_flex_preview <- function(text, nonce, max_bytes) {
 }
 
 mcp_repl_normalize_response <- function(response) {
+  if (is.null(response)) {
+    # mcptools returns NULL when no reply arrived within its wait. The reply
+    # may still arrive and would then answer the next request.
+    return(list(
+      text = "",
+      error = "mcp-repl did not reply within the MCP client's wait",
+      error_type = "interpreter"
+    ))
+  }
   if (is.character(response)) {
     return(list(
       text = paste(response, collapse = "\n"),
@@ -1201,11 +1357,7 @@ mcp_repl_normalize_response <- function(response) {
   }
 
   if (execution_error) {
-    error <- if (nzchar(text)) {
-      paste("mcp-repl reported an execution error:", text)
-    } else {
-      "mcp-repl reported an execution error"
-    }
+    error <- mcp_repl_execution_error(text)
     error_type <- "execution"
   }
 
@@ -1216,6 +1368,14 @@ mcp_repl_normalize_response <- function(response) {
     error <- as.character(error)[[1L]]
   }
   list(text = text, error = error, error_type = error_type)
+}
+
+mcp_repl_execution_error <- function(text) {
+  if (nzchar(text)) {
+    paste("mcp-repl reported an execution error:", text)
+  } else {
+    "mcp-repl reported an execution error"
+  }
 }
 
 mcp_repl_truncate <- function(text, max_chars) {
