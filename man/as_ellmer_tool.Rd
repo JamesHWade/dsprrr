@@ -9,7 +9,7 @@ as_ellmer_tool(
   name = NULL,
   description = NULL,
   .llm = NULL,
-  annotations = list(),
+  annotations = NULL,
   output = c("auto", "json", "text", "raw"),
   copy = c("none", "deep"),
   error = c("reject", "abort", "return"),
@@ -29,8 +29,21 @@ signature's instructions.}
 \item{.llm}{The chat the module uses when the tool is called. With \code{NULL},
 the module's own chat or the default chat (see \code{\link[=get_default_chat]{get_default_chat()}}).}
 
-\item{annotations}{A list of ellmer tool annotations, passed to
-\code{\link[ellmer:tool]{ellmer::tool()}}, for example to mark the tool read-only.}
+\item{annotations}{Tool annotations from \code{\link[ellmer:tool_annotations]{ellmer::tool_annotations()}},
+which tell a chat or an agent runtime what the tool may do. With \code{NULL}
+(the default), they are inferred from the module. A prediction module,
+such as one from \code{\link[=module]{module()}} or \code{\link[=chain_of_thought]{chain_of_thought()}}, only sends its
+inputs to the model provider of its chat and changes nothing, so its
+tool is marked read-only and closed-world (\code{read_only_hint = TRUE},
+\code{open_world_hint = FALSE}). A module compiled with \code{\link[=KNNFewShot]{KNNFewShot()}} is
+marked the same way when the module it wraps is; its \code{vectorizer} is
+assumed only to compute embeddings. Other modules get no annotations,
+because they can run your functions, tools or code: for example
+\code{\link[=module_fn]{module_fn()}}, \code{\link[=react]{react()}}, \code{\link[=code_act]{code_act()}}, \code{\link[=rlm_module]{rlm_module()}}, \code{\link[=flex]{flex()}},
+pipelines and wrappers such as \code{\link[=refine]{refine()}}. Use \code{list()} for no
+annotations, or pass your own. Agent runtimes may restrict tools without
+annotations, for example by treating them as destructive or as needing
+network access.}
 
 \item{output}{How the tool returns its result:
 \itemize{

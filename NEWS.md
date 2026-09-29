@@ -258,6 +258,16 @@ First development changelog. dsprrr is experimental; the API may change.
   or an interrupted request makes the runner unusable, so a late reply can
   never answer a later request.
 
+* `as_ellmer_tool()` now marks tools made from prediction modules (`module()`,
+  `chain_of_thought()`, and `KNNFewShot()` programs that wrap one) as
+  read-only and closed-world. Such a tool only sends its inputs to its chat's
+  model provider, but without annotations agent runtimes such as deputy
+  treated it as destructive and as needing network access, so it was refused
+  in read-only and plan modes. Modules that can run functions, tools or code
+  still get no annotations. `annotations = NULL` (the new default) infers
+  them; `annotations = list()` gives none, and annotations you pass are used
+  as given.
+
 * `metric_exact_match()` and `metric_f1()` now work without `field` in
   `evaluate()`, `optimize_grid()`, and `compile()`. Those functions pass the
   whole data row as `expected`, so every row used to fail with "Metric must

@@ -92,6 +92,98 @@ test_that("as_ellmer_tool passes annotations through to ellmer", {
 
   expect_true(tool@annotations$read_only_hint)
   expect_false(tool@annotations$destructive_hint)
+  expect_null(tool@annotations$open_world_hint)
+})
+
+test_that("as_ellmer_tool marks prediction modules read-only and closed-world", {
+  predicts <- list(
+    module = module(signature("text -> sentiment")),
+    chain_of_thought = chain_of_thought("question -> answer"),
+    with_reasoning = module(with_reasoning("question -> answer")),
+    knn = dsprrr:::KNNFewShotModule$new(
+      module = module(signature("text -> answer")),
+      k = 1L,
+      vectorizer = function(texts) matrix(1, nrow = length(texts)),
+      input_text = function(row) "x",
+      train_embeddings = matrix(1, nrow = 1),
+      trainset_demos = list(list(text = "x", answer = "y"))
+    )
+  )
+  expected <- ellmer::tool_annotations(
+    read_only_hint = TRUE,
+    open_world_hint = FALSE
+  )
+
+  expect_identical(
+    vapply(predicts, function(x) class(x)[[1L]], character(1)),
+    c(
+      module = "PredictModule",
+      chain_of_thought = "PredictModule",
+      with_reasoning = "PredictModule",
+      knn = "KNNFewShotModule"
+    )
+  )
+  for (kind in names(predicts)) {
+    tool <- as_ellmer_tool(predicts[[kind]], name = "predict_tool")
+    expect_identical(tool@annotations, expected, info = kind)
+  }
+})
+
+test_that("as_ellmer_tool claims nothing for modules that can run code or tools", {
+  factory <- function() r_code_runner()
+  reward_fn <- function(args, pred) 1
+  others <- list(
+    module_fn = module_fn("text -> answer", function(text) list(answer = text)),
+    react = react("question -> answer"),
+    code_act = code_act("question -> answer", interpreter_factory = factory),
+    program_of_thought = program_of_thought(
+      "question -> answer",
+      interpreter_factory = factory
+    ),
+    rlm = rlm_module("question -> answer", interpreter_factory = factory),
+    flex = suppressWarnings(flex("question -> answer")),
+    pipeline = pipeline(module(signature("question -> answer"))),
+    best_of_n = best_of_n(
+      module(signature("question -> answer")),
+      reward_fn = reward_fn
+    ),
+    knn_react = dsprrr:::KNNFewShotModule$new(
+      module = react("text -> answer"),
+      k = 1L,
+      vectorizer = function(texts) matrix(1, nrow = length(texts)),
+      input_text = function(row) "x",
+      train_embeddings = matrix(1, nrow = 1),
+      trainset_demos = list(list(text = "x", answer = "y"))
+    )
+  )
+
+  for (kind in names(others)) {
+    tool <- as_ellmer_tool(others[[kind]], name = "other_tool")
+    expect_identical(tool@annotations, list(), info = kind)
+  }
+})
+
+test_that("as_ellmer_tool uses explicit annotations as given", {
+  mod <- module(signature("text -> sentiment"))
+  custom <- ellmer::tool_annotations(
+    read_only_hint = FALSE,
+    destructive_hint = TRUE
+  )
+
+  none <- as_ellmer_tool(mod, name = "plain", annotations = list())
+  given <- as_ellmer_tool(mod, name = "custom", annotations = custom)
+  fn_given <- as_ellmer_tool(
+    module_fn("text -> answer", function(text) list(answer = text)),
+    name = "fn_custom",
+    annotations = ellmer::tool_annotations(read_only_hint = TRUE)
+  )
+
+  expect_identical(none@annotations, list())
+  expect_identical(given@annotations, custom)
+  expect_identical(
+    fn_given@annotations,
+    ellmer::tool_annotations(read_only_hint = TRUE)
+  )
 })
 
 test_that("as_ellmer_tool supports output serialization modes", {
