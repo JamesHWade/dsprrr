@@ -2,37 +2,80 @@
 % Please edit documentation in R/module-fn.R
 \name{module_fn}
 \alias{module_fn}
-\title{Callable Module}
+\title{Wrap an R function as a module}
 \usage{
 module_fn(signature, forward, chat = NULL, name = NULL, config = list())
 }
 \arguments{
-\item{signature}{A \link{Signature} object or signature string.}
+\item{signature}{A signature from \code{\link[=signature]{signature()}}, or a signature string.}
 
-\item{forward}{Function called with named signature inputs. If the function
-accepts \code{.llm} or \code{...}, the active chat object is passed as \code{.llm}.
-Return a named list matching the signature output fields, or a scalar when
-the signature has exactly one output field. \code{forward} is invoked once per
-row; use \code{\link[=run_dataset]{run_dataset()}} or \code{\link[=evaluate]{evaluate()}} to process multi-row datasets.}
+\item{forward}{A function called once per input row with the inputs as
+named arguments. If it has a \code{.llm} argument or \code{...}, it also receives a
+chat as \code{.llm}: the one passed to \code{\link[=run]{run()}}, else the module's chat, else
+the scoped or default chat, else \code{NULL} (no chat is auto-detected from
+API keys). It returns a named list with the signature's output fields,
+or a single value when there is one output field. Missing or unknown
+fields, and values of the wrong type, are an error.}
 
-\item{chat}{Optional ellmer Chat object stored on the module.}
+\item{chat}{An ellmer Chat stored on the module and passed to \code{forward} as
+\code{.llm}.}
 
-\item{name}{Optional module name stored in \code{config$name}.}
+\item{name}{Optional module name, stored in \code{config$name}.}
 
-\item{config}{Optional configuration metadata.}
+\item{config}{Optional list of settings stored on the module.}
 }
 \value{
-An R6 \code{FnModule} object inheriting from the internal Module base class.
+A module (an R6 object of class \code{FnModule}).
 }
 \description{
-\code{module_fn()} wraps an ordinary R function in a dsprrr Module. This gives
-custom callables the same \code{run()} and \code{evaluate()} surface as built-in
-modules without requiring users to subclass dsprrr internals.
+\code{module_fn()} turns an ordinary R function into a module, so it can be used
+with \code{\link[=run]{run()}}, \code{\link[=run_dataset]{run_dataset()}}, \code{\link[=evaluate]{evaluate()}} and \code{\link[=pipeline]{pipeline()}} like any other.
+Use it for rule-based baselines, for steps that call other code or
+services, or for your own logic around several model calls.
+}
+\details{
+Function-backed modules record traces but not token counts or costs.
+\code{\link[=compile]{compile()}} and the optimizers refuse them, because there is no prompt to
+optimize.
 }
 \examples{
-summarizer <- module_fn(
+truncate <- module_fn(
   "text -> summary",
-  function(text, ...) list(summary = substr(text, 1, 20))
+  function(text) substr(text, 1, 20)
 )
-run(summarizer, text = "A long piece of text")
+run(truncate, text = "A long piece of text that needs a summary")
+
+# Return a named list for several outputs
+stats <- module_fn(
+  "text -> n_words: int, n_chars: int",
+  function(text) {
+    list(n_words = length(strsplit(text, "\\\\s+")[[1]]), n_chars = nchar(text))
+  }
+)
+run(stats, text = "Four words right here")
+
+\dontrun{
+# Take `.llm` to call a model yourself
+translate <- module_fn(
+  "text -> translation",
+  function(text, .llm) {
+    .llm$chat(paste("Translate to French:", text), echo = "none")
+  }
+)
+run(translate, text = "Good morning", .llm = ellmer::chat_openai(model = "gpt-6-luna"))
 }
+}
+\seealso{
+Other program constructors:
+\code{\link[=chain_of_thought]{chain_of_thought()}},
+\code{\link[=code_act]{code_act()}},
+\code{\link[=flex]{flex()}},
+\code{\link[=module]{module()}},
+\code{\link[=multi_chain_comparison]{multi_chain_comparison()}},
+\code{\link[=program_of_thought]{program_of_thought()}},
+\code{\link[=rag_module]{rag_module()}},
+\code{\link[=react]{react()}},
+\code{\link[=rlm]{rlm()}},
+\code{\link[=rlm_module]{rlm_module()}}
+}
+\concept{program constructors}

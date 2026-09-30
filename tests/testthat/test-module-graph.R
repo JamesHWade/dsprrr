@@ -1,5 +1,5 @@
 graph_test_module <- function(input = "text", output = "answer") {
-  module(signature(paste0(input, " -> ", output)), type = "predict")
+  module(signature(paste0(input, " -> ", output)))
 }
 
 GraphTestProgram <- R6::R6Class(

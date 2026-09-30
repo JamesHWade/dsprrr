@@ -1,5 +1,19 @@
 # Tests for BootstrapFewShot teleprompter
 
+bootstrap_test_metadata <- function(program) {
+  result <- optimization_result(program)
+  utils::modifyList(
+    result$extensions$bootstrap_few_shot,
+    list(
+      total_attempts = result$budget$attempts,
+      error_count = result$budget$total_errors,
+      budget_summary = result$budget,
+      stop_reason = result$budget$stop_reason,
+      partial = identical(result$status, "partial")
+    )
+  )
+}
+
 test_that("BootstrapFewShot can be created with defaults", {
   tp <- BootstrapFewShot()
   expect_s3_class(tp, "dsprrr::BootstrapFewShot")
@@ -71,11 +85,11 @@ test_that("BootstrapFewShot validates properties", {
 
 test_that("BootstrapFewShot requires metric for compilation", {
   sig <- Signature(
-    inputs = list(input(name = "question", class = S7::class_character)),
+    inputs = list(input(name = "question", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Answer the question"
   )
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
 
   trainset <- data.frame(
     question = c("What is 2+2?", "What is 3+3?"),
@@ -84,7 +98,7 @@ test_that("BootstrapFewShot requires metric for compilation", {
 
   tp <- BootstrapFewShot()
   expect_error(
-    compile(tp, mod, trainset),
+    compile(mod, tp, trainset),
     "requires a metric"
   )
 })
@@ -92,7 +106,12 @@ test_that("BootstrapFewShot requires metric for compilation", {
 test_that("BootstrapFewShot rejects Flex instead of assigning unused demos", {
   flex_program <- suppressWarnings(flex("question -> draft"))
   pipeline_program <- flex_program %>>%
-    module(signature("draft -> answer"), type = "predict")
+    module(signature("draft -> answer"))
+  wrapped_program <- best_of_n(
+    flex_program,
+    N = 2L,
+    reward_fn = function(...) 1
+  )
   trainset <- data.frame(question = "q", answer = "a")
   optimizer <- BootstrapFewShot(
     metric = function(prediction, expected) 1,
@@ -101,11 +120,15 @@ test_that("BootstrapFewShot rejects Flex instead of assigning unused demos", {
   )
 
   direct_error <- tryCatch(
-    compile(optimizer, flex_program, trainset),
+    compile(flex_program, optimizer, trainset),
     error = identity
   )
   nested_error <- tryCatch(
-    compile(optimizer, pipeline_program, trainset),
+    compile(pipeline_program, optimizer, trainset),
+    error = identity
+  )
+  wrapped_error <- tryCatch(
+    compile(wrapped_program, optimizer, trainset),
     error = identity
   )
 
@@ -113,21 +136,57 @@ test_that("BootstrapFewShot rejects Flex instead of assigning unused demos", {
   expect_identical(direct_error$paths, "$")
   expect_s3_class(nested_error, "dsprrr_flex_demo_unsupported_error")
   expect_identical(nested_error$paths, "$/steps/1")
+  expect_s3_class(wrapped_error, "dsprrr_flex_demo_unsupported_error")
+  expect_identical(wrapped_error$paths, "$/module")
+})
+
+test_that("BootstrapFewShot rejects RLM without predictor-local evidence", {
+  runner <- list(
+    execute = function(code, context = list(), ...) {
+      list(success = TRUE, result = NULL)
+    },
+    policy = function() {
+      list(
+        backend = "test",
+        trust = "test-only",
+        sandboxed = TRUE,
+        persistent = TRUE
+      )
+    }
+  )
+  program <- rlm_module("question -> answer", runner = runner)
+  trainset <- data.frame(question = "q", answer = "a")
+  optimizer <- BootstrapFewShot(
+    metric = function(prediction, expected) 1,
+    max_labeled_demos = 1L,
+    max_bootstrapped_demos = 0L
+  )
+
+  error <- tryCatch(
+    compile(program, optimizer, trainset),
+    error = identity
+  )
+
+  expect_s3_class(error, "dsprrr_bootstrap_graph_unsupported")
+  expect_s3_class(error, "dsprrr_optimizer_ineligible_error")
+  expect_identical(error$paths, "$")
+  expect_length(program$generate_action$demos, 0L)
+  expect_length(program$extract$demos, 0L)
 })
 
 test_that("BootstrapFewShot compile returns unmodified program for empty trainset", {
   sig <- Signature(
-    inputs = list(input(name = "question", class = S7::class_character)),
+    inputs = list(input(name = "question", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Answer the question"
   )
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
 
   empty_trainset <- data.frame(question = character(), answer = character())
   tp <- BootstrapFewShot(metric = function(pred, exp) 1.0)
 
   expect_warning(
-    result <- compile(tp, mod, empty_trainset),
+    result <- compile(mod, tp, empty_trainset),
     "Empty trainset"
   )
   expect_identical(result, mod)
@@ -135,11 +194,11 @@ test_that("BootstrapFewShot compile returns unmodified program for empty trainse
 
 test_that("BootstrapFewShot compile adds labeled demos from trainset", {
   sig <- Signature(
-    inputs = list(input(name = "question", class = S7::class_character)),
+    inputs = list(input(name = "question", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Answer the question"
   )
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
 
   trainset <- data.frame(
     question = c(
@@ -152,13 +211,10 @@ test_that("BootstrapFewShot compile adds labeled demos from trainset", {
   )
 
   # Create a mock LLM that returns predictable results
-  mock_llm <- structure(
-    list(
-      chat_structured = function(prompt, type, ...) {
-        list(answer = "mocked")
-      }
-    ),
-    class = "Chat"
+  mock_llm <- new_test_chat(
+    chat_structured = function(prompt, type, ...) {
+      list(answer = "mocked")
+    }
   )
 
   # Metric that always returns 0 so no bootstrapped demos are added
@@ -169,7 +225,7 @@ test_that("BootstrapFewShot compile adds labeled demos from trainset", {
     seed = 42L
   )
 
-  result <- compile(tp, mod, trainset, .llm = mock_llm)
+  result <- compile(mod, tp, trainset, .llm = mock_llm)
 
   expect_true(inherits(result, "Module"))
   expect_true(result$config$compiled)
@@ -186,20 +242,20 @@ test_that("BootstrapFewShot compile adds labeled demos from trainset", {
   expect_equal(demo$source, "labeled")
 
   # Check optimizer info in config
-  expect_equal(result$config$optimizer$n_labeled_demos, 2)
-  expect_equal(result$config$optimizer$n_bootstrapped_demos, 0)
+  expect_equal(bootstrap_test_metadata(result)$n_labeled_demos, 2)
+  expect_equal(bootstrap_test_metadata(result)$n_bootstrapped_demos, 0)
 })
 
 test_that("BootstrapFewShot compile bootstraps demos with metric", {
   sig <- Signature(
-    inputs = list(input(name = "question", class = S7::class_character)),
+    inputs = list(input(name = "question", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Answer the question"
   )
 
-  mod <- module(signature = sig, type = "predict", template = "{question}")
-  mock_llm <- structure(
-    list(chat_structured = function(prompt, ...) {
+  mod <- module(signature = sig, template = "{question}")
+  mock_llm <- new_test_chat(
+    chat_structured = function(prompt, ...) {
       lines <- trimws(strsplit(prompt, "\n", fixed = TRUE)[[1L]])
       question <- utils::tail(lines[nzchar(lines)], 1L)
       switch(
@@ -210,8 +266,7 @@ test_that("BootstrapFewShot compile bootstraps demos with metric", {
         "What is 5+5?" = "10",
         "unknown"
       )
-    }),
-    class = "Chat"
+    }
   )
 
   trainset <- data.frame(
@@ -239,14 +294,14 @@ test_that("BootstrapFewShot compile bootstraps demos with metric", {
     seed = 42L
   )
 
-  result <- compile(tp, mod, trainset, .llm = mock_llm)
+  result <- compile(mod, tp, trainset, .llm = mock_llm)
 
   expect_true(inherits(result, "Module"))
   expect_true(result$config$compiled)
 
   # Should have labeled + bootstrapped demos
-  n_labeled <- result$config$optimizer$n_labeled_demos
-  n_bootstrapped <- result$config$optimizer$n_bootstrapped_demos
+  n_labeled <- bootstrap_test_metadata(result)$n_labeled_demos
+  n_bootstrapped <- bootstrap_test_metadata(result)$n_bootstrapped_demos
 
   expect_equal(n_labeled, 1)
   expect_equal(n_bootstrapped, 2)
@@ -258,12 +313,12 @@ test_that("BootstrapFewShot compile bootstraps demos with metric", {
 test_that("BootstrapFewShot handles teacher errors gracefully", {
   # Use a standard module with a mock LLM that fails intermittently
   sig <- Signature(
-    inputs = list(input(name = "x", class = S7::class_character)),
+    inputs = list(input(name = "x", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Test"
   )
 
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
 
   trainset <- data.frame(
     x = c("a", "b", "c", "d", "e"),
@@ -276,17 +331,14 @@ test_that("BootstrapFewShot handles teacher errors gracefully", {
   call_counter$max_fails <- 2
 
   # Mock LLM that fails for the first max_fails calls, then succeeds
-  failing_llm <- structure(
-    list(
-      chat_structured = function(prompt, type, ...) {
-        call_counter$count <- call_counter$count + 1
-        if (call_counter$count <= call_counter$max_fails) {
-          stop("Simulated failure")
-        }
-        list(answer = "success")
+  failing_llm <- new_test_chat(
+    chat_structured = function(prompt, type, ...) {
+      call_counter$count <- call_counter$count + 1
+      if (call_counter$count <= call_counter$max_fails) {
+        stop("Simulated failure")
       }
-    ),
-    class = "Chat"
+      list(answer = "success")
+    }
   )
 
   tp <- BootstrapFewShot(
@@ -298,21 +350,21 @@ test_that("BootstrapFewShot handles teacher errors gracefully", {
 
   # Should complete despite some failures
   result <- expect_test_warnings(
-    compile(tp, mod, trainset, .llm = failing_llm),
+    compile(mod, tp, trainset, .llm = failing_llm),
     "Bootstrap attempt failed"
   )
 
   expect_true(inherits(result, "Module"))
   expect_true(result$config$compiled)
   # Verify error_count is actually tracked (was a scoping bug)
-  expect_equal(result$config$optimizer$error_count, 2)
-  expect_equal(result$config$optimizer$total_attempts, 4L)
-  expect_equal(result$config$optimizer$budget_summary$successes, 2L)
+  expect_equal(bootstrap_test_metadata(result)$error_count, 2)
+  expect_equal(bootstrap_test_metadata(result)$total_attempts, 4L)
+  expect_equal(bootstrap_test_metadata(result)$budget_summary$successes, 2L)
   expect_equal(
-    result$config$optimizer$budget_summary$consecutive_errors,
+    bootstrap_test_metadata(result)$budget_summary$consecutive_errors,
     0L
   )
-  expect_false(result$config$optimizer$budget_summary$stopped)
+  expect_false(bootstrap_test_metadata(result)$budget_summary$stopped)
 })
 
 test_that("BootstrapFewShot counts metric failures by training-row attempt", {
@@ -330,7 +382,7 @@ test_that("BootstrapFewShot counts metric failures by training-row attempt", {
     0.1
   }
 
-  program <- module(signature("x -> y"), type = "predict")
+  program <- module(signature("x -> y"))
   teleprompter <- BootstrapFewShot(
     metric = metric,
     metric_threshold = 0.5,
@@ -348,14 +400,14 @@ test_that("BootstrapFewShot counts metric failures by training-row attempt", {
     ),
     "Metric evaluation failed"
   )
-  budget <- result$config$optimizer$budget_summary
+  budget <- bootstrap_test_metadata(result)$budget_summary
 
   expect_equal(budget$attempts, 3L)
   expect_equal(budget$successes, 1L)
   expect_equal(budget$total_errors, 2L)
   expect_equal(budget$consecutive_errors, 1L)
   expect_false(budget$stopped)
-  expect_equal(result$config$optimizer$n_bootstrapped_demos, 0L)
+  expect_equal(bootstrap_test_metadata(result)$n_bootstrapped_demos, 0L)
 })
 
 test_that("BootstrapFewShot max_errors zero stops after the first attempt", {
@@ -368,7 +420,7 @@ test_that("BootstrapFewShot max_errors zero stops after the first attempt", {
     .package = "dsprrr"
   )
 
-  program <- module(signature("x -> y"), type = "predict")
+  program <- module(signature("x -> y"))
   teleprompter <- BootstrapFewShot(
     metric = function(...) 1,
     max_labeled_demos = 0L,
@@ -385,14 +437,17 @@ test_that("BootstrapFewShot max_errors zero stops after the first attempt", {
     ),
     "Bootstrap attempt failed"
   )
-  budget <- result$config$optimizer$budget_summary
+  budget <- bootstrap_test_metadata(result)$budget_summary
 
   expect_equal(teacher_calls, 1L)
   expect_equal(budget$attempts, 1L)
   expect_equal(budget$total_errors, 1L)
   expect_true(budget$stopped)
   expect_equal(budget$stop_reason$limit, 0L)
-  expect_identical(result$config$optimizer$stop_reason, budget$stop_reason)
+  expect_identical(
+    bootstrap_test_metadata(result)$stop_reason,
+    budget$stop_reason
+  )
 })
 
 test_that("BootstrapFewShot logging cannot bypass the shared metric budget", {
@@ -417,7 +472,7 @@ test_that("BootstrapFewShot logging cannot bypass the shared metric budget", {
   )
   result <- dsprrr:::compile_bootstrap(
     teleprompter,
-    module(signature("x -> y"), type = "predict"),
+    module(signature("x -> y")),
     data.frame(x = "train", y = "train"),
     valset = data.frame(x = "validation", y = "validation"),
     control = dsprrr:::optimizer_control(
@@ -427,7 +482,7 @@ test_that("BootstrapFewShot logging cannot bypass the shared metric budget", {
   )
 
   trials <- read_trials_jsonl(file.path(log_dir, "trials.jsonl"))
-  budget <- result$config$optimizer$budget_summary
+  budget <- bootstrap_test_metadata(result)$budget_summary
   expect_identical(eval_calls, 0L)
   expect_identical(budget$metric_calls, 0L)
   expect_identical(budget$trials, 0L)
@@ -475,15 +530,14 @@ test_that("BootstrapFewShot print method works", {
 
 test_that("BootstrapFewShot respects metric_threshold", {
   sig <- Signature(
-    inputs = list(input(name = "x", class = S7::class_character)),
+    inputs = list(input(name = "x", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Test"
   )
 
-  mod <- module(signature = sig, type = "predict")
-  mock_llm <- structure(
-    list(chat_structured = function(...) "predicted"),
-    class = "Chat"
+  mod <- module(signature = sig)
+  mock_llm <- new_test_chat(
+    chat_structured = function(...) "predicted"
   )
 
   trainset <- data.frame(
@@ -502,8 +556,8 @@ test_that("BootstrapFewShot respects metric_threshold", {
     max_bootstrapped_demos = 2L
   )
 
-  result_high <- compile(tp_high_threshold, mod, trainset, .llm = mock_llm)
-  expect_equal(result_high$config$optimizer$n_bootstrapped_demos, 0)
+  result_high <- compile(mod, tp_high_threshold, trainset, .llm = mock_llm)
+  expect_equal(bootstrap_test_metadata(result_high)$n_bootstrapped_demos, 0)
 
   # Threshold of 0.2 - demos should pass
   tp_low_threshold <- BootstrapFewShot(
@@ -513,30 +567,27 @@ test_that("BootstrapFewShot respects metric_threshold", {
     max_bootstrapped_demos = 2L
   )
 
-  result_low <- compile(tp_low_threshold, mod, trainset, .llm = mock_llm)
-  expect_equal(result_low$config$optimizer$n_bootstrapped_demos, 2)
+  result_low <- compile(mod, tp_low_threshold, trainset, .llm = mock_llm)
+  expect_equal(bootstrap_test_metadata(result_low)$n_bootstrapped_demos, 2)
 })
 
-test_that("compile_module works with BootstrapFewShot", {
+test_that("compile works with BootstrapFewShot", {
   sig <- Signature(
-    inputs = list(input(name = "text", class = S7::class_character)),
+    inputs = list(input(name = "text", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Summarize"
   )
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
 
   trainset <- data.frame(
     text = c("Hello world", "Goodbye world"),
     summary = c("greeting", "farewell")
   )
 
-  mock_llm <- structure(
-    list(
-      chat_structured = function(prompt, type, ...) {
-        list(summary = "mocked")
-      }
-    ),
-    class = "Chat"
+  mock_llm <- new_test_chat(
+    chat_structured = function(prompt, type, ...) {
+      list(summary = "mocked")
+    }
   )
 
   tp <- BootstrapFewShot(
@@ -545,7 +596,7 @@ test_that("compile_module works with BootstrapFewShot", {
     max_bootstrapped_demos = 1L
   )
 
-  result <- compile_module(mod, tp, trainset, .llm = mock_llm)
+  result <- compile(mod, tp, trainset, .llm = mock_llm)
 
   expect_true(inherits(result, "Module"))
   expect_true(result$is_compiled())
@@ -560,16 +611,15 @@ test_that("BootstrapFewShot harvests demos with field-aware metrics (dsprrr-s3b)
   local_reset_cache()
 
   sig <- Signature(
-    inputs = list(input(name = "question", class = S7::class_character)),
+    inputs = list(input(name = "question", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Answer the question"
   )
-  mod <- module(signature = sig, type = "predict", template = "{question}")
+  mod <- module(signature = sig, template = "{question}")
 
   # Mock LLM always returns the correct structured answer so every row passes.
-  mock_llm <- structure(
-    list(chat_structured = function(prompt, type, ...) list(answer = "yes")),
-    class = "Chat"
+  mock_llm <- new_test_chat(
+    chat_structured = function(prompt, type, ...) list(answer = "yes")
   )
 
   trainset <- data.frame(
@@ -584,18 +634,17 @@ test_that("BootstrapFewShot harvests demos with field-aware metrics (dsprrr-s3b)
     seed = 42L
   )
 
-  result <- compile(tp, mod, trainset, .llm = mock_llm)
+  result <- compile(mod, tp, trainset, .llm = mock_llm)
 
-  expect_gt(result$config$optimizer$n_bootstrapped_demos, 0)
+  expect_gt(bootstrap_test_metadata(result)$n_bootstrapped_demos, 0)
 })
 
 test_that("BootstrapFewShot supplies execution traces to trace metrics", {
   local_reset_cache()
   sig <- signature("question -> answer", instructions = "Answer")
-  mod <- module(sig, type = "predict", template = "{question}")
-  mock_llm <- structure(
-    list(chat_structured = function(prompt, type, ...) list(answer = "yes")),
-    class = "Chat"
+  mod <- module(sig, template = "{question}")
+  mock_llm <- new_test_chat(
+    chat_structured = function(prompt, type, ...) list(answer = "yes")
   )
   trainset <- data.frame(question = "q1", answer = "yes")
   seen <- list()
@@ -612,9 +661,9 @@ test_that("BootstrapFewShot supplies execution traces to trace metrics", {
     seed = 42L
   )
 
-  compiled <- compile(tp, mod, trainset, .llm = mock_llm)
+  compiled <- compile(mod, tp, trainset, .llm = mock_llm)
 
-  expect_gt(compiled$config$optimizer$n_bootstrapped_demos, 0L)
+  expect_gt(bootstrap_test_metadata(compiled)$n_bootstrapped_demos, 0L)
   expect_length(seen, 1L)
   expect_s3_class(seen[[1L]], "dsprrr_program_trace")
   expect_length(seen[[1L]]$events, 1L)

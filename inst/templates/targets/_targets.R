@@ -121,7 +121,6 @@ list(
         instructions = "Classify the sentiment of the given text."
       ) |>
         dsprrr::module(
-          type = "predict",
           template = "Analyze the sentiment of this text:\n\n{text}"
         )
     }
@@ -301,7 +300,7 @@ list(
         n_errors = evaluation_results$n_errors,
         is_compiled = optimized_module$is_compiled(),
         best_params = if (optimized_module$is_compiled()) {
-          optimized_module$state$best_params
+          dsprrr::best_params(optimized_module)
         } else {
           NULL
         },

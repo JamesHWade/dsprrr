@@ -2,49 +2,50 @@
 % Please edit documentation in R/traces.R
 \name{export_traces}
 \alias{export_traces}
-\title{Export Module Traces}
+\title{Export a module's traces as a tibble}
 \usage{
 export_traces(module, include_prompts = FALSE, include_outputs = FALSE)
 }
 \arguments{
-\item{module}{A DSPrrr module with recorded traces}
+\item{module}{A module.}
 
-\item{include_prompts}{Logical; whether to include full prompts in the output (default FALSE)}
+\item{include_prompts}{If \code{TRUE}, add the prompts, as \code{prompt} (plain
+text), \code{prompt_markdown} and \code{prompt_html}.}
 
-\item{include_outputs}{Logical; whether to include full outputs in the output (default FALSE)}
+\item{include_outputs}{If \code{TRUE}, add the outputs and responses, as
+\code{output} (a list-column), \code{turns}, \code{response}, \code{response_text},
+\code{response_markdown} and \code{response_html}.}
 }
 \value{
-A tibble with one row per trace containing:
-\itemize{
-\item timestamp: When the trace was recorded
-\item latency_ms: Response time in milliseconds
-\item input_tokens: Number of input tokens used
-\item output_tokens: Number of output tokens generated
-\item total_tokens: Total tokens (input + output)
-\item cost: Cost in USD (if available from the provider)
-\item model: The model name/version used
-\item prompt_length: Character length of the prompt
-\item prompt: The full prompt text (if include_prompts = TRUE)
-\item output: The model output (if include_outputs = TRUE)
-}
+A tibble with one row per trace and the columns \code{timestamp},
+\code{latency_ms}, \code{input_tokens}, \code{cached_input_tokens}, \code{output_tokens},
+\code{total_tokens}, \code{cost} (in US dollars, when known), \code{model},
+\code{prompt_length}, \code{program_artifact_id} and \code{trace_context}, plus the
+columns requested above. A module without traces gives an empty tibble
+and a message.
 }
 \description{
-Export traces from a module as a tidy tibble for analysis and visualization.
+Every call of a module records a trace on it: when it ran, how long it
+took, the tokens and cost, and the model. \code{export_traces()} returns these
+traces as a tibble with one row per call, for analysis or plotting.
+Prompts and outputs are left out unless you ask for them, because they
+can contain sensitive data.
 }
 \examples{
-\dontrun{
-# Get basic trace metrics
-traces <- export_traces(my_module)
-
-# Include full prompts and outputs for analysis
-full_traces <- export_traces(my_module,
-                             include_prompts = TRUE,
-                             include_outputs = TRUE)
-
-# Visualize token usage over time
-library(ggplot2)
-ggplot(traces, aes(x = timestamp, y = total_tokens)) +
-  geom_line() +
-  geom_point()
+shout <- module_fn("text -> reply", function(text) toupper(text))
+run(shout, text = "hello")
+run(shout, text = "goodbye")
+export_traces(shout)
+export_traces(shout, include_outputs = TRUE)$output
 }
+\seealso{
+Other inspection:
+\code{\link{accessors}},
+\code{\link[=clear_prompt_history]{clear_prompt_history()}},
+\code{\link[=clear_traces]{clear_traces()}},
+\code{\link[=get_last_prompt]{get_last_prompt()}},
+\code{\link[=inspect_history]{inspect_history()}},
+\code{\link[=session_cost]{session_cost()}},
+\code{\link[=summarize_traces]{summarize_traces()}}
 }
+\concept{inspection}

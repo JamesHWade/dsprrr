@@ -2,7 +2,7 @@
 % Please edit documentation in R/module-assert.R
 \name{with_assertions}
 \alias{with_assertions}
-\title{Wrap a Module with Assertions}
+\title{Validate a module's outputs and retry on failure}
 \usage{
 with_assertions(
   module,
@@ -14,83 +14,94 @@ with_assertions(
 )
 }
 \arguments{
-\item{module}{A Module object to wrap}
+\item{module}{The module to wrap.}
 
-\item{assertions}{List of Assertion objects (from \code{assert_output()} or
-\code{suggest_output()}) or an AssertionSet}
+\item{assertions}{A list of assertions made with \code{\link[=assert_output]{assert_output()}},
+\code{\link[=suggest_output]{suggest_output()}} or the \verb{assert_*()} helpers, or an \code{\link[=assertion_set]{assertion_set()}}.}
 
-\item{max_retries}{Maximum number of retry attempts (default 3)}
+\item{max_retries}{Number of retries after the first attempt.}
 
-\item{on_failure}{What to do when max retries exceeded: "error" (default)
-or "warn" (return best attempt with warning)}
+\item{on_failure}{What happens when hard assertions still fail after the
+last retry: \code{"error"} (the default) raises an error; \code{"warn"} gives a
+warning and returns the attempt with the fewest failed hard assertions.}
 
-\item{feedback_template}{Template for feedback injection on retry.
-Uses glue syntax. Available variables:
-\itemize{
-\item \code{{failures}}: Bulleted list of hard assertion failure messages
-}}
+\item{feedback_template}{A glue template for the retry feedback, where
+\code{{failures}} is the list of failed assertion messages, one per line. The
+default says the previous response did not satisfy the requirements,
+lists them, and asks for a new response that satisfies all of them.}
 
-\item{...}{Additional arguments passed to the module constructor}
+\item{...}{Passed to the wrapper: \code{chat} (an ellmer Chat, which defaults to
+the wrapped module's chat) or \code{config}.}
 }
 \value{
-An AssertModule object
+A module (an R6 object of class \code{AssertModule}) with the same
+signature as \code{module}.
 }
 \description{
-Factory function to create an assertion wrapper around any module.
-Validates outputs against assertions and retries with backtracking
-when hard assertions fail.
+\code{with_assertions()} wraps a module so that every output is checked against
+assertions. When a hard assertion fails, the module runs again with
+feedback that lists the failed checks, up to \code{max_retries} more times.
+Soft assertions (suggestions) only give a warning.
 }
 \details{
-\subsection{Assertion Types}{
-\itemize{
-\item \strong{\code{assert_output()}}: Hard assertion. Must pass or execution retries.
-Use for critical constraints like length limits, required patterns, etc.
-\item \strong{\code{suggest_output()}}: Soft suggestion. Logs warning but doesn't retry.
-Use for style preferences, optional improvements, etc.
-}
-}
+On a retry, the feedback is passed to the wrapped module as an extra input
+named \code{assertion_feedback}. A prediction module without a custom template
+adds it to the prompt as an \verb{assertion_feedback:} line. A \code{\link[=module_fn]{module_fn()}}
+function must accept \code{assertion_feedback} (or \code{...}) to be retried. Each
+attempt uses its own partition of the response cache, so retries get
+fresh responses, and each retry is another model call.
 
-\subsection{Backtracking Behavior}{
-
-When hard assertions fail:
-\enumerate{
-\item Feedback is generated from the failure messages
-\item The module is re-run with feedback injected as \code{assertion_feedback}
-\item This continues until assertions pass or max_retries is exceeded
-\item If max_retries exceeded, behavior depends on \code{on_failure} parameter
-}
-}
-
-\subsection{Performance Considerations}{
-
-Each retry makes a new LLM call. Use assertions judiciously and consider:
-\itemize{
-\item Starting with max_retries = 2-3 for most use cases
-\item Using "warn" for non-critical assertions to avoid blocking
-\item Combining with caching to reduce costs during development
-}
-}
+The returned module's \code{get_attempts()} method lists the attempts of the
+last run with their numbers of failed hard and soft assertions (or those of
+all runs, with \code{all = TRUE}).
 }
 \examples{
-\dontrun{
-# Create a QA module
 qa <- module(signature("question -> answer"))
-
-# Wrap with assertions
-validated <- with_assertions(
+checked <- with_assertions(
   qa,
   assertions = list(
-    assert_output(~ nchar(.x$answer) <= 100, "Answer must be 100 chars or less"),
-    assert_output(~ nchar(.x$answer) >= 10, "Answer must be at least 10 chars"),
-    suggest_output(~ grepl("^[A-Z]", .x$answer), "Should start with capital")
+    assert_length("answer", max = 100),
+    assert_matches("answer", "^[A-Z]", "Start with a capital letter"),
+    suggest_output(~ !grepl("!", .x$answer), "Avoid exclamation marks")
   ),
-  max_retries = 3
+  max_retries = 2L
 )
+checked
 
-# Run - will retry if assertions fail
-result <- run(validated, question = "What is the capital of France?", .llm = llm)
-
-# Check attempt history
-validated$get_attempts()
+\dontrun{
+run(
+  checked,
+  question = "What is the capital of France?",
+  .llm = ellmer::chat_openai(model = "gpt-6-luna")
+)
+checked$get_attempts()
 }
 }
+\seealso{
+Other assertions:
+\code{\link[=assert_contains]{assert_contains()}},
+\code{\link[=assert_custom]{assert_custom()}},
+\code{\link[=assert_length]{assert_length()}},
+\code{\link[=assert_matches]{assert_matches()}},
+\code{\link[=assert_not_contains]{assert_not_contains()}},
+\code{\link[=assert_not_empty]{assert_not_empty()}},
+\code{\link[=assert_not_matches]{assert_not_matches()}},
+\code{\link[=assert_one_of]{assert_one_of()}},
+\code{\link[=assert_range]{assert_range()}},
+\code{\link{assertions}}
+
+Other composition:
+\code{\link[=as_reward_fn]{as_reward_fn()}},
+\code{\link[=best_of_n]{best_of_n()}},
+\code{\link[=ensemble]{ensemble()}},
+\code{\link{module-graph}},
+\code{\link[=pipeline]{pipeline()}},
+\code{\link[=reduce_best_by_metric]{reduce_best_by_metric()}},
+\code{\link[=reduce_first]{reduce_first()}},
+\code{\link[=reduce_majority]{reduce_majority()}},
+\code{\link[=reduce_weighted_vote]{reduce_weighted_vote()}},
+\code{\link[=refine]{refine()}},
+\code{\link[=step]{step()}}
+}
+\concept{assertions}
+\concept{composition}

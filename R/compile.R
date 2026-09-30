@@ -1,113 +1,109 @@
-#' Compile S7 Generic and Methods
-#'
-#' This file defines the compile generic and its methods for optimizing
-#' DSPrrr modules using teleprompters.
-
-#' Compile Generic
+#' Optimize a program with a teleprompter
 #'
 #' @description
-#' Generic method for compiling/optimizing a module using a teleprompter.
+#' `compile()` improves a program (its demos, instructions or other settings)
+#' with a teleprompter such as [LabeledFewShot()], [BootstrapFewShot()] or
+#' [MIPROv2()], using a training set. It returns a new program and leaves the
+#' input unchanged. Its argument order suits the native pipe:
+#' `program |> compile(teleprompter, trainset)`.
 #'
-#' @param teleprompter A Teleprompter object
-#' @param program A module to optimize
-#' @param ... Additional arguments including trainset (training data)
+#' @param program The module or pipeline to optimize. Programs made with
+#'   [module_fn()] cannot be compiled.
+#' @param teleprompter A teleprompter object that sets the optimization
+#'   strategy. Integer settings of teleprompters need integer literals, as in
+#'   `LabeledFewShot(k = 3L)`; `k = 3` is an error.
+#' @param ... The training set and optimizer options:
+#'   - `trainset` (required, third argument): a data frame with the program's
+#'     input columns and the expected outputs.
+#'   - `valset`: an optional validation data frame, for teleprompters that
+#'     use one. It may also be given as the fourth argument.
+#'   - `.llm`: an ellmer Chat for the program's calls (see [run()]).
+#'   - `.trace_context`: a named, JSON-compatible list copied into the
+#'     metadata and traces of the calls made while compiling.
 #'
-#' @return An optimized module
-#' @seealso [compile_module()] for the pipe-friendly wrapper with
-#'   validation and friendlier argument order
+#'   Some teleprompters take further arguments; see their help pages.
+#'
+#' @details
+#' Teleprompters that score candidates call the metric as
+#' `metric(prediction, expected)`, where `expected` is the whole training
+#' row, so give built-in metrics a `field`, as in
+#' `metric_exact_match(field = "sentiment")`. Compiling a program that is
+#' already compiled works but gives a warning.
+#'
+#' @return A new, compiled program of the same kind as `program`. Check it
+#'   with `compiled$is_compiled()`.
+#' @export
+#' @family teleprompters
 #' @examples
-#' \dontrun{
-#' classifier <- module(signature("text -> sentiment"), type = "predict")
-#' trainset <- dsp_trainset(
-#'   text = c("I love it!", "Terrible experience"),
-#'   sentiment = c("positive", "negative")
+#' classifier <- module(
+#'   signature("text -> sentiment: enum('positive', 'negative')")
 #' )
-#' optimized <- compile(LabeledFewShot(k = 2L), classifier, trainset)
-#' }
-#' @export
-compile <- S7::new_generic("compile", c("teleprompter", "program"))
-
-# Method registration moved to zzz.R to ensure proper loading order
-
-#' Compile a DSPrrr Program
-#'
-#' @description
-#' Main user-facing function to compile/optimize a DSPrrr module using
-#' a teleprompter optimization strategy.
-#'
-#' @param program A DSPrrr module to optimize (e.g., from `module()`)
-#' @param teleprompter A Teleprompter object defining the optimization strategy
-#' @param trainset Training data as a data frame
-#' @param valset Optional validation set for evaluation
-#' @param .llm Optional ellmer chat object to reuse during compilation
-#' @param ... Additional arguments passed to the teleprompter
-#'
-#' @return An optimized module with updated demonstrations and/or instructions
-#'
-#' @export
-#' @examples
-#' \dontrun{
-#' # Create a simple module
-#' classifier <- signature("text -> sentiment") |>
-#'   module(type = "predict")
-#'
-#' # Prepare training data
 #' trainset <- data.frame(
-#'   text = c("I love it!", "Terrible experience"),
-#'   sentiment = c("positive", "negative")
+#'   text = c("I love it!", "Terrible experience", "Works great", "Broke in a day"),
+#'   sentiment = c("positive", "negative", "positive", "negative")
 #' )
 #'
-#' # Compile with LabeledFewShot
-#' tp <- LabeledFewShot(k = 2)
-#' optimized <- compile_module(classifier, tp, trainset)
+#' # LabeledFewShot copies training rows into the prompt as demos, so it
+#' # needs no model calls
+#' compiled <- classifier |> compile(LabeledFewShot(k = 2L), trainset)
+#' compiled$is_compiled()
+#' classifier$is_compiled()
+#' compiled$demo_table
 #'
-#' # Compile with GridSearch
-#' variants <- data.frame(
-#'   id = c("terse", "detailed"),
-#'   instructions_suffix = c(
-#'     "Be concise.",
-#'     "Provide detailed reasoning."
+#' \dontrun{
+#' # BootstrapFewShot runs the program and keeps demos that pass the metric
+#' bootstrapped <- classifier |>
+#'   compile(
+#'     BootstrapFewShot(
+#'       metric = metric_exact_match(field = "sentiment"),
+#'       max_bootstrapped_demos = 2L
+#'     ),
+#'     trainset,
+#'     .llm = ellmer::chat_openai(model = "gpt-6-luna")
 #'   )
-#' )
-#' tp <- GridSearchTeleprompter(
-#'   variants = variants,
-#'   metric = metric_exact_match(field = "sentiment")
-#' )
-#' optimized <- compile_module(classifier, tp, trainset)
 #' }
-compile_module <- function(
-  program,
-  teleprompter,
-  trainset,
-  valset = NULL,
-  .llm = NULL,
-  ...
-) {
-  # Validate inputs
+compile <- S7::new_generic("compile", c("program", "teleprompter"))
+
+# Methods are registered in zzz.R after all teleprompter classes are loaded.
+
+#' Validate and normalize shared compilation inputs
+#' @noRd
+validate_compile_inputs <- function(program, teleprompter, trainset, dots) {
   if (!inherits(teleprompter, "dsprrr::Teleprompter")) {
     cli::cli_abort(c(
-      "teleprompter must be a Teleprompter object",
-      "i" = "Got: {.cls {class(teleprompter)[1]}}"
+      "`teleprompter` must be a Teleprompter object",
+      "x" = "Got {.cls {class(teleprompter)[1]}}"
     ))
   }
-
   if (!is.data.frame(trainset)) {
-    cli::cli_abort("trainset must be a data frame")
+    cli::cli_abort(
+      "trainset must be a data frame",
+      class = "dsprrr_compile_argument_error"
+    )
   }
 
-  if (!is.null(valset) && !is.data.frame(valset)) {
-    valset <- tryCatch(
-      as.data.frame(valset),
-      error = function(e) {
+  dot_names <- names(dots) %||% rep("", length(dots))
+  valset_index <- which(dot_names == "valset")
+  if (length(valset_index) > 1L) {
+    cli::cli_abort("`valset` must be supplied at most once")
+  }
+  if (
+    length(valset_index) == 0L && length(dots) > 0L && dot_names[[1L]] == ""
+  ) {
+    valset_index <- 1L
+  }
+  if (length(valset_index) == 1L && !is.null(dots[[valset_index]])) {
+    dots[[valset_index]] <- tryCatch(
+      as.data.frame(dots[[valset_index]]),
+      error = function(error) {
         cli::cli_abort(c(
-          "valset must be convertible to a data frame",
-          "x" = e$message
+          "`valset` must be convertible to a data frame",
+          "x" = conditionMessage(error)
         ))
       }
     )
   }
 
-  # Check if program is already compiled and warn
   if (inherits(program, "Module") && program$is_compiled()) {
     cli::cli_warn(c(
       "Program appears to be already compiled",
@@ -116,125 +112,53 @@ compile_module <- function(
     ))
   }
 
-  # Dispatch to appropriate compile method
-  compile(teleprompter, program, trainset, valset = valset, .llm = .llm, ...)
+  dots
 }
 
-#' Create Training Data for DSPrrr
-#'
-#' @description
-#' Helper function to create properly formatted training data for
-#' DSPrrr compilation.
-#'
-#' @param ... Named vectors or lists representing input/output pairs
-#' @param .data Optional data frame to use as base
-#'
-#' @return A data frame suitable for use as trainset
-#' @export
-#' @examples
-#' # Create training data from scratch
-#' trainset <- dsp_trainset(
-#'   text = c("Great product!", "Awful service"),
-#'   sentiment = c("positive", "negative")
-#' )
-#'
-#' # Add to existing data frame
-#' df <- data.frame(text = c("Hello", "World"))
-#' trainset <- dsp_trainset(.data = df, label = c("greeting", "other"))
-dsp_trainset <- function(..., .data = NULL) {
-  dots <- list(...)
-
-  if (length(dots) == 0 && is.null(.data)) {
-    cli::cli_abort("Must provide either data arguments or .data parameter")
-  }
-
-  # Start with .data if provided
-  if (!is.null(.data)) {
-    result <- as.data.frame(.data)
+#' Invoke a compiler with correlation-only trace context
+#' @noRd
+compile_with_trace_context <- function(
+  compiler,
+  program,
+  teleprompter,
+  trainset,
+  ...,
+  .llm = NULL
+) {
+  assert_ellmer_chat(.llm, arg = ".llm", allow_null = TRUE)
+  compiler_expression <- substitute(compiler)
+  compiler_name <- if (is.symbol(compiler_expression)) {
+    as.character(compiler_expression)
   } else {
-    result <- data.frame(stringsAsFactors = FALSE)
+    NULL
   }
 
-  # Add columns from dots
-  if (length(dots) > 0) {
-    # Check all have same length
-    lengths <- lengths(dots)
-    if (length(unique(lengths)) > 1) {
-      cli::cli_abort(c(
-        "All arguments must have the same length",
-        "i" = "Lengths: {lengths}"
-      ))
-    }
-
-    # If result is empty, create with proper number of rows
-    if (nrow(result) == 0 && length(dots) > 0) {
-      n_rows <- lengths[1]
-      result <- data.frame(
-        row.names = seq_len(n_rows),
-        stringsAsFactors = FALSE
-      )
-    }
-
-    # Add to result
-    for (name in names(dots)) {
-      result[[name]] <- dots[[name]]
-    }
-  }
-
-  # Validate result has at least one row
-  if (nrow(result) == 0) {
-    cli::cli_warn("Created empty training set")
-  }
-
-  result
-}
-
-#' Evaluate a Compiled Module
-#'
-#' @description
-#' Evaluate the performance of a compiled module on a test dataset.
-#'
-#' @param module A DSPrrr module (compiled or not)
-#' @param data Test data as a data frame or tibble.
-#' @param metric A metric function from `metric_*()` functions
-#' @param .llm Optional LLM connection for running the module
-#' @param verbose Whether to show progress
-#'
-#' @return A list with evaluation results including mean score and per-example scores
-#' @export
-#' @examples
-#' \dontrun{
-#' # Evaluate a module
-#' results <- evaluate_dsp(
-#'   module = optimized_classifier,
-#'   data = test_data,
-#'   metric = metric_exact_match(field = "sentiment"),
-#'   .llm = llm_connection
-#' )
-#'
-#' print(results$mean_score)
-#' }
-evaluate_dsp <- function(module, data, metric, .llm = NULL, verbose = TRUE) {
-  results <- evaluate(
-    module,
-    data,
-    metric,
-    .llm = .llm,
-    .parallel = FALSE,
-    .progress = verbose
-  )
-
-  if (verbose) {
-    cli::cli_alert_success(
-      "Evaluated {results$n_evaluated}/{nrow(data)} examples"
+  dots <- rlang::list2(...)
+  dots <- validate_compile_inputs(program, teleprompter, trainset, dots)
+  dot_names <- names(dots) %||% rep("", length(dots))
+  context_index <- which(dot_names == ".trace_context")
+  if (length(context_index) > 1L) {
+    cli::cli_abort(
+      "{.arg .trace_context} must be supplied at most once",
+      class = "dsprrr_trace_context_error"
     )
-    if (results$n_errors > 0) {
-      cli::cli_alert_warning("{results$n_errors} examples failed")
-    }
-    if (!is.na(results$mean_score)) {
-      cli::cli_alert_info("Mean score: {round(results$mean_score, 3)}")
-    }
   }
+  context_supplied <- length(context_index) == 1L
+  context <- if (context_supplied) {
+    dots[[context_index]]
+  } else {
+    list()
+  }
+  if (context_supplied) {
+    dots <- dots[-context_index]
+  }
+  context <- trace_context_resolve(context, supplied = context_supplied)
+  previous_trace_context <- trace_context_enter(context)
+  on.exit(trace_context_restore(previous_trace_context), add = TRUE)
 
-  results
+  do.call(
+    compiler_name %||% compiler,
+    c(list(teleprompter, program, trainset, .llm = .llm), dots),
+    envir = environment(compiler) %||% parent.frame()
+  )
 }

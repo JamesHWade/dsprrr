@@ -4,23 +4,38 @@
 # Uses a teacher model to generate demonstrations from training examples,
 # selecting those that pass a metric threshold.
 
-#' BootstrapFewShot Teleprompter
+#' BootstrapFewShot: keep the program's own successful outputs as demos
 #'
 #' @include teleprompter.R optimizer-core.R
 #'
 #' @description
-#' A teleprompter that bootstraps demonstrations by having a teacher model
-#' generate predictions on training examples and selecting successful ones
-#' as demonstrations. This is DSPy's foundational optimization approach.
-#'
-#' The optimizer:
-#' 1. Starts with optional labeled demonstrations from the training set
-#' 2. Uses a teacher model to generate predictions on remaining examples
-#' 3. Evaluates predictions using the provided metric
-#' 4. Selects top-scoring predictions as bootstrapped demonstrations
-#' 5. Optionally runs multiple rounds, updating the teacher with new demos
+#' `BootstrapFewShot()` runs the program on training rows, scores each output
+#' with `metric`, and keeps the outputs that pass as few-shot demonstrations.
+#' Labeled training rows can be added as demonstrations too. This is DSPy's
+#' basic demonstration optimizer and a building block of
+#' [BootstrapFewShotWithRandomSearch()] and [MIPROv2()].
 #'
 #' @details
+#' Compilation works through the training rows in their original order:
+#'
+#' 1. The first `max_labeled_demos` rows become labeled demonstrations, copied
+#'    from the data.
+#' 2. A copy of the program (the teacher) runs on each remaining row, using
+#'    the demonstrations collected so far. An output that passes the metric
+#'    becomes a demonstration. This stops once `max_bootstrapped_demos` are
+#'    collected.
+#' 3. With `max_rounds` above `1L`, step 2 repeats over the same rows until
+#'    enough demonstrations are collected.
+#'
+#' The compiled copy gets the labeled demonstrations followed by the
+#' bootstrapped ones. Rows used as labeled demonstrations are never
+#' bootstrapped, so with the default `max_labeled_demos = 16L` a training set of
+#' 16 rows or fewer yields labeled demonstrations only and makes no model
+#' calls. Set `max_labeled_demos = 0L` to bootstrap from every row.
+#'
+#' The teacher runs with the `.llm` passed to [compile()], or with the chat the
+#' program would otherwise use.
+#'
 #' ## Joint pipeline compilation
 #'
 #' When `program` is a pipeline (built with [pipeline()] or [`%>>%`]),
@@ -32,35 +47,65 @@
 #' therefore receive demos even though the training set only labels the
 #' final output. Labeled demos (`max_labeled_demos`) are applied to the
 #' final step only, and only when its input fields exist in the trainset.
+#' Programs containing Flex or an RLM, at the root or nested, are rejected.
+#' Flex constructs its inner predictors per invocation; RLM root examples do
+#' not match its children's `state -> ...` signatures. Use GEPA for these
+#' programs, or instruction-only MIPROv2 for an RLM graph.
 #'
-#' @param metric A metric function for evaluating predictions (required).
-#' @param metric_threshold Minimum score for a demo to be accepted.
-#'   If NULL, accepts any successful prediction. Default is NULL.
-#' @param max_errors Maximum number of errors allowed during optimization.
-#'   Default is 5.
-#' @param max_bootstrapped_demos Maximum number of bootstrapped demonstrations
-#'   to include. Default is 4.
-#' @param max_labeled_demos Maximum number of labeled demonstrations from
-#'   the training set. Default is 16.
-#' @param max_rounds Number of bootstrap rounds to perform. Default is 1.
-#' @param teacher_settings List of settings for the teacher model, such as
-#'   `temperature` or `model`. If NULL, defaults to `list(temperature = 0.7)`.
-#' @param seed Random seed for reproducibility. Default is NULL.
-#' @param log_dir Directory for trial logging. Default is NULL.
+#' @param metric A metric function (required). Use a field-aware metric such
+#'   as `metric_exact_match(field = "answer")`: like [evaluate()], it receives
+#'   the whole training row as `expected`, and its `field` names the column
+#'   that supplies labeled demonstrations. A metric without a `field` receives
+#'   only the bare value of the label column, which is the first column named
+#'   `output`, `label`, `answer`, `response`, `result` or `y`, or else the
+#'   first non-input column.
+#' @param metric_threshold Minimum score for a bootstrapped output to become a
+#'   demonstration. `NULL` (the default) keeps any output that scores above 0.
+#' @param max_errors Integer; stop after this many consecutive failed attempts
+#'   when [compile()] gets no `control` (default `5L`).
+#' @param max_bootstrapped_demos Integer maximum number of bootstrapped
+#'   demonstrations (default `4L`).
+#' @param max_labeled_demos Integer number of leading training rows used as
+#'   labeled demonstrations (default `16L`). See Details.
+#' @param max_rounds Integer number of passes over the remaining rows
+#'   (default `1L`).
+#' @param teacher_settings A list of settings meant for the teacher, such as
+#'   `list(temperature = 0.7)`. It is currently not applied: the teacher runs
+#'   with the same chat and settings as the program.
+#' @param seed Recorded with the run, but it does not currently change the
+#'   result: the training rows are used in their original order. Shuffle the
+#'   training set yourself to vary which rows are used.
+#' @param log_dir Directory for a [TrialLog] of the run, or `NULL` (the
+#'   default) for none. When `valset` is passed to [compile()], the compiled
+#'   program is scored on it for the log.
 #'
+#' @return A `BootstrapFewShot` object to pass to [compile()].
+#' @family teleprompters
 #' @export
 #'
 #' @examples
-#' \dontrun{
-#' # Create a BootstrapFewShot teleprompter
 #' tp <- BootstrapFewShot(
 #'   metric = metric_exact_match(field = "answer"),
-#'   max_bootstrapped_demos = 4L,
-#'   max_labeled_demos = 8L
+#'   max_bootstrapped_demos = 2L,
+#'   max_labeled_demos = 0L
 #' )
+#' tp
 #'
-#' # Compile a module
-#' compiled <- compile(tp, qa_module, trainset, .llm = llm)
+#' \dontrun{
+#' qa <- module(signature("question -> answer"))
+#' trainset <- data.frame(
+#'   question = c(
+#'     "Capital of France?", "Capital of Japan?", "Capital of Peru?"
+#'   ),
+#'   answer = c("Paris", "Tokyo", "Lima")
+#' )
+#' compiled <- compile(
+#'   qa,
+#'   tp,
+#'   trainset,
+#'   .llm = ellmer::chat_openai(model = "gpt-6-luna")
+#' )
+#' best_demos(compiled, as_tibble = TRUE)
 #' }
 BootstrapFewShot <- S7::new_class(
   "BootstrapFewShot",
@@ -152,7 +197,48 @@ bootstrap_budget_eval_result <- function(budget) {
     metric_calls = as.integer(summary$metric_calls),
     provider_usage_unknown = summary$unknown_usage$provider_calls > 0L,
     token_usage_unknown = token_usage_unknown,
-    total_latency_ms = summary$elapsed_seconds * 1000
+    total_latency_ms = summary$elapsed_seconds * 1000,
+    trace_context = current_trace_context()
+  )
+}
+
+bootstrap_record_result <- function(student, details, budget, trial_log) {
+  budget_summary <- optimizer_budget_summary(budget)
+  trials <- if (is.null(trial_log)) {
+    tibble::tibble()
+  } else {
+    trial_log$as_tibble()
+  }
+  scores <- if ("mean_score" %in% names(trials)) {
+    trials$mean_score
+  } else if ("score" %in% names(trials)) {
+    trials$score
+  } else {
+    numeric()
+  }
+  valid_scores <- which(!is.na(scores))
+  best_trial <- if (length(valid_scores) > 0L) {
+    valid_scores[[which.max(scores[valid_scores])]]
+  } else {
+    NULL
+  }
+  best_score <- if (is.null(best_trial)) NULL else scores[[best_trial]]
+  best_params <- list(
+    n_labeled_demos = details$n_labeled_demos,
+    n_bootstrapped_demos = details$n_bootstrapped_demos
+  )
+
+  record_optimization_result(
+    student,
+    optimizer = "BootstrapFewShot",
+    status = if (optimizer_budget_stopped(budget)) "partial" else "completed",
+    best_score = best_score,
+    best_trial = best_trial,
+    best_params = best_params,
+    trials = trials,
+    budget = budget_summary,
+    stop_reason = optimization_stop_reason(budget_summary),
+    extensions = details
   )
 }
 
@@ -506,7 +592,7 @@ compile_bootstrap <- function(
 
       # Run teacher with temperature for diversity
       teacher_condition <- NULL
-      trace_count_before <- length(teacher$state$traces %||% list())
+      trace_count_before <- evaluation_trace_cursor(teacher)
       result <- tryCatch(
         {
           # Apply teacher settings (like temperature)
@@ -710,23 +796,15 @@ compile_bootstrap <- function(
   final_demos <- c(labeled_demos, bootstrapped_demos)
   student$demos <- final_demos
 
-  # Update student state
-  student$state$compiled <- TRUE
-  student$config$compiled <- TRUE
-  student$config$teleprompter <- "BootstrapFewShot"
   budget_summary <- optimizer_budget_summary(budget)
-  student$config$optimizer <- list(
+  details <- list(
     n_labeled_demos = length(labeled_demos),
     n_bootstrapped_demos = length(bootstrapped_demos),
-    total_attempts = budget_summary$attempts,
-    error_count = budget_summary$total_errors,
     max_rounds = teleprompter@max_rounds,
     rounds_completed = min(
       teleprompter@max_rounds,
       ceiling(budget_summary$attempts / max(1, length(bootstrap_indices)))
-    ),
-    budget_summary = budget_summary,
-    stop_reason = budget_summary$stop_reason
+    )
   )
 
   # Log trial if logging enabled
@@ -748,12 +826,8 @@ compile_bootstrap <- function(
       stage = "bootstrap_log_validation",
       unit_id = paste0(.checkpoint_namespace, ":log-validation")
     )
-    budget_summary <- optimizer_budget_summary(budget)
-    student$config$optimizer$total_attempts <- budget_summary$attempts
-    student$config$optimizer$error_count <- budget_summary$total_errors
-    student$config$optimizer$budget_summary <- budget_summary
-    student$config$optimizer$stop_reason <- budget_summary$stop_reason
   }
+  bootstrap_record_result(student, details, budget, trial_log)
 
   expected_units <- unlist(lapply(
     seq_len(teleprompter@max_rounds),
@@ -784,44 +858,69 @@ compile_bootstrap <- function(
   student
 }
 
-bootstrap_flex_paths <- function(program, path = "$") {
-  if (inherits(program, "FlexModule")) {
-    return(path)
-  }
-  if (!inherits(program, "PipelineModule")) {
-    return(character())
-  }
-
-  unlist(
-    lapply(seq_along(program$steps), function(index) {
-      bootstrap_flex_paths(
-        program$steps[[index]]@module,
-        paste0(path, "/steps/", index)
-      )
-    }),
-    use.names = FALSE
+bootstrap_flex_paths <- function(program) {
+  modules <- named_modules(
+    program,
+    include_root = TRUE,
+    boundaries = "respect"
   )
+  names(modules)[vapply(
+    modules,
+    inherits,
+    logical(1),
+    what = "FlexModule"
+  )]
 }
 
-bootstrap_assert_demo_eligible <- function(program) {
+bootstrap_assert_demo_eligible <- function(
+  program,
+  optimizer_name = "BootstrapFewShot"
+) {
   paths <- bootstrap_flex_paths(program)
-  if (length(paths) == 0L) {
-    return(invisible(program))
+  if (length(paths) > 0L) {
+    cli::cli_abort(
+      c(
+        "{optimizer_name} cannot optimize Flex demonstrations",
+        "x" = "Flex constructs fresh inner predictors for every invocation, so assigning demos to the outer module has no effect.",
+        "i" = "Unsupported Flex path{?s}: {.path {paths}}.",
+        "i" = "Use GEPA for Flex structure and instruction optimization."
+      ),
+      class = c(
+        "dsprrr_flex_demo_unsupported_error",
+        "dsprrr_optimizer_ineligible_error"
+      ),
+      paths = paths
+    )
   }
 
-  cli::cli_abort(
-    c(
-      "BootstrapFewShot cannot optimize Flex demonstrations",
-      "x" = "Flex constructs fresh inner predictors for every invocation, so assigning demos to the outer module has no effect.",
-      "i" = "Unsupported Flex path{?s}: {.path {paths}}.",
-      "i" = "Use GEPA for Flex structure and instruction optimization."
-    ),
-    class = c(
-      "dsprrr_flex_demo_unsupported_error",
-      "dsprrr_optimizer_ineligible_error"
-    ),
-    paths = paths
+  modules <- named_modules(
+    program,
+    include_root = TRUE,
+    boundaries = "respect"
   )
+  rlm_paths <- names(modules)[vapply(
+    modules,
+    inherits,
+    logical(1),
+    what = "RLMModule"
+  )]
+  if (length(rlm_paths) > 0L) {
+    cli::cli_abort(
+      c(
+        "{optimizer_name} cannot derive demos for RLM predictors",
+        "x" = "Root training examples do not match the child predictor signatures.",
+        "i" = "Unsupported RLM path{?s}: {.path {rlm_paths}}.",
+        "i" = "Use GEPA for RLM child instructions, or MIPROv2 with {.code max_bootstrapped_demos = 0L}."
+      ),
+      class = c(
+        "dsprrr_bootstrap_graph_unsupported",
+        "dsprrr_optimizer_ineligible_error"
+      ),
+      paths = rlm_paths
+    )
+  }
+
+  invisible(program)
 }
 
 #' Joint compile method for BootstrapFewShot on pipelines
@@ -903,8 +1002,8 @@ compile_bootstrap_pipeline <- function(
   trainset <- sample_dataset(trainset, n = NULL, seed = teleprompter@seed)
 
   # Independent copies: teacher generates traces, student receives demos
-  teacher <- program$deepcopy()
-  student <- program$deepcopy()
+  teacher <- copy_module(program)
+  student <- copy_module(program)
 
   pipeline_inputs <- vapply(
     program$signature@inputs,
@@ -1025,7 +1124,7 @@ compile_bootstrap_pipeline <- function(
   }
 
   write_pipeline_checkpoint <- function(phase = "bootstrap") {
-    partial <- student$deepcopy()
+    partial <- copy_module(student)
     for (i in demo_steps) {
       key <- as.character(i)
       partial$steps[[i]]@module$demos <- c(
@@ -1339,11 +1438,7 @@ compile_bootstrap_pipeline <- function(
     student_module$demos <- c(labeled_demos[[key]], demos_i)
   }
 
-  student$state$compiled <- TRUE
-  student$config$compiled <- TRUE
-  student$config$teleprompter <- "BootstrapFewShot"
-  budget_summary <- optimizer_budget_summary(budget)
-  student$config$optimizer <- list(
+  details <- list(
     joint_pipeline = TRUE,
     n_steps = n_steps,
     demo_steps = demo_steps,
@@ -1355,11 +1450,7 @@ compile_bootstrap_pipeline <- function(
       }),
       as.character(demo_steps)
     ),
-    total_attempts = budget_summary$attempts,
-    error_count = budget_summary$total_errors,
-    max_rounds = teleprompter@max_rounds,
-    budget_summary = budget_summary,
-    stop_reason = budget_summary$stop_reason
+    max_rounds = teleprompter@max_rounds
   )
 
   if (!is.null(trial_log)) {
@@ -1381,12 +1472,8 @@ compile_bootstrap_pipeline <- function(
       stage = "bootstrap_pipeline_log_validation",
       unit_id = paste0(.checkpoint_namespace, ":log-validation")
     )
-    budget_summary <- optimizer_budget_summary(budget)
-    student$config$optimizer$total_attempts <- budget_summary$attempts
-    student$config$optimizer$error_count <- budget_summary$total_errors
-    student$config$optimizer$budget_summary <- budget_summary
-    student$config$optimizer$stop_reason <- budget_summary$stop_reason
   }
+  bootstrap_record_result(student, details, budget, trial_log)
 
   expected_units <- unlist(lapply(
     seq_len(teleprompter@max_rounds),
@@ -1461,11 +1548,8 @@ find_output_column <- function(trainset, input_names) {
   NULL
 }
 
-#' Print method for BootstrapFewShot
-#' @param x A BootstrapFewShot object
-#' @param ... Additional arguments (unused)
-#' @export
-print.BootstrapFewShot <- function(x, ...) {
+# Print a BootstrapFewShot object through its S7 method.
+print_bootstrap_few_shot <- function(x, ...) {
   cli::cli_h3("BootstrapFewShot Teleprompter")
 
   cli::cli_text("{.field max_bootstrapped_demos}: {x@max_bootstrapped_demos}")
@@ -1482,6 +1566,3 @@ print.BootstrapFewShot <- function(x, ...) {
 
   invisible(x)
 }
-
-# Register S7 print method
-S7::method(print, BootstrapFewShot) <- print.BootstrapFewShot

@@ -2,31 +2,42 @@
 % Please edit documentation in R/traces.R
 \name{summarize_traces}
 \alias{summarize_traces}
-\title{Summarize Module Traces}
+\title{Summarize a module's traces}
 \usage{
 summarize_traces(module)
 }
 \arguments{
-\item{module}{A DSPrrr module with recorded traces}
+\item{module}{A module.}
 }
 \value{
-A list containing:
-\itemize{
-\item n_traces: Number of traces
-\item total_tokens: Total tokens used across all traces
-\item total_cost: Total cost in USD
-\item avg_latency_ms: Average latency per request
-\item avg_tokens_per_request: Average tokens per request
-\item token_breakdown: List with input/output token totals
-\item model_usage: Table of requests per model
-}
+A list of class \code{dsprrr_trace_summary} with \code{n_traces},
+\code{total_tokens}, \code{total_latency_ms} and \code{total_cost} (in US dollars, \code{NA}
+when a cost is unknown). For a module with traces, it also has
+\code{total_input_tokens}, \code{total_output_tokens}, \code{total_cached_tokens},
+\code{total_duration_s}, \code{avg_latency_ms}, \code{avg_tokens_per_request},
+\code{token_breakdown} (input and output totals and their ratio) and
+\code{model_usage} (a data frame of calls per model).
 }
 \description{
-Provide a statistical summary of module traces for performance analysis.
+\code{summarize_traces()} totals a module's traces: the number of calls,
+tokens, cost and latency, and the calls per model. Printing the result
+gives a short report.
 }
 \examples{
 \dontrun{
-summary <- summarize_traces(my_module)
-print(summary)
+qa <- module(signature("question -> answer"))
+run(qa, question = "What is 2 + 2?", .llm = ellmer::chat_openai(model = "gpt-6-luna"))
+summarize_traces(qa)
 }
 }
+\seealso{
+Other inspection:
+\code{\link{accessors}},
+\code{\link[=clear_prompt_history]{clear_prompt_history()}},
+\code{\link[=clear_traces]{clear_traces()}},
+\code{\link[=export_traces]{export_traces()}},
+\code{\link[=get_last_prompt]{get_last_prompt()}},
+\code{\link[=inspect_history]{inspect_history()}},
+\code{\link[=session_cost]{session_cost()}}
+}
+\concept{inspection}

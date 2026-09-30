@@ -13,7 +13,7 @@ library(dsprrr)
 library(ellmer)
 
 # Set up LLM
-llm <- chat_openai(model = "gpt-4o-mini")
+llm <- chat_openai(model = "gpt-6-luna")
 # llm <- chat_anthropic(model = "claude-sonnet-4-20250514")
 
 # =============================================================================
@@ -21,7 +21,7 @@ llm <- chat_openai(model = "gpt-4o-mini")
 # =============================================================================
 cat("\n=== Test 1: Basic Module ===\n")
 
-mod <- module(signature("question -> answer"), type = "predict")
+mod <- module(signature("question -> answer"))
 
 # Use structured format to get cost/token metadata
 result <- run(
@@ -50,12 +50,15 @@ cat("\n=== Test 2: Parallel Batch Processing ===\n")
 batch_results <- run(
   mod,
   question = c("What is 2+2?", "Capital of France?", "Who wrote Hamlet?"),
-  .parallel = TRUE, # No .llm - workers create their own clients
+  .concurrency = concurrency_control(
+    backend = "mirai",
+    max_active = 3L
+  ), # No .llm - workers create their own clients
   .return_format = "structured"
 )
 print(batch_results)
 
-# Alternative: Sequential batch (use .llm, no .parallel)
+# Alternative: sequential batch (omit .concurrency)
 cat("\nSequential batch for comparison:\n")
 seq_results <- run(
   mod,
@@ -89,8 +92,7 @@ print(rag_result)
 cat("\n=== Test 4: ellmer Tool Integration ===\n")
 
 sentiment_mod <- module(
-  signature("text -> sentiment: enum('positive', 'negative', 'neutral')"),
-  type = "predict"
+  signature("text -> sentiment: enum('positive', 'negative', 'neutral')")
 )
 
 tool <- as_ellmer_tool(
@@ -102,12 +104,13 @@ tool <- as_ellmer_tool(
 print(tool)
 
 # Register and use
-agent <- chat_openai(model = "gpt-4o-mini")
-register_dsprrr_tool(
-  agent,
-  sentiment_mod,
-  name = "sentiment_analyzer",
-  .llm = llm
+agent <- chat_openai(model = "gpt-6-luna")
+agent$register_tool(
+  as_ellmer_tool(
+    sentiment_mod,
+    name = "sentiment_analyzer",
+    .llm = llm
+  )
 )
 response <- agent$chat("Analyze the sentiment of: 'I absolutely love this!'")
 cat("\nAgent response:\n")
@@ -118,7 +121,7 @@ print(response)
 # =============================================================================
 cat("\n=== Test 5: Streaming ===\n")
 
-stream_mod <- module(signature("topic -> summary"), type = "predict")
+stream_mod <- module(signature("topic -> summary"))
 
 cat("Streaming response:\n")
 stream_mod$stream(
@@ -133,18 +136,23 @@ cat("\n")
 # =============================================================================
 # cat("\n=== Test 6: Timeout Handling ===\n")
 #
-# # Set very short timeout to force timeout errors
-# options(dsprrr.parallel_timeout = 0.001)  # 1ms
+# # Set a very short total timeout to force timeout errors
+# timeout_control <- concurrency_control(
+#   backend = "mirai",
+#   max_active = 2L,
+#   total_timeout = 0.001
+# )
 #
 # tryCatch({
-#   run(mod, question = c("test1", "test2"), .llm = llm, .parallel = TRUE)
+#   run(
+#     mod,
+#     question = c("test1", "test2"),
+#     .concurrency = timeout_control
+#   )
 # }, error = function(e) {
 #   cat("Expected timeout error:\n")
 #   print(e)
 # })
-#
-# # Reset timeout
-# options(dsprrr.parallel_timeout = NULL)
 
 # =============================================================================
 # Summary

@@ -2,7 +2,7 @@
 % Please edit documentation in R/module-rlm.R
 \name{rlm}
 \alias{rlm}
-\title{Run a Recursive Language Model in one call}
+\title{Run a recursive language model (RLM) in one call}
 \usage{
 rlm(
   signature,
@@ -11,86 +11,114 @@ rlm(
   .timeout = 30,
   .max_iterations = 20L,
   .max_llm_calls = 50L,
+  .max_output_chars = 10000L,
   .sub_lm = NULL,
   .tools = list(),
-  .verbose = FALSE
+  .verbose = FALSE,
+  .runner = NULL,
+  .interpreter_factory = NULL
 )
 }
 \arguments{
-\item{signature}{A Signature object or string notation defining inputs/outputs
-(e.g., \code{"question -> answer"})}
+\item{signature}{A \code{\link[=signature]{signature()}} object or a signature string such as
+\code{"question -> answer"}.}
 
-\item{...}{Named arguments matching the signature's inputs. These are passed
-to \code{\link[=run]{run()}}.}
+\item{...}{Named inputs, plus \code{\link[=run]{run()}} options such as \code{.return_format}.
+Each input is staged as one variable, including vectors, lists, matrices
+and data frames. For several investigations, create an \code{\link[=rlm_module]{rlm_module()}} and
+use \code{\link[=run_dataset]{run_dataset()}} with list-columns.}
 
-\item{.llm}{An ellmer Chat object. If \code{NULL}, uses the default Chat from
+\item{.llm}{An ellmer Chat. \code{NULL} uses the default chat from
 \code{\link[=get_default_chat]{get_default_chat()}}.}
 
-\item{.timeout}{Numeric. Maximum execution time in seconds per code
-evaluation. Default 30.}
+\item{.timeout}{Maximum execution time per code step, in seconds, for the
+default managed runner (default 30). Runners you supply use their own
+timeout.}
 
-\item{.max_iterations}{Integer. Maximum REPL iterations before fallback.
-Default 20.}
+\item{.max_iterations}{Integer maximum number of code steps before the
+fallback extraction (default \code{20L}).}
 
-\item{.max_llm_calls}{Integer. Maximum recursive LLM calls allowed.
-Default 50.}
+\item{.max_llm_calls}{Integer maximum number of sub-queries (default \code{50L}).}
 
-\item{.sub_lm}{Optional ellmer Chat for recursive \code{llm_query()} calls.
-\code{NULL} disables recursive queries.}
+\item{.max_output_chars}{Maximum number of characters of each execution
+result shown to the model (default \code{10000L}).}
 
-\item{.tools}{Named list of user-defined R functions available in the REPL.}
+\item{.sub_lm}{Optional ellmer Chat for \code{llm_query()} sub-queries. \code{NULL}
+uses \code{.llm}; set \code{.max_llm_calls = 0L} to disable sub-queries.}
 
-\item{.verbose}{Logical. Print execution progress. Default \code{FALSE}.}
+\item{.tools}{Named list of R functions or ellmer tools that the generated
+code can call. They run in the host R process, outside the sandbox.}
+
+\item{.verbose}{Whether to print progress (default \code{FALSE}).}
+
+\item{.runner}{Optional persistent runner you own. Supply at most one of
+this and \code{.interpreter_factory}.}
+
+\item{.interpreter_factory}{Optional function with no arguments that returns
+a fresh persistent runner for the call. When both this and \code{.runner} are
+\code{NULL}, a managed \code{\link[=mcp_repl_runner]{mcp_repl_runner()}} is used.}
 }
 \value{
-The module output according to the signature.
+With \code{.return_format = "simple"} (the default), a named list with
+the signature's outputs. With \code{.return_format = "structured"}, a
+\code{dsprrr_result} with \code{output}, \code{chat} and \code{metadata}.
 }
 \description{
-Convenience wrapper that creates a runner, module, and executes an RLM
-in a single call. Equivalent to:
-
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{runner <- r_code_runner(timeout = .timeout)
-mod <- rlm_module(
-  signature,
-  runner = runner,
-  max_iterations = .max_iterations,
-  max_llm_calls = .max_llm_calls,
-  sub_lm = .sub_lm,
-  verbose = .verbose,
-  tools = .tools
-)
-run(mod, ..., .llm = .llm)
-}\if{html}{\out{</div>}}
-
-For repeated use or optimization, prefer creating a module with
-\code{\link[=rlm_module]{rlm_module()}} and calling \code{\link[=run]{run()}} separately.
+\code{rlm()} runs a one-off RLM investigation: it builds an \code{\link[=rlm_module]{rlm_module()}}, runs
+it on the inputs in \code{...}, and returns the result. By default each call gets
+a fresh managed \code{\link[=mcp_repl_runner]{mcp_repl_runner()}}, whose sandbox disables network access
+but allows writes in its workspace; this needs the suggested mcptools
+package and Posit's \code{mcp-repl} executable. Pass \code{.runner} or
+\code{.interpreter_factory} to use another backend. For repeated use,
+optimization or control over the runner's lifetime, create an
+\code{\link[=rlm_module]{rlm_module()}} instead.
 }
 \examples{
 \dontrun{
-# One-liner RLM call
 result <- rlm(
   "document, question -> answer",
-  document = readLines("big_file.txt") |> paste(collapse = "\n"),
+  document = "Owner: team-a\nObligation: rotate keys quarterly",
   question = "What are the main themes?",
-  .llm = ellmer::chat_openai()
+  .llm = ellmer::chat_openai(model = "gpt-6-luna"),
+  .max_iterations = 4L,
+  .max_llm_calls = 0L
 )
 
-# With recursive sub-queries
+# Rich local R objects need a trusted runner that can stage them
+sessions <- data.frame(
+  release = c("2.3.9", "2.4.0"),
+  converted = c(TRUE, FALSE)
+)
+local_runner <- r_code_runner(persistent = TRUE)
 result <- rlm(
-  "codebase, question -> answer",
-  codebase = source_code,
-  question = "How does auth work?",
-  .llm = ellmer::chat_openai(),
-  .sub_lm = ellmer::chat_openai(model = "gpt-4o-mini")
+  "sessions, question -> answer",
+  sessions = sessions,
+  question = "Where did conversion fall?",
+  .llm = ellmer::chat_openai(model = "gpt-6-luna"),
+  .runner = local_runner
 )
+local_runner$shutdown()
 }
-
 }
 \seealso{
-\itemize{
-\item \code{\link[=rlm_module]{rlm_module()}} for creating reusable RLM modules
-\item \code{\link[=r_code_runner]{r_code_runner()}} for configuring the code execution backend
-\item \code{\link[=run]{run()}} for executing modules
-\item \code{\link[=dsp]{dsp()}} for simple one-shot LLM calls (no code execution)
+Other program constructors:
+\code{\link[=chain_of_thought]{chain_of_thought()}},
+\code{\link[=code_act]{code_act()}},
+\code{\link[=flex]{flex()}},
+\code{\link[=module]{module()}},
+\code{\link[=module_fn]{module_fn()}},
+\code{\link[=multi_chain_comparison]{multi_chain_comparison()}},
+\code{\link[=program_of_thought]{program_of_thought()}},
+\code{\link[=rag_module]{rag_module()}},
+\code{\link[=react]{react()}},
+\code{\link[=rlm_module]{rlm_module()}}
+
+Other code execution:
+\code{\link[=code_act]{code_act()}},
+\code{\link[=mcp_repl_runner]{mcp_repl_runner()}},
+\code{\link[=program_of_thought]{program_of_thought()}},
+\code{\link[=r_code_runner]{r_code_runner()}},
+\code{\link[=rlm_module]{rlm_module()}}
 }
-}
+\concept{code execution}
+\concept{program constructors}

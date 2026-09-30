@@ -1,7 +1,7 @@
 #' R6 Module Base Class
 #'
 #' @description
-#' Base class for all DSPrrr modules. Provides core functionality for
+#' Base class for all dsprrr modules. Provides core functionality for
 #' stateful LLM modules with signatures, configuration, and mutable state.
 #'
 #' @keywords internal
@@ -31,9 +31,7 @@ Module <- R6::R6Class(
         cli::cli_abort("signature must be a Signature object")
       }
 
-      if (!is.null(chat) && !inherits(chat, "Chat")) {
-        cli::cli_abort("chat must be an ellmer Chat object")
-      }
+      assert_ellmer_chat(chat, arg = "chat", allow_null = TRUE)
 
       self$signature <- signature
       self$config <- normalize_module_config(config)
@@ -47,7 +45,8 @@ Module <- R6::R6Class(
         last_grid = tibble::tibble(),
         best_score = NULL,
         best_params = NULL,
-        best_trial = NULL
+        best_trial = NULL,
+        optimization_result = NULL
       )
     },
 
@@ -63,47 +62,71 @@ Module <- R6::R6Class(
     },
 
     #' @description
+    #' Names of signature inputs the module fills in itself (for example the
+    #' retrieved context of a RAG module), so callers need not supply them.
+    #' @return A character vector.
+    supplied_inputs = function() {
+      character()
+    },
+
+    #' @description
     #' Run the module with inputs
     #'
     #' This method provides a convenient interface for executing modules directly.
-    #' For batch processing with parallel execution support, use the `run()` generic
+    #' For batch processing with concurrency controls, use the `run()` generic
     #' function instead: `run(module, ...)`.
     #'
     #' @param ... Named inputs matching the signature
     #' @param .llm Optional ellmer chat object
     #' @param .verbose Logical for debug output (currently unused, for API consistency)
-    #' @param .parallel Logical for parallel batch processing (requires using run() generic)
-    #' @param .parallel_method Legacy parallel backend passed through by [run()]
     #' @param .concurrency Optional policy created by [concurrency_control()]
     #' @param .progress Logical for progress bar (currently unused, for API consistency)
     #' @param .return_format Either "simple" or "structured"
+    #' @param .trace_context A named JSON-compatible correlation context
     #' @return Module outputs. For .return_format="simple", returns the output value directly.
     #'   For "structured", returns a tibble with output, chat, and metadata columns.
     run = function(
       ...,
       .llm = NULL,
       .verbose = FALSE,
-      .parallel = FALSE,
-      .parallel_method = c("ellmer", "mirai"),
       .concurrency = NULL,
       .concurrency_runtime = NULL,
       .progress = TRUE,
       .return_format = "simple",
       .cache = NULL,
-      .predict_compat = FALSE
+      .trace_context = list()
     ) {
-      parallel_missing <- missing(.parallel)
-      parallel_method_missing <- missing(.parallel_method)
-      concurrency_missing <- missing(.concurrency)
+      if (!is.null(.llm)) {
+        assert_ellmer_chat(.llm, arg = ".llm")
+      } else {
+        assert_ellmer_chat(self$chat, arg = "module$chat", allow_null = TRUE)
+      }
+      trace_context_supplied <- !missing(.trace_context)
+      trace_context <- trace_context_resolve(
+        .trace_context,
+        supplied = trace_context_supplied
+      )
+      trace_cursor <- evaluation_trace_cursor(self)
+      previous_trace_context <- trace_context_enter(
+        trace_context,
+        program = self,
+        inherit_program_id = !trace_context_supplied
+      )
+      invocation_trace_fields <- trace_context_fields()
+      on.exit(
+        {
+          trace_context_restore(previous_trace_context)
+          trace_context_annotate_module_traces(
+            self,
+            trace_cursor,
+            fields = invocation_trace_fields
+          )
+        },
+        add = TRUE
+      )
+
       if (is.null(.concurrency_runtime)) {
-        concurrency <- resolve_concurrency_control(
-          .concurrency = .concurrency,
-          concurrency_missing = concurrency_missing,
-          .parallel = .parallel,
-          parallel_missing = parallel_missing,
-          .parallel_method = .parallel_method,
-          parallel_method_missing = parallel_method_missing
-        )
+        concurrency <- resolve_concurrency_control(.concurrency)
       } else if (
         !inherits(
           .concurrency_runtime,
@@ -120,17 +143,6 @@ Module <- R6::R6Class(
       # value must fail loudly instead of being silently forwarded.
       validate_cache_arg(.cache)
       .return_format <- match.arg(.return_format, c("simple", "structured"))
-      if (
-        !is.logical(.predict_compat) ||
-          length(.predict_compat) != 1L ||
-          is.na(.predict_compat)
-      ) {
-        cli::cli_abort(
-          "Internal predict compatibility mode is invalid",
-          class = "dsprrr_runtime_config_error"
-        )
-      }
-
       inputs <- list(...)
 
       # Validate inputs against signature
@@ -140,7 +152,8 @@ Module <- R6::R6Class(
         missing = if (inherits(self, "FlexModule")) "ignore" else "error",
         extra = if (inherits(self, "FlexModule")) "error" else "warn",
         type = if (inherits(self, "FlexModule")) "error" else "warn",
-        context = "inputs"
+        context = "inputs",
+        supplied = self$supplied_inputs()
       )
 
       input_contract <- module_input_contract(self, inputs)
@@ -161,34 +174,24 @@ Module <- R6::R6Class(
             runtime,
             explicit_llm = !is.null(.llm)
           )
-          if (
-            isTRUE(.predict_compat) &&
-              !identical(runtime$effective_backend, "sequential")
-          ) {
-            cli::cli_abort(
-              c(
-                "Stateful predict batches require sequential execution",
-                "i" = "Use {.fn run} for isolated concurrent batch execution."
-              ),
-              class = c(
-                "dsprrr_predict_concurrency_unsupported",
-                "dsprrr_concurrency_unsupported_error"
-              )
-            )
-          }
           inputs <- lapply(
             inputs,
-            batch_recycle_input,
-            size = input_contract$size
+            function(value) {
+              module_batch_recycle_input(self, value, input_contract$size)
+            }
           )
-          return(run_factory_interpreter_batch(
-            module = self,
-            inputs = inputs,
-            n = input_contract$size,
-            .llm = .llm,
-            .progress = .progress,
-            .return_format = .return_format,
-            .concurrency = runtime
+          return(trace_context_annotate_result(
+            run_factory_interpreter_batch(
+              module = self,
+              inputs = inputs,
+              n = input_contract$size,
+              .llm = .llm,
+              .progress = .progress,
+              .return_format = .return_format,
+              .concurrency = runtime,
+              .cache = .cache
+            ),
+            fields = invocation_trace_fields
           ))
         }
         if (
@@ -225,25 +228,13 @@ Module <- R6::R6Class(
             .llm = .llm,
             .chat = runtime_chat
           )
-        if (
-          isTRUE(.predict_compat) &&
-            !identical(runtime$effective_backend, "sequential")
-        ) {
-          cli::cli_abort(
-            c(
-              "Stateful predict batches require sequential execution",
-              "i" = "Use {.fn run} for isolated concurrent batch execution."
-            ),
-            class = c(
-              "dsprrr_predict_concurrency_unsupported",
-              "dsprrr_concurrency_unsupported_error"
-            )
-          )
-        }
       }
 
       if (identical(input_contract$kind, "empty")) {
-        return(empty_batch_result(.return_format))
+        return(trace_context_annotate_result(
+          empty_batch_result(.return_format),
+          fields = invocation_trace_fields
+        ))
       }
 
       # Exact Predict modules share the same scheduler whether callers use the
@@ -255,17 +246,19 @@ Module <- R6::R6Class(
           batch_recycle_input,
           size = input_contract$size
         )
-        return(run_batch(
-          module = self,
-          inputs = inputs,
-          n = input_contract$size,
-          .llm = .llm,
-          .verbose = .verbose,
-          .progress = .progress,
-          .return_format = .return_format,
-          .cache = .cache,
-          .concurrency = runtime,
-          .isolate_rows = !isTRUE(.predict_compat)
+        return(trace_context_annotate_result(
+          run_batch(
+            module = self,
+            inputs = inputs,
+            n = input_contract$size,
+            .llm = .llm,
+            .verbose = .verbose,
+            .progress = .progress,
+            .return_format = .return_format,
+            .cache = .cache,
+            .concurrency = runtime
+          ),
+          fields = invocation_trace_fields
         ))
       }
 
@@ -275,66 +268,18 @@ Module <- R6::R6Class(
       if (.return_format == "simple") {
         return(result$output[[1]])
       } else {
-        return(structure(
-          list(
-            output = result$output[[1]],
-            chat = result$chat[[1]],
-            metadata = result$metadata[[1]]
+        return(trace_context_annotate_result(
+          structure(
+            list(
+              output = result$output[[1]],
+              chat = result$chat[[1]],
+              metadata = result$metadata[[1]]
+            ),
+            class = "dsprrr_result"
           ),
-          class = "dsprrr_result"
+          fields = invocation_trace_fields
         ))
       }
-    },
-
-    #' @description
-    #' Predict using the module
-    #'
-    #' Convenience method that delegates to `run()`. Provides a familiar interface
-    #' for users coming from tidymodels or other prediction frameworks.
-    #'
-    #' @param ... Named inputs matching the signature
-    #' @param .llm Optional ellmer chat object (uses stored chat if not provided)
-    #' @return The declared output record, or a list of output records for a
-    #'   batch. Single-field object outputs retain their field name.
-    predict = function(..., .llm = NULL) {
-      result <- self$run(
-        ...,
-        .llm = .llm,
-        .return_format = "structured",
-        .predict_compat = TRUE
-      )
-      if (inherits(result, "dsprrr_batch_result")) {
-        return(lapply(result, `[[`, "output"))
-      }
-      result$output
-    },
-
-    #' @description
-    #' Optimize the module using development data
-    #' @param data Development data as a data frame or tibble
-    #' @param objective Metric or metric set
-    #' @param control Optimization control parameters
-    #' @return Updated module (self)
-    optimize = function(
-      data,
-      metric = metric_exact_match(),
-      grid = NULL,
-      parameters = NULL,
-      objective = c("maximize", "minimize"),
-      .llm = NULL,
-      control = list(),
-      ...
-    ) {
-      self$optimize_grid(
-        data = data,
-        metric = metric,
-        grid = grid,
-        parameters = parameters,
-        objective = objective,
-        .llm = .llm,
-        control = control,
-        ...
-      )
     },
 
     #' @description
@@ -440,7 +385,6 @@ Module <- R6::R6Class(
           data = data,
           metric = metric,
           .llm = .llm,
-          .parallel = control$parallel,
           .progress = control$evaluation_progress,
           ...
         )
@@ -492,8 +436,10 @@ Module <- R6::R6Class(
         evaluation = evaluations,
         timestamp = timestamps
       )
+      durable_trials <- trials_tbl
+      durable_trials$evaluation <- NULL
 
-      self$state$trials <- trials_tbl
+      self$state$trials <- durable_trials
       self$state$optimization_history <- append(
         self$state$optimization_history,
         list(trials_tbl)
@@ -507,13 +453,20 @@ Module <- R6::R6Class(
           best_params,
           keep.null = TRUE
         )
-        self$state$best_score <- scores[best_idx]
-        self$state$best_params <- best_params
-        self$state$best_trial <- best_idx
-        self$state$compiled <- TRUE
         if (is.function(self$apply_optimization_params)) {
           self$apply_optimization_params(best_params)
         }
+        record_optimization_result(
+          self,
+          optimizer = "GridSearch",
+          baseline_score = scores[[1]],
+          best_score = scores[[best_idx]],
+          best_trial = best_idx,
+          best_params = best_params,
+          trials = durable_trials,
+          stop_reason = "completed",
+          extensions = list(candidate_grid = candidate_grid)
+        )
       } else {
         cli::cli_warn(
           "No valid scores produced during optimisation; configuration left unchanged"
@@ -537,7 +490,8 @@ Module <- R6::R6Class(
         last_grid = tibble::tibble(),
         best_score = NULL,
         best_params = NULL,
-        best_trial = NULL
+        best_trial = NULL,
+        optimization_result = NULL
       )
 
       if (hard) {
@@ -580,7 +534,9 @@ Module <- R6::R6Class(
           model = character(0),
           prompt_length = integer(0),
           prompt = character(0),
-          response = character(0)
+          response = character(0),
+          program_artifact_id = character(0),
+          trace_context = list()
         ))
       }
 
@@ -623,7 +579,26 @@ Module <- R6::R6Class(
           integer(1)
         ),
         prompt = vapply(traces, trace_prompt_text, character(1)),
-        response = vapply(traces, trace_response_text, character(1))
+        response = vapply(traces, trace_response_text, character(1)),
+        program_artifact_id = vapply(
+          traces,
+          function(trace) {
+            id <- trace$program_artifact_id %||% NA_character_
+            if (
+              !is.character(id) ||
+                length(id) != 1L ||
+                is.na(id)
+            ) {
+              return(NA_character_)
+            }
+            id
+          },
+          character(1)
+        ),
+        trace_context = lapply(
+          traces,
+          function(trace) trace$trace_context %||% list()
+        )
       )
     },
 
@@ -718,60 +693,7 @@ Module <- R6::R6Class(
     #' Check if module is compiled/optimized
     #' @return Logical
     is_compiled = function() {
-      isTRUE(self$state$compiled)
-    },
-
-    #' @description
-    #' Create a vitals-compatible solver function
-    #' @param .llm Optional ellmer chat object
-    #' @param .parallel Logical for parallel processing
-    #' @param .return_format Either "simple" or "structured"
-    #' @param ... Additional arguments
-    #' @return Function compatible with vitals Tasks
-    as_vitals_solver = function(
-      .llm = NULL,
-      .parallel = FALSE,
-      .return_format = "structured",
-      ...
-    ) {
-      module <- self
-
-      function(inputs, ...) {
-        if (!is.data.frame(inputs)) {
-          inputs <- as.data.frame(inputs)
-        }
-
-        # This will use the full run_dataset logic once migrated
-        results <- tibble::tibble(
-          result = vector("list", nrow(inputs)),
-          .chat = vector("list", nrow(inputs)),
-          .metadata = vector("list", nrow(inputs))
-        )
-
-        # Process each row
-        for (i in seq_len(nrow(inputs))) {
-          row_inputs <- as.list(inputs[i, , drop = FALSE])
-          result <- module$forward(row_inputs, .llm = .llm, trace = TRUE)
-
-          results$result[i] <- list(result$output[[1]])
-          results$.chat[i] <- list(result$chat[[1]] %||% NULL)
-          results$.metadata[i] <- list(result$metadata[[1]] %||% list())
-        }
-
-        if (.return_format == "simple") {
-          list(
-            result = results$result,
-            solver_chat = replicate(nrow(results), NULL, simplify = FALSE),
-            metadata = replicate(nrow(results), list(), simplify = FALSE)
-          )
-        } else {
-          list(
-            result = results$result,
-            solver_chat = results$.chat,
-            metadata = results$.metadata
-          )
-        }
-      }
+      !is.null(self$state$optimization_result) || isTRUE(self$state$compiled)
     },
 
     #' @description
@@ -951,9 +873,18 @@ Module <- R6::R6Class(
     #'
     #' @param ... Named inputs matching the signature
     #' @param .llm Optional ellmer chat object
+    #' @param .trace_context A named JSON-compatible correlation context
     #' @return A promise that resolves to the result
-    run_async = function(..., .llm = NULL) {
-      dsprrr::run_async(self, ..., .llm = .llm)
+    run_async = function(..., .llm = NULL, .trace_context = list()) {
+      if (missing(.trace_context)) {
+        return(dsprrr::run_async(self, ..., .llm = .llm))
+      }
+      dsprrr::run_async(
+        self,
+        ...,
+        .llm = .llm,
+        .trace_context = .trace_context
+      )
     },
 
     #' @description
@@ -1040,10 +971,11 @@ Module <- R6::R6Class(
         last_grid = tibble::tibble(),
         best_score = NULL,
         best_params = NULL,
-        best_trial = NULL
+        best_trial = NULL,
+        optimization_result = NULL
       )
 
-      new_mod
+      artifact_copy_runtime(self, new_mod)
     },
 
     #' @description
@@ -1055,6 +987,21 @@ Module <- R6::R6Class(
   ),
 
   private = list(
+    # Module$copy() handles Chat isolation explicitly after the structural R6
+    # clone. Preserve the original reference during that first pass so an
+    # ellmer clone failure is reported through the package's typed boundary.
+    deep_clone = function(name, value) {
+      if (identical(name, "chat")) {
+        return(value)
+      }
+      is_r6_object <- is.environment(value) &&
+        !is.null(get0(".__enclos_env__", value, inherits = FALSE))
+      if (is_r6_object) {
+        return(value$clone(deep = TRUE))
+      }
+      value
+    },
+
     # Build prompt from inputs (to be overridden by subclasses)
     build_prompt = function(inputs) {
       cli::cli_abort("build_prompt() must be implemented by subclass")
@@ -1066,52 +1013,7 @@ Module <- R6::R6Class(
       if (is.null(chat)) {
         return(NULL)
       }
-
-      # Use R6's clone method (ellmer Chat is R6)
-      # deep = TRUE ensures internal state is also cloned
-      tryCatch(
-        {
-          cloned <- chat$clone(deep = TRUE)
-          # Reset the turn history to start fresh
-          cloned$set_turns(list())
-          cloned
-        },
-        error = function(e) {
-          # If clone fails, try to recreate from provider info
-          model <- tryCatch(chat$get_model(), error = function(e) NULL)
-          class_names <- class(chat)
-
-          for (cls in class_names) {
-            result <- switch(
-              cls,
-              "Chat" = NULL, # Skip base class
-              # OpenAI variants
-              "OpenAIChat" = ,
-              "chat_openai" = ellmer::chat_openai(model = model),
-              # Anthropic variants
-              "ClaudeChat" = ,
-              "chat_claude" = ellmer::chat_claude(model = model),
-              # Google variants
-              "ChatGoogleGemini" = ,
-              "chat_google_gemini" = ellmer::chat_google_gemini(model = model),
-              # Ollama variants
-              "OllamaChat" = ,
-              "chat_ollama" = ellmer::chat_ollama(model = model),
-              NULL
-            )
-
-            if (!is.null(result)) {
-              return(result)
-            }
-          }
-
-          # Fallback: return same chat (not ideal but better than failing)
-          cli::cli_warn(
-            "Could not clone Chat of class {.cls {class_names[1]}}; sharing reference"
-          )
-          chat
-        }
-      )
+      clone_ellmer_chat(chat, arg = "chat", reset_turns = TRUE)
     },
 
     # Postprocess model output (to be overridden by subclasses)
@@ -1220,6 +1122,74 @@ factory_interpreter_history_field <- function(module) {
 }
 
 
+# Append one RLM observability record while preserving the module's bounded
+# retention contract when records are merged back from isolated workers.
+append_factory_interpreter_rlm_record <- function(records, record) {
+  limit <- getOption("dsprrr.rlm_trace_limit", 100L)
+  if (
+    !is.numeric(limit) ||
+      length(limit) != 1L ||
+      is.na(limit) ||
+      !is.finite(limit) ||
+      limit < 1L
+  ) {
+    limit <- 100L
+  }
+  records <- append(records %||% list(), list(record))
+  if (length(records) > floor(limit)) {
+    records <- utils::tail(records, floor(limit))
+  }
+  records
+}
+
+
+# Commit a canonical RLM trace produced by an isolated interpreter worker.
+# Worker-local state and prompt history disappear with the mirai process, so
+# both stores must be reconstructed in the parent in input-row order.
+commit_factory_interpreter_trace <- function(module, trace, index, runtime) {
+  if (!inherits(module, "RLMModule") || is.null(trace)) {
+    return(invisible(module))
+  }
+  if (!is.list(trace)) {
+    cli::cli_abort(
+      "Interpreter worker returned an invalid canonical trace",
+      class = "dsprrr_trace_contract_error"
+    )
+  }
+
+  trace_cursor <- evaluation_trace_cursor(module)
+  history_generation_before <- prompt_history_generation()
+  sequence <- module$state$trace_sequence %||% 0
+  valid_sequence <- is.numeric(sequence) &&
+    length(sequence) == 1L &&
+    !is.na(sequence) &&
+    is.finite(sequence) &&
+    sequence >= 0
+  if (!valid_sequence) {
+    cli::cli_abort(
+      "RLM trace sequence is invalid",
+      class = "dsprrr_trace_contract_error"
+    )
+  }
+
+  module$state$trace_sequence <- as.numeric(sequence) + 1
+  module$state$traces <- append_factory_interpreter_rlm_record(
+    module$state$traces,
+    trace
+  )
+
+  add_to_global_history(trace, source = "RLMModule")
+  reconcile_dataset_row_observability(
+    module = module,
+    trace_count_before = trace_cursor,
+    history_generation_before = history_generation_before,
+    row_index = index,
+    runtime = runtime
+  )
+  invisible(module)
+}
+
+
 format_factory_interpreter_batch_row <- function(
   result,
   index,
@@ -1268,24 +1238,28 @@ run_factory_interpreter_batch <- function(
   .llm,
   .progress,
   .return_format,
-  .concurrency
+  .concurrency,
+  .cache = NULL
 ) {
+  validate_cache_arg(.cache)
   input_sets <- lapply(seq_len(n), function(i) lapply(inputs, `[[`, i))
   history_field <- factory_interpreter_history_field(module)
+  row_trace_events <- vector("list", n)
   llm <- .llm %||% module$chat %||% get_default_chat()
-  if (is.null(llm)) {
-    cli::cli_abort("No LLM provided. Pass .llm or set a default chat.")
-  }
+  llm <- assert_ellmer_chat(llm, arg = ".llm")
 
   if (identical(.concurrency$effective_backend, "sequential")) {
-    rows <- lapply(seq_len(n), function(index) {
+    rows <- vector("list", n)
+    for (index in seq_len(n)) {
+      trace_count_before <- evaluation_trace_cursor(module)
+      history_generation_before <- prompt_history_generation()
       result <- tryCatch(
         {
           forwarded <- module$forward(
             input_sets[[index]],
             .llm = llm,
             trace = TRUE,
-            .cache = FALSE
+            .cache = .cache
           )
           list(
             output = forwarded$output[[1L]],
@@ -1296,14 +1270,25 @@ run_factory_interpreter_batch <- function(
         interrupt = function(condition) stop(condition),
         error = function(condition) condition
       )
-      format_factory_interpreter_batch_row(
+      reconcile_dataset_row_observability(
+        module = module,
+        trace_count_before = trace_count_before,
+        history_generation_before = history_generation_before,
+        row_index = index,
+        runtime = .concurrency
+      )
+      row_trace_events[[index]] <- new_evaluation_trace_events(
+        module,
+        trace_count_before
+      )
+      rows[[index]] <- format_factory_interpreter_batch_row(
         result,
         index,
         .return_format,
         .concurrency,
         chat = llm
       )
-    })
+    }
   } else {
     profile <- new_dsprrr_mirai_profile()
     mapped <- NULL
@@ -1333,7 +1318,8 @@ run_factory_interpreter_batch <- function(
       module,
       llm,
       history_field,
-      namespace_path
+      namespace_path,
+      cache
     ) {
       if (
         file.exists(file.path(namespace_path, "R", "module-base.R")) &&
@@ -1345,16 +1331,40 @@ run_factory_interpreter_batch <- function(
       }
       tryCatch(
         {
+          trace_cursor <- if (inherits(module, "RLMModule")) {
+            get(
+              "evaluation_trace_cursor",
+              envir = asNamespace("dsprrr")
+            )(module)
+          } else {
+            NULL
+          }
           forwarded <- module$forward(
             input_set,
             .llm = llm,
             trace = TRUE,
-            .cache = FALSE
+            .cache = cache
           )
           history <- if (is.null(history_field)) {
             list()
           } else {
             module$state[[history_field]]
+          }
+          trace <- if (is.null(trace_cursor)) {
+            NULL
+          } else {
+            trace_indices <- get(
+              "evaluation_trace_indices",
+              envir = asNamespace("dsprrr")
+            )(module, trace_cursor)
+            if (length(trace_indices) == 0L) {
+              cli::cli_abort(
+                "RLM worker completed without a canonical trace",
+                class = "dsprrr_trace_contract_error"
+              )
+            } else {
+              module$state$traces[[trace_indices[[length(trace_indices)]]]]
+            }
           }
           list(
             ok = TRUE,
@@ -1364,7 +1374,8 @@ run_factory_interpreter_batch <- function(
               history[[length(history)]]
             } else {
               NULL
-            }
+            },
+            trace = trace
           )
         },
         interrupt = function(condition) stop(condition),
@@ -1384,7 +1395,8 @@ run_factory_interpreter_batch <- function(
         module = module,
         llm = llm,
         history_field = history_field,
-        namespace_path = namespace_path
+        namespace_path = namespace_path,
+        cache = .cache
       ),
       .compute = profile
     )
@@ -1398,7 +1410,8 @@ run_factory_interpreter_batch <- function(
       profile_owned <- FALSE
     }
 
-    rows <- lapply(seq_len(n), function(index) {
+    rows <- vector("list", n)
+    for (index in seq_len(n)) {
       record <- records[[index]]
       if (mirai::is_mirai_error(record)) {
         condition <- simpleError(record$message %||% as.character(record))
@@ -1418,20 +1431,37 @@ run_factory_interpreter_batch <- function(
           metadata = record$metadata
         )
         if (!is.null(history_field) && !is.null(record$history)) {
-          module$state[[history_field]] <- append(
-            module$state[[history_field]],
-            list(record$history)
-          )
+          module$state[[history_field]] <- if (inherits(module, "RLMModule")) {
+            append_factory_interpreter_rlm_record(
+              module$state[[history_field]],
+              record$history
+            )
+          } else {
+            append(module$state[[history_field]], list(record$history))
+          }
         }
+        trace_count_before <- evaluation_trace_cursor(module)
+        commit_factory_interpreter_trace(
+          module = module,
+          trace = record$trace,
+          index = index,
+          runtime = .concurrency
+        )
+        row_trace_events[[index]] <- new_evaluation_trace_events(
+          module,
+          trace_count_before
+        )
       }
-      format_factory_interpreter_batch_row(
+      rows[[index]] <- format_factory_interpreter_batch_row(
         result,
         index,
         .return_format,
         .concurrency
       )
-    })
+    }
   }
+
+  attr(rows, "dsprrr_row_trace_events") <- row_trace_events
 
   if (identical(.return_format, "structured")) {
     structure(rows, class = c("dsprrr_batch_result", "list"))
@@ -1445,63 +1475,34 @@ run_factory_interpreter_batch <- function(
 #' @noRd
 `%||%` <- function(x, y) if (is.null(x)) y else x
 
-#' Predict Method for Modules (tidymodels-style)
+#' Predict with a module on new data
 #'
 #' @description
-#' S3 predict method for dsprrr Modules, providing a tidymodels-familiar
-#' interface. This is an alternative to `run_dataset()` that matches the
-#' pattern used by parsnip and other tidymodels packages.
+#' `predict()` on a module is [run_dataset()] under the name tidymodels users
+#' expect: `predict(module, new_data)` is `run_dataset(module, new_data)`.
 #'
-#' @param object A dsprrr Module object
-#' @param new_data A data frame or tibble with columns matching the module's
-#'   signature inputs
-#' @param ... Additional arguments passed to `run_dataset()`
+#' @param object A module, such as one created with [module()].
+#' @param new_data A data frame with one column per signature input.
+#' @param .llm An ellmer Chat to use instead of the one stored on `object` or
+#'   the default chat.
+#' @param ... Passed to [run_dataset()], for example `.return_format`,
+#'   `.concurrency` or `.cache`.
 #'
-#' @return A tibble with the input columns plus prediction results.
-#'   The output column is named according to the signature's output field.
+#' @return A tibble with the columns of `new_data` plus a `result`
+#'   list-column holding each row's output as a named list, exactly as
+#'   returned by [run_dataset()].
 #'
 #' @export
+#' @family execution
 #' @examples
-#' \dontrun{
-#' # Create a module
-#' mod <- signature("text -> sentiment") |>
-#'   module(type = "predict", chat = chat_openai())
-#'
-#' # Use predict() like parsnip models
-#' new_data <- tibble::tibble(text = c("Great!", "Terrible"))
-#' predict(mod, new_data)
-#'
-#' # Equivalent to run_dataset()
-#' run_dataset(mod, new_data, .llm = mod$chat)
-#' }
-predict.Module <- function(object, new_data, ...) {
+#' shout <- module_fn("text -> reply", function(text) toupper(text))
+#' predictions <- predict(shout, data.frame(text = c("great", "terrible")))
+#' predictions
+#' vapply(predictions$result, function(r) r$reply, character(1))
+predict.Module <- function(object, new_data, .llm = NULL, ...) {
   if (!is.data.frame(new_data)) {
     cli::cli_abort("{.arg new_data} must be a data frame or tibble")
   }
 
-  # Get the LLM to use - prefer stored chat, then try default
-  llm <- object$chat
-  if (is.null(llm)) {
-    llm <- tryCatch(
-      get_default_chat(create = TRUE),
-      error = function(e) {
-        cli::cli_abort(c(
-          "No Chat available for prediction",
-          "i" = "Either set a chat on the module: {.code mod$chat <- chat_openai()}",
-          "i" = "Or pass .llm: {.code predict(mod, data, .llm = chat)}"
-        ))
-      }
-    )
-  }
-
-  # Use run_dataset for the actual processing
-  run_dataset(object, new_data, .llm = llm, ...)
-}
-
-#' Predict Method for PredictModule
-#'
-#' @rdname predict.Module
-#' @export
-predict.PredictModule <- function(object, new_data, ...) {
-  predict.Module(object, new_data, ...)
+  run_dataset(object, new_data, .llm = .llm, ...)
 }

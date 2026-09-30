@@ -2,8 +2,7 @@
 % Please edit documentation in R/teleprompter-omni.R
 \name{Omni}
 \alias{Omni}
-\alias{print.Omni}
-\title{Omni Teleprompter}
+\title{Omni: explore with several optimizers, then continue from the best}
 \usage{
 Omni(
   metric,
@@ -17,63 +16,72 @@ Omni(
   seed = NULL,
   verbose = TRUE
 )
-
-\method{print}{Omni}(x, ...)
 }
 \arguments{
-\item{metric}{Metric function used to compare every candidate on the same
-validation set.}
+\item{metric}{A metric function (required) used to score every candidate on
+the same validation set, such as \code{metric_exact_match(field = "answer")}.}
 
-\item{explorers}{Named list of at least two \link{Teleprompter} objects. Every
-explorer starts from an independent copy of the input program.}
+\item{explorers}{Named list of at least two optimizer objects. Each starts
+from its own copy of the input program.}
 
-\item{continuation}{A \link{Teleprompter} object run from the best exploration
+\item{continuation}{An optimizer object run from the best exploration
 candidate.}
 
-\item{metric_threshold}{Minimum score required to be considered successful.}
+\item{metric_threshold}{Accepted for consistency with the other optimizers
+(see \code{\link[=Teleprompter]{Teleprompter()}}); \code{Omni()} does not use it.}
 
-\item{max_errors}{Maximum number of errors allowed during evaluation.}
+\item{max_errors}{Does not stop the run; set \code{max_errors} on each explorer
+and on the continuation instead.}
 
-\item{valset_ratio}{Fraction of \code{trainset} to hold out for candidate
-comparison when \code{valset} is not supplied.}
+\item{valset_ratio}{Share of \code{trainset} held out for validation when no
+\code{valset} is given (default \code{0.1}, must be above 0).}
 
-\item{parallel}{Whether to compile exploration branches concurrently with
-mirai. Parallel exploration requires \code{.llm = NULL}. Each worker creates
-its own default chat from \code{OPENAI_API_KEY}, \code{ANTHROPIC_API_KEY}, or
-\code{GOOGLE_API_KEY}.}
+\item{parallel}{Whether to compile the explorers at the same time with
+mirai (default \code{FALSE}). Parallel exploration requires \code{.llm = NULL}:
+each worker creates its own default chat from \code{OPENAI_API_KEY},
+\code{ANTHROPIC_API_KEY} or \code{GOOGLE_API_KEY}.}
 
 \item{num_workers}{Number of mirai workers for parallel exploration. \code{NULL}
-uses one worker per explorer.}
+(the default) uses one worker per explorer.}
 
-\item{seed}{Optional whole-number random seed within R's integer range for
-reproducible splitting, sequential exploration, and mirai worker streams.}
+\item{seed}{Optional whole-number seed for the validation split, sequential
+exploration and the mirai worker streams.}
 
-\item{verbose}{Whether to print progress messages.}
-
-\item{x}{An Omni object.}
-
-\item{...}{Additional arguments.}
+\item{verbose}{Whether to print progress messages (default \code{TRUE}).}
+}
+\value{
+An \code{Omni} object to pass to \code{\link[=compile]{compile()}}.
 }
 \description{
-A meta-teleprompter that explores several optimization strategies from the
-same seed program, compares their outputs with one shared validation metric,
-and seeds a fresh continuation optimizer from the winner.
+\code{Omni()} runs several optimizers (the explorers) independently from the same
+program, scores each result on one validation set, and then runs a
+\code{continuation} optimizer from the winner. The original program stays a
+candidate throughout, so an explorer or continuation that makes things
+worse cannot replace a better program.
+}
+\details{
+Omni adapts the explore, pick-best and continue pattern of the Omni
+meta-optimizer in the \href{https://github.com/gepa-ai/gepa}{GEPA project},
+described in the
+\href{https://gepa-ai.github.io/gepa/blog/2026/07/22/optimize-anything-omni/}{GEPA Omni announcement}.
 
-Inspired by the Omni meta-optimizer from the
-\href{https://github.com/gepa-ai/gepa}{GEPA project}, this adapts the explore,
-pick-best, and continue pattern described in the
-\href{https://gepa-ai.github.io/gepa/blog/2026/07/22/optimize-anything-omni/}{GEPA Omni announcement}
-to dsprrr modules. The original program remains a candidate throughout, so a
-regressing explorer or continuation step cannot replace a better program.
+Omni needs validation data: pass \code{valset} to \code{\link[=compile]{compile()}}, or it holds out
+\code{floor(valset_ratio * nrow(trainset))} rows and stops with an error when
+that is zero. The seed program, every explorer result and the continuation
+result are all scored on it, and the highest score wins.
 
-\code{Omni()} does not impose a common budget because dsprrr teleprompters expose
-different native budget controls. Configure comparable budgets on the
-explorer objects before constructing \code{Omni()}. Common validation re-scoring
-of the seed, each explorer result, and the continuation result is additional
-evaluation work outside those native optimizer budgets.
+Omni sets no shared budget, because each optimizer has its own budget
+controls. Give the explorers comparable budgets before building \code{Omni()}.
+The validation scoring is extra work on top of those budgets.
+
+\code{\link[=compile]{compile()}} accepts extra arguments for this optimizer:
+\code{explorer_compile_args} (a list, named by explorer, of further arguments for
+that explorer's \code{\link[=compile]{compile()}} call), \code{continuation_compile_args}, and
+\code{valset_ratio}, \code{parallel}, \code{num_workers} and \code{seed}, which override the
+values stored here. The candidates are stored in
+\code{optimization_result(compiled)$extensions$omni$candidate_programs}.
 }
 \examples{
-\dontrun{
 metric <- metric_exact_match(field = "answer")
 
 tp <- Omni(
@@ -88,8 +96,44 @@ tp <- Omni(
     generations = 2L
   )
 )
+tp
 
-compiled <- compile(tp, qa_module, trainset, valset = valset, .llm = llm)
-compiled$config$optimizer$candidate_programs
+\dontrun{
+qa <- module(signature("question -> answer"))
+trainset <- data.frame(
+  question = c("Capital of France?", "Capital of Peru?", "Capital of Chad?"),
+  answer = c("Paris", "Lima", "N'Djamena")
+)
+valset <- data.frame(
+  question = c("Capital of Japan?", "Capital of Kenya?"),
+  answer = c("Tokyo", "Nairobi")
+)
+compiled <- compile(
+  qa,
+  tp,
+  trainset,
+  valset = valset,
+  .llm = ellmer::chat_openai(model = "gpt-6-luna")
+)
+optimization_result(compiled)$extensions$omni$candidate_programs
 }
 }
+\seealso{
+Other teleprompters:
+\code{\link[=AutoResearch]{AutoResearch()}},
+\code{\link[=BetterTogether]{BetterTogether()}},
+\code{\link[=BootstrapFewShot]{BootstrapFewShot()}},
+\code{\link[=BootstrapFewShotWithRandomSearch]{BootstrapFewShotWithRandomSearch()}},
+\code{\link[=COPRO]{COPRO()}},
+\code{\link[=GEPA]{GEPA()}},
+\code{\link[=GridSearchTeleprompter]{GridSearchTeleprompter()}},
+\code{\link[=KNNFewShot]{KNNFewShot()}},
+\code{\link[=LabeledFewShot]{LabeledFewShot()}},
+\code{\link[=MIPROv2]{MIPROv2()}},
+\code{\link[=MetaHarness]{MetaHarness()}},
+\code{\link[=ReAnchor]{ReAnchor()}},
+\code{\link[=SIMBA]{SIMBA()}},
+\code{\link[=Teleprompter]{Teleprompter()}},
+\code{\link[=compile]{compile()}}
+}
+\concept{teleprompters}

@@ -2,51 +2,116 @@
 % Please edit documentation in R/module-program-of-thought.R
 \name{program_of_thought}
 \alias{program_of_thought}
-\title{Create a Program of Thought Module}
+\title{Create a Program of Thought module that answers by running R code}
 \usage{
 program_of_thought(
   signature,
   runner = NULL,
+  interpreter_factory = NULL,
   max_iters = 3L,
   extract_answer = TRUE,
-  ...,
-  interpreter_factory = NULL
+  config = list(),
+  chat = NULL,
+  ...
 )
 }
 \arguments{
-\item{signature}{A Signature object or string notation defining inputs/outputs}
+\item{signature}{A \code{\link[=signature]{signature()}} object or a signature string such as
+\code{"question -> answer"}.}
 
-\item{runner}{Optional caller-owned code runner implementing \code{execute()} and
-\code{policy()}. It is retained, never automatically closed, and must not be
-shared concurrently when persistent.}
+\item{runner}{A code runner you own, such as \code{\link[=r_code_runner]{r_code_runner()}}. It is
+reused across calls and never shut down by dsprrr.}
 
-\item{max_iters}{Maximum code generation/repair iterations (default 3)}
+\item{interpreter_factory}{A function with no arguments that returns a fresh
+runner for each call. Supply exactly one of \code{runner} and
+\code{interpreter_factory}.}
 
-\item{extract_answer}{Logical. If TRUE (default), use LLM to extract final
-answer from execution result. If FALSE, return execution result directly.}
+\item{max_iters}{Integer maximum number of attempts to write working code
+(default \code{3L}).}
 
-\item{...}{Additional arguments passed to the module}
+\item{extract_answer}{If \code{TRUE} (the default), a model call turns the
+execution result into the output fields. If \code{FALSE}, the formatted result
+is returned directly.}
 
-\item{interpreter_factory}{Optional zero-argument function returning a fresh
-runner with \code{execute()}, \code{policy()}, optional \code{start()}, and idempotent
-terminal \code{shutdown()} or \code{close()}.
-Supply exactly one of \code{runner} and \code{interpreter_factory}.}
+\item{config}{Optional module configuration, such as runtime settings.}
+
+\item{chat}{Optional ellmer Chat stored on the module.}
+
+\item{...}{Must be empty.}
 }
 \value{
-A ProgramOfThoughtModule object
+A Program of Thought module.
 }
 \description{
-Factory function to create a ProgramOfThoughtModule that generates and
-executes R code to solve problems.
-Use \code{\link[=run]{run()}} to execute it. \code{\link[=run_async]{run_async()}} supports factory-backed modules;
-async streaming and module \verb{$stream()} entry points reject ProgramOfThought.
-\code{\link[=run_stream]{run_stream()}} preserves the synchronous \code{forward()} fallback unless a
-matching token-stream request is active; that request is rejected first.
+\code{program_of_thought()} creates a module that answers by writing R code,
+running it with \code{runner}, and reading the answer from the result. It suits
+tasks that need exact computation, such as arithmetic, statistics or data
+manipulation, where a model's direct answer is unreliable. Run it with
+\code{\link[=run]{run()}}.
+}
+\details{
+Each call works as follows:
+\enumerate{
+\item The model writes R code for the inputs.
+\item The runner executes it.
+\item If it fails, the error goes back to the model, which repairs the code.
+Steps 2 and 3 repeat up to \code{max_iters} times; if no attempt succeeds,
+the call fails.
+\item With \code{extract_answer = TRUE}, a second model call turns the execution
+result into the output fields; otherwise the result itself is returned.
+}
+
+Code runs only through the runtime you supply, as either \code{runner} or
+\code{interpreter_factory}; see \code{\link[=r_code_runner]{r_code_runner()}} for how each is owned and shut
+down. \code{\link[=r_code_runner]{r_code_runner()}} runs code in a separate process with your
+permissions and is not a sandbox. For untrusted input, use a sandboxed
+runner such as \code{\link[=mcp_repl_runner]{mcp_repl_runner()}}; \code{runner$policy()} shows what a runner
+enforces. A stateful \code{runner} must not be used by two calls at the same
+time.
+
+\code{\link[=run_async]{run_async()}} supports Program of Thought with an \code{interpreter_factory}, in
+a separate mirai process, but rejects a caller-owned \code{runner}. Token
+streaming with \code{\link[=stream_async]{stream_async()}} or the module's \verb{$stream()} method is
+unavailable, because it would bypass code execution. \code{\link[=run_stream]{run_stream()}} runs
+the module as one non-streaming call and rejects requests for token
+streaming.
 }
 \examples{
+\dontshow{if (rlang::is_installed("callr")) withAutoprint(\{ # examplesIf}
+pot <- program_of_thought(
+  "question -> answer",
+  runner = r_code_runner(timeout = 30)
+)
+pot
+
 \dontrun{
-runner <- r_code_runner(timeout = 30)
-pot <- program_of_thought("question -> answer", runner = runner)
-result <- run(pot, question = "Calculate 847 * 293", .llm = llm)
+run(
+  pot,
+  question = "What is the sum of the primes below 100?",
+  .llm = ellmer::chat_openai(model = "gpt-6-luna")
+)
 }
+\dontshow{\}) # examplesIf}
 }
+\seealso{
+Other program constructors:
+\code{\link[=chain_of_thought]{chain_of_thought()}},
+\code{\link[=code_act]{code_act()}},
+\code{\link[=flex]{flex()}},
+\code{\link[=module]{module()}},
+\code{\link[=module_fn]{module_fn()}},
+\code{\link[=multi_chain_comparison]{multi_chain_comparison()}},
+\code{\link[=rag_module]{rag_module()}},
+\code{\link[=react]{react()}},
+\code{\link[=rlm]{rlm()}},
+\code{\link[=rlm_module]{rlm_module()}}
+
+Other code execution:
+\code{\link[=code_act]{code_act()}},
+\code{\link[=mcp_repl_runner]{mcp_repl_runner()}},
+\code{\link[=r_code_runner]{r_code_runner()}},
+\code{\link[=rlm]{rlm()}},
+\code{\link[=rlm_module]{rlm_module()}}
+}
+\concept{code execution}
+\concept{program constructors}

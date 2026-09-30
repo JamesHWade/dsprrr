@@ -2,7 +2,9 @@
 
 # Helper: Create a mock module for testing
 create_mock_module <- function(
-  responses = list("answer1", "answer2", "answer3")
+  responses = list("answer1", "answer2", "answer3"),
+  provider_calls = 1L,
+  cost = 0.001
 ) {
   idx <- 0
   mock_mod <- list(
@@ -16,12 +18,13 @@ create_mock_module <- function(
         chat = list(NULL),
         metadata = list(list(
           total_tokens = 100,
-          cost = 0.001,
+          cost = cost,
+          provider_calls = provider_calls,
           model = "mock-model"
         ))
       )
     },
-    reset_copy = function() create_mock_module(responses)
+    reset_copy = function() create_mock_module(responses, provider_calls, cost)
   )
   class(mock_mod) <- c("MockModule", "Module", "R6")
   mock_mod
@@ -150,7 +153,7 @@ test_that("BestOfN returns best scoring result", {
 
 test_that("BestOfN metadata includes attempt info", {
   mock <- create_mock_module()
-  wrapper <- best_of_n(mock, N = 3, threshold = 1.0)
+  wrapper <- best_of_n(mock, N = 3, threshold = 2.0)
   result <- wrapper$forward(list(question = "test"))
 
   meta <- result$metadata[[1]]
@@ -158,6 +161,9 @@ test_that("BestOfN metadata includes attempt info", {
   expect_true("best_score" %in% names(meta))
   expect_true("all_scores" %in% names(meta))
   expect_true("total_tokens" %in% names(meta))
+  expect_equal(meta$cost, 0.003)
+  expect_identical(meta$provider_calls, 3L)
+  expect_false("total_cost" %in% names(meta))
 })
 
 test_that("BestOfN get_attempts returns attempt history", {
@@ -242,7 +248,12 @@ test_that("BestOfN handles module errors gracefully", {
     tibble::tibble(
       output = list(list(answer = "success")),
       chat = list(NULL),
-      metadata = list(list(total_tokens = 100, cost = 0.001, model = "mock"))
+      metadata = list(list(
+        total_tokens = 100,
+        cost = 0.001,
+        provider_calls = 1L,
+        model = "mock"
+      ))
     )
   }
 
@@ -254,6 +265,9 @@ test_that("BestOfN handles module errors gracefully", {
 
   # Should succeed after 2 failures
   expect_equal(result$output[[1]]$answer, "success")
+  expect_true(is.na(result$metadata[[1L]]$cost))
+  expect_true(is.na(result$metadata[[1L]]$provider_calls))
+  expect_true(is.na(result$metadata[[1L]]$total_tokens))
 })
 
 test_that("BestOfN fails after too many consecutive errors", {
@@ -510,6 +524,9 @@ test_that("RefineModule metadata includes feedback count", {
   meta <- result$metadata[[1]]
   expect_true("feedback_count" %in% names(meta))
   expect_equal(meta$feedback_count, 2)
+  expect_equal(meta$cost, 0.003)
+  expect_identical(meta$provider_calls, 3L)
+  expect_false("total_cost" %in% names(meta))
 })
 
 test_that("RefineModule custom feedback field works", {
@@ -721,4 +738,60 @@ test_that("with_assertions(best_of_n(mod)) nests without a crash (dsprrr-wx6)", 
   expect_no_error(nested$forward(list(question = "q")))
   # assertion passes on the first outer attempt; inner best_of_n runs twice
   expect_equal(sort(seen$ids), c("1.1", "1.2"))
+})
+
+test_that("refine() runs through run() when the signature declares feedback", {
+  local_reset_cache()
+  prompts <- character()
+  llm <- new_test_chat(
+    chat_structured = function(prompt, ...) {
+      prompts <<- c(prompts, prompt)
+      if (length(prompts) == 1) {
+        list(answer = "Paris is the capital")
+      } else {
+        list(answer = "Paris")
+      }
+    }
+  )
+  one_word <- function(pred, inputs) {
+    as.numeric(length(strsplit(pred$answer, "\\s+")[[1]]) == 1)
+  }
+  qa <- module(signature("question, feedback -> answer"))
+  refined <- refine(
+    qa,
+    N = 3L,
+    reward_fn = one_word,
+    feedback_template = "Your answer '{prediction}' was too long."
+  )
+
+  result <- run(refined, question = "Capital of France?", .llm = llm)
+
+  expect_equal(result$answer, "Paris")
+  expect_length(prompts, 2)
+  expect_match(prompts[[1]], "No feedback yet.", fixed = TRUE)
+  expect_match(prompts[[2]], "was too long", fixed = TRUE)
+})
+
+test_that("refine() adds feedback to the prompt when the signature omits it", {
+  local_reset_cache()
+  prompts <- character()
+  llm <- new_test_chat(
+    chat_structured = function(prompt, ...) {
+      prompts <<- c(prompts, prompt)
+      list(answer = if (length(prompts) == 1) "two words" else "one")
+    }
+  )
+  one_word <- function(pred, inputs) {
+    as.numeric(length(strsplit(pred$answer, "\\s+")[[1]]) == 1)
+  }
+  refined <- refine(
+    module(signature("question -> answer")),
+    N = 2L,
+    reward_fn = one_word
+  )
+
+  result <- run(refined, question = "Pick a word", .llm = llm)
+
+  expect_equal(result$answer, "one")
+  expect_match(prompts[[2]], "feedback:", fixed = TRUE)
 })

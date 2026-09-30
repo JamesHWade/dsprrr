@@ -1,12 +1,97 @@
-#' Ensemble Module for Combining Multiple Modules
+#' Ensemble modules and reducers
 #'
-#' @description
-#' R6 class that wraps multiple modules and combines their outputs using
-#' a reduce function. Useful for ensemble methods where multiple optimized
-#' modules vote on the final answer.
+#' The user-facing constructor is [ensemble()]; reducers are the `reduce_*()`
+#' functions.
 #'
 #' @name module-ensemble
+#' @noRd
 NULL
+
+# Sum canonical child-module usage without treating missing usage as free.
+#
+# Aggregating wrappers use this after their child work completes. A swallowed
+# child failure is explicitly unknown because it may have reached the provider
+# before failing without returning metadata.
+aggregate_module_usage_metadata <- function(
+  metadata,
+  unknown_attempt = FALSE
+) {
+  if (isTRUE(unknown_attempt)) {
+    return(list(
+      input_tokens = NA_real_,
+      output_tokens = NA_real_,
+      total_tokens = NA_real_,
+      provider_calls = NA_integer_,
+      cost = NA_real_
+    ))
+  }
+
+  if (length(metadata) == 0L) {
+    return(list(
+      input_tokens = 0,
+      output_tokens = 0,
+      total_tokens = 0,
+      provider_calls = 0L,
+      cost = 0
+    ))
+  }
+
+  usage_scalar <- function(value, whole = FALSE) {
+    if (
+      is.null(value) ||
+        length(value) != 1L ||
+        !is.numeric(value) ||
+        is.na(value) ||
+        !is.finite(value) ||
+        value < 0 ||
+        (whole && value != floor(value))
+    ) {
+      return(NA_real_)
+    }
+    as.numeric(value)
+  }
+
+  usage_sum <- function(field, whole = FALSE) {
+    values <- vapply(
+      metadata,
+      function(item) usage_scalar(item[[field]], whole = whole),
+      numeric(1)
+    )
+    total <- sum(values)
+    if (anyNA(values) || !is.finite(total)) NA_real_ else total
+  }
+
+  provider_calls <- vapply(
+    metadata,
+    function(item) {
+      value <- usage_scalar(item$provider_calls, whole = TRUE)
+      if (
+        is.na(value) ||
+          value > .Machine$integer.max
+      ) {
+        return(NA_real_)
+      }
+      as.numeric(value)
+    },
+    numeric(1)
+  )
+  provider_calls <- if (
+    anyNA(provider_calls) ||
+      sum(provider_calls) > .Machine$integer.max
+  ) {
+    NA_integer_
+  } else {
+    as.integer(sum(provider_calls))
+  }
+
+  list(
+    input_tokens = usage_sum("input_tokens", whole = TRUE),
+    output_tokens = usage_sum("output_tokens", whole = TRUE),
+    total_tokens = usage_sum("total_tokens", whole = TRUE),
+    provider_calls = provider_calls,
+    cost = usage_sum("cost")
+  )
+}
 
 #' Ensemble Module Class
 #'
@@ -103,6 +188,13 @@ EnsembleModule <- R6::R6Class(
     },
 
     #' @description
+    #' Inputs every member fills in itself.
+    #' @return A character vector.
+    supplied_inputs = function() {
+      Reduce(intersect, lapply(self$modules, function(m) m$supplied_inputs()))
+    },
+
+    #' @description
     #' Execute all modules and combine their outputs
     #'
     #' @param batch Named list or data frame of inputs
@@ -123,8 +215,6 @@ EnsembleModule <- R6::R6Class(
       chats <- list()
       individual_metadata <- list()
       successful_indices <- integer(0) # Track which modules succeeded
-      total_tokens <- 0
-      total_cost <- 0
       n_errors <- 0
 
       # Run all modules
@@ -151,14 +241,6 @@ EnsembleModule <- R6::R6Class(
 
           metadata <- result$metadata[[1]]
           individual_metadata[[length(individual_metadata) + 1]] <- metadata
-
-          # Accumulate costs
-          if (!is.null(metadata$total_tokens)) {
-            total_tokens <- total_tokens + metadata$total_tokens
-          }
-          if (!is.null(metadata$cost) && !is.na(metadata$cost)) {
-            total_cost <- total_cost + metadata$cost
-          }
         }
       }
 
@@ -196,6 +278,10 @@ EnsembleModule <- R6::R6Class(
       } else {
         NA_character_
       }
+      usage <- aggregate_module_usage_metadata(
+        individual_metadata,
+        unknown_attempt = n_errors > 0L
+      )
 
       # Create aggregated metadata
       final_metadata <- list(
@@ -204,9 +290,9 @@ EnsembleModule <- R6::R6Class(
         n_modules = length(self$modules),
         n_successful = length(outputs),
         n_errors = n_errors,
-        n_llm_calls = length(outputs),
-        total_tokens = total_tokens,
-        total_cost = total_cost,
+        provider_calls = usage$provider_calls,
+        total_tokens = usage$total_tokens,
+        cost = usage$cost,
         latency_ms = latency_ms
       )
 
@@ -325,12 +411,15 @@ EnsembleModule <- R6::R6Class(
     #' @description
     #' Create a reset copy of the module
     reset_copy = function() {
-      EnsembleModule$new(
-        modules = lapply(self$modules, function(m) m$reset_copy()),
-        reduce_fn = self$reduce_fn,
-        weights = self$weights,
-        config = list(),
-        chat = self$chat
+      artifact_copy_runtime(
+        self,
+        EnsembleModule$new(
+          modules = lapply(self$modules, function(m) m$reset_copy()),
+          reduce_fn = self$reduce_fn,
+          weights = self$weights,
+          config = list(),
+          chat = self$chat
+        )
       )
     },
 
@@ -346,47 +435,65 @@ EnsembleModule <- R6::R6Class(
   )
 )
 
-#' Create an Ensemble Module
+#' Combine several modules into one
 #'
 #' @description
-#' Factory function to create an Ensemble module that combines multiple
-#' modules using a reduce function.
+#' `ensemble()` builds a module that runs every module in `modules` on the
+#' same inputs and combines their outputs with a reducer, by default a
+#' majority vote. It is a module, not an optimizer: [run()] it like any
+#' other.
 #'
-#' @param modules A list of Module objects to combine
-#' @param reduce_fn Function to combine outputs. Default is `reduce_majority()`.
-#'   Should accept a list of outputs and optional weights parameter.
-#' @param weights Optional numeric vector of weights for each module.
-#'   Useful for weighted voting based on validation performance.
-#' @param ... Additional arguments passed to module constructor
+#' @param modules A list of modules with the same input field names, for
+#'   example variants compiled with different demos or instructions. The
+#'   ensemble takes the signature of the first one.
+#' @param reduce_fn A function called as `reduce_fn(outputs, weights)`, where
+#'   `outputs` is the list of outputs from the modules that succeeded, that
+#'   returns one output. The default is [reduce_majority()]; see also
+#'   [reduce_weighted_vote()], [reduce_first()] and
+#'   [reduce_best_by_metric()].
+#' @param weights Optional numeric weights, one per module, such as
+#'   validation scores. The reducer receives the weights of the modules that
+#'   succeeded.
+#' @param ... Passed to the ensemble module: `chat` or `config`.
 #'
-#' @return An EnsembleModule object
+#' @details
+#' A module that fails gives a warning and is left out of the vote; the
+#' ensemble fails only if every module fails. Identical modules sharing a
+#' chat return identical cached responses when caching is on, so the members
+#' should differ (demos, instructions, model or temperature) for the vote to
+#' mean something. The returned module's `get_individual_outputs()` method
+#' lists each member's output from the last run.
 #'
-#' @name ensemble_module
+#' @return A module (an R6 object of class `EnsembleModule`).
+#'
 #' @export
+#' @family composition
 #' @examples
-#' # Create multiple compiled modules
-#' sig <- signature("question -> answer")
-#' mod1 <- module(sig, type = "predict")
-#' mod2 <- module(sig, type = "predict")
-#' mod3 <- module(sig, type = "predict")
-#'
-#' # Combine with majority voting
-#' ens <- ensemble(list(mod1, mod2, mod3))
-#'
-#' # With weighted voting based on validation scores
-#' ens <- ensemble(
-#'   list(mod1, mod2, mod3),
-#'   reduce_fn = reduce_weighted_vote(),
-#'   weights = c(0.9, 0.85, 0.8)
+#' # Offline stand-ins for three differently tuned classifiers
+#' sig <- signature("text -> sentiment")
+#' voters <- list(
+#'   module_fn(sig, function(text) "positive"),
+#'   module_fn(sig, function(text) "negative"),
+#'   module_fn(sig, function(text) "positive")
 #' )
 #'
-#' # With custom reduce function
-#' custom_reduce <- function(outputs, weights = NULL) {
-#'   # Take the longest answer
-#'   lengths <- vapply(outputs, function(o) nchar(o$answer %||% ""), integer(1))
-#'   outputs[[which.max(lengths)]]
+#' majority <- ensemble(voters)
+#' run(majority, text = "Not bad at all")
+#'
+#' # Weight the second voter by its validation accuracy
+#' weighted <- ensemble(
+#'   voters,
+#'   reduce_fn = reduce_weighted_vote(),
+#'   weights = c(0.4, 0.9, 0.4)
+#' )
+#' run(weighted, text = "Not bad at all")
+#'
+#' # A custom reducer: answer "unsure" unless every voter agrees
+#' unanimous <- function(outputs, weights = NULL) {
+#'   labels <- vapply(outputs, function(o) o$sentiment, character(1))
+#'   if (length(unique(labels)) == 1) outputs[[1]] else list(sentiment = "unsure")
 #' }
-#' ens <- ensemble(list(mod1, mod2, mod3), reduce_fn = custom_reduce)
+#' run(ensemble(voters, reduce_fn = unanimous), text = "Not bad at all")
 ensemble <- function(
   modules,
   reduce_fn = NULL,
@@ -474,29 +581,33 @@ get_signature_input_names <- function(sig) {
 # Reducer Functions
 # ============================================================================
 
-#' Majority Vote Reducer
+#' Pick the most common ensemble output
 #'
 #' @description
-#' Creates a reduce function that returns the most common output among
-#' the ensemble members. For structured outputs (lists), compares by
-#' the first field or a specified field.
+#' `reduce_majority()` makes a reducer for [ensemble()] that returns the
+#' output whose value occurs most often. It is the default reducer.
 #'
-#' @param field Optional field name to use for voting when outputs are lists.
-#'   If NULL, uses the first field of the output.
-#' @param tie_breaker How to handle ties: "first" (default) returns the first
-#'   occurrence, "random" picks randomly among tied values.
+#' @param field The output field to vote on. With `NULL`, the first field.
+#' @param tie_breaker `"first"` picks, among tied values, the one that
+#'   occurs first; `"random"` picks one at random.
 #'
-#' @return A reduce function for use with `ensemble()`
+#' @details
+#' Values are compared as strings. If the ensemble has `weights`, each vote
+#' counts with its module's weight. The reducer returns the whole output of
+#' the first module that gave the winning value.
+#'
+#' @return A function `function(outputs, weights = NULL)` for the `reduce_fn`
+#'   argument of [ensemble()].
 #'
 #' @export
+#' @family composition
 #' @examples
-#' \dontrun{
-#' # Basic majority voting
-#' ens <- ensemble(modules, reduce_fn = reduce_majority())
-#'
-#' # Vote based on specific field
-#' ens <- ensemble(modules, reduce_fn = reduce_majority(field = "sentiment"))
-#' }
+#' vote <- reduce_majority(field = "sentiment")
+#' vote(list(
+#'   list(sentiment = "positive", confidence = 0.6),
+#'   list(sentiment = "negative", confidence = 0.9),
+#'   list(sentiment = "positive", confidence = 0.8)
+#' ))
 reduce_majority <- function(field = NULL, tie_breaker = "first") {
   tie_breaker <- match.arg(tie_breaker, c("first", "random"))
 
@@ -558,27 +669,35 @@ reduce_majority <- function(field = NULL, tie_breaker = "first") {
   }
 }
 
-#' Weighted Vote Reducer
+#' Pick the ensemble output with the most total weight
 #'
 #' @description
-#' Creates a reduce function that uses weighted voting, where each module's
-#' vote is weighted by its weight (typically validation score).
+#' `reduce_weighted_vote()` makes a reducer for [ensemble()] that adds up the
+#' `weights` of the modules behind each value and returns the output with the
+#' largest total. Without weights, every vote counts 1.
 #'
-#' @param field Optional field name to use for voting when outputs are lists.
-#'   If NULL, uses the first field of the output.
+#' @inheritParams reduce_majority
 #'
-#' @return A reduce function for use with `ensemble()`
+#' @details
+#' Values are compared as strings. Ties go to the value that sorts first
+#' alphabetically. The reducer returns the whole output of the first module
+#' that gave the winning value.
+#'
+#' @inherit reduce_majority return
 #'
 #' @export
+#' @family composition
 #' @examples
-#' \dontrun{
-#' # Weighted voting with validation scores
-#' ens <- ensemble(
-#'   modules,
-#'   reduce_fn = reduce_weighted_vote(),
-#'   weights = c(0.9, 0.85, 0.75)
+#' vote <- reduce_weighted_vote(field = "sentiment")
+#' outputs <- list(
+#'   list(sentiment = "positive"),
+#'   list(sentiment = "negative"),
+#'   list(sentiment = "positive")
 #' )
-#' }
+#' vote(outputs)
+#'
+#' # The second module is trusted more than the other two together
+#' vote(outputs, weights = c(0.4, 0.9, 0.4))
 reduce_weighted_vote <- function(field = NULL) {
   function(outputs, weights = NULL) {
     if (length(outputs) == 0) {
@@ -620,19 +739,23 @@ reduce_weighted_vote <- function(field = NULL) {
   }
 }
 
-#' First Successful Output Reducer
+#' Pick the first successful ensemble output
 #'
 #' @description
-#' Creates a reduce function that simply returns the first successful output.
-#' Useful when you want to try multiple modules but just need one answer.
+#' `reduce_first()` makes a reducer for [ensemble()] that returns the output
+#' of the first module that succeeded, in the order of `modules`. Use it for
+#' fallbacks: a module fails, and the next one answers.
 #'
-#' @return A reduce function for use with `ensemble()`
+#' @details
+#' [ensemble()] still runs every module, so this does not save calls.
+#'
+#' @inherit reduce_majority return
 #'
 #' @export
+#' @family composition
 #' @examples
-#' \dontrun{
-#' ens <- ensemble(modules, reduce_fn = reduce_first())
-#' }
+#' first <- reduce_first()
+#' first(list(list(answer = "from module 1"), list(answer = "from module 2")))
 reduce_first <- function() {
   function(outputs, weights = NULL) {
     if (length(outputs) == 0) {
@@ -642,30 +765,40 @@ reduce_first <- function() {
   }
 }
 
-#' Best by Metric Reducer
+#' Pick the ensemble output that scores best against a known answer
 #'
 #' @description
-#' Creates a reduce function that scores each output using a metric function
-#' and returns the best-scoring output. Requires expected value to be set
-#' via the `set_expected` attribute before calling.
+#' `reduce_best_by_metric()` makes a reducer for [ensemble()] that scores
+#' every output with `metric` against an expected value and returns the best
+#' one. The expected value is not part of the inputs: set it with
+#' `attr(reducer, "set_expected")(value)` before each [run()], which makes
+#' this reducer useful when you know the answer, for example while studying
+#' how ensemble members differ on labelled data.
 #'
-#' @param metric A metric function created with `metric_*()` functions
-#' @param maximize If TRUE (default), return highest-scoring output.
-#'   If FALSE, return lowest-scoring output.
+#' @param metric A metric called as `metric(output, expected)`, such as
+#'   `metric_f1(field = "answer")`. With a built-in metric and a `field`, set
+#'   the expected value as a list containing that field.
+#' @param maximize If `TRUE` (the default), return the highest-scoring output;
+#'   if `FALSE`, the lowest.
 #'
-#' @return A reduce function for use with `ensemble()`
+#' @details
+#' Calling the reducer on more than one output before an expected value is
+#' set is an error. A metric error gives a warning and leaves that output
+#' out; if no output can be scored, the reducer errors.
+#'
+#' @return A function `function(outputs, weights = NULL)` for the `reduce_fn`
+#'   argument of [ensemble()], with a `"set_expected"` attribute that stores
+#'   the expected value for later calls.
 #'
 #' @export
+#' @family composition
 #' @examples
-#' \dontrun{
-#' # Score each output and return best
-#' ens <- ensemble(
-#'   modules,
-#'   reduce_fn = reduce_best_by_metric(
-#'     metric = metric_exact_match(field = "answer")
-#'   )
-#' )
-#' }
+#' pick <- reduce_best_by_metric(metric_f1(field = "answer"))
+#' attr(pick, "set_expected")(list(answer = "the capital is Paris"))
+#' pick(list(
+#'   list(answer = "Paris"),
+#'   list(answer = "the capital of France is Paris")
+#' ))
 reduce_best_by_metric <- function(
   metric,
   maximize = TRUE

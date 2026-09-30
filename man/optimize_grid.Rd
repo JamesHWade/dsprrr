@@ -3,7 +3,7 @@
 \name{optimize_grid}
 \alias{optimize_grid}
 \alias{optimize_grid.Module}
-\title{Grid Search Optimisation}
+\title{Grid search over module settings}
 \usage{
 optimize_grid(module, ...)
 
@@ -20,39 +20,115 @@ optimize_grid(module, ...)
 )
 }
 \arguments{
-\item{module}{A DSPrrr module (created via \code{\link[=module]{module()}}).}
+\item{module}{A module, such as one created with \code{\link[=module]{module()}}.}
 
-\item{...}{Additional arguments forwarded to \code{\link[=evaluate]{evaluate()}}.}
+\item{...}{Further arguments passed to \code{\link[=evaluate]{evaluate()}}, such as
+\code{.concurrency = concurrency_control(max_active = 4L)}.}
 
-\item{data}{Development data containing columns required by the module's
-signature plus any fields consumed by the metric.}
+\item{data}{A data frame with the signature's input columns and the columns
+the metric compares.}
 
-\item{metric}{Metric function applied per example. Defaults to
+\item{metric}{A metric function called as \code{metric(prediction, expected)}.
+The default, \code{\link[=metric_exact_match]{metric_exact_match()}} without a \code{field}, compares the one
+output field that also names a column of \code{data}; pass \code{field} to choose
+the column explicitly. Use \code{\link[=as_dsprrr_metric]{as_dsprrr_metric()}} to adapt a vitals scorer.}
 
-\code{\link[=metric_exact_match]{metric_exact_match()}}. Use \code{\link[=as_dsprrr_metric]{as_dsprrr_metric()}} to adapt yardstick/vitals
-metrics.}
+\item{grid}{A data frame with one row per candidate, or a named list that is
+expanded like \code{parameters}.}
 
-\item{grid}{Optional data frame/tibble of candidate configurations.}
+\item{parameters}{Used when \code{grid} is \code{NULL}: a named list of values to
+cross, or a tidymodels parameter set such as the one returned by
+\code{\link[=module_parameters]{module_parameters()}}.}
 
-\item{parameters}{Optional named list or tidymodels parameter set used to
-generate a grid when \code{grid} is not supplied.}
+\item{objective}{\code{"maximize"} (the default) keeps the highest mean score;
+\code{"minimize"} keeps the lowest.}
 
-\item{objective}{Optimisation direction. \code{"maximize"} (default) selects the
-highest metric value; \code{"minimize"} selects the lowest.}
+\item{.llm}{Optional ellmer Chat used for every evaluation.}
 
-\item{.llm}{Optional ellmer chat object reused during optimisation.}
-
-\item{control}{Named list of control options. Recognised entries:
-\code{progress} (logical), \code{parallel} (logical forwarded to \code{\link[=evaluate]{evaluate()}}),
-\code{evaluation_progress} (logical), \code{grid_type} (\code{"regular"} or \code{"random"}),
-\code{grid_levels} (integer, for regular grids), and \code{grid_size} (integer, for
-random grids).}
+\item{control}{A named list of options: \code{progress} (a progress bar over
+candidates; default \code{interactive()}), \code{evaluation_progress} (a bar inside
+each evaluation; default \code{FALSE}), and, for tidymodels parameter sets,
+\code{grid_type} (\code{"regular"}, the default, or \code{"random"}), \code{grid_levels}
+(levels per parameter in a regular grid; default \code{3L}) and \code{grid_size}
+(candidates in a random grid; default \code{max(10L, grid_levels)}). A
+\code{parallel} entry is accepted but has no effect; pass \code{.concurrency}
+through \code{...} to evaluate rows concurrently.}
 }
 \value{
-The optimised module (modified in place, invisibly).
+The module, modified in place: the best row's settings are applied
+and the trials are recorded. When no candidate produces a score, the
+settings are left unchanged and a warning is raised.
 }
 \description{
-Optimise a DSPrrr module over a grid of candidate configurations. Accepts
-either an explicit \code{grid} data frame or a set of parameter definitions that
-can be expanded into a grid (named lists or tidymodels parameter sets).
+\code{optimize_grid()} evaluates a module once for every row of a grid of
+settings, such as different \code{reasoning_effort} values or instructions, and
+applies the best-scoring row to the module. It modifies the module in
+place, unlike \code{\link[=compile]{compile()}}, which returns a new program.
 }
+\details{
+Give the candidates as \code{grid}, a data frame with one row per candidate, or
+as \code{parameters}, which is expanded into a grid: a named list is crossed with
+\code{\link[=expand.grid]{expand.grid()}}, and a tidymodels parameter set (see \code{\link[=module_parameters]{module_parameters()}})
+is expanded with \code{dials::grid_regular()} or \code{dials::grid_random()},
+depending on \code{control}. One of the two is required.
+
+These grid columns change what the module sends:
+\itemize{
+\item Runtime settings, sent to the chat: \code{temperature}, \code{top_p},
+\code{reasoning_effort}, \code{frequency_penalty}, \code{presence_penalty}, \code{max_tokens},
+\code{max_output_tokens} and \code{service_tier}. Reasoning models restrict
+sampling settings: gpt-6-luna, for example, accepts \code{temperature} and
+\code{top_p} only when \code{reasoning_effort} is \code{"none"}.
+\item \code{instructions} replaces the signature's instructions, and
+\code{instructions_suffix} is appended to them.
+\item \code{template} replaces the prompt template.
+}
+
+Other columns are stored in \code{module$config} but do not change the prompt.
+
+Each candidate is evaluated on a copy of the module with \code{\link[=evaluate]{evaluate()}}, so a
+grid of \code{n} rows makes up to \code{n * nrow(data)} model calls. The trials are
+stored on the module; read them with \code{\link[=module_trials]{module_trials()}}, \code{\link[=top_trials]{top_trials()}} or
+\code{\link[=optimization_result]{optimization_result()}}.
+}
+\examples{
+\dontrun{
+classifier <- module(signature("text -> sentiment"))
+devset <- data.frame(
+  text = c("I love it!", "Terrible experience", "It's okay"),
+  sentiment = c("positive", "negative", "neutral")
+)
+
+optimize_grid(
+  classifier,
+  data = devset,
+  metric = metric_exact_match(field = "sentiment"),
+  grid = data.frame(reasoning_effort = c("none", "low", "medium")),
+  .llm = ellmer::chat_openai(model = "gpt-6-luna")
+)
+
+# `classifier` now carries the best setting and the trials
+classifier$config$reasoning_effort
+module_trials(classifier)
+
+# Named lists are crossed into a grid
+optimize_grid(
+  classifier,
+  data = devset,
+  metric = metric_exact_match(field = "sentiment"),
+  parameters = list(
+    reasoning_effort = c("none", "low"),
+    instructions_suffix = c("Answer with one word.", "Be decisive.")
+  ),
+  .llm = ellmer::chat_openai(model = "gpt-6-luna")
+)
+}
+}
+\seealso{
+Other grid search:
+\code{\link[=GridSearchTeleprompter]{GridSearchTeleprompter()}},
+\code{\link[=module_metrics]{module_metrics()}},
+\code{\link[=module_parameters]{module_parameters()}},
+\code{\link[=module_trials]{module_trials()}}
+}
+\concept{grid search}

@@ -1,7 +1,7 @@
 # agentic harnesses require an OS-sandboxed runner by default
 
     Code
-      compile(tp, harness_program(), harness_data(), .llm = make_harness_task_llm(),
+      compile(harness_program(), tp, harness_data(), .llm = make_harness_task_llm(),
       .agent_llm = agent)
     Condition
       Error in `harness_validate_runner()`:
@@ -12,7 +12,7 @@
 ---
 
     Code
-      compile(tp, harness_program(), harness_data(), .llm = make_harness_task_llm(),
+      compile(harness_program(), tp, harness_data(), .llm = make_harness_task_llm(),
       .agent_llm = agent, runner = r_code_runner())
     Condition
       Error in `harness_validate_runner()`:

@@ -2,7 +2,7 @@
 % Please edit documentation in R/optimizer-logging.R
 \name{load_trial_log}
 \alias{load_trial_log}
-\title{Load Trial Log from Directory}
+\title{Load a saved trial log}
 \usage{
 load_trial_log(log_dir)
 }
@@ -10,14 +10,30 @@ load_trial_log(log_dir)
 \item{log_dir}{Path to the log directory.}
 }
 \value{
-A TrialLog object.
+A \link{TrialLog}.
 }
 \description{
-Load a TrialLog from a directory that was previously saved.
+\code{load_trial_log()} reopens a \link{TrialLog} from a directory written by an
+optimizer's \code{log_dir} or by \code{TrialLog$new(log_dir = )}.
 }
 \examples{
-\dontrun{
-log <- load_trial_log("logs/my_optimizer/")
-log$as_tibble()
+dir <- file.path(tempdir(), "load-trial-log-example")
+log <- TrialLog$new("my-search", log_dir = dir)
+log$add_trial(create_trial("my-search", params = list(k = 2L)))
+
+restored <- load_trial_log(dir)
+restored$as_tibble()[, c("trial_id", "status")]
 }
+\seealso{
+Other optimizer building blocks:
+\code{\link{TrialLog}},
+\code{\link[=complete_trial]{complete_trial()}},
+\code{\link[=create_trial]{create_trial()}},
+\code{\link[=eval_program]{eval_program()}},
+\code{\link[=optimizer_control]{optimizer_control()}},
+\code{\link[=read_trials_jsonl]{read_trials_jsonl()}},
+\code{\link[=sample_dataset]{sample_dataset()}},
+\code{\link[=split_dataset]{split_dataset()}},
+\code{\link[=write_trials_jsonl]{write_trials_jsonl()}}
 }
+\concept{optimizer building blocks}

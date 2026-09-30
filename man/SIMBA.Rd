@@ -2,7 +2,7 @@
 % Please edit documentation in R/teleprompter-simba.R
 \name{SIMBA}
 \alias{SIMBA}
-\title{SIMBA Teleprompter}
+\title{SIMBA: stochastic introspective mini-batch ascent}
 \usage{
 SIMBA(
   metric = NULL,
@@ -18,69 +18,118 @@ SIMBA(
 )
 }
 \arguments{
-\item{metric}{A metric function for evaluating predictions (required).}
+\item{metric}{A metric function (required), such as
+\code{metric_exact_match(field = "answer")}. Its \code{field} also names the column
+that supplies the demonstrations' outputs.}
 
-\item{metric_threshold}{Minimum score required to be considered successful.
-If NULL, uses the metric's default threshold.}
+\item{metric_threshold}{Accepted for consistency with the other optimizers
+(see \code{\link[=Teleprompter]{Teleprompter()}}). SIMBA prints it but does not use it.}
 
-\item{max_errors}{Maximum number of errors allowed during optimization.
-Default is 5.}
+\item{max_errors}{Integer; stop after this many consecutive failed
+evaluations when \code{\link[=compile]{compile()}} gets no \code{control} (default \code{5L}).}
 
-\item{bsize}{Mini-batch size for hard example mining. Default is 32.}
+\item{bsize}{Integer mini-batch size (default \code{32L}, capped at the number
+of training rows).}
 
-\item{num_candidates}{Number of candidate runs per example to measure
-variability. Default is 6.}
+\item{num_candidates}{Integer number of runs per mini-batch (default \code{6L}).}
 
-\item{max_steps}{Maximum number of optimization steps. Default is 8.}
+\item{max_steps}{Integer maximum number of steps (default \code{8L}).}
 
-\item{max_demos}{Maximum number of demonstrations to keep. Default is 4.}
+\item{max_demos}{Integer maximum number of demonstrations kept, and of hard
+rows taken per step (default \code{4L}).}
 
-\item{prompt_model}{Optional LLM for rule generation (reflection).}
+\item{prompt_model}{Optional ellmer Chat that writes the rules. SIMBA calls
+its \verb{$chat()} method directly, so its conversation history grows during
+the run. \code{NULL} (the default) uses the fixed rule described in Details.}
 
-\item{seed}{Random seed for reproducibility. Default is 0.}
+\item{seed}{Seed for the mini-batch samples (default \code{0L}), or \code{NULL}.}
 
-\item{log_dir}{Directory for trial logging. Default is NULL.}
+\item{log_dir}{Directory for a \link{TrialLog} with one trial per kept step, or
+\code{NULL} (the default).}
+}
+\value{
+A \code{SIMBA} object to pass to \code{\link[=compile]{compile()}}.
 }
 \description{
-SIMBA (self-improving via hard example mining) iteratively samples
-mini-batches, identifies high-variability examples, and generates
-improvement rules or demonstrations to improve performance.
-
-The optimizer:
-\enumerate{
-\item Evaluates baseline performance on the training set (or validation set).
-\item Repeats for up to \code{max_steps}:
-\itemize{
-\item Samples a mini-batch
-\item Runs multiple candidates to measure variability
-\item Identifies hard examples
-\item Generates a rule and/or adds demos
-\item Evaluates improvement and keeps changes if better
-}
-}
+\code{SIMBA()} finds the training rows the program struggles with, turns them
+into an instruction rule and demonstrations, and keeps the change when the
+program's score improves. Each step works on a random mini-batch, which is
+where the name (stochastic introspective mini-batch ascent) comes from.
 }
 \details{
+The program is first scored on \code{valset} (or \code{trainset}). Each of up to
+\code{max_steps} steps then:
+\enumerate{
+\item Samples \code{bsize} rows of \code{trainset} and runs the current program on them
+\code{num_candidates} times.
+\item Rates each row's difficulty as one minus its mean score plus the share
+of runs that disagree with the most common output, and takes the
+hardest rows (at most \code{max_demos}).
+\item Asks \code{prompt_model} for a rule based on those rows and appends it to the
+instructions. Without \code{prompt_model}, the rule is the first hard row
+written out, as in \verb{SIMBA rule: question: ..., expected: ...}.
+\item Adds the hard rows as demonstrations, keeping the latest \code{max_demos}.
+\item Scores the changed program and keeps it only if the score improves.
+}
+
+The search stops at the first step that does not improve the score. With
+dsprrr's response cache on (the default), the repeated runs in step 1
+return the same cached output, so difficulty reduces to one minus the mean
+score; call \code{configure_cache(enable = FALSE)} to measure disagreement.
 \subsection{Differences from DSPy's SIMBA}{
 
-This is an adapted implementation: it mines hard (high-variability)
-examples and asks an LLM to generate improvement rules, but it does not
-reproduce every detail of DSPy's stochastic introspective mini-batch
-ascent (e.g., trajectory-level introspection across candidate programs).
-Expect qualitatively similar behavior, not identical results.
+This is an adapted implementation. It mines hard examples and asks a model
+for improvement rules, but it does not reproduce every detail of DSPy's
+SIMBA, such as introspection over trajectories of several candidate
+programs. Expect similar behavior, not identical results.
 }
 }
 \examples{
-\dontrun{
 tp <- SIMBA(
   metric = metric_exact_match(field = "answer"),
-  bsize = 32L,
-  num_candidates = 6L,
-  max_steps = 8L,
-  max_demos = 4L,
-  prompt_model = ellmer::chat_openai(),
-  seed = 0L
+  bsize = 8L,
+  num_candidates = 4L,
+  max_steps = 4L,
+  max_demos = 2L
 )
+tp
 
-compiled <- compile(tp, qa_module, trainset, .llm = llm)
+\dontrun{
+qa <- module(signature("question -> answer"))
+trainset <- data.frame(
+  question = c("Capital of France?", "Capital of Peru?", "Capital of Chad?"),
+  answer = c("Paris", "Lima", "N'Djamena")
+)
+tp <- SIMBA(
+  metric = metric_exact_match(field = "answer"),
+  bsize = 8L,
+  prompt_model = ellmer::chat_openai(model = "gpt-6-luna")
+)
+compiled <- compile(
+  qa,
+  tp,
+  trainset,
+  .llm = ellmer::chat_openai(model = "gpt-6-luna")
+)
+optimization_result(compiled)$extensions$simba$rules
 }
 }
+\seealso{
+Other teleprompters:
+\code{\link[=AutoResearch]{AutoResearch()}},
+\code{\link[=BetterTogether]{BetterTogether()}},
+\code{\link[=BootstrapFewShot]{BootstrapFewShot()}},
+\code{\link[=BootstrapFewShotWithRandomSearch]{BootstrapFewShotWithRandomSearch()}},
+\code{\link[=COPRO]{COPRO()}},
+\code{\link[=GEPA]{GEPA()}},
+\code{\link[=GridSearchTeleprompter]{GridSearchTeleprompter()}},
+\code{\link[=KNNFewShot]{KNNFewShot()}},
+\code{\link[=LabeledFewShot]{LabeledFewShot()}},
+\code{\link[=MIPROv2]{MIPROv2()}},
+\code{\link[=MetaHarness]{MetaHarness()}},
+\code{\link[=Omni]{Omni()}},
+\code{\link[=ReAnchor]{ReAnchor()}},
+\code{\link[=Teleprompter]{Teleprompter()}},
+\code{\link[=compile]{compile()}}
+}
+\concept{teleprompters}

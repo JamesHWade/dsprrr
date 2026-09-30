@@ -2,32 +2,57 @@
 % Please edit documentation in R/async.R
 \name{stream_async}
 \alias{stream_async}
-\title{Stream module output asynchronously}
+\title{Stream a module's text output asynchronously}
 \usage{
 stream_async(module, ..., .llm = NULL)
 }
 \arguments{
-\item{module}{A dsprrr Module object}
+\item{module}{A prediction module from \code{\link[=module]{module()}} or \code{\link[=chain_of_thought]{chain_of_thought()}}.
+Other modules are rejected before any request; use \code{\link[=run]{run()}} for them.}
 
-\item{...}{Named inputs matching the module's signature}
+\item{...}{Inputs named after the signature's input fields.}
 
-\item{.llm}{Optional ellmer Chat object}
+\item{.llm}{An ellmer Chat; see \code{\link[=run]{run()}} for how it is chosen when
+omitted.}
 }
 \value{
-A promise that resolves to an async generator
+An async generator that yields the response text in chunks.
 }
 \description{
-Streams text output from a module asynchronously.
-Returns a promise that resolves to an async generator.
-Only ordinary \code{PredictModule} objects are supported. Modules and composites
-with specialized \code{forward()} semantics are rejected before provider work;
-use \code{\link[=run]{run()}} for their complete workflows.
+\code{stream_async()} sends a module's prompt to the model and returns ellmer's
+async generator of text chunks, for use inside an asynchronous function
+(for example with the coro package). The response is plain streamed text:
+the signature's output types are not applied. For per-field callbacks and
+structured results, use \code{\link[=run_stream]{run_stream()}}.
+}
+\details{
+The generator comes from ellmer's \code{Chat$stream_async()}. The call does not
+use the response cache and records no trace.
 }
 \examples{
 \dontrun{
-stream_async(mod, question = "Write a story") |>
-  promises::then(function(gen) {
-    # Process async generator
-  })
+storyteller <- module(signature("topic -> story"))
+chunks <- stream_async(
+  storyteller,
+  topic = "a lighthouse keeper",
+  .llm = ellmer::chat_openai(model = "gpt-6-luna")
+)
+
+print_chunks <- coro::async(function(generator) {
+  for (chunk in coro::await_each(generator)) cat(chunk)
+})
+print_chunks(chunks)
 }
 }
+\seealso{
+Other execution:
+\code{\link[=concurrency_control]{concurrency_control()}},
+\code{\link[=evaluate]{evaluate()}},
+\code{\link[=predict.Module]{predict.Module()}},
+\code{\link[=run]{run()}},
+\code{\link[=run_async]{run_async()}},
+\code{\link[=run_dataset]{run_dataset()}},
+\code{\link[=run_stream]{run_stream()}},
+\code{\link[=stream_listener]{stream_listener()}}
+}
+\concept{execution}

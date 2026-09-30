@@ -1,9 +1,9 @@
 test_that("evaluate() works with epochs = 1 (default behavior)", {
   sig <- signature("question -> answer")
-  mod <- module(sig, type = "predict")
+  mod <- module(sig)
 
   # Mock LLM
-  mock_llm <- list(
+  mock_llm <- new_test_chat(
     chat_structured = function(...) "test answer"
   )
 
@@ -53,11 +53,11 @@ test_that("epoch summaries omit uncertainty with fewer than two epochs", {
 
 test_that("evaluate() runs multiple epochs when epochs > 1", {
   sig <- signature("question -> answer")
-  mod <- module(sig, type = "predict")
+  mod <- module(sig)
 
   # Mock LLM with some variability
   call_count <- 0
-  mock_llm <- list(
+  mock_llm <- new_test_chat(
     chat_structured = function(...) {
       call_count <<- call_count + 1
       if (call_count %% 2 == 0) "4" else "wrong"
@@ -102,12 +102,12 @@ test_that("evaluate() runs multiple epochs when epochs > 1", {
 
 test_that("evaluate() computes correct statistics across epochs", {
   sig <- signature("question -> answer")
-  mod <- module(sig, type = "predict")
+  mod <- module(sig)
 
   # Mock LLM with deterministic output per call
   answers <- c("4", "4", "4") # All correct for first question across 3 epochs
   call_idx <- 0
-  mock_llm <- list(
+  mock_llm <- new_test_chat(
     chat_structured = function(...) {
       call_idx <<- call_idx + 1
       answers[((call_idx - 1) %% length(answers)) + 1]
@@ -152,8 +152,8 @@ test_that("evaluate() computes correct statistics across epochs", {
 })
 
 test_that("eval_program() preserves failure-adjusted epoch statistics", {
-  mod <- module(signature("question -> answer"), type = "predict")
-  mock_llm <- list(chat_structured = function(...) "4")
+  mod <- module(signature("question -> answer"))
+  mock_llm <- new_test_chat(chat_structured = function(...) "4")
   dataset <- tibble::tibble(question = "What is 2+2?", answer = "4")
   metric_calls <- 0L
   metric <- function(prediction, expected_row) {
@@ -200,9 +200,9 @@ test_that("eval_program() preserves failure-adjusted epoch statistics", {
 
 test_that("epochs parameter validates input", {
   sig <- signature("question -> answer")
-  mod <- module(sig, type = "predict")
+  mod <- module(sig)
 
-  mock_llm <- list(chat_structured = function(...) "4")
+  mock_llm <- new_test_chat(chat_structured = function(...) "4")
   dataset <- tibble::tibble(question = "Q?", answer = "A")
   # Simple metric that compares prediction to expected row$answer
   metric <- function(prediction, expected_row) {
@@ -235,7 +235,7 @@ test_that("epochs parameter validates input", {
 
 test_that("epoch results use all no-failure observations consistently", {
   sig <- signature("question -> answer")
-  mod <- module(sig, type = "predict")
+  mod <- module(sig)
 
   # Mock LLM with varying correctness
   # Epoch 1: score 0.5, Epoch 2: score 1.0, Epoch 3: score 0.0
@@ -245,7 +245,7 @@ test_that("epoch results use all no-failure observations consistently", {
   # would be copied from the same baseline for every row.
   response_path <- withr::local_tempfile()
   writeLines(responses, response_path)
-  mock_llm <- list(
+  mock_llm <- new_test_chat(
     chat_structured = function(...) {
       remaining <- readLines(response_path)
       if (length(remaining) == 0) {
@@ -311,9 +311,9 @@ test_that("epoch results use all no-failure observations consistently", {
 
 test_that("print methods show epoch information", {
   sig <- signature("question -> answer")
-  mod <- module(sig, type = "predict")
+  mod <- module(sig)
 
-  mock_llm <- list(chat_structured = function(...) "4")
+  mock_llm <- new_test_chat(chat_structured = function(...) "4")
   dataset <- tibble::tibble(question = "Q?", answer = "4")
   # Simple metric that compares prediction to expected row$answer
   metric <- function(prediction, expected_row) {
@@ -340,8 +340,8 @@ test_that("print methods show epoch information", {
 
 test_that("evaluate() handles empty dataset with epochs > 1", {
   sig <- signature("question -> answer")
-  mod <- module(sig, type = "predict")
-  mock_llm <- list(chat_structured = function(...) "4")
+  mod <- module(sig)
+  mock_llm <- new_test_chat(chat_structured = function(...) "4")
 
   empty_data <- tibble::tibble(question = character(0), answer = character(0))
   # Simple metric that compares prediction to expected row$answer
@@ -374,10 +374,10 @@ test_that("evaluate() handles empty dataset with epochs > 1", {
 
 test_that("evaluate() reports epoch in error messages", {
   sig <- signature("question -> answer")
-  mod <- module(sig, type = "predict")
+  mod <- module(sig)
 
   # Mock LLM that works fine
-  mock_llm <- list(chat_structured = function(...) "wrong_answer")
+  mock_llm <- new_test_chat(chat_structured = function(...) "wrong_answer")
 
   dataset <- tibble::tibble(question = "Q1", answer = "4")
   # Metric that always fails with error
@@ -404,8 +404,8 @@ test_that("evaluate() reports epoch in error messages", {
 
 test_that("epochs parameter coerces non-integer", {
   sig <- signature("question -> answer")
-  mod <- module(sig, type = "predict")
-  mock_llm <- list(chat_structured = function(...) "4")
+  mod <- module(sig)
+  mock_llm <- new_test_chat(chat_structured = function(...) "4")
   dataset <- tibble::tibble(question = "Q?", answer = "4")
   # Simple metric that compares prediction to expected row$answer
   metric <- function(prediction, expected_row) {
@@ -430,8 +430,8 @@ test_that("epochs parameter coerces non-integer", {
 
 test_that("eval_program() validates epochs parameter", {
   sig <- signature("question -> answer")
-  mod <- module(sig, type = "predict")
-  mock_llm <- list(chat_structured = function(...) "4")
+  mod <- module(sig)
+  mock_llm <- new_test_chat(chat_structured = function(...) "4")
   dataset <- tibble::tibble(question = "Q?", answer = "4")
   # Simple metric that compares prediction to expected row$answer
   metric <- function(prediction, expected_row) {
@@ -467,9 +467,9 @@ test_that("eval_program() validates epochs parameter", {
 
 test_that("evaluate() counts intermittent metric failures as zero", {
   sig <- signature("question -> answer")
-  mod <- module(sig, type = "predict")
+  mod <- module(sig)
 
-  mock_llm <- list(chat_structured = function(...) "4")
+  mock_llm <- new_test_chat(chat_structured = function(...) "4")
 
   dataset <- tibble::tibble(
     question = c("Q1", "Q2", "Q3"),
@@ -532,8 +532,8 @@ test_that("evaluate() counts intermittent metric failures as zero", {
 })
 
 test_that("evaluate() includes a wholly failed epoch in uncertainty", {
-  mod <- module(signature("question -> answer"), type = "predict")
-  mock_llm <- list(chat_structured = function(...) "4")
+  mod <- module(signature("question -> answer"))
+  mock_llm <- new_test_chat(chat_structured = function(...) "4")
   dataset <- tibble::tibble(
     question = c("Q1", "Q2"),
     answer = c("4", "4")

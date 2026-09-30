@@ -1,68 +1,71 @@
-#' KNNFewShot Teleprompter
+#' KNN few-shot: choose demonstrations by similarity at run time
 #'
 #' @description
-#' A teleprompter that uses k-nearest neighbor retrieval to dynamically select
-#' demonstrations at runtime based on similarity to the input query. Unlike
-#' [LabeledFewShot] which selects static demos at compile time, KNNFewShot
-#' selects different demos for each query based on embedding similarity.
+#' `KNNFewShot()` gives every input its own demonstrations: the `k` training
+#' rows whose embeddings are most similar to it. Compiling embeds the training
+#' set once, with no model calls; each run then embeds the input and picks its
+#' nearest rows. [LabeledFewShot()], by contrast, attaches one fixed set.
 #'
 #' @details
-#' KNNFewShot works by:
-#' 1. Pre-computing embeddings for all training examples at compile time
-#' 2. At runtime, embedding each input query
-#' 3. Finding the k most similar training examples using cosine similarity
-#' 4. Using those examples as demonstrations for the current query
+#' `vectorizer` turns a character vector into a numeric matrix with one row
+#' per string. For real embeddings, wrap a provider, for example
+#' `function(x) ragnar::embed_openai(x, model = "text-embedding-3-small")`.
+#' Similarity is cosine similarity.
 #'
-#' This approach is particularly effective when:
-#' - The training set is large and diverse
-#' - Different types of queries benefit from different demonstrations
-#' - Semantic similarity is a good proxy for task relevance
+#' [compile()] returns a wrapper module. Each run records the chosen rows and
+#' their similarity scores in `compiled$state$demo_selections`. Demonstration
+#' outputs come from the metric's `field` when there is one, and otherwise from
+#' an automatically detected label column, as in [LabeledFewShot()].
 #'
-#' @section Vectorizer Function:
-#' The `vectorizer` parameter should be a function that takes a character vector
-#' and returns a numeric matrix where each row is an embedding. Common options:
-#' - `ragnar::embed_openai()` for OpenAI embeddings
-#' - Custom embedding functions using other providers
+#' @param metric Optional. It is not used for scoring, but when it has a
+#'   `field`, that column supplies the demonstrations' outputs.
+#' @param metric_threshold,max_errors Accepted for consistency with the other
+#'   optimizers (see [Teleprompter()]); `KNNFewShot()` does not use them.
+#' @param k Integer number of neighbors used as demonstrations (default `3L`).
+#' @param vectorizer Required. A function that takes a character vector and
+#'   returns a numeric matrix of embeddings, one row per string.
+#' @param input_text Optional function that turns a one-row data frame of
+#'   inputs into the text to embed. The default pastes the signature's input
+#'   columns together, separated by spaces.
+#' @param cache_embeddings Currently has no effect: the training set is always
+#'   embedded once, at compile time.
+#' @param merge_demos If `TRUE`, keep the module's existing demonstrations and
+#'   add the selected ones after them. If `FALSE` (the default), the selected
+#'   rows replace them.
 #'
-#' For testing, you can provide a deterministic vectorizer that returns
-#' consistent embeddings for the same inputs.
-#'
-#' @param metric A metric function for evaluating predictions. If NULL,
-#'   uses exact_match() by default.
-#' @param metric_threshold Minimum score required to be considered successful.
-#'   If NULL, uses the metric's default threshold.
-#' @param max_errors Maximum number of errors allowed during optimization.
-#'   Default is 5.
-#' @param k Number of nearest neighbors to use as demonstrations. Default is 3.
-#' @param vectorizer A function that takes a character vector and returns a
-#'   numeric matrix of embeddings (one row per input). Required.
-#' @param input_text A function that converts a training example (data frame row)
-#'   to a character string for embedding. Default concatenates all input columns.
-#' @param cache_embeddings Whether to cache embeddings for the training set.
-#'   Default is TRUE.
-#' @param merge_demos If TRUE, merge KNN-selected demos with any existing demos
-#'   on the module. Default is FALSE (replace).
-#'
+#' @return A `KNNFewShot` object to pass to [compile()].
+#' @family teleprompters
 #' @examples
-#' \dontrun{
-#' # Create a simple vectorizer (in practice, use ragnar::embed_openai or similar)
-#' simple_vectorizer <- function(texts) {
-#'   # Return random embeddings for demonstration
-#'   matrix(runif(length(texts) * 10), nrow = length(texts))
+#' # A toy vectorizer that counts letters. Use real embeddings in practice.
+#' letter_counts <- function(texts) {
+#'   t(vapply(
+#'     tolower(texts),
+#'     function(x) tabulate(utf8ToInt(x) - 96L, nbins = 26L),
+#'     integer(26)
+#'   ))
 #' }
 #'
-#' # Create the teleprompter
-#' tp <- KNNFewShot(
-#'   k = 3L,
-#'   vectorizer = simple_vectorizer,
-#'   input_text = function(example) example$question
+#' tp <- KNNFewShot(k = 2L, vectorizer = letter_counts)
+#' tp
+#'
+#' qa <- module(signature("question -> answer"))
+#' trainset <- data.frame(
+#'   question = c(
+#'     "What is 2 + 2?", "Capital of France?",
+#'     "What is 10 / 5?", "Capital of Peru?"
+#'   ),
+#'   answer = c("4", "Paris", "2", "Lima")
 #' )
+#' # Compiling embeds the training rows; no model is called
+#' compiled <- compile(qa, tp, trainset)
 #'
-#' # Compile a module
-#' compiled <- compile(tp, my_module, trainset, .llm = llm)
-#'
-#' # Now queries will get dynamically selected demos
-#' run(compiled, question = "What is 2+2?", .llm = llm)
+#' \dontrun{
+#' run(
+#'   compiled,
+#'   question = "Capital of Chile?",
+#'   .llm = ellmer::chat_openai(model = "gpt-6-luna")
+#' )
+#' compiled$state$demo_selections
 #' }
 #'
 #' @export
@@ -203,12 +206,16 @@ compile_knn <- function(teleprompter, program, trainset, .llm = NULL, ...) {
     merge_demos = teleprompter@merge_demos
   )
 
-  # Mark as compiled
-  knn_module$state$compiled <- TRUE
-  knn_module$config$compiled <- TRUE
-  knn_module$config$teleprompter <- "KNNFewShot"
   knn_module$config$compilation_k <- teleprompter@k
   knn_module$config$n_train_examples <- nrow(trainset)
+  record_optimization_result(
+    knn_module,
+    optimizer = "KNNFewShot",
+    best_params = list(k = teleprompter@k),
+    lineage = list(n_train_examples = nrow(trainset)),
+    stop_reason = "completed",
+    extensions = list(merge_demos = teleprompter@merge_demos)
+  )
 
   knn_module
 }

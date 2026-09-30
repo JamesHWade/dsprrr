@@ -1,36 +1,35 @@
-#' Assertion Helper Functions
+#' Assertion helpers
 #'
-#' @description
-#' Convenience functions for creating common assertion patterns.
-#' These are shorthand for `assert_output()` with pre-built condition functions.
+#' Shorthand constructors for common [assert_output()] conditions.
 #'
 #' @name assertion-helpers
+#' @noRd
 NULL
 
-#' Assert Output Length
+#' Assert the length of an output
 #'
 #' @description
-#' Create an assertion that validates the character length of a field.
+#' `assert_length()` checks that the number of characters in an output field
+#' is within `min` and `max`. Like the other `assert_*()` helpers, it is
+#' shorthand for [assert_output()] (or [suggest_output()]) with a ready-made
+#' condition.
 #'
-#' @param field The output field to check. If NULL, checks the entire output.
-#' @param min Minimum length (inclusive). Default NULL (no minimum).
-#' @param max Maximum length (inclusive). Default NULL (no maximum).
-#' @param type "assert" for hard assertion (default), "suggest" for soft suggestion.
+#' @param field The output field to check. With `NULL`, the whole output is
+#'   checked, which suits outputs with a single field. A missing field fails
+#'   the check.
+#' @param min,max Inclusive bounds on the number of characters. Give at least
+#'   one.
+#' @param type `"assert"` (the default) for a hard assertion, which makes
+#'   [with_assertions()] retry when it fails, or `"suggest"` for a soft one,
+#'   which only gives a warning.
 #'
-#' @return An Assertion object
+#' @return An assertion for [assertion_set()] or [with_assertions()].
 #'
 #' @export
+#' @family assertions
 #' @examples
-#' \dontrun{
-#' # Max 100 characters
 #' assert_length("answer", max = 100)
-#'
-#' # Between 10 and 200 characters
-#' assert_length("summary", min = 10, max = 200)
-#'
-#' # Soft suggestion for length
-#' assert_length("answer", max = 50, type = "suggest")
-#' }
+#' assert_length("summary", min = 10, max = 200, type = "suggest")
 assert_length <- function(
   field = NULL,
   min = NULL,
@@ -76,27 +75,24 @@ assert_length <- function(
   }
 }
 
-#' Assert Output Contains Substring
+#' Assert that an output contains a string
 #'
 #' @description
-#' Create an assertion that validates the output contains a specific substring.
+#' `assert_contains()` checks that an output field contains `pattern`,
+#' matched as a fixed string, not a regular expression. Use
+#' [assert_matches()] for regular expressions.
 #'
-#' @param field The output field to check. If NULL, checks the entire output.
-#' @param pattern The substring that must be present.
-#' @param ignore_case Logical. If TRUE, comparison is case-insensitive. Default FALSE.
-#' @param type "assert" for hard assertion (default), "suggest" for soft suggestion.
+#' @inheritParams assert_length
+#' @param pattern The string that must appear.
+#' @param ignore_case If `TRUE`, ignore case when matching.
 #'
-#' @return An Assertion object
+#' @inherit assert_length return
 #'
 #' @export
+#' @family assertions
 #' @examples
-#' \dontrun{
-#' # Must contain "important"
-#' assert_contains("answer", "important")
-#'
-#' # Case-insensitive check
+#' assert_contains("answer", "Paris")
 #' assert_contains("summary", "conclusion", ignore_case = TRUE)
-#' }
 assert_contains <- function(
   field = NULL,
   pattern,
@@ -132,27 +128,22 @@ assert_contains <- function(
   }
 }
 
-#' Assert Output Does Not Contain Substring
+#' Assert that an output does not contain a string
 #'
 #' @description
-#' Create an assertion that validates the output does not contain a specific substring.
+#' `assert_not_contains()` checks that an output field does not contain
+#' `pattern`, matched as a fixed string. A missing field passes.
 #'
-#' @param field The output field to check. If NULL, checks the entire output.
-#' @param pattern The substring that must NOT be present.
-#' @param ignore_case Logical. If TRUE, comparison is case-insensitive. Default FALSE.
-#' @param type "assert" for hard assertion (default), "suggest" for soft suggestion.
+#' @inheritParams assert_contains
+#' @param pattern The string that must not appear.
 #'
-#' @return An Assertion object
+#' @inherit assert_length return
 #'
 #' @export
+#' @family assertions
 #' @examples
-#' \dontrun{
-#' # Must not contain profanity (simple example)
-#' assert_not_contains("answer", "badword")
-#'
-#' # Must not reveal internal details
-#' assert_not_contains("response", "internal_api_key")
-#' }
+#' assert_not_contains("answer", "As an AI")
+#' assert_not_contains("reply", "password", ignore_case = TRUE)
 assert_not_contains <- function(
   field = NULL,
   pattern,
@@ -188,31 +179,26 @@ assert_not_contains <- function(
   }
 }
 
-#' Assert Output Matches Pattern
+#' Assert that an output matches a regular expression
 #'
 #' @description
-#' Create an assertion that validates the output matches a regular expression.
+#' `assert_matches()` checks that an output field matches a Perl-compatible
+#' regular expression.
 #'
-#' @param field The output field to check. If NULL, checks the entire output.
-#' @param pattern The regular expression pattern to match.
-#' @param message Optional custom error message. If NULL, generates a default.
-#' @param ignore_case Logical. If TRUE, matching is case-insensitive. Default FALSE.
-#' @param type "assert" for hard assertion (default), "suggest" for soft suggestion.
+#' @inheritParams assert_length
+#' @param pattern A regular expression (Perl syntax).
+#' @param message The message shown when the check fails, which
+#'   [with_assertions()] also sends back to the model on a retry. With `NULL`,
+#'   a message naming the field and pattern.
+#' @param ignore_case If `TRUE`, ignore case when matching.
 #'
-#' @return An Assertion object
+#' @inherit assert_length return
 #'
 #' @export
+#' @family assertions
 #' @examples
-#' \dontrun{
-#' # Must start with capital letter
-#' assert_matches("answer", "^[A-Z]", "Must start with capital letter")
-#'
-#' # Must be a valid email format (simple check)
-#' assert_matches("email", "^[^@]+@[^@]+\\.[^@]+$", "Must be valid email")
-#'
-#' # Must end with period
-#' assert_matches("summary", "\\.$", "Must end with period")
-#' }
+#' assert_matches("answer", "^[A-Z]", "Start with a capital letter")
+#' assert_matches("email", "^[^@]+@[^@]+\\.[^@]+$", "Return a valid email address")
 assert_matches <- function(
   field = NULL,
   pattern,
@@ -247,28 +233,22 @@ assert_matches <- function(
   }
 }
 
-#' Assert Output Does Not Match Pattern
+#' Assert that an output does not match a regular expression
 #'
 #' @description
-#' Create an assertion that validates the output does NOT match a regular expression.
+#' `assert_not_matches()` checks that an output field does not match a
+#' Perl-compatible regular expression. A missing field passes.
 #'
-#' @param field The output field to check. If NULL, checks the entire output.
-#' @param pattern The regular expression pattern that must NOT match.
-#' @param message Optional custom error message. If NULL, generates a default.
-#' @param ignore_case Logical. If TRUE, matching is case-insensitive. Default FALSE.
-#' @param type "assert" for hard assertion (default), "suggest" for soft suggestion.
+#' @inheritParams assert_matches
+#' @param pattern A regular expression (Perl syntax) that must not match.
 #'
-#' @return An Assertion object
+#' @inherit assert_length return
 #'
 #' @export
+#' @family assertions
 #' @examples
-#' \dontrun{
-#' # Must not contain URLs
-#' assert_not_matches("answer", "https?://", "Must not contain URLs")
-#'
-#' # Must not contain code blocks
-#' assert_not_matches("summary", "```", "Must not contain code blocks")
-#' }
+#' assert_not_matches("answer", "https?://", "Do not include links")
+#' assert_not_matches("summary", "```", "Do not include code blocks")
 assert_not_matches <- function(
   field = NULL,
   pattern,
@@ -303,27 +283,22 @@ assert_not_matches <- function(
   }
 }
 
-#' Assert Output is One Of
+#' Assert that an output is one of a set of values
 #'
 #' @description
-#' Create an assertion that validates the output is one of a set of allowed values.
+#' `assert_one_of()` checks that an output field equals one of `values`.
 #'
-#' @param field The output field to check. If NULL, checks the entire output.
-#' @param values Character vector of allowed values.
-#' @param ignore_case Logical. If TRUE, comparison is case-insensitive. Default FALSE.
-#' @param type "assert" for hard assertion (default), "suggest" for soft suggestion.
+#' @inheritParams assert_length
+#' @param values A character vector of allowed values.
+#' @param ignore_case If `TRUE`, ignore case when comparing.
 #'
-#' @return An Assertion object
+#' @inherit assert_length return
 #'
 #' @export
+#' @family assertions
 #' @examples
-#' \dontrun{
-#' # Must be a valid sentiment
 #' assert_one_of("sentiment", c("positive", "negative", "neutral"))
-#'
-#' # Case-insensitive check
-#' assert_one_of("category", c("A", "B", "C"), ignore_case = TRUE)
-#' }
+#' assert_one_of("grade", c("A", "B", "C"), ignore_case = TRUE)
 assert_one_of <- function(
   field = NULL,
   values,
@@ -360,34 +335,36 @@ assert_one_of <- function(
   }
 }
 
-#' Assert Custom Condition
+#' Assert a custom condition
 #'
 #' @description
-#' Create a custom assertion with a user-defined condition function.
-#' This is a convenience wrapper around `assert_output()` with clearer semantics.
+#' `assert_custom()` builds an assertion from your own condition. It is
+#' [assert_output()] or [suggest_output()], chosen by `type`.
 #'
-#' @param condition A function or formula that takes the output and returns TRUE/FALSE.
-#' @param message Error message when assertion fails.
-#' @param field Optional. The specific output field to validate.
-#' @param type "assert" for hard assertion (default), "suggest" for soft suggestion.
+#' @inheritParams assert_length
+#' @param condition A function, or a formula using `.x`, that takes the output
+#'   (or the `field`) and returns `TRUE` or `FALSE`.
+#' @param message The message shown when the check fails, which
+#'   [with_assertions()] also sends back to the model on a retry.
+#' @param field The output field passed to `condition`. With `NULL` (the
+#'   default), the whole output (a named list) is passed.
 #'
-#' @return An Assertion object
+#' @inherit assert_length return
 #'
 #' @export
+#' @family assertions
 #' @examples
-#' \dontrun{
-#' # Custom validation: answer must have exactly 3 sentences
+#' # Exactly three sentences
 #' assert_custom(
-#'   ~ length(gregexpr("\\.", .x$answer)[[1]]) == 3,
-#'   "Answer must have exactly 3 sentences"
+#'   ~ lengths(regmatches(.x$answer, gregexpr("[.!?]", .x$answer))) == 3,
+#'   "Answer in exactly three sentences"
 #' )
 #'
-#' # Custom validation: summary must be shorter than original text
+#' # Compare two output fields
 #' assert_custom(
-#'   function(x) nchar(x$summary) < nchar(x$original),
-#'   "Summary must be shorter than original"
+#'   function(x) nchar(x$summary) < nchar(x$details),
+#'   "The summary must be shorter than the details"
 #' )
-#' }
 assert_custom <- function(
   condition,
   message,
@@ -403,26 +380,20 @@ assert_custom <- function(
   }
 }
 
-#' Assert Output is Not Empty
+#' Assert that an output is not empty
 #'
 #' @description
-#' Create an assertion that validates the output is not empty or whitespace-only.
+#' `assert_not_empty()` checks that an output field has at least one
+#' character that is not white space.
 #'
-#' @param field The output field to check. If NULL, checks the entire output.
-#' @param type "assert" for hard assertion (default), "suggest" for soft suggestion.
+#' @inheritParams assert_length
 #'
-#' @return An Assertion object
+#' @inherit assert_length return
 #'
 #' @export
+#' @family assertions
 #' @examples
-#' \dontrun{
-#' # Answer must not be empty
 #' assert_not_empty("answer")
-#'
-#' # All fields must have content
-#' assert_not_empty("summary")
-#' assert_not_empty("conclusion")
-#' }
 assert_not_empty <- function(field = NULL, type = c("assert", "suggest")) {
   type <- match.arg(type)
 
@@ -449,27 +420,22 @@ assert_not_empty <- function(field = NULL, type = c("assert", "suggest")) {
   }
 }
 
-#' Assert Numeric Value in Range
+#' Assert that a numeric output is within a range
 #'
 #' @description
-#' Create an assertion that validates a numeric output value is within a range.
+#' `assert_range()` checks that an output field, converted to a number, lies
+#' within `min` and `max`. A value that cannot be converted fails the check.
 #'
-#' @param field The output field to check. If NULL, checks the entire output.
-#' @param min Minimum value (inclusive). Default NULL (no minimum).
-#' @param max Maximum value (inclusive). Default NULL (no maximum).
-#' @param type "assert" for hard assertion (default), "suggest" for soft suggestion.
+#' @inheritParams assert_length
+#' @param min,max Inclusive bounds. Give at least one.
 #'
-#' @return An Assertion object
+#' @inherit assert_length return
 #'
 #' @export
+#' @family assertions
 #' @examples
-#' \dontrun{
-#' # Score must be between 0 and 100
 #' assert_range("score", min = 0, max = 100)
-#'
-#' # Confidence must be positive
-#' assert_range("confidence", min = 0)
-#' }
+#' assert_range("confidence", min = 0, type = "suggest")
 assert_range <- function(
   field = NULL,
   min = NULL,

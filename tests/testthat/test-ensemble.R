@@ -1,7 +1,11 @@
-# Tests for EnsembleModule and Ensemble teleprompter
+# Tests for EnsembleModule
 
 # Helper: Create a mock module for testing
-create_mock_module <- function(response = "answer1") {
+create_mock_module <- function(
+  response = "answer1",
+  provider_calls = 1L,
+  cost = 0.001
+) {
   mock_mod <- list(
     signature = signature("question -> answer"),
     chat = NULL,
@@ -11,12 +15,13 @@ create_mock_module <- function(response = "answer1") {
         chat = list(NULL),
         metadata = list(list(
           total_tokens = 100,
-          cost = 0.001,
+          cost = cost,
+          provider_calls = provider_calls,
           model = "mock-model"
         ))
       )
     },
-    reset_copy = function() create_mock_module(response)
+    reset_copy = function() create_mock_module(response, provider_calls, cost)
   )
   class(mock_mod) <- c("MockModule", "Module", "R6")
   mock_mod
@@ -209,7 +214,20 @@ test_that("EnsembleModule metadata includes module counts", {
   expect_equal(meta$n_modules, 3)
   expect_equal(meta$n_successful, 3)
   expect_equal(meta$n_errors, 0)
-  expect_equal(meta$n_llm_calls, 3)
+  expect_equal(meta$provider_calls, 3)
+  expect_false("n_llm_calls" %in% names(meta))
+})
+
+test_that("EnsembleModule sums nested provider calls", {
+  ens <- ensemble(list(
+    create_mock_module("a", provider_calls = 2L),
+    create_mock_module("b", provider_calls = 3L)
+  ))
+
+  metadata <- ens$forward(list(question = "test"))$metadata[[1L]]
+
+  expect_identical(metadata$provider_calls, 5L)
+  expect_equal(metadata$cost, 0.002)
 })
 
 test_that("EnsembleModule handles module errors gracefully", {
@@ -229,6 +247,9 @@ test_that("EnsembleModule handles module errors gracefully", {
   expect_s3_class(result, "tbl_df")
   expect_equal(result$metadata[[1]]$n_successful, 2)
   expect_equal(result$metadata[[1]]$n_errors, 1)
+  expect_true(is.na(result$metadata[[1]]$provider_calls))
+  expect_true(is.na(result$metadata[[1]]$cost))
+  expect_true(is.na(result$metadata[[1]]$total_tokens))
 })
 
 test_that("EnsembleModule errors when all modules fail", {
@@ -734,150 +755,6 @@ test_that("EnsembleModule errors with helpful message when reduce function fails
 })
 
 # ============================================================================
-# Ensemble Teleprompter Tests
-# ============================================================================
-
-test_that("Ensemble S7 class exists", {
-  expect_true(S7::S7_inherits(Ensemble(), Teleprompter))
-})
-
-test_that("Ensemble creates with default values", {
-  tp <- Ensemble()
-
-  expect_null(tp@reduce_fn)
-  expect_null(tp@size)
-  expect_null(tp@weights)
-})
-
-test_that("Ensemble accepts reduce_fn parameter", {
-  tp <- Ensemble(reduce_fn = reduce_first())
-  expect_true(is.function(tp@reduce_fn))
-})
-
-test_that("Ensemble accepts size parameter", {
-  tp <- Ensemble(size = 3L)
-  expect_equal(tp@size, 3L)
-})
-
-test_that("Ensemble validates size parameter", {
-  expect_error(Ensemble(size = -1))
-  expect_error(Ensemble(size = 0))
-})
-
-test_that("Ensemble accepts weights parameter", {
-  tp <- Ensemble(weights = c(0.9, 0.8, 0.7))
-  expect_equal(tp@weights, c(0.9, 0.8, 0.7))
-})
-
-test_that("compile_ensemble creates EnsembleModule", {
-  mods <- lapply(1:3, function(i) create_mock_module(paste0("a", i)))
-  tp <- Ensemble()
-
-  result <- compile(tp, program = NULL, trainset = NULL, programs = mods)
-
-  expect_s3_class(result, "EnsembleModule")
-  expect_equal(length(result$modules), 3)
-  expect_true(result$config$compiled)
-  expect_equal(result$config$teleprompter, "Ensemble")
-})
-
-test_that("compile_ensemble respects size parameter", {
-  mods <- lapply(1:5, function(i) create_mock_module(paste0("a", i)))
-  tp <- Ensemble(size = 3L)
-
-  result <- compile(tp, program = NULL, trainset = NULL, programs = mods)
-
-  expect_equal(length(result$modules), 3)
-})
-
-test_that("compile_ensemble uses reduce_fn from teleprompter", {
-  mods <- lapply(1:3, function(i) create_mock_module(paste0("a", i)))
-  tp <- Ensemble(reduce_fn = reduce_first())
-
-  result <- compile(tp, program = NULL, trainset = NULL, programs = mods)
-
-  # Verify the reduce function is reduce_first by checking behavior
-  run_result <- result$forward(list(question = "test"))
-  expect_equal(run_result$output[[1]]$answer, "a1") # First module's output
-})
-
-test_that("compile_ensemble uses weights from teleprompter", {
-  mods <- lapply(1:3, function(i) create_mock_module(paste0("a", i)))
-  tp <- Ensemble(weights = c(0.9, 0.8, 0.7))
-
-  result <- compile(tp, program = NULL, trainset = NULL, programs = mods)
-
-  expect_equal(result$weights, c(0.9, 0.8, 0.7))
-})
-
-test_that("compile_ensemble warns when more weights than programs", {
-  mods <- lapply(1:2, function(i) create_mock_module(paste0("a", i)))
-  tp <- Ensemble(weights = c(0.9, 0.8, 0.7)) # 3 weights for 2 programs
-
-  expect_warning(
-    result <- compile(tp, program = NULL, trainset = NULL, programs = mods),
-    "More weights"
-  )
-  # Should truncate to first 2 weights
-  expect_equal(result$weights, c(0.9, 0.8))
-})
-
-test_that("compile_ensemble errors when fewer weights than programs", {
-  mods <- lapply(1:4, function(i) create_mock_module(paste0("a", i)))
-  tp <- Ensemble(weights = c(0.9, 0.8)) # 2 weights for 4 programs
-
-  # Should error since user explicitly provided weights but count is wrong
-  expect_error(
-    compile(tp, program = NULL, trainset = NULL, programs = mods),
-    "Fewer weights"
-  )
-})
-
-test_that("compile_ensemble errors without programs", {
-  tp <- Ensemble()
-
-  expect_error(
-    compile(tp, program = NULL, trainset = NULL),
-    "requires a list of modules"
-  )
-})
-
-test_that("compile_ensemble accepts program as list of modules", {
-  mods <- lapply(1:3, function(i) create_mock_module(paste0("a", i)))
-  tp <- Ensemble()
-
-  # Pass modules via program argument instead of programs
-
-  result <- compile(tp, program = mods, trainset = NULL)
-
-  expect_s3_class(result, "EnsembleModule")
-  expect_equal(length(result$modules), 3)
-})
-
-test_that("ensemble_from_programs convenience function works", {
-  mods <- lapply(1:3, function(i) create_mock_module(paste0("a", i)))
-
-  result <- ensemble_from_programs(mods)
-
-  expect_s3_class(result, "EnsembleModule")
-  expect_equal(length(result$modules), 3)
-})
-
-test_that("ensemble_from_programs accepts all parameters", {
-  mods <- lapply(1:5, function(i) create_mock_module(paste0("a", i)))
-
-  result <- ensemble_from_programs(
-    programs = mods,
-    reduce_fn = reduce_first(),
-    weights = c(0.9, 0.85, 0.8),
-    size = 3L
-  )
-
-  expect_equal(length(result$modules), 3)
-  expect_equal(result$weights, c(0.9, 0.85, 0.8))
-})
-
-# ============================================================================
 # Integration Tests
 # ============================================================================
 
@@ -934,6 +811,7 @@ test_that("ensemble accumulates token costs", {
         metadata = list(list(
           total_tokens = 100,
           cost = 0.001,
+          provider_calls = 1L,
           model = "mock"
         ))
       )
@@ -945,5 +823,6 @@ test_that("ensemble accumulates token costs", {
   result <- ens$forward(list(question = "test"))
 
   expect_equal(result$metadata[[1]]$total_tokens, 300)
-  expect_equal(result$metadata[[1]]$total_cost, 0.003)
+  expect_equal(result$metadata[[1]]$cost, 0.003)
+  expect_false("total_cost" %in% names(result$metadata[[1]]))
 })

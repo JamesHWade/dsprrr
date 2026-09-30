@@ -2,37 +2,56 @@
 % Please edit documentation in R/orchestration.R
 \name{validate_workflow}
 \alias{validate_workflow}
-\title{Validate Workflow Configuration}
+\title{Check a module and its data before a run}
 \usage{
 validate_workflow(module, data = NULL, board = NULL)
 }
 \arguments{
-\item{module}{A DSPrrr module to validate}
+\item{module}{The module to check.}
 
-\item{data}{Optional data to validate against the module's signature}
+\item{data}{Optional data frame to check against the signature's inputs.}
 
-\item{board}{Optional pins board to check for accessibility}
+\item{board}{Optional pins board. Only its class is checked; the board is
+not accessed.}
 }
 \value{
-A list with validation results (invisibly). Prints a summary.
+Invisibly, a list with \code{valid} (\code{FALSE} when the module, data or
+board check fails) and \code{checks} (one list per check with \code{passed} and
+\code{message}).
 }
 \description{
-Check that a workflow has all required components configured correctly.
-Useful for validating pipelines before running expensive LLM operations.
+\code{validate_workflow()} runs quick checks before an expensive batch run or
+pipeline step: that \code{module} is a dsprrr module, how many inputs its
+signature has, that \code{data} has a column for every input, and that \code{board}
+is a pins board. It prints one line per check and makes no model calls.
 }
 \examples{
-\dontrun{
-mod <- signature("text -> sentiment") |> module(type = "predict")
-validate_workflow(mod, data = test_data)
-}
+classifier <- module(signature("text -> sentiment"))
+reviews <- data.frame(text = c("Great!", "Awful."))
+validate_workflow(classifier, data = reviews)
+
+# A missing input column fails the check
+result <- validate_workflow(classifier, data = data.frame(review = "Great!"))
+result$valid
 }
 \seealso{
-Other orchestration:
-\code{\link{orchestration}},
-\code{\link[=pin_module_config]{pin_module_config()}},
-\code{\link[=pin_trace]{pin_trace()}},
-\code{\link[=pin_vitals_log]{pin_vitals_log()}},
-\code{\link[=restore_module_config]{restore_module_config()}},
-\code{\link[=use_dsprrr_template]{use_dsprrr_template()}}
+Other integrations:
+\code{\link[=as_dsprrr_metric]{as_dsprrr_metric()}},
+\code{\link[=as_dsprrr_traces]{as_dsprrr_traces()}},
+\code{\link[=as_ellmer_tool]{as_ellmer_tool()}},
+\code{\link[=as_vitals_cost]{as_vitals_cost()}},
+\code{\link[=as_vitals_samples]{as_vitals_samples()}},
+\code{\link[=as_vitals_solver]{as_vitals_solver()}},
+\code{\link[=as_vitals_task]{as_vitals_task()}},
+\code{\link[=create_search_tool]{create_search_tool()}},
+\code{\link[=llm_predict]{llm_predict()}},
+\code{\link[=ragnar_tool]{ragnar_tool()}},
+\code{\link[=reasoning_effort]{reasoning_effort()}},
+\code{\link[=register_dsprrr_engine]{register_dsprrr_engine()}},
+\code{\link[=summarize_traces_df]{summarize_traces_df()}},
+\code{\link[=temperature]{temperature()}},
+\code{\link[=top_p]{top_p()}},
+\code{\link[=use_dsprrr_template]{use_dsprrr_template()}},
+\code{\link{vitals_metrics}}
 }
-\concept{orchestration}
+\concept{integrations}

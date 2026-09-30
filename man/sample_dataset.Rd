@@ -2,36 +2,48 @@
 % Please edit documentation in R/optimizer-core.R
 \name{sample_dataset}
 \alias{sample_dataset}
-\title{Sample from a Dataset Deterministically}
+\title{Sample rows reproducibly}
 \usage{
 sample_dataset(dataset, n = NULL, seed = NULL, replace = FALSE)
 }
 \arguments{
-\item{dataset}{A data frame to sample from.}
+\item{dataset}{A data frame.}
 
-\item{n}{Number of rows to sample. If NULL or greater than nrow(dataset),
-returns the full dataset.}
+\item{n}{Number of rows to draw. When \code{n} is \code{NULL} or at least
+\code{nrow(dataset)} and \code{replace = FALSE}, the data is returned unchanged, in
+its original order.}
 
-\item{seed}{Random seed for reproducibility. If NULL, sampling is random.}
+\item{seed}{Random seed, or \code{NULL} (the default) to use the current random
+number stream.}
 
-\item{replace}{Whether to sample with replacement. Default is FALSE.}
+\item{replace}{Whether to draw with replacement (default \code{FALSE}).}
 }
 \value{
-A data frame containing the sampled rows.
+A data frame with the drawn rows.
 }
 \description{
-Sample rows from a dataset with optional seed for reproducibility.
-Used by optimizers for consistent train/validation splits and
-demo selection.
+\code{sample_dataset()} draws \code{n} rows from a data frame. With a \code{seed}, the draw
+is reproducible and the session's random number stream is left as it was.
 }
 \examples{
-df <- tibble::tibble(x = 1:10, y = letters[1:10])
+df <- data.frame(x = 1:10, y = letters[1:10])
 
-# Deterministic sampling
-sample1 <- sample_dataset(df, n = 5, seed = 42)
-sample2 <- sample_dataset(df, n = 5, seed = 42)
-identical(sample1, sample2)  # TRUE
-
-# Random sampling (different each time)
-sample3 <- sample_dataset(df, n = 5)
+sample_dataset(df, n = 3, seed = 42)
+identical(
+  sample_dataset(df, n = 3, seed = 42),
+  sample_dataset(df, n = 3, seed = 42)
+)
 }
+\seealso{
+Other optimizer building blocks:
+\code{\link{TrialLog}},
+\code{\link[=complete_trial]{complete_trial()}},
+\code{\link[=create_trial]{create_trial()}},
+\code{\link[=eval_program]{eval_program()}},
+\code{\link[=load_trial_log]{load_trial_log()}},
+\code{\link[=optimizer_control]{optimizer_control()}},
+\code{\link[=read_trials_jsonl]{read_trials_jsonl()}},
+\code{\link[=split_dataset]{split_dataset()}},
+\code{\link[=write_trials_jsonl]{write_trials_jsonl()}}
+}
+\concept{optimizer building blocks}

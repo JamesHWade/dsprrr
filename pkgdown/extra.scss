@@ -1,58 +1,7 @@
 // dsprrr custom styles
 // This file is processed by pkgdown and integrates with bslib
 
-// Tab styling improvements
-.nav-tabs {
-  border-bottom: 2px solid var(--bs-primary);
-  margin-bottom: 1rem;
-
-  .nav-link {
-    border: none;
-    border-radius: 0;
-    padding: 0.75rem 1.25rem;
-    font-weight: 500;
-    color: var(--bs-body-color);
-
-    &:hover {
-      color: var(--bs-primary);
-      border-color: transparent;
-    }
-
-    &.active {
-      color: var(--bs-primary);
-      background-color: transparent;
-      border-bottom: 3px solid var(--bs-primary);
-    }
-  }
-}
-
-.tab-content {
-  padding-top: 1rem;
-
-  > .tab-pane {
-    // Ensure code blocks render properly in tabs
-    pre {
-      margin-top: 0;
-    }
-  }
-}
-
-// Feature cards
-.card.border-start.border-primary {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  }
-
-  .card-title {
-    color: var(--bs-primary);
-    font-weight: 600;
-  }
-}
-
-// Core primitives section (Signatures / Modules / Optimizers)
+// Home page: Signatures / Modules / Metrics / Optimizers rows
 .primitive-row {
   padding: 1.25rem 0;
   border-top: 1px solid var(--bs-border-color);
@@ -63,8 +12,7 @@
     margin-top: 0;
   }
 
-  // The bold lead-in on each primitive ("Declare your task.") echoes
-  // DSPy's primitive taglines.
+  // The bold lead-in on each row ("Declare the task.") reads as a tagline.
   p > strong:first-child {
     display: block;
     font-size: 1.05rem;
@@ -72,58 +20,21 @@
     margin-bottom: 0.25rem;
   }
 
-  // Keep the descriptive column and its code block vertically centered
-  // together, with comfortable spacing on wider screens.
   pre {
     margin-bottom: 0;
   }
-}
 
-// "Learn more ->" inline links under primitives and gallery tabs
-.primitive-row a[href$="html"],
-.example-gallery a[href$="html"] {
-  font-weight: 500;
-  text-decoration: none;
+  a[href$="html"] {
+    font-weight: 500;
+    text-decoration: none;
 
-  &:hover {
-    text-decoration: underline;
+    &:hover {
+      text-decoration: underline;
+    }
   }
 }
 
-// Example gallery (Extract / Agent / Pipeline / Multimodal / Optimize)
-.example-gallery {
-  > .tab-pane {
-    // Steady height so switching tabs doesn't jump the page.
-    min-height: 22rem;
-  }
-
-  // The one-line caption above each example.
-  > .tab-pane > p:first-child {
-    color: var(--bs-secondary-color);
-    margin-bottom: 0.75rem;
-  }
-}
-
-@media (max-width: 768px) {
-  .example-gallery > .tab-pane {
-    min-height: 0;
-  }
-}
-
-// Section separators
-hr {
-  border: none;
-  border-top: 2px solid var(--bs-border-color);
-  margin: 3rem 0;
-}
-
-// Result callouts in the "Automatic Optimization" tabs ("**Result**: ...").
-// Scoped to that section so a bold lead-in elsewhere isn't recolored.
-#optimizeTabsContent .tab-pane p strong:first-child {
-  color: var(--bs-success);
-}
-
-// Ecosystem table
+// Tables
 .table {
   th {
     background-color: var(--bs-primary);
@@ -135,27 +46,19 @@ hr {
   }
 }
 
-// Hero section - first code block
+// Home page: highlight the first example
 .contents > .sourceCode:first-of-type {
   border-left: 4px solid var(--bs-primary);
   border-radius: var(--bs-border-radius);
 }
 
-// Make the tagline more prominent
-.contents > h2:first-of-type {
-  font-size: 1.5rem;
-  color: var(--bs-primary);
-  font-weight: 600;
-  margin-bottom: 1.5rem;
-}
-
-// Improve code block styling
+// Code blocks
 pre {
   border-radius: var(--bs-border-radius);
   border: 1px solid var(--bs-border-color);
 }
 
-// Output comments styling (simulated output)
+// Comments and printed output in code blocks
 .sourceCode .co {
   color: var(--bs-secondary-color);
   font-style: italic;

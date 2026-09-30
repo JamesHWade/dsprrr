@@ -1,22 +1,21 @@
-#' Run the Interactive RLM Demo
+#' Run the interactive RLM demo
 #'
 #' @description
-#' Launch an interactive Shiny app that demonstrates how Recursive Language
-#' Models (RLMs) work. The app includes pre-recorded traces showing RLM
-#' exploration of the bslib source code, with playback controls, educational
-#' annotations, and an optional live execution mode.
+#' `run_demo()` opens a Shiny app that shows how recursive language models
+#' ([rlm_module()]) work. It replays recorded traces of an RLM exploring the
+#' bslib source code, with playback controls and annotations, and can also
+#' run your own queries.
 #'
-#' @param port Port to run the app on. If NULL, Shiny picks an available port.
-#' @param launch.browser Whether to open the app in a browser (default TRUE).
+#' @param port The port to run the app on. With `NULL`, Shiny picks one.
+#' @param launch.browser If `TRUE` (the default), open the app in a browser.
 #'
 #' @details
-#' The demo app has two modes:
-#' - **Replay mode** (default): Watch pre-recorded RLM traces with playback
-#'   controls. No API key needed.
-#' - **Live mode**: Run your own RLM queries using an OpenAI API key.
+#' Replay mode, the default, needs no API key. Live mode runs your own RLM
+#' queries and needs an OpenAI API key. The app needs the shiny package.
 #'
-#' @return Invisibly returns the Shiny app object.
+#' @return The value returned by [shiny::runApp()] when the app stops.
 #'
+#' @seealso [rlm_module()]
 #' @export
 #' @examples
 #' \dontrun{

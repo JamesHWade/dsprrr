@@ -2,7 +2,7 @@
 % Please edit documentation in R/assertion-helpers.R
 \name{assert_length}
 \alias{assert_length}
-\title{Assert Output Length}
+\title{Assert the length of an output}
 \usage{
 assert_length(
   field = NULL,
@@ -12,29 +12,41 @@ assert_length(
 )
 }
 \arguments{
-\item{field}{The output field to check. If NULL, checks the entire output.}
+\item{field}{The output field to check. With \code{NULL}, the whole output is
+checked, which suits outputs with a single field. A missing field fails
+the check.}
 
-\item{min}{Minimum length (inclusive). Default NULL (no minimum).}
+\item{min, max}{Inclusive bounds on the number of characters. Give at least
+one.}
 
-\item{max}{Maximum length (inclusive). Default NULL (no maximum).}
-
-\item{type}{"assert" for hard assertion (default), "suggest" for soft suggestion.}
+\item{type}{\code{"assert"} (the default) for a hard assertion, which makes
+\code{\link[=with_assertions]{with_assertions()}} retry when it fails, or \code{"suggest"} for a soft one,
+which only gives a warning.}
 }
 \value{
-An Assertion object
+An assertion for \code{\link[=assertion_set]{assertion_set()}} or \code{\link[=with_assertions]{with_assertions()}}.
 }
 \description{
-Create an assertion that validates the character length of a field.
+\code{assert_length()} checks that the number of characters in an output field
+is within \code{min} and \code{max}. Like the other \verb{assert_*()} helpers, it is
+shorthand for \code{\link[=assert_output]{assert_output()}} (or \code{\link[=suggest_output]{suggest_output()}}) with a ready-made
+condition.
 }
 \examples{
-\dontrun{
-# Max 100 characters
 assert_length("answer", max = 100)
-
-# Between 10 and 200 characters
-assert_length("summary", min = 10, max = 200)
-
-# Soft suggestion for length
-assert_length("answer", max = 50, type = "suggest")
+assert_length("summary", min = 10, max = 200, type = "suggest")
 }
+\seealso{
+Other assertions:
+\code{\link[=assert_contains]{assert_contains()}},
+\code{\link[=assert_custom]{assert_custom()}},
+\code{\link[=assert_matches]{assert_matches()}},
+\code{\link[=assert_not_contains]{assert_not_contains()}},
+\code{\link[=assert_not_empty]{assert_not_empty()}},
+\code{\link[=assert_not_matches]{assert_not_matches()}},
+\code{\link[=assert_one_of]{assert_one_of()}},
+\code{\link[=assert_range]{assert_range()}},
+\code{\link{assertions}},
+\code{\link[=with_assertions]{with_assertions()}}
 }
+\concept{assertions}

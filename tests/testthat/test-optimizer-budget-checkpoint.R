@@ -22,20 +22,16 @@ checkpoint_test_chat <- function(
 ) {
   provider_object <- checkpoint_test_provider(provider, model)
   local({
-    self <- structure(
-      list(
-        chat_structured = function(prompt, type, ...) {
-          if (!is.null(counter)) {
-            counter$calls <- counter$calls + 1L
-          }
-          list(answer = answer)
-        },
-        clone = function(...) self,
-        set_turns = function(turns) invisible(NULL),
-        get_provider = function() provider_object,
-        get_model = function() model
-      ),
-      class = "Chat"
+    self <- new_test_chat(
+      model = model,
+      provider = provider_object,
+      clone = function(...) self,
+      chat_structured = function(prompt, type, ...) {
+        if (!is.null(counter)) {
+          counter$calls <- counter$calls + 1L
+        }
+        list(answer = answer)
+      }
     )
     self
   })
@@ -94,7 +90,7 @@ test_that("optimizer error budgets do not become batch cancellation budgets", {
     .package = "dsprrr"
   )
   result <- eval_program(
-    module(signature("question -> answer"), type = "predict"),
+    module(signature("question -> answer")),
     data.frame(question = c("a", "b", "c"), answer = "ok"),
     metric = function(...) 1,
     control = optimizer_control(max_errors = 1L, progress = FALSE)
@@ -140,7 +136,7 @@ test_that("ledger-only optimizers stop at a metric cap and return partial best",
     gepa_mutate_instruction = function(instruction, ...) instruction,
     .package = "dsprrr"
   )
-  program <- module(signature("question -> answer"), type = "predict")
+  program <- module(signature("question -> answer"))
   data <- data.frame(question = c("a", "b"), answer = "ok")
   control <- function() {
     optimizer_control(
@@ -161,8 +157,8 @@ test_that("ledger-only optimizers stop at a metric cap and return partial best",
     control = control()
   )
   expect_equal(calls, 1L)
-  expect_true(gepa$config$optimizer$partial)
-  expect_equal(gepa$config$optimizer$budget_summary$metric_calls, 1L)
+  expect_true(identical(optimization_result(gepa)$status, "partial"))
+  expect_equal(optimization_result(gepa)$budget$metric_calls, 1L)
 
   calls <- 0L
   simba <- dsprrr:::compile_simba(
@@ -172,8 +168,8 @@ test_that("ledger-only optimizers stop at a metric cap and return partial best",
     control = control()
   )
   expect_equal(calls, 1L)
-  expect_true(simba$config$optimizer$partial)
-  expect_equal(simba$config$optimizer$budget_summary$metric_calls, 1L)
+  expect_true(identical(optimization_result(simba)$status, "partial"))
+  expect_equal(optimization_result(simba)$budget$metric_calls, 1L)
 
   calls <- 0L
   copro <- dsprrr:::compile_copro(
@@ -183,8 +179,8 @@ test_that("ledger-only optimizers stop at a metric cap and return partial best",
     control = control()
   )
   expect_equal(calls, 1L)
-  expect_true(copro$config$optimizer$partial)
-  expect_equal(copro$config$optimizer$budget_summary$metric_calls, 1L)
+  expect_true(identical(optimization_result(copro)$status, "partial"))
+  expect_equal(optimization_result(copro)$budget$metric_calls, 1L)
 })
 
 test_that("optimizer ledger records exact usage and bounded overshoot", {
@@ -450,7 +446,7 @@ test_that("restored budgets fail closed under every stricter current limit", {
   expect_false(optimizer_budget_preflight(stricter_errors, "new_work"))
 })
 
-test_that("new finite caps reject restored unknown historical usage", {
+test_that("new finite caps reject restored unknown usage", {
   cases <- list(
     max_metric_calls = list(field = "metric_calls", code = "unknown_metric"),
     max_provider_calls = list(
@@ -792,7 +788,7 @@ test_that("trial accounting and preflight reject capacity overflow", {
   expect_no_warning(expect_error(
     optimizer_budgeted_provider_call(
       outcome_budget,
-      model = function(...) NULL,
+      model = new_test_chat(),
       stage = "paid_work",
       unit_id = "provider:overflow",
       call = function() {
@@ -805,7 +801,7 @@ test_that("trial accounting and preflight reject capacity overflow", {
 })
 
 test_that("canonical evaluation metadata distinguishes hits and provider calls", {
-  program <- module(signature("x -> y"), type = "predict")
+  program <- module(signature("x -> y"))
   metadata <- list(
     list(
       input_tokens = 8L,
@@ -831,6 +827,43 @@ test_that("canonical evaluation metadata distinguishes hits and provider calls",
   expect_equal(usage$tokens_out, 2L)
   expect_equal(usage$total_cost, 0.01)
   expect_false(usage$provider_usage_unknown)
+})
+
+test_that("optimizer metadata accepts only canonical live usage fields", {
+  program <- ensemble(list(
+    module(signature("x -> y")),
+    module(signature("x -> y"))
+  ))
+
+  canonical <- optimizer_metadata_usage(
+    program,
+    list(provider_calls = 2L, cost = 0.25)
+  )
+  expect_identical(canonical$provider_calls, 2L)
+  expect_equal(canonical$total_cost, 0.25)
+
+  removed <- optimizer_metadata_usage(
+    program,
+    list(n_llm_calls = 2L, total_cost = 0.25)
+  )
+  expect_true(is.na(removed$provider_calls))
+  expect_true(is.na(removed$total_cost))
+
+  predictor <- module(signature("x -> y"))
+  inferred <- optimizer_metadata_usage(predictor, list(cost = 0.1))
+  expect_identical(inferred$provider_calls, 1L)
+  explicit_unknown <- optimizer_metadata_usage(
+    predictor,
+    list(provider_calls = NA_integer_, cost = NA_real_)
+  )
+  expect_true(is.na(explicit_unknown$provider_calls))
+  expect_true(is.na(explicit_unknown$total_cost))
+
+  budget <- new_optimizer_budget(optimizer_control(max_cost = 1))
+  record_optimizer_usage(budget, list(cost = 0.25), "metadata")
+  expect_equal(budget$known_cost, 0)
+  record_optimizer_usage(budget, list(known_cost = 0.25), "metadata")
+  expect_equal(budget$known_cost, 0.25)
 })
 
 test_that("row-sized optimizer evaluation resumes without repeating paid rows", {
@@ -860,7 +893,7 @@ test_that("row-sized optimizer evaluation resumes without repeating paid rows", 
     },
     .package = "dsprrr"
   )
-  program <- module(signature("x -> y"), type = "predict")
+  program <- module(signature("x -> y"))
   data <- data.frame(x = 1:5, y = 1:5)
   partial <- list()
   save_partial <- function(records, ...) {
@@ -922,7 +955,7 @@ test_that("row-sized optimizer evaluation resumes without repeating paid rows", 
 })
 
 checkpoint_fixture <- function(path, control = NULL) {
-  program <- module(signature("x -> y"), type = "predict")
+  program <- module(signature("x -> y"))
   metric <- metric_exact_match(field = "y")
   data <- data.frame(x = c("a", "b"), y = c("a", "b"))
   if (is.null(control)) {
@@ -1230,6 +1263,9 @@ test_that("checkpoint reads detect same-inode rewrites with restored mtime", {
 test_that("concurrent checkpoint writers reject a stale predecessor", {
   skip_if_not_installed("callr")
   directory <- withr::local_tempdir()
+  if (.Platform$OS.type == "unix") {
+    Sys.chmod(directory, mode = "0700", use_umask = FALSE)
+  }
   path <- file.path(directory, "shared-checkpoint.rds")
   package_context <- callr_dsprrr_context()
   package_loader <- callr_load_dsprrr
@@ -1266,7 +1302,7 @@ test_that("concurrent checkpoint writers reject a stale predecessor", {
       envir = namespace,
       inherits = FALSE
     )
-    program <- module(signature("x -> y"), type = "predict")
+    program <- module(signature("x -> y"))
     metric <- metric_exact_match(field = "y")
     context <- optimizer_checkpoint_begin(
       "ConcurrentOptimizer",
@@ -1356,6 +1392,9 @@ test_that("concurrent checkpoint writers reject a stale predecessor", {
 test_that("checkpoint locks are released when a writer process dies", {
   skip_if_not_installed("callr")
   directory <- withr::local_tempdir()
+  if (.Platform$OS.type == "unix") {
+    Sys.chmod(directory, mode = "0700", use_umask = FALSE)
+  }
   path <- file.path(directory, "crash-checkpoint.rds")
   ready <- file.path(directory, "lock-held")
   package_context <- callr_dsprrr_context()
@@ -1829,7 +1868,7 @@ test_that("checkpoint program artifacts exclude secret key material", {
 test_that("Bootstrap module checkpoints bind the effective model by hash", {
   path <- withr::local_tempfile(fileext = ".rds")
   unlink(path)
-  program <- module(signature("question -> answer"), type = "predict")
+  program <- module(signature("question -> answer"))
   data <- data.frame(question = "q", answer = "a")
   teleprompter <- BootstrapFewShot(
     metric = function(...) 1,
@@ -1838,8 +1877,8 @@ test_that("Bootstrap module checkpoints bind the effective model by hash", {
   )
   secret_model <- "model-a?api_key=TOPSECRET"
   compile(
-    teleprompter,
     program,
+    teleprompter,
     data,
     .llm = checkpoint_test_chat(secret_model),
     control = optimizer_control(
@@ -1864,8 +1903,8 @@ test_that("Bootstrap module checkpoints bind the effective model by hash", {
 
   condition <- expect_error(
     compile(
-      teleprompter,
       program,
+      teleprompter,
       data,
       .llm = checkpoint_test_chat("model-b"),
       control = optimizer_control(
@@ -1890,8 +1929,8 @@ test_that("Bootstrap module checkpoints bind the effective model by hash", {
 })
 
 test_that("Bootstrap pipeline checkpoints reject a changed effective model", {
-  draft <- module(signature("question -> draft"), type = "predict")
-  answer <- module(signature("draft -> answer"), type = "predict")
+  draft <- module(signature("question -> draft"))
+  answer <- module(signature("draft -> answer"))
   program <- draft %>>% answer
   data <- data.frame(question = "q", answer = "a")
   teleprompter <- BootstrapFewShot(
@@ -1902,8 +1941,8 @@ test_that("Bootstrap pipeline checkpoints reject a changed effective model", {
   path <- withr::local_tempfile(fileext = ".rds")
   unlink(path)
   compile(
-    teleprompter,
     program,
+    teleprompter,
     data,
     .llm = checkpoint_test_chat("pipeline-model-a"),
     control = optimizer_control(
@@ -1915,8 +1954,8 @@ test_that("Bootstrap pipeline checkpoints reject a changed effective model", {
 
   condition <- expect_error(
     compile(
-      teleprompter,
       program,
+      teleprompter,
       data,
       .llm = checkpoint_test_chat("pipeline-model-b"),
       control = optimizer_control(
@@ -1943,7 +1982,7 @@ test_that("Bootstrap pipeline checkpoints reject a changed effective model", {
 test_that("effective runtime distinguishes providers sharing a model name", {
   path <- withr::local_tempfile(fileext = ".rds")
   unlink(path)
-  program <- module(signature("question -> answer"), type = "predict")
+  program <- module(signature("question -> answer"))
   data <- data.frame(question = "q", answer = "a")
   metric <- function(...) 1
   teleprompter <- BootstrapFewShot(
@@ -1952,8 +1991,8 @@ test_that("effective runtime distinguishes providers sharing a model name", {
     max_bootstrapped_demos = 1L
   )
   compile(
-    teleprompter,
     program,
+    teleprompter,
     data,
     .llm = checkpoint_test_chat("shared-model", provider = "openai"),
     control = optimizer_control(
@@ -1965,8 +2004,8 @@ test_that("effective runtime distinguishes providers sharing a model name", {
 
   condition <- expect_error(
     compile(
-      teleprompter,
       program,
+      teleprompter,
       data,
       .llm = checkpoint_test_chat(
         "shared-model",
@@ -1999,12 +2038,11 @@ test_that("effective runtime resolves attached and default Chats", {
   unlink(attached_path)
   attached_a <- module(
     signature("question -> answer"),
-    type = "predict",
     chat = checkpoint_test_chat("attached-a")
   )
   compile(
-    teleprompter,
     attached_a,
+    teleprompter,
     data,
     control = optimizer_control(
       max_metric_calls = 0L,
@@ -2014,13 +2052,12 @@ test_that("effective runtime resolves attached and default Chats", {
   )
   attached_b <- module(
     signature("question -> answer"),
-    type = "predict",
     chat = checkpoint_test_chat("attached-b")
   )
   attached_error <- expect_error(
     compile(
-      teleprompter,
       attached_b,
+      teleprompter,
       data,
       control = optimizer_control(
         max_metric_calls = 1L,
@@ -2041,13 +2078,13 @@ test_that("effective runtime resolves attached and default Chats", {
 
   default_path <- withr::local_tempfile(fileext = ".rds")
   unlink(default_path)
-  program <- module(signature("question -> answer"), type = "predict")
+  program <- module(signature("question -> answer"))
   withr::local_options(list(
     dsprrr.default_chat = checkpoint_test_chat("default-a")
   ))
   compile(
-    teleprompter,
     program,
+    teleprompter,
     data,
     control = optimizer_control(
       max_metric_calls = 0L,
@@ -2058,8 +2095,8 @@ test_that("effective runtime resolves attached and default Chats", {
   options(dsprrr.default_chat = checkpoint_test_chat("default-b"))
   default_error <- expect_error(
     compile(
-      teleprompter,
       program,
+      teleprompter,
       data,
       control = optimizer_control(
         max_metric_calls = 1L,
@@ -2093,12 +2130,12 @@ test_that("checkpointing fails before work without a stable effective Chat", {
   }
   expect_error(
     compile(
+      module(signature("question -> answer")),
       BootstrapFewShot(
         metric = metric,
         max_labeled_demos = 0L,
         max_bootstrapped_demos = 1L
       ),
-      module(signature("question -> answer"), type = "predict"),
       data.frame(question = "q", answer = "a"),
       control = optimizer_control(
         checkpoint_path = path,
@@ -2113,18 +2150,15 @@ test_that("checkpointing fails before work without a stable effective Chat", {
 
 test_that("BootstrapFewShot checkpoint resume matches uninterrupted search", {
   make_llm <- function(counter) {
-    structure(
-      list(
-        chat_structured = function(prompt, type, ...) {
-          counter$calls <- counter$calls + 1L
-          list(answer = "yes")
-        },
-        get_model = function() "bootstrap-checkpoint-model"
-      ),
-      class = "Chat"
+    new_test_chat(
+      model = "bootstrap-checkpoint-model",
+      chat_structured = function(prompt, type, ...) {
+        counter$calls <- counter$calls + 1L
+        list(answer = "yes")
+      }
     )
   }
-  program <- module(signature("question -> answer"), type = "predict")
+  program <- module(signature("question -> answer"))
   data <- data.frame(
     question = paste0("q", 1:4),
     answer = rep("yes", 4)
@@ -2144,8 +2178,8 @@ test_that("BootstrapFewShot checkpoint resume matches uninterrupted search", {
   registry <- list(runtime = resumed_chat)
 
   partial <- compile(
-    teleprompter,
     program,
+    teleprompter,
     data,
     .llm = resumed_chat,
     control = optimizer_control(
@@ -2156,16 +2190,19 @@ test_that("BootstrapFewShot checkpoint resume matches uninterrupted search", {
     )
   )
   expect_equal(resumed_counter$calls, 2L)
-  expect_equal(partial$config$optimizer$n_bootstrapped_demos, 2L)
+  expect_equal(
+    optimization_result(partial)$best_params$n_bootstrapped_demos,
+    2L
+  )
   expect_identical(
-    partial$config$optimizer$stop_reason$code,
+    optimization_result(partial)$stop_reason,
     "max_metric_calls"
   )
   expect_identical(optimizer_checkpoint_read(path)$progress$phase, "bootstrap")
 
   resumed <- compile(
-    teleprompter,
     program,
+    teleprompter,
     data,
     .llm = resumed_chat,
     control = optimizer_control(
@@ -2177,14 +2214,17 @@ test_that("BootstrapFewShot checkpoint resume matches uninterrupted search", {
     )
   )
   expect_equal(resumed_counter$calls, 4L)
-  expect_equal(resumed$config$optimizer$n_bootstrapped_demos, 4L)
+  expect_equal(
+    optimization_result(resumed)$best_params$n_bootstrapped_demos,
+    4L
+  )
   expect_identical(optimizer_checkpoint_read(path)$progress$phase, "complete")
 
   uninterrupted_counter <- new.env(parent = emptyenv())
   uninterrupted_counter$calls <- 0L
   uninterrupted <- compile(
-    teleprompter,
     program,
+    teleprompter,
     data,
     .llm = make_llm(uninterrupted_counter),
     control = optimizer_control(max_metric_calls = 4L, progress = FALSE)
@@ -2192,26 +2232,22 @@ test_that("BootstrapFewShot checkpoint resume matches uninterrupted search", {
   expect_equal(uninterrupted_counter$calls, 4L)
   expect_equal(resumed$demos, uninterrupted$demos)
   expect_equal(
-    resumed$config$optimizer$budget_summary$metric_calls,
-    uninterrupted$config$optimizer$budget_summary$metric_calls
+    optimization_result(resumed)$budget$metric_calls,
+    optimization_result(uninterrupted)$budget$metric_calls
   )
-  expect_equal(resumed$config$optimizer$total_attempts, 4L)
+  expect_equal(optimization_result(resumed)$budget$attempts, 4L)
 })
 
 test_that("MIPRO resumes an interrupted BO row without repeated provider calls", {
   make_chat <- function(counter) {
     local({
-      self <- structure(
-        list(
-          chat_structured = function(prompt, type, ...) {
-            counter$calls <- counter$calls + 1L
-            list(answer = "ok")
-          },
-          clone = function(...) self,
-          set_turns = function(turns) invisible(NULL),
-          get_model = function() "checkpoint-test-model"
-        ),
-        class = "Chat"
+      self <- new_test_chat(
+        model = "checkpoint-test-model",
+        clone = function(...) self,
+        chat_structured = function(prompt, type, ...) {
+          counter$calls <- counter$calls + 1L
+          list(answer = "ok")
+        }
       )
       self
     })
@@ -2221,7 +2257,7 @@ test_that("MIPRO resumes an interrupted BO row without repeated provider calls",
     question = c("one", "two", "three"),
     answer = "ok"
   )
-  program <- module(signature("question -> answer"), type = "predict")
+  program <- module(signature("question -> answer"))
   teleprompter <- MIPROv2(
     metric = metric,
     auto = NULL,
@@ -2253,10 +2289,10 @@ test_that("MIPRO resumes an interrupted BO row without repeated provider calls",
     ),
     "No candidate received full evaluation"
   )
-  expect_true(interrupted$config$optimizer$partial)
+  expect_true(identical(optimization_result(interrupted)$status, "partial"))
   expect_equal(counter$calls, 4L)
   expect_identical(
-    interrupted$config$optimizer$stop_reason$code,
+    optimization_result(interrupted)$stop_reason,
     "max_metric_calls"
   )
 
@@ -2274,7 +2310,7 @@ test_that("MIPRO resumes an interrupted BO row without repeated provider calls",
     )
   )
   expect_equal(counter$calls, 15L)
-  expect_false(resumed$config$optimizer$partial)
+  expect_false(identical(optimization_result(resumed)$status, "partial"))
 
   fresh_counter <- new.env(parent = emptyenv())
   fresh_counter$calls <- 0L
@@ -2291,12 +2327,12 @@ test_that("MIPRO resumes an interrupted BO row without repeated provider calls",
   )
   expect_equal(fresh_counter$calls, 15L)
   expect_identical(
-    resumed$config$optimizer$trial_history,
-    fresh$config$optimizer$trial_history
+    optimization_result(resumed)$trials,
+    optimization_result(fresh)$trials
   )
   expect_identical(
-    resumed$config$optimizer$best_config,
-    fresh$config$optimizer$best_config
+    optimization_result(resumed)$best_params,
+    optimization_result(fresh)$best_params
   )
   expect_identical(resumed$demos, fresh$demos)
 })
@@ -2305,23 +2341,19 @@ test_that("MIPRO replays one durable trial after failure between append and chec
   counter <- new.env(parent = emptyenv())
   counter$calls <- 0L
   chat <- local({
-    self <- structure(
-      list(
-        chat_structured = function(prompt, type, ...) {
-          counter$calls <- counter$calls + 1L
-          list(answer = "ok")
-        },
-        clone = function(...) self,
-        set_turns = function(turns) invisible(NULL),
-        get_model = function() "mipro-log-resume-model"
-      ),
-      class = "Chat"
+    self <- new_test_chat(
+      model = "mipro-log-resume-model",
+      clone = function(...) self,
+      chat_structured = function(prompt, type, ...) {
+        counter$calls <- counter$calls + 1L
+        list(answer = "ok")
+      }
     )
     self
   })
   metric <- function(...) 1
   registry <- list(metric = metric, task = chat)
-  program <- module(signature("question -> answer"), type = "predict")
+  program <- module(signature("question -> answer"))
   data <- data.frame(question = "q", answer = "ok")
   teleprompter <- MIPROv2(
     metric = metric,
@@ -2493,5 +2525,8 @@ test_that("MIPRO replays one durable trial after failure between append and chec
     )),
     1L
   )
-  expect_false(resumed_program$config$optimizer$partial)
+  expect_false(identical(
+    optimization_result(resumed_program)$status,
+    "partial"
+  ))
 })

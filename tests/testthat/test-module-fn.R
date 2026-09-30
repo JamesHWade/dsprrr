@@ -78,8 +78,8 @@ test_that("module_fn objects do not support optimization", {
 
   expect_error(
     compile(
-      LabeledFewShot(),
       mod,
+      LabeledFewShot(),
       data.frame(text = "hi", answer = "hi")
     ),
     "do not support optimization"

@@ -221,7 +221,7 @@ sig <- signature(
 - `is_compiled()`: Check if module has been optimized
 
 ```r
-mod <- module(sig, type = "predict")
+mod <- module(sig)
 result <- run(mod, question = "What is 2+2?", .llm = llm)
 ```
 
@@ -238,7 +238,7 @@ result <- run(mod, question = "What is 2+2?", .llm = llm)
 | `run_dataset(module, dataset, ...)` | Batch execute on data frame |
 | `evaluate(module, dataset, metric)` | Compute metrics on dataset |
 | `optimize_grid(module, devset, metric)` | Grid search optimization |
-| `compile(teleprompter, module, trainset)` | Teleprompter-based optimization |
+| `compile(module, teleprompter, trainset)` | Teleprompter-based optimization |
 
 ### Teleprompters (S7)
 
@@ -248,7 +248,7 @@ Optimization strategies that compile modules:
 
 ```r
 tp <- LabeledFewShot(k = 4L, metric = metric_exact_match())
-compiled <- compile(tp, mod, trainset)
+compiled <- compile(mod, tp, trainset)
 ```
 
 ### Vitals Integration
@@ -265,7 +265,7 @@ Bridge to the `vitals` package for evaluation:
 sig <- signature("text -> sentiment: enum('positive', 'negative', 'neutral')")
 
 # 2. Create module
-mod <- module(sig, type = "predict")
+mod <- module(sig)
 
 # 3. Run with LLM
 llm <- ellmer::chat_openai()
@@ -304,22 +304,29 @@ eval_result <- evaluate(mod, test_data, metric = metric_exact_match())
 - Integration tests often skip on CRAN (`skip_on_cran()`)
 
 ### Key Test Conventions
+
+Every model boundary requires a real ellmer `Chat` R6 object. A plain list with
+a `chat_structured` element is rejected with `dsprrr_chat_type_error`. Use
+`new_test_chat()` from `tests/testthat/helper-chat.R`, which builds an R6
+`Chat` whose methods you supply:
+
 ```r
 # Mock LLM for deterministic testing
-mock_llm <- list(
-  chat_structured = function(prompt, type, ...) {
-    list(answer = "mocked response")
-  }
+mock_llm <- new_test_chat(
+  chat_structured = function(...) list(answer = "mocked response")
 )
 
 # Test module behavior
 test_that("module returns expected output", {
   sig <- signature("q -> a")
-  mod <- module(sig, type = "predict")
+  mod <- module(sig)
   result <- mod$forward(list(q = "test"), .llm = mock_llm)
   expect_s3_class(result, "tbl_df")
 })
 ```
+
+`new_test_chat()` also takes `clone`, `get_turns`, `set_turns`, `last_turn`,
+and `get_model` overrides for tests that exercise Chat isolation.
 
 ### VCR Cassettes (HTTP Recording)
 
@@ -354,7 +361,7 @@ test_that("integration test with cassette", {
   skip_if_not(file.exists(cassette_file), "VCR cassette not recorded")
 
   vcr::local_cassette("my-test")
-  llm <- ellmer::chat_openai(model = "gpt-4o-mini")
+  llm <- ellmer::chat_openai(model = "gpt-6-luna")
   # ... test code
 })
 ```
@@ -416,7 +423,7 @@ Tests that work in isolation may fail when run together if persistent disk cache
 # BAD: Will fail if cache has entries from previous run
 test_that("mock returns different values", {
   call_count <- 0
-  mock_llm <- list(
+  mock_llm <- new_test_chat(
     chat_structured = function(...) {
       call_count <<- call_count + 1
       paste("response", call_count)
@@ -436,7 +443,7 @@ test_that("mock returns different values", {
   local_reset_cache()
 
   call_count <- 0
-  mock_llm <- list(
+  mock_llm <- new_test_chat(
     chat_structured = function(...) {
       call_count <<- call_count + 1
       paste("response", call_count)
@@ -463,7 +470,10 @@ test_that("mock returns different values", {
 
 **Teleprompters (11):**
 - LabeledFewShot, BootstrapFewShot, BootstrapFewShotWithRandomSearch
-- MIPROv2, SIMBA, GEPA, COPRO, KNNFewShot, Ensemble, GridSearch, BetterTogether
+- MIPROv2, SIMBA, GEPA, COPRO, KNNFewShot, GridSearch, BetterTogether
+- ReAnchor (experimental, DSPy 3.4): fits decision thresholds/cuts/weights
+  from recorded evidence; single Predict modules only
+- Ensembling is a module (`EnsembleModule`), not a teleprompter
 - BootstrapFewShot compiles pipelines **jointly**: per-step demos are
   harvested from passing end-to-end traces (DSPy-style whole-program compilation)
 - GEPA supports feedback metrics via `metric_with_feedback()`: metrics may
@@ -481,6 +491,10 @@ test_that("mock returns different values", {
 - Two-tier caching (memory + disk): `configure_cache()`, `clear_cache()`, `cache_stats()`
 - LM configuration: `dsp_configure()`, `with_lm()`, `local_lm()`
 - Async support: `run_async()`, `stream_async()` with promises
+- Experimental calibrated decisions (`R/decision.R`): `with_decisions()`
+  swaps boolean/enum fields for probability-evidence schemas at request time
+  and decodes after the cache (in `PredictModule$forward()` and
+  `process_batch_item()`); settings live in `config$decisions`
 - Streaming listeners: `run_stream()` + `stream_listener()` (per-field
   callbacks, pipeline status events)
 - vitals bridges (`as_vitals_solver`, `as_dsprrr_metric`)
@@ -534,8 +548,9 @@ Suggested:
 ## Known Issues
 
 - For internal S7 classes with complex default values, use `@noRd` instead of `@keywords internal` to avoid R CMD check codoc mismatch warnings
-- Instruction-level optimizers (MIPROv2, GEPA, COPRO) operate on single
-  modules; only BootstrapFewShot compiles pipelines jointly
+- COPRO and SIMBA operate on single modules. MIPROv2 and GEPA tune each
+  predictor's instructions across multi-predictor programs, and
+  BootstrapFewShot compiles pipelines jointly
 
 ## Issue Tracking with Kata
 
@@ -759,8 +774,11 @@ git worktree prune
 - **PLAN.md**: Detailed roadmap with milestones and task tracking
 - **VITALS_INTEGRATION.md**: Documentation for vitals package integration
 - **inst/scripts/record-cassettes.R**: Helper script for re-recording VCR cassettes
-- **vignettes/**: User-facing tutorials
-  - `getting-started.Rmd`: Introduction and basic usage
-  - `compilation-optimization.Rmd`: Optimization workflow
-  - `vitals-integration.Rmd`: Vitals bridge usage
-  - `orchestration.Rmd`: Production workflow patterns
+- **vignettes/**: User-facing articles; `_pkgdown.yml` groups them for the site
+  - `tutorial-*.Rmd`: the six-step learning path (Tutorial 1 is "Get started")
+  - `compilation-optimization.Rmd`, `advanced-optimization.Rmd`: optimization
+  - `vitals-recipes.Rmd`: vitals bridge usage
+  - `orchestration.Rmd`: targets/Quarto workflows
+  - `articles/`: site-only articles (RLM, Flex, Omni, agentic harnesses)
+  - `_vcr/`: recorded LLM responses replayed when pkgdown builds the site;
+    `dsprrr:::eval_vignette()` decides when chunks run

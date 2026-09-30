@@ -2,7 +2,7 @@
 % Please edit documentation in R/teleprompter-bootstrap-rs.R
 \name{BootstrapFewShotWithRandomSearch}
 \alias{BootstrapFewShotWithRandomSearch}
-\title{BootstrapFewShotWithRandomSearch Teleprompter}
+\title{BootstrapFewShot with random search over candidate programs}
 \usage{
 BootstrapFewShotWithRandomSearch(
   metric = NULL,
@@ -20,65 +20,112 @@ BootstrapFewShotWithRandomSearch(
 )
 }
 \arguments{
-\item{metric}{A metric function for evaluating predictions (required).}
+\item{metric}{A metric function (required), such as
+\code{metric_exact_match(field = "answer")}. It scores candidates on \code{valset}
+and is passed to each \code{\link[=BootstrapFewShot]{BootstrapFewShot()}} candidate.}
 
-\item{metric_threshold}{Minimum score for a demo to be accepted.
-If NULL, accepts any successful prediction. Default is NULL.}
+\item{metric_threshold}{Passed to each \code{\link[=BootstrapFewShot]{BootstrapFewShot()}} candidate: the
+minimum score for a bootstrapped output to become a demonstration. \code{NULL}
+(the default) keeps any output that scores above 0.}
 
-\item{max_errors}{Maximum number of errors allowed during optimization.
-Default is 10.}
+\item{max_errors}{Integer; stop after this many consecutive failed
+evaluations when \code{\link[=compile]{compile()}} gets no \code{control} (default \code{5L}).}
 
-\item{num_candidate_programs}{Number of candidate programs to generate.
-Default is 16.}
+\item{num_candidate_programs}{Integer number of candidates, including the
+three fixed ones (default \code{16L}).}
 
-\item{num_threads}{Number of threads for parallel evaluation. If 1,
-runs sequentially. Default is 1.}
+\item{num_threads}{Integer number of validation rows scored at the same time
+(default \code{1L}, sequential). Ignored when \code{\link[=compile]{compile()}} gets a \code{control},
+whose own \code{num_threads} applies.}
 
-\item{stop_at_score}{Early stopping threshold. If a candidate achieves
-this score or higher, stop searching. Default is NULL (no early stop).}
+\item{stop_at_score}{Stop as soon as a candidate scores at least this value,
+or \code{NULL} (the default) to score every candidate.}
 
-\item{max_bootstrapped_demos}{Maximum bootstrapped demos per candidate.
-Default is 4.}
+\item{max_bootstrapped_demos, max_labeled_demos, max_rounds, teacher_settings}{Passed to each \code{\link[=BootstrapFewShot]{BootstrapFewShot()}} candidate (defaults \code{4L}, \code{16L}, \code{1L}
+and \code{NULL}). \code{teacher_settings} is currently not applied.}
 
-\item{max_labeled_demos}{Maximum labeled demos per candidate.
-Default is 16.}
+\item{seed}{Integer seed, such as \code{42L}, used to draw the candidates' seeds
+and to sample the \code{labeled_only} demonstrations. A double such as \code{42}
+currently makes the \code{labeled_only} candidate fail with a warning.}
 
-\item{max_rounds}{Number of bootstrap rounds per candidate. Default is 1.}
-
-\item{teacher_settings}{List of settings for the teacher model.
-If NULL, defaults to \code{list(temperature = 0.7)}.}
-
-\item{seed}{Random seed for reproducibility. Default is NULL.}
-
-\item{log_dir}{Directory for trial logging. Default is NULL.}
+\item{log_dir}{Directory for a \link{TrialLog} with one trial per scored
+candidate, or \code{NULL} (the default).}
+}
+\value{
+A \code{BootstrapFewShotWithRandomSearch} object to pass to \code{\link[=compile]{compile()}}.
 }
 \description{
-A teleprompter that extends BootstrapFewShot with random search over
-multiple candidate programs. It generates several candidate configurations
-and selects the best based on validation set performance.
-
-The optimizer generates candidates including:
-\enumerate{
-\item Uncompiled baseline program
-\item LabeledFewShot-only program
-\item BootstrapFewShot with unshuffled examples
-\item BootstrapFewShot with various random seeds
+\code{BootstrapFewShotWithRandomSearch()} compiles several candidate programs,
+scores each one on a validation set, and returns the best. Use it when a
+single \code{\link[=BootstrapFewShot]{BootstrapFewShot()}} run is too sensitive to which demonstrations it
+happens to collect. \code{\link[=compile]{compile()}} requires a \code{valset}.
 }
+\details{
+\code{num_candidate_programs} candidates are built in this order:
+\enumerate{
+\item \code{baseline}: the uncompiled program.
+\item \code{labeled_only}: \code{\link[=LabeledFewShot]{LabeledFewShot()}} with \code{k = max_labeled_demos}.
+\item \code{bootstrap_unshuffled}: \code{\link[=BootstrapFewShot]{BootstrapFewShot()}} with the settings below.
+\item \verb{bootstrap_seed_<n>}: further \code{\link[=BootstrapFewShot]{BootstrapFewShot()}} runs, each given a
+random seed.
+}
+
+Each candidate is scored on \code{valset}, and the highest mean score wins (ties
+go to the earlier candidate). BootstrapFewShot does not currently shuffle
+the training rows, so the seeded candidates see the rows in the same order
+and differ only when the model's outputs differ. With dsprrr's response
+cache on, repeated identical requests return identical outputs.
+
+The ranked candidates are stored in
+\code{optimization_result(compiled)$extensions$bootstrap_few_shot_with_random_search$candidate_programs}.
+Programs containing Flex or RLM modules are rejected.
 }
 \examples{
-\dontrun{
-# Create a BootstrapFewShotWithRandomSearch teleprompter
 tp <- BootstrapFewShotWithRandomSearch(
   metric = metric_exact_match(field = "answer"),
-  num_candidate_programs = 8L,
-  num_threads = 4L,
-  stop_at_score = 0.95
+  num_candidate_programs = 6L,
+  max_labeled_demos = 2L,
+  stop_at_score = 0.95,
+  seed = 42L
 )
+tp
 
-# Compile with validation set (required)
-compiled <- compile(tp, qa_module, trainset, valset = valset, .llm = llm)
-
-# Access ranked candidates
-compiled$config$optimizer$candidate_programs
+\dontrun{
+qa <- module(signature("question -> answer"))
+trainset <- data.frame(
+  question = c("Capital of France?", "Capital of Peru?", "Capital of Chad?"),
+  answer = c("Paris", "Lima", "N'Djamena")
+)
+valset <- data.frame(
+  question = c("Capital of Japan?", "Capital of Kenya?"),
+  answer = c("Tokyo", "Nairobi")
+)
+compiled <- compile(
+  qa,
+  tp,
+  trainset,
+  valset = valset,
+  .llm = ellmer::chat_openai(model = "gpt-6-luna")
+)
+top_trials(compiled)
 }
 }
+\seealso{
+Other teleprompters:
+\code{\link[=AutoResearch]{AutoResearch()}},
+\code{\link[=BetterTogether]{BetterTogether()}},
+\code{\link[=BootstrapFewShot]{BootstrapFewShot()}},
+\code{\link[=COPRO]{COPRO()}},
+\code{\link[=GEPA]{GEPA()}},
+\code{\link[=GridSearchTeleprompter]{GridSearchTeleprompter()}},
+\code{\link[=KNNFewShot]{KNNFewShot()}},
+\code{\link[=LabeledFewShot]{LabeledFewShot()}},
+\code{\link[=MIPROv2]{MIPROv2()}},
+\code{\link[=MetaHarness]{MetaHarness()}},
+\code{\link[=Omni]{Omni()}},
+\code{\link[=ReAnchor]{ReAnchor()}},
+\code{\link[=SIMBA]{SIMBA()}},
+\code{\link[=Teleprompter]{Teleprompter()}},
+\code{\link[=compile]{compile()}}
+}
+\concept{teleprompters}

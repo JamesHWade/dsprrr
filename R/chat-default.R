@@ -1,19 +1,10 @@
-#' Default Chat Configuration
+#' Default chat configuration
 #'
-#' @description
-#' Functions for managing the default ellmer Chat object used by dsprrr.
-#' When no Chat is explicitly provided to `dsp()` or `module()`, these
-#' functions determine which Chat to use.
-#'
-#' @details
-#' The default Chat is resolved in this order:
-#' 1. Explicit `options(dsprrr.default_chat = chat_object)`
-#' 2. Auto-detection from environment variables:
-#'    - `OPENAI_API_KEY` → `ellmer::chat_openai()`
-#'    - `ANTHROPIC_API_KEY` → `ellmer::chat_claude()`
-#' 3. Error with helpful setup instructions
+#' The user-facing documentation, including the order in which dsprrr picks
+#' a chat, is on the [get_default_chat()] page.
 #'
 #' @name default-chat
+#' @noRd
 NULL
 
 # Package environment to store default chat, prompt history, scoped LM, and cache state
@@ -27,32 +18,174 @@ NULL
 .dsprrr_env$cache_privacy_status <- "not_checked"
 .dsprrr_env$cache_privacy_reason <- NULL
 .dsprrr_env$cache_disk_guard <- NULL
+.dsprrr_env$trace_context <- list()
+.dsprrr_env$trace_program_artifact_id <- NA_character_
+.dsprrr_env$trace_program <- NULL
 
-#' Get the Default Chat
+#' Test whether a value is a current ellmer Chat
+#' @noRd
+is_ellmer_chat <- function(chat) {
+  is.environment(chat) &&
+    R6::is.R6(chat) &&
+    inherits(chat, "Chat")
+}
+
+#' Validate a current ellmer Chat
+#' @noRd
+assert_ellmer_chat <- function(chat, arg = "chat", allow_null = FALSE) {
+  if (isTRUE(allow_null) && is.null(chat)) {
+    return(chat)
+  }
+  if (!is_ellmer_chat(chat)) {
+    cli::cli_abort(
+      c(
+        "{.arg {arg}} must be an ellmer Chat R6 object",
+        "x" = "Got {.cls {class(chat)[1]}}.",
+        "i" = "Create one with an {.code ellmer::chat_*()} constructor."
+      ),
+      class = "dsprrr_chat_type_error"
+    )
+  }
+  chat
+}
+
+#' Deep-clone an ellmer Chat, optionally resetting its conversation
+#' @noRd
+clone_ellmer_chat <- function(chat, arg = "chat", reset_turns = TRUE) {
+  chat <- assert_ellmer_chat(chat, arg = arg)
+  clone <- tryCatch(chat[["clone"]], error = function(e) NULL)
+  if (!is.function(clone)) {
+    cli::cli_abort(
+      c(
+        "Cannot create an independent ellmer Chat",
+        "x" = "{.arg {arg}} does not provide {.code clone()}.",
+        "i" = "Supply a current ellmer Chat R6 object."
+      ),
+      class = c("dsprrr_chat_clone_error", "dsprrr_chat_isolation_error")
+    )
+  }
+
+  cloned <- tryCatch(
+    clone(deep = TRUE),
+    error = function(e) {
+      cli::cli_abort(
+        "Failed to deep-clone {.arg {arg}}",
+        class = c("dsprrr_chat_clone_error", "dsprrr_chat_isolation_error"),
+        parent = e
+      )
+    }
+  )
+  if (
+    !is_ellmer_chat(cloned) ||
+      identical(rlang::obj_address(cloned), rlang::obj_address(chat))
+  ) {
+    cli::cli_abort(
+      c(
+        "Cannot create an independent ellmer Chat",
+        "x" = "{.code clone(deep = TRUE)} did not return a new Chat R6 object."
+      ),
+      class = c("dsprrr_chat_clone_error", "dsprrr_chat_isolation_error")
+    )
+  }
+
+  if (!isTRUE(reset_turns)) {
+    return(cloned)
+  }
+
+  set_turns <- tryCatch(cloned[["set_turns"]], error = function(e) NULL)
+  get_turns <- tryCatch(cloned[["get_turns"]], error = function(e) NULL)
+  if (!is.function(set_turns) || !is.function(get_turns)) {
+    cli::cli_abort(
+      c(
+        "Cannot reset the cloned ellmer Chat",
+        "x" = "The clone must provide {.code set_turns()} and {.code get_turns()}."
+      ),
+      class = c("dsprrr_chat_reset_error", "dsprrr_chat_isolation_error")
+    )
+  }
+  tryCatch(
+    set_turns(list()),
+    error = function(e) {
+      cli::cli_abort(
+        "Failed to reset the cloned ellmer Chat",
+        class = c("dsprrr_chat_reset_error", "dsprrr_chat_isolation_error"),
+        parent = e
+      )
+    }
+  )
+  turns <- tryCatch(
+    get_turns(),
+    error = function(e) {
+      cli::cli_abort(
+        "Failed to verify the cloned ellmer Chat history",
+        class = c("dsprrr_chat_reset_error", "dsprrr_chat_isolation_error"),
+        parent = e
+      )
+    }
+  )
+  if (!is.list(turns) || length(turns) != 0L) {
+    cli::cli_abort(
+      "The cloned ellmer Chat history could not be reset",
+      class = c("dsprrr_chat_reset_error", "dsprrr_chat_isolation_error")
+    )
+  }
+  cloned
+}
+
+#' Get, set or clear the default chat
 #'
 #' @description
-#' Retrieves the default Chat object for dsprrr operations. If no default
-#' is set, attempts to auto-detect from environment variables.
+#' `get_default_chat()` returns the ellmer Chat that dsprrr uses when neither
+#' the call nor the module names one. `set_default_chat()` sets it for the
+#' rest of the session; [dsp_configure()] does the same from a provider name.
+#' `clear_default_chat()` forgets a chat that was created from an API key, so
+#' the next call detects one again, for example after you change the key.
 #'
-#' @param create Logical. If `TRUE` (default), create a Chat from environment
-#'   variables if none is explicitly set. If `FALSE`, return `NULL` when no
-#'   default is available.
+#' @details
+#' ## How dsprrr chooses a chat
 #'
-#' @return An ellmer Chat object, or `NULL` if `create = FALSE` and no
-#'   default is available.
+#' Each model call uses the first of these that is available:
+#'
+#' 1. The `.llm` argument of [run()], [run_dataset()], [evaluate()],
+#'    [compile()] and the other functions that call models.
+#' 2. The chat stored on the module, from the `chat` argument of [module()]
+#'    and the other constructors.
+#' 3. A chat set for a block of code with [with_lm()] or [local_lm()].
+#' 4. The default chat set with `set_default_chat()` or [dsp_configure()]
+#'    (stored in `options(dsprrr.default_chat)`).
+#' 5. A chat created from the first API key found in the environment:
+#'    `OPENAI_API_KEY` gives [ellmer::chat_openai()], `ANTHROPIC_API_KEY`
+#'    gives [ellmer::chat_anthropic()] and `GOOGLE_API_KEY` gives
+#'    [ellmer::chat_google_gemini()], each with the provider's default model.
+#'    It is created once, with a message naming the provider and model (set
+#'    `options(dsprrr.quiet = TRUE)` to silence it), and reused until
+#'    `clear_default_chat()`.
+#'
+#' If none is available, the call fails with an error that explains how to
+#' set one up. `get_default_chat()` returns the first of steps 3 to 5.
+#'
+#' @param create If `TRUE` (the default), create a chat from an API key when
+#'   none is set (step 5), and error if that fails. If `FALSE`, return `NULL`
+#'   instead of creating one.
+#'
+#' @return `get_default_chat()` returns an ellmer Chat, or `NULL` when
+#'   `create = FALSE` and none is set. `set_default_chat()` returns the
+#'   previous default (or `NULL`) invisibly, and `clear_default_chat()`
+#'   returns `NULL` invisibly.
 #'
 #' @export
+#' @family configuration
 #' @examples
-#' \dontrun{
-#' # Set a default chat
-#' set_default_chat(ellmer::chat_openai())
+#' # Building a chat makes no request, so this runs without an API key
+#' luna <- ellmer::chat_openai(model = "gpt-6-luna")
+#' previous <- set_default_chat(luna)
+#' get_default_chat()$get_model()
 #'
-#' # Get the default chat
-#' chat <- get_default_chat()
+#' # Restore the previous default (here: none)
+#' set_default_chat(previous)
 #'
-#' # Check if a default is available without creating one
-#' chat <- get_default_chat(create = FALSE)
-#' }
+#' # Forget a chat detected from an API key
+#' clear_default_chat()
 get_default_chat <- function(create = TRUE) {
   # Check for scoped LM first (highest priority after explicit .llm)
   scoped <- get_scoped_lm()
@@ -63,13 +196,7 @@ get_default_chat <- function(create = TRUE) {
   # Check options
   chat <- getOption("dsprrr.default_chat")
   if (!is.null(chat)) {
-    if (!inherits(chat, "Chat")) {
-      cli::cli_abort(c(
-        "Invalid default chat in options",
-        "x" = "{.code options(dsprrr.default_chat)} must be an ellmer Chat object",
-        "i" = "Create one with {.code ellmer::chat_openai()} or similar"
-      ))
-    }
+    assert_ellmer_chat(chat, arg = "options(dsprrr.default_chat)")
     return(chat)
   }
 
@@ -94,8 +221,11 @@ get_default_chat <- function(create = TRUE) {
       " " = "   {.code Sys.setenv(ANTHROPIC_API_KEY = 'your-key')}",
       " " = "2. Set a default Chat explicitly:",
       " " = "   {.code options(dsprrr.default_chat = ellmer::chat_openai())}",
-      " " = "3. Pass a Chat to the function:",
-      " " = "   {.code chat |> dsp('q -> a', q = 'Hello')}"
+      " " = "3. Pass a Chat to {.fn run}:",
+      " " = paste0(
+        "   {.code run(module(signature('q -> a')), q = 'Hello', ",
+        ".llm = chat)}"
+      )
     ))
   }
 
@@ -104,36 +234,11 @@ get_default_chat <- function(create = TRUE) {
   chat
 }
 
-#' Set the Default Chat
-#'
-#' @description
-#' Sets the default Chat object for dsprrr operations. This is stored
-#' in R options and persists for the session.
-#'
-#' @param chat An ellmer Chat object, or `NULL` to clear the default.
-#'
-#' @return Invisibly returns the previous default Chat (if any).
-#'
+#' @rdname get_default_chat
+#' @param chat An ellmer Chat, or `NULL` to remove the default set earlier.
 #' @export
-#' @examples
-#' \dontrun{
-#' # Set a default OpenAI chat
-#' set_default_chat(ellmer::chat_openai())
-#'
-#' # Set a default Claude chat
-#' set_default_chat(ellmer::chat_claude())
-#'
-#' # Clear the default
-#' set_default_chat(NULL)
-#' }
 set_default_chat <- function(chat) {
-  if (!is.null(chat) && !inherits(chat, "Chat")) {
-    cli::cli_abort(c(
-      "Invalid chat object",
-      "x" = "{.arg chat} must be an ellmer Chat object or NULL",
-      "i" = "Create one with {.code ellmer::chat_openai()} or similar"
-    ))
-  }
+  assert_ellmer_chat(chat, arg = "chat", allow_null = TRUE)
 
   old <- getOption("dsprrr.default_chat")
   options(dsprrr.default_chat = chat)
@@ -142,6 +247,20 @@ set_default_chat <- function(chat) {
   .dsprrr_env$default_chat <- NULL
 
   invisible(old)
+}
+
+#' Provider whose API key is set in the environment
+#'
+#' Checks OpenAI, Anthropic, then Google, matching `auto_detect_chat()`.
+#' @noRd
+detect_env_provider <- function() {
+  keys <- c(
+    openai = "OPENAI_API_KEY",
+    anthropic = "ANTHROPIC_API_KEY",
+    google = "GOOGLE_API_KEY"
+  )
+  found <- names(keys)[nzchar(Sys.getenv(keys))]
+  if (length(found) == 0) NULL else found[[1]]
 }
 
 #' Auto-detect Chat from Environment
@@ -227,20 +346,8 @@ emit_auto_detection_message <- function(provider, chat) {
   invisible(NULL)
 }
 
-#' Clear Cached Default Chat
-#'
-#' @description
-#' Clears any cached default Chat. Useful for testing or when
-#' environment variables change.
-#'
-#' @return Invisibly returns `NULL`.
-#'
+#' @rdname get_default_chat
 #' @export
-#' @examples
-#' \dontrun{
-#' # Clear cached chat (will re-detect on next use)
-#' clear_default_chat()
-#' }
 clear_default_chat <- function() {
   .dsprrr_env$default_chat <- NULL
   .dsprrr_env$auto_detect_message_shown <- FALSE
@@ -262,107 +369,73 @@ get_scoped_lm <- function() {
   .dsprrr_env$scoped_lm
 }
 
-#' Execute Code with a Scoped LM Override
+#' Use a chat for a block of code
 #'
 #' @description
-#' Temporarily sets a default LLM for all dsprrr operations within a code block.
-#' Similar to DSPy's `dspy.context(lm=lm)` context manager. When the block exits
-#' (normally or due to an error), the previous LM is restored.
+#' `with_lm()` evaluates `code` with `lm` as the chat for every dsprrr call in
+#' it that does not name one, like DSPy's `dspy.context(lm = ...)`.
+#' `local_lm()` does the same until the calling function returns. Either way,
+#' the previous chat is restored afterwards, also after an error.
 #'
 #' @details
-#' The scoped LM has higher priority than `options(dsprrr.default_chat)` and
-#' auto-detection, but lower priority than an explicit `.llm` parameter.
+#' The scoped chat ranks below the `.llm` argument and below a chat stored on
+#' the module, and above the default chat; see [get_default_chat()] for the
+#' full order. A module created with a `chat` argument therefore keeps using
+#' its own chat inside `with_lm()`. Blocks can be nested; the innermost chat
+#' wins.
 #'
-#' Resolution order (highest to lowest):
-#' 1. Explicit `.llm` parameter
-#' 2. Scoped LM from `with_lm()` / `local_lm()`
-#' 3. Module's stored `$chat`
-#' 4. `options(dsprrr.default_chat)`
-#' 5. Auto-detection from environment variables
+#' @param lm An ellmer Chat. For `local_lm()`, `NULL` removes any scoped chat
+#'   until the calling function returns.
+#' @param code Code to evaluate with `lm` as the scoped chat.
 #'
-#' @param lm An ellmer Chat object to use as the default LLM within the block.
-#' @param code An expression to evaluate with the scoped LLM.
-#'
-#' @return The result of evaluating `code`.
+#' @return `with_lm()` returns the value of `code`. `local_lm()` returns the
+#'   previous scoped chat (or `NULL`) invisibly.
 #'
 #' @export
+#' @family configuration
 #' @examples
-#' \dontrun{
-#' # Use Claude for a specific block
-#' claude <- ellmer::chat_claude()
-#' result <- with_lm(claude, {
-#'   dsp("question -> answer", question = "What is 2+2?")
-#'   dsp("text -> summary", text = "Long article...")
-#' })
+#' # Building chats makes no request, so this runs without an API key
+#' fast <- ellmer::chat_openai(
+#'   model = "gpt-6-luna",
+#'   params = ellmer::params(reasoning_effort = "low")
+#' )
+#' careful <- ellmer::chat_openai(
+#'   model = "gpt-6-luna",
+#'   params = ellmer::params(reasoning_effort = "high")
+#' )
 #'
-#' # Nested contexts work correctly
-#' gpt4 <- ellmer::chat_openai(model = "gpt-4o")
-#' with_lm(gpt4, {
-#'   run(mod1, text = "outer uses gpt4")
-#'   with_lm(claude, {
-#'     run(mod2, text = "inner uses claude")
-#'   })
-#'   run(mod3, text = "back to gpt4")
-#' })
+#' with_lm(fast, identical(get_default_chat(), fast))
+#' with_lm(fast, with_lm(careful, identical(get_default_chat(), careful)))
+#'
+#' review <- function() {
+#'   local_lm(careful)
+#'   # every dsprrr call from here to the end of the function uses `careful`
+#'   identical(get_default_chat(), careful)
+#' }
+#' review()
+#'
+#' # Outside the block and the function, no scoped chat is left
+#' identical(get_default_chat(create = FALSE), careful)
+#'
+#' \dontrun{
+#' summarize <- module(signature("text -> summary"))
+#' with_lm(fast, run(summarize, text = "A long article ..."))
 #' }
 with_lm <- function(lm, code) {
   # Validate input
-
-  if (!inherits(lm, "Chat")) {
-    cli::cli_abort(c(
-      "Invalid LM object",
-      "x" = "{.arg lm} must be an ellmer Chat object",
-      "i" = "Create one with {.code ellmer::chat_openai()} or similar"
-    ))
-  }
+  assert_ellmer_chat(lm, arg = "lm")
 
   local_lm(lm)
   code
 }
 
-#' Set Local LM Override
-#'
-#' @description
-#' Sets a scoped LLM override that lasts until the calling function exits.
-#' Useful for functions that need to ensure a specific LLM is used for
-#' all internal dsprrr calls.
-#'
-#' @details
-#' This function uses [withr::defer()] to ensure cleanup when the calling
-#' function exits, even if an error occurs. For a block-based alternative,
-#' see [with_lm()].
-#'
-#' @param lm An ellmer Chat object to use as the default LLM, or `NULL` to
-#'   clear any scoped override.
-#' @param .env The environment to scope to (defaults to caller's environment).
-#'
-#' @return Invisibly returns the previous scoped LM (if any).
-#'
+#' @rdname with_lm
+#' @param .env The environment whose exit ends the scope: by default, the
+#'   function that calls `local_lm()` (cleanup uses [withr::defer()]).
 #' @export
-#' @examples
-#' \dontrun{
-#' my_analysis <- function(data) {
-#'   # All dsprrr calls in this function will use Claude
-#'   local_lm(ellmer::chat_claude())
-#'
-#'   # These calls don't need .llm parameter
-#'   summary <- dsp("data -> summary", data = data)
-#'   insights <- dsp("summary -> insights", summary = summary)
-#'   insights
-#' }
-#'
-#' # The scoped LM is automatically cleared when my_analysis() returns
-#' result <- my_analysis(my_data)
-#' }
 local_lm <- function(lm, .env = parent.frame()) {
   # Validate input (NULL is allowed to clear scoped LM)
-  if (!is.null(lm) && !inherits(lm, "Chat")) {
-    cli::cli_abort(c(
-      "Invalid LM object",
-      "x" = "{.arg lm} must be an ellmer Chat object or NULL",
-      "i" = "Create one with {.code ellmer::chat_openai()} or similar"
-    ))
-  }
+  assert_ellmer_chat(lm, arg = "lm", allow_null = TRUE)
 
   # Store the previous value
   old <- .dsprrr_env$scoped_lm
@@ -381,41 +454,55 @@ local_lm <- function(lm, .env = parent.frame()) {
   invisible(old)
 }
 
-#' Configure dsprrr Default Settings
+#' Configure the default chat from a provider name
 #'
 #' @description
-#' Configure the default LLM provider and settings for dsprrr. Similar to
-#' DSPy's `dspy.configure(lm=lm)`, this sets up a default Chat that will be
-#' used by `dsp()` and modules when no explicit Chat is provided.
+#' `dsp_configure()` builds an ellmer Chat for a provider and makes it the
+#' default chat, like DSPy's `dspy.configure(lm = ...)`. Modules use it when
+#' neither the call nor the module names a chat; see [get_default_chat()]
+#' for the full order.
 #'
 #' @param provider Character string specifying the provider. One of:
-#'   `"openai"`, `"anthropic"`, `"google"`. If `NULL` (default), auto-detects
-#'   from environment variables.
+#'   `"openai"`, `"anthropic"`, `"google"`. If `NULL` (default), uses the
+#'   first provider whose API key is set: `OPENAI_API_KEY`,
+#'   `ANTHROPIC_API_KEY`, then `GOOGLE_API_KEY`.
 #' @param model Character string specifying the model name. If `NULL`,
 #'   uses the provider's default model.
 #' @param api_key Character string with the API key. If `NULL`, reads from
 #'   the appropriate environment variable.
-#' @param temperature Numeric value for temperature (0-2). Default is `NULL`
-#'   (use provider default).
-#' @param ... Additional arguments passed to the ellmer chat constructor.
+#' @param temperature Sampling temperature, applied through
+#'   `ellmer::params(temperature = )`. Default `NULL` uses the provider
+#'   default. Reasoning models may ignore or reject it: gpt-6-luna accepts it
+#'   only with `params = ellmer::params(reasoning_effort = "none")`.
+#' @param ... Additional arguments passed to the ellmer chat constructor
+#'   ([ellmer::chat_openai()], [ellmer::chat_anthropic()] or
+#'   [ellmer::chat_google_gemini()]), such as `params` or `system_prompt`.
 #'
-#' @return Invisibly returns the configured Chat object.
+#' @return The new default Chat, invisibly.
 #'
 #' @export
+#' @family configuration
 #' @examples
 #' \dontrun{
 #' # Configure with auto-detection (uses env vars)
 #' dsp_configure()
 #'
 #' # Configure with specific provider and model
-#' dsp_configure(provider = "openai", model = "gpt-4o-mini")
+#' dsp_configure(provider = "openai", model = "gpt-6-luna")
 #'
 #' # Configure with temperature
-#' dsp_configure(provider = "anthropic", model = "claude-3-5-sonnet-latest",
-#'               temperature = 0.7)
+#' dsp_configure(provider = "anthropic", temperature = 0.7)
 #'
-#' # Now dsp() uses this configuration
-#' dsp("question -> answer", question = "What is 2+2?")
+#' # gpt-6-luna takes a temperature only with reasoning turned off
+#' dsp_configure(
+#'   provider = "openai",
+#'   model = "gpt-6-luna",
+#'   temperature = 0,
+#'   params = ellmer::params(reasoning_effort = "none")
+#' )
+#'
+#' # Now run() uses this configuration
+#' run(module(signature("question -> answer")), question = "What is 2+2?")
 #' }
 dsp_configure <- function(
   provider = NULL,
@@ -424,46 +511,44 @@ dsp_configure <- function(
   temperature = NULL,
   ...
 ) {
-  # Build chat based on provider
   if (is.null(provider)) {
-    # Auto-detect from environment
-    chat <- auto_detect_chat()
-    if (is.null(chat)) {
+    provider <- detect_env_provider()
+    if (is.null(provider)) {
       cli::cli_abort(c(
         "Could not auto-detect provider",
         "i" = "Set an API key environment variable or specify {.arg provider}"
       ))
     }
-  } else {
-    # Validate provider
-    provider <- tolower(provider)
-    valid_providers <- c("openai", "anthropic", "google")
-    if (!provider %in% valid_providers) {
-      cli::cli_abort(c(
-        "Unknown provider: {.val {provider}}",
-        "i" = "Valid providers: {.val {valid_providers}}"
-      ))
-    }
-
-    # Build args for chat constructor
-    chat_args <- list(...)
-
-    if (!is.null(model)) {
-      chat_args$model <- model
-    }
-
-    if (!is.null(api_key)) {
-      chat_args$api_key <- api_key
-    }
-
-    # Create chat based on provider
-    chat <- switch(
-      provider,
-      "openai" = do.call(ellmer::chat_openai, chat_args),
-      "anthropic" = do.call(ellmer::chat_claude, chat_args),
-      "google" = do.call(ellmer::chat_google_gemini, chat_args)
-    )
   }
+
+  provider <- tolower(provider)
+  valid_providers <- c("openai", "anthropic", "google")
+  if (!provider %in% valid_providers) {
+    cli::cli_abort(c(
+      "Unknown provider: {.val {provider}}",
+      "i" = "Valid providers: {.val {valid_providers}}"
+    ))
+  }
+
+  # Build args for the ellmer chat constructor
+  chat_args <- list(...)
+  if (!is.null(model)) {
+    chat_args$model <- model
+  }
+  if (!is.null(api_key)) {
+    chat_args$api_key <- api_key
+  }
+  if (!is.null(temperature)) {
+    chat_args$params <- chat_args$params %||% ellmer::params()
+    chat_args$params$temperature <- temperature
+  }
+
+  chat <- switch(
+    provider,
+    "openai" = do.call(ellmer::chat_openai, chat_args),
+    "anthropic" = do.call(ellmer::chat_anthropic, chat_args),
+    "google" = do.call(ellmer::chat_google_gemini, chat_args)
+  )
 
   # Store configuration metadata
   .dsprrr_env$config <- list(
@@ -496,102 +581,51 @@ dsp_configure <- function(
 #'
 #' @noRd
 detect_provider_name <- function(chat) {
-  # Try to use get_provider() method if available (ellmer 0.4+)
-  provider_obj <- tryCatch(
-    chat$get_provider(),
+  provider_name <- tryCatch(
+    chat$get_provider()@name,
     error = function(e) NULL
   )
-
-  if (!is.null(provider_obj)) {
-    # ellmer returns an S7 Provider object with @name slot
-    provider_name <- tryCatch(
-      provider_obj@name,
-      error = function(e) NULL
-    )
-
-    if (
-      !is.null(provider_name) &&
-        is.character(provider_name) &&
-        nzchar(provider_name)
-    ) {
-      return(provider_name)
-    }
-
-    # Check provider class name as fallback
-    provider_class <- class(provider_obj)[1]
-    if (grepl("OpenAI", provider_class, fixed = TRUE)) {
-      return("OpenAI")
-    }
-    if (grepl("Claude|Anthropic", provider_class)) {
-      return("Anthropic")
-    }
-    if (grepl("Google|Gemini", provider_class)) {
-      return("Google")
-    }
-  }
-
-  # Final fallback: check chat class name
-  class_name <- class(chat)[1]
-  if (grepl("openai", class_name, ignore.case = TRUE)) {
-    return("OpenAI")
-  }
-  if (grepl("claude|anthropic", class_name, ignore.case = TRUE)) {
-    return("Anthropic")
-  }
-  if (grepl("google|gemini", class_name, ignore.case = TRUE)) {
-    return("Google")
+  if (
+    is.character(provider_name) &&
+      length(provider_name) == 1L &&
+      !is.na(provider_name) &&
+      nzchar(provider_name)
+  ) {
+    return(provider_name)
   }
 
   "Unknown"
 }
 
-#' dsprrr Situation Report
+#' Report dsprrr's configuration
 #'
 #' @description
-#' Displays a comprehensive overview of your dsprrr configuration,
-#' including API keys, default chat settings, prompt history, and
-#' package versions. Inspired by `usethis::git_sitrep()`.
+#' `dsprrr_sitrep()` prints what dsprrr will use and what it has done this
+#' session: package versions, the default chat, which API keys are set, the
+#' prompt history, dsprrr options and the response cache. It is modelled on
+#' `usethis::git_sitrep()` and is a good first step when calls do not behave
+#' as expected.
 #'
-#' @return Invisibly returns a list with configuration details:
-#'   - `has_default_chat`: Logical, whether a default chat is configured
-#'   - `provider`: Character, name of the default provider
-#'   - `model`: Character, name of the default model
-#'   - `api_keys`: Named list of API key availability (logical)
-#'   - `n_calls`: Integer, number of LLM calls this session
-#'   - `prompt_history_count`: Integer, entries in prompt history
-#'   - `prompt_history_max`: Integer, maximum history size
-#'   - `ellmer_version`: Character, installed ellmer version
-#'   - `dsprrr_version`: Character, installed dsprrr version
+#' @details
+#' The default chat shown is the one [get_default_chat()] returns with
+#' `create = FALSE`, so a chat that would be created from an API key on first
+#' use is reported as not configured. The report makes no model calls.
+#'
+#' @return A list, invisibly, with `dsprrr_version`, `ellmer_version`,
+#'   `has_default_chat`, `provider` and `model` of the default chat,
+#'   `api_keys` (whether `OPENAI_API_KEY`, `ANTHROPIC_API_KEY` and
+#'   `GOOGLE_API_KEY` are set), `n_calls` and `prompt_history_count` (entries
+#'   in the prompt history), `prompt_history_max`, and the cache settings and
+#'   state (`cache_enabled`, `cache_disk_path`, `cache_disk_private`,
+#'   `cache_degraded`, `cache_privacy_status` and, when caching is on,
+#'   `cache_stats`). Once calls have been recorded, it also has
+#'   `total_tokens_in`, `total_tokens_out` and `total_cost`.
 #'
 #' @export
+#' @family configuration
 #' @examples
-#' \dontrun{
-#' dsprrr_sitrep()
-#' #> dsprrr configuration
-#' #> ────────────────────────────────────────────────────────
-#' #>
-#' #> ── Packages ──
-#' #> ✔ ellmer 0.2.0 (OK)
-#' #> ✔ dsprrr 0.1.0
-#' #>
-#' #> ── Default Chat ──
-#' #> ✔ OpenAI (gpt-4o-mini)
-#' #>   Source: Auto-detected from OPENAI_API_KEY
-#' #>
-#' #> ── API Keys ──
-#' #> ✔ OPENAI_API_KEY
-#' #> ✔ ANTHROPIC_API_KEY
-#' #> ✖ GOOGLE_API_KEY
-#' #>
-#' #> ── Session State ──
-#' #> • Prompt history: 12 / 100 entries
-#' #> • LLM calls: 15
-#' #> • Tokens: 2,450 in / 890 out
-#' #>
-#' #> ── Options ──
-#' #> • dsprrr.verbose: TRUE
-#' #> • dsprrr.quiet: FALSE
-#' }
+#' status <- dsprrr_sitrep()
+#' status$has_default_chat
 dsprrr_sitrep <- function() {
   cli::cli_h1("dsprrr configuration")
 
@@ -707,15 +741,17 @@ dsprrr_sitrep <- function() {
 
   if (n_calls > 0) {
     # Aggregate stats
-    total_tokens_in <- 0L
-    total_tokens_out <- 0L
-    total_cost <- 0
-
-    for (entry in history) {
-      total_tokens_in <- total_tokens_in + (entry$tokens_in %||% 0L)
-      total_tokens_out <- total_tokens_out + (entry$tokens_out %||% 0L)
-      total_cost <- total_cost + (entry$cost %||% 0)
+    sum_history_field <- function(field) {
+      values <- vapply(
+        history,
+        function(entry) as.numeric(entry[[field]] %||% 0),
+        numeric(1)
+      )
+      if (anyNA(values)) NA_real_ else sum(values)
     }
+    total_tokens_in <- sum_history_field("tokens_in")
+    total_tokens_out <- sum_history_field("tokens_out")
+    total_cost <- sum_history_field("cost")
 
     result$total_tokens_in <- total_tokens_in
     result$total_tokens_out <- total_tokens_out
@@ -723,13 +759,17 @@ dsprrr_sitrep <- function() {
 
     cli::cli_bullets(c("*" = "LLM calls: {n_calls}"))
 
-    if (total_tokens_in > 0 || total_tokens_out > 0) {
+    if (is.na(total_tokens_in) || is.na(total_tokens_out)) {
+      cli::cli_bullets(c("*" = "Tokens: unknown"))
+    } else if (total_tokens_in > 0 || total_tokens_out > 0) {
       cli::cli_bullets(c(
         "*" = "Tokens: {format(total_tokens_in, big.mark = ',')} in / {format(total_tokens_out, big.mark = ',')} out"
       ))
     }
 
-    if (total_cost > 0) {
+    if (is.na(total_cost)) {
+      cli::cli_bullets(c("*" = "Est. cost: unknown"))
+    } else if (total_cost > 0) {
       cli::cli_bullets(c(
         "*" = "Est. cost: ${format(total_cost, digits = 2, nsmall = 2)}"
       ))
@@ -854,41 +894,28 @@ dsprrr_sitrep <- function() {
   invisible(result)
 }
 
-#' Session Cost Summary
+#' Summarize this session's token use and cost
 #'
 #' @description
-#' Get cost and token usage summary for the current dsprrr session.
-#' This aggregates data from all LLM calls tracked in the prompt history.
+#' `session_cost()` adds up the tokens and estimated cost of the model calls
+#' in the prompt history (see [inspect_history()]), overall and per model.
 #'
-#' @return A list with:
-#'   - `n_calls`: Integer, number of LLM calls
-#'   - `tokens_in`: Integer, total input tokens
-#'   - `tokens_out`: Integer, total output tokens
-#'   - `total_tokens`: Integer, sum of input and output tokens
-#'   - `cost`: Numeric, total estimated cost in USD
-#'   - `by_model`: A tibble with per-model breakdown (if available)
+#' @details
+#' The prompt history keeps the most recent 100 calls by default
+#' (`options(dsprrr.prompt_history_max = )`), so older calls drop out of the
+#' totals, and [clear_prompt_history()] resets them. Only calls recorded in
+#' the history count: see [inspect_history()] for which ones are. Costs are
+#' ellmer's estimates.
+#'
+#' @return A list of class `dsprrr_session_cost` with `n_calls`, `tokens_in`,
+#'   `tokens_out`, `total_tokens`, `cost` (in US dollars; `NA` if any call's
+#'   cost is unknown) and `by_model`, a tibble with the same totals per model.
 #'
 #' @export
+#' @family inspection
 #' @examples
-#' \dontrun{
-#' # After running some dsp() calls
-#' dsp("question -> answer", question = "What is 2+2?")
-#' dsp("question -> answer", question = "What is the capital of France?")
-#'
-#' # Get session summary
 #' session_cost()
-#' #> $n_calls
-#' #> [1] 2
-#' #> $tokens_in
-#' #> [1] 45
-#' #> $tokens_out
-#' #> [1] 12
-#' #> $cost
-#' #> [1] 0.0001
-#'
-#' # Access total cost directly
-#' session_cost()$cost
-#' }
+#' session_cost()$total_tokens
 session_cost <- function() {
   history <- .dsprrr_env$prompt_history %||% list()
 
@@ -1003,7 +1030,7 @@ print.dsprrr_session_cost <- function(x, ...) {
     "*" = "Total: {format(x$total_tokens, big.mark = ',')} tokens"
   ))
 
-  if (x$cost > 0) {
+  if (isTRUE(x$cost > 0)) {
     cli::cli_bullets(c(
       "*" = "Est. cost: ${format(x$cost, digits = 4, nsmall = 4)}"
     ))
@@ -1039,12 +1066,15 @@ check_ellmer_version <- function(version) {
   }
 
   # Keep this aligned with the minimum declared in DESCRIPTION.
-  min_version <- "0.4.1"
+  min_version <- "0.5.0"
 
   tryCatch(
     {
-      utils::compareVersion(version, min_version) >= 0
+      comparison <- suppressWarnings(
+        utils::compareVersion(version, min_version)
+      )
+      isTRUE(comparison >= 0)
     },
-    error = function(e) TRUE # Assume OK if we can't parse
+    error = function(e) FALSE
   )
 }

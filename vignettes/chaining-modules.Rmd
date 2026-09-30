@@ -1,15 +1,15 @@
 ---
-title: "Chaining Modules and Pipelines"
+title: "Chain modules into pipelines"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Chaining Modules and Pipelines}
+  %\VignetteIndexEntry{Chain modules into pipelines}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
 
 ```{r}
 #| include: false
-# Examples are illustrative and require an LLM client, so they are not evaluated.
+# Chunks that call a model are not evaluated; chunks that only build modules are.
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
@@ -17,128 +17,208 @@ knitr::opts_chunk$set(
 )
 ```
 
-## Overview
-Chaining lets you build multi-step LLM workflows by passing outputs from one
-module to the next. dsprrr provides two approaches:
+A pipeline runs modules in order and passes each step's outputs to the next
+step. This page shows how to build one, how data moves between steps, and how
+to run, inspect and compile the result. A pipeline is itself a module, so
+`run()`, `run_dataset()`, `evaluate()` and `compile()` work on it.
 
-- `%>>%` for quick, readable pipelines with automatic field matching
-- `pipeline()` + `step()` for explicit control over mappings and selections
+## How data moves between steps
 
-Both approaches produce a pipeline module you can run with `run()` or
-`run_dataset()` just like any other module.
+Step 1 receives the inputs you pass to `run()`. Every later step receives only
+the previous step's outputs, plus any static inputs you attach to that step.
+Pipeline inputs are not forwarded past step 1.
 
-## Create Building-Block Modules
-Start with small modules that do one thing well:
+The example on this page turns release notes into a headline for customers:
 
-```{r}
+| Step | Module | Receives | Produces |
+|---|---|---|---|
+| 1 | `list_changes` | `notes`, the pipeline input | `changes` |
+| 2 | `write_summary` | `changes` from step 1, and `audience`, a static input | `summary` |
+| 3 | `write_headline` | `text`, which is step 2's `summary` renamed | `headline` |
+
+## Build the steps
+
+Each step is an ordinary module that does one thing:
+
+```{r steps}
+#| eval: true
+#| message: false
 library(dsprrr)
-library(ellmer)
 
-mod_extract <- signature("document -> facts") |>
-  module(type = "predict", template = "Extract key facts: {document}")
-
-mod_answer <- signature("facts, question -> answer") |>
-  module(type = "predict", template = "Use facts: {facts}\nQ: {question}")
-
-mod_format <- signature("answer -> response") |>
-  module(type = "predict", template = "Format: {answer}")
+list_changes <- module(signature(
+  "notes -> changes: list[str]",
+  instructions = "List each user-visible change as one short sentence."
+))
+write_summary <- module(signature(
+  "changes, audience -> summary",
+  instructions = "Summarize the changes in two sentences for the given audience."
+))
+write_headline <- module(signature(
+  "text -> headline",
+  instructions = "Write a headline of at most eight words for the text."
+))
 ```
 
-## Simple Chaining with `%>>%`
-When field names align, outputs connect automatically:
+## Connect them with pipeline() and step()
 
-```{r}
-qa_pipeline <- mod_extract %>>% mod_answer %>>% mod_format
+`pipeline()` takes modules in order. Wrap a module in `step()` when it needs
+wiring:
 
-llm <- chat_openai()
-result <- run(
-  qa_pipeline,
-  document = "...",
-  question = "What happened?",
-  .llm = llm
+```{r pipeline}
+#| eval: true
+release <- pipeline(
+  list_changes,
+  step(write_summary, audience = "customers"),
+  step(write_headline, map = c(summary = "text"))
+)
+release
+```
+
+`step()` takes three kinds of wiring:
+
+| Argument | Effect | Example |
+|---|---|---|
+| Named values | Static inputs, the same on every run. They win over an upstream field with the same name. | `audience = "customers"` |
+| `map` | Renames fields from the previous step. Names are that step's outputs, values are this step's inputs. | `map = c(summary = "text")` |
+| `select` | Keeps only the listed fields of this step's outputs for the next step. | `select = "summary"` |
+
+Run the pipeline like any module. The result holds the last step's outputs,
+here a list with one element, `headline`:
+
+```{r run}
+llm <- ellmer::chat_openai(model = "gpt-6-luna")
+notes <- paste(
+  "v2.3: Rewrote CSV export, now twice as fast.",
+  "Added a dark mode.",
+  "Fixed a bug that logged users out after five minutes."
+)
+run(release, notes = notes, .llm = llm)
+```
+
+## Chain with %>>%
+
+When each module's inputs are exactly the previous module's outputs, `%>>%`
+builds the same kind of pipeline with less typing:
+
+```{r pipe-operator}
+brief <- list_changes %>>%
+  module(signature("changes -> summary")) %>>%
+  module(signature("summary -> headline"))
+run(brief, notes = notes, .llm = llm)
+```
+
+`%>>%` accepts only modules, so use `pipeline()` when a step needs static
+inputs, `map` or `select`.
+
+## Drop fields with select
+
+Every output of a step moves on to the next one, and a Predict module
+without a template writes every input it receives into its prompt.
+`chain_of_thought()` adds a `reasoning` output, so without `select` the
+headline step below would also read the summary's reasoning:
+
+```{r select}
+careful <- pipeline(
+  list_changes,
+  step(chain_of_thought("changes -> summary"), select = "summary"),
+  module(signature("summary -> headline"))
 )
 ```
 
-## Map Inputs When Names Differ
-If a downstream module expects a different input name, map fields explicitly:
+## When a later step needs an original input
 
-```{r}
-mod_retrieve <- signature("query -> documents") |>
-  module(type = "predict", template = "Retrieve docs for: {query}")
+Suppose step 1 extracts facts from a document and step 2 answers a question
+about those facts. As a pipeline, `run()` stops with "Missing inputs for
+pipeline step 2", because `question` went only to step 1. If the value is the
+same on every run, attach it as a static input with `step()`. Otherwise,
+write the flow as a function with `module_fn()`, which passes the active chat
+to a `.llm` argument:
 
-mod_summarize <- signature("context -> summary") |>
-  module(type = "predict", template = "Summarize: {context}")
+```{r module-fn}
+facts_from <- module(signature("document -> facts: list[str]"))
+answer_from <- module(signature("facts: list[str], question -> answer"))
 
-rag_pipeline <- mod_retrieve %>>%
-  map_inputs(mod_summarize, documents = "context")
-
-result <- run(rag_pipeline, query = "dsprrr pipelines", .llm = llm)
-```
-
-## Inject Static Inputs
-Use `with_inputs()` to add constants that don\'t come from upstream outputs:
-
-```{r}
-mod_answer <- signature("facts, question, tone -> answer") |>
-  module(type = "predict")
-
-qa_pipeline <- mod_extract %>>%
-  with_inputs(mod_answer, tone = "concise") %>>%
-  mod_format
-```
-
-## Select Outputs to Pass Forward
-Keep only specific fields from a structured output:
-
-```{r}
-mod_reason <- signature("question -> answer, reasoning") |>
-  module(type = "chain_of_thought")
-
-mod_present <- signature("answer -> response") |>
-  module(type = "predict")
-
-pipeline_filtered <- mod_reason %>>%
-  select_outputs(mod_present, "answer")
-```
-
-## Explicit Pipelines with `pipeline()` and `step()`
-For more control (or when you prefer not to use `%>>%`), build a pipeline
-explicitly:
-
-```{r}
-explicit_pipeline <- pipeline(
-  mod_retrieve,
-  step(mod_summarize, map = c(documents = "context")),
-  mod_format
+qa <- module_fn(
+  "document, question -> answer",
+  function(document, question, .llm) {
+    facts <- run(facts_from, document = document, .llm = .llm)$facts
+    run(answer_from, facts = facts, question = question, .llm = .llm)
+  }
 )
-
-result <- run(explicit_pipeline, query = "...", .llm = llm)
+run(qa, document = notes, question = "Is there a dark mode now?", .llm = llm)
 ```
 
-## Batch Execution with `run_dataset()`
-Pipelines work with data frames the same way as single modules.
-`run_dataset()` adds a `result` column to your input data:
+The trade-off is optimization: `compile()` cannot see inside a function, so
+it refuses `module_fn()` programs. Compile `facts_from` and `answer_from` on
+their own instead.
 
-```{r}
-library(tibble)
+## Run many inputs
 
-questions <- tibble(
-  document = c("Doc A", "Doc B"),
-  question = c("What changed?", "What is the summary?")
+`run_dataset()` runs the pipeline once per row and returns the input columns
+plus a `result` list-column:
+
+```{r run-dataset}
+releases <- tibble::tibble(
+  notes = c(notes, "v2.4: Added single sign-on. Search is faster.")
 )
-
-results <- run_dataset(
-  qa_pipeline,
-  questions,
-  .llm = llm
-)
-
-# Inspect results
+results <- run_dataset(release, releases, .llm = llm)
 results$result
 ```
 
-## Tips
-- Prefer small, composable modules. They are easier to debug and optimize.
-- Use `trace_summary()` and `export_traces()` to inspect multi-step behavior.
-- When column names in your data frame don\'t match the pipeline inputs, rename
-  them first or wrap the pipeline with `map_inputs()` to align fields.
+## See what each step did
+
+The result keeps only the last step's outputs. Each run also records every
+step's inputs and outputs in the pipeline's traces:
+
+```{r step-outputs}
+run(release, notes = notes, .llm = llm)
+latest <- release$state$traces[[length(release$state$traces)]]
+latest$step_inputs
+latest$step_outputs
+```
+
+A structured result reports usage for the whole run (`n_steps`,
+`provider_calls`, `total_tokens`, `cost`) and keeps each step's own metadata,
+including the prompt it sent, in `step_metadata`:
+
+```{r usage}
+result <- run(release, notes = notes, .llm = llm, .return_format = "structured")
+result$metadata$total_tokens
+cat(result$metadata$step_metadata[[2]]$prompt)
+```
+
+## Compile the whole pipeline
+
+`BootstrapFewShot()` compiles a pipeline jointly: it runs the whole pipeline
+on each training row and scores the final output with your metric. When a run
+passes, every step's inputs and outputs from that run become a demonstration
+for that step, so only the final output needs a label:
+
+```{r compile}
+past_releases <- tibble::tibble(
+  notes = c(
+    "v2.1: Added two-factor login. Fixed slow search on large projects.",
+    "v2.2: New PDF export. Removed the legacy API."
+  ),
+  headline = c(
+    "Two-factor login and faster search",
+    "PDF export arrives, legacy API retires"
+  )
+)
+
+compiled <- compile(
+  release,
+  BootstrapFewShot(
+    metric = metric_f1(field = "headline"),
+    metric_threshold = 0.5,
+    max_bootstrapped_demos = 2L
+  ),
+  past_releases,
+  .llm = llm
+)
+```
+
+`compile()` returns a new pipeline and leaves `release` unchanged. A useful
+training set has more than two rows; [Compile and
+optimize](compilation-optimization.html) covers data, metrics and the other
+teleprompters.

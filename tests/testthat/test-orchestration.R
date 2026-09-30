@@ -5,11 +5,11 @@
 # Create a minimal test module
 create_test_module <- function() {
   sig <- Signature(
-    inputs = list(input(name = "text", class = S7::class_character)),
+    inputs = list(input(name = "text", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Test instructions"
   )
-  module(signature = sig, type = "predict", template = "Test: {text}")
+  module(signature = sig, template = "Test: {text}")
 }
 
 # ---- pin_module_config tests ----
@@ -46,7 +46,7 @@ test_that("pin_module_config saves correct structure", {
   config <- pins::pin_read(board, "test-module")
 
   expect_identical(config$format, "dsprrr-program")
-  expect_identical(config$format_version, 4L)
+  expect_identical(config$format_version, 6L)
   expect_named(
     config,
     c(
@@ -153,7 +153,7 @@ test_that("restore_module_config rejects legacy pinned configs", {
 test_that("pin_module_config round-trips chain_of_thought kind", {
   skip_if_not_installed("pins")
 
-  mod <- module(signature("question -> answer"), type = "chain_of_thought")
+  mod <- chain_of_thought(signature("question -> answer"))
   board <- pins::board_temp()
 
   pin_module_config(board, "cot", mod)
@@ -447,38 +447,31 @@ test_that("generated targets workflow runs its core graph end to end", {
   skip_if_not_installed("jsonlite")
 
   make_mock_chat <- function() {
-    structure(
-      list(
-        chat_structured = function(prompt, type, ...) {
-          sentiment <- if (
-            grepl(
-              "terrible|not recommend|worst|waste|disappointing|not worth",
-              prompt,
-              ignore.case = TRUE
-            )
-          ) {
-            "negative"
-          } else if (
-            grepl(
-              "amazing|love|exceeded|great|highly recommend",
-              prompt,
-              ignore.case = TRUE
-            )
-          ) {
-            "positive"
-          } else {
-            "neutral"
-          }
+    new_test_chat(
+      model = "deterministic-test",
+      chat_structured = function(prompt, type, ...) {
+        sentiment <- if (
+          grepl(
+            "terrible|not recommend|worst|waste|disappointing|not worth",
+            prompt,
+            ignore.case = TRUE
+          )
+        ) {
+          "negative"
+        } else if (
+          grepl(
+            "amazing|love|exceeded|great|highly recommend",
+            prompt,
+            ignore.case = TRUE
+          )
+        ) {
+          "positive"
+        } else {
+          "neutral"
+        }
 
-          list(sentiment = sentiment)
-        },
-        get_turns = function(...) list(),
-        set_turns = function(...) invisible(NULL),
-        last_turn = function(...) NULL,
-        get_model = function() "deterministic-test",
-        clone = function(deep = FALSE) make_mock_chat()
-      ),
-      class = "Chat"
+        list(sentiment = sentiment)
+      }
     )
   }
 
@@ -595,8 +588,8 @@ test_that("module config round-trips correctly", {
 test_that("pin_module_config preserves complete pipelines (dsprrr-07u)", {
   skip_if_not_installed("pins")
 
-  m1 <- module(signature("question -> thought"), type = "predict")
-  m2 <- module(signature("thought -> answer"), type = "predict")
+  m1 <- module(signature("question -> thought"))
+  m2 <- module(signature("thought -> answer"))
   pipe <- pipeline(m1, m2)
   board <- pins::board_temp()
 

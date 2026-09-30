@@ -1,328 +1,210 @@
-#' Create an LLM Module
+#' Create a prediction module
 #'
 #' @description
-#' The primary function for creating executable LLM modules. Supports
-#' "predict" for standard structured prediction, "react" for ReAct-style
-#' tool-using modules, "chain_of_thought" for step-by-step reasoning,
-#' "multichain" for multi-chain comparison, "program_of_thought" for code
-#' execution modules, and experimental "flex" for declarative or
-#' interpreter-backed programs.
+#' `module()` turns a signature into a prediction module: one structured model
+#' call per input, whose output follows the signature. It is the usual
+#' starting point:
+#' [signature()] -> `module()` -> [run()] -> [evaluate()] -> [compile()].
 #'
-#' @param signature A Signature object defining the module's interface
-#' @param type Character string specifying the module type:
-#'   - `"predict"` (default): Standard prediction module
-#'   - `"react"`: ReAct-style module with tool support
-#'   - `"chain_of_thought"`: Adds step-by-step reasoning to the signature
-#'   - `"multichain"`: MultiChainComparison module for ensemble reasoning
-#'   - `"program_of_thought"`: Code execution module (requires a runtime source)
-#'   - `"codeact"`: Hybrid agent with tools + code execution (requires a runtime source)
-#'   - `"rlm"`: Recursive Language Model for REPL-based context exploration
-#'     (requires a runtime source)
-#'   - `"flex"`: Experimental declarative or executable Flex program
-#' @param tools Optional tools configuration:
-#'   - for `type = "react"` or `type = "codeact"`: list of ellmer ToolDef objects.
-#'   - for `type = "rlm"`: named list of R functions exposed to the REPL.
-#'   - for executable `type = "flex"`: named host functions or ToolDef objects.
-#'   If provided with `type = "predict"`, automatically upgrades to react.
-#' @param max_iterations Maximum iterations for ReAct, CodeAct, or RLM modules
-#'   created through this generic factory (default: 10). For CodeAct it also
-#'   caps tool calls within one invocation; exceeding that inner budget errors.
-#' @param M Number of reasoning chains for multichain (default: 3)
-#' @param temperature Temperature for multichain diversity (default: 0.7)
-#' @param runner Optional caller-owned code runner implementing `execute()` and
-#'   `policy()` for code execution types. It is never automatically closed.
-#' @param max_iters Maximum code repair iterations for program_of_thought
-#'   (default: 3), or the DSPy 3.3-compatible alias for RLM's
-#'   `max_iterations`. For RLM, supply only one spelling.
-#' @param extract_answer Logical. For program_of_thought, whether to use LLM
-#'   to extract final answer from execution result (default: TRUE)
-#' @param template Optional glue template for prompt generation
-#' @param demos Optional list of demonstration examples
-#' @param config Optional configuration list
-#' @param chat Optional ellmer Chat object for LLM operations. If provided, the
-#'   module will use this Chat for all predictions unless overridden with `.llm`.
-#' @param interpreter_factory Optional zero-argument factory for
-#'   program-of-thought, CodeAct, RLM, and executable Flex modules. It creates
-#'   one fresh runner per invocation. Supply exactly one of `runner` and
-#'   `interpreter_factory` for ordinary code-executing types; Flex accepts only
-#'   the factory so every invocation is isolated.
-#' @param module_src Optional complete source for `type = "flex"`.
-#' @param source_format Flex source language: `"auto"`, `"json"`, or `"r"`.
-#' @param max_predictor_calls Maximum bridged predictor calls allowed by Flex,
-#'   or `NULL` for no limit.
-#' @param max_tool_calls Maximum direct host-tool calls allowed by executable
-#'   Flex, or `NULL` for no limit.
-#' @param require_sandbox Whether executable Flex requires a runner that
-#'   advertises an enforced sandbox.
-#' @param ... Additional arguments forwarded to [rlm_module()] when
-#'   `type = "rlm"`. Reserved and required to be empty for `type = "flex"`.
+#' Other kinds of program have their own constructors: [chain_of_thought()]
+#' adds a reasoning step, [react()] calls tools, [multi_chain_comparison()]
+#' compares several reasoning chains, and [program_of_thought()],
+#' [code_act()], [rlm_module()] and [flex()] run code.
 #'
-#' @return A module object (R6) that can be executed with `run()`
+#' @param signature A signature from [signature()]. A string is not accepted
+#'   here; wrap it in [signature()].
+#' @param chat An ellmer Chat stored on the module. [run()] uses it unless you
+#'   pass `.llm`; see [get_default_chat()] for the full order.
+#' @param template A glue template for the input part of the prompt, with
+#'   input fields in single braces, as in `"Review: {text}"`. The default
+#'   (`""`) lists each input as `name: value`.
+#' @param demos Worked examples placed before the input in every prompt: a
+#'   list of `list(inputs = list(...), output = list(...))`. [compile()] sets
+#'   demos for you.
+#' @param config Model settings applied to a copy of the chat on every call:
+#'   `temperature`, `top_p`, `reasoning_effort`, `max_tokens`,
+#'   `max_output_tokens`, `frequency_penalty`, `presence_penalty` and
+#'   `service_tier`, for example `config = list(reasoning_effort = "low")`.
+#'   Reasoning models such as gpt-6-luna accept `temperature` and `top_p` only
+#'   with `reasoning_effort = "none"`. Chat settings such as `model` or
+#'   `provider` are an error here; set them on the chat instead.
+#' @param ... Must be empty. Arguments of other constructors, such as `tools`
+#'   or `type`, give an error that names the constructor to use.
+#'
+#' @return A prediction module (an R6 object of class `PredictModule`) to use
+#'   with [run()], [run_dataset()], [evaluate()] and [compile()].
 #' @export
+#' @family program constructors
 #' @examples
-#' # Create a simple prediction module
-#' classifier <- signature("text -> sentiment") |>
-#'   module(type = "predict", template = "Analyze: {text}")
-#'
-#' # With demonstrations
-#' qa <- signature("context, question -> answer") |>
-#'   module(
-#'     type = "predict",
-#'     demos = list(
-#'       list(
-#'         inputs = list(context = "...", question = "..."),
-#'         output = "..."
-#'       )
+#' classifier <- module(
+#'   signature("text -> sentiment: enum('positive', 'negative', 'neutral')"),
+#'   template = "Classify the sentiment of this review:\n{text}",
+#'   demos = list(
+#'     list(
+#'       inputs = list(text = "Arrived broken."),
+#'       output = list(sentiment = "negative")
 #'     )
-#'   )
-#'
-#' # Create a multichain comparison module
-#' mcc <- signature("question -> answer") |>
-#'   module(type = "multichain", M = 5, temperature = 0.8)
+#'   ),
+#'   config = list(reasoning_effort = "low")
+#' )
+#' classifier
 #'
 #' \dontrun{
-#' # Execute the module (requires an llm object)
-#' llm <- ellmer::chat_openai()
-#' result <- classifier |> run(text = "Great package!", .llm = llm)
-#'
-#' # Or create module with Chat attached
-#' classifier <- signature("text -> sentiment") |>
-#'   module(type = "predict", chat = chat_openai())
-#' result <- classifier |> run(text = "Great package!")  # No .llm needed
-#'
-#' # Create a ReAct module with tools
-#' search_tool <- ellmer::tool(
-#'   search_fn,
-#'   description = "Search for information",
-#'   arguments = list(query = ellmer::type_string())
+#' run(
+#'   classifier,
+#'   text = "Great package!",
+#'   .llm = ellmer::chat_openai(model = "gpt-6-luna")
 #' )
-#' agent <- signature("question -> answer") |>
-#'   module(type = "react", tools = list(search_tool), chat = chat_openai())
 #' }
 module <- function(
   signature,
-  type = "predict",
-  tools = NULL,
-  max_iterations = 10L,
-  M = 3L,
-  temperature = 0.7,
-  runner = NULL,
-  max_iters = 3L,
-  extract_answer = TRUE,
+  chat = NULL,
   template = "",
   demos = list(),
   config = list(),
-  chat = NULL,
-  ...,
-  interpreter_factory = NULL,
-  module_src = NULL,
-  max_predictor_calls = 100L,
-  max_tool_calls = 100L,
-  source_format = c("auto", "json", "r"),
-  require_sandbox = TRUE
+  ...
 ) {
-  # Validate signature
+  reject_partial_argument_matches(sys.call(), sys.function())
+  reject_module_arguments(...)
+
   if (!inherits(signature, "dsprrr::Signature")) {
     cli::cli_abort(c(
       "First argument must be a Signature object",
       "x" = "Got {.cls {class(signature)[1]}}",
-      "i" = "Create one with: {.code signature('question -> answer')}",
-      "i" = "Or use explicit form: {.code Signature(inputs = list(input('q')), ...)}"
+      "i" = "Create one with: {.code signature('question -> answer')}"
     ))
   }
 
-  # Validate chat if provided
-  if (!is.null(chat) && !inherits(chat, "Chat")) {
-    cli::cli_abort(c(
-      "{.arg chat} must be an ellmer Chat object",
-      "x" = "Got {.cls {class(chat)[1]}}",
-      "i" = "Create one with: {.code ellmer::chat_openai()} or {.code ellmer::chat_claude()}"
-    ))
-  }
+  assert_ellmer_chat(chat, arg = "chat", allow_null = TRUE)
 
-  # Auto-upgrade to react if tools are provided
-  if (!is.null(tools) && length(tools) > 0 && type == "predict") {
-    type <- "react"
-  }
+  mod <- PredictModule$new(
+    signature = signature,
+    template = template,
+    demos = demos,
+    config = config,
+    chat = chat
+  )
+  stamp_module_kind(mod, "predict")
+}
 
-  # Validate type
-  type <- match.arg(
-    type,
-    c(
-      "predict",
-      "react",
-      "chain_of_thought",
-      "multichain",
-      "program_of_thought",
-      "codeact",
-      "rlm",
-      "flex"
+#' Record the constructor contract on a module
+#' @noRd
+stamp_module_kind <- function(module, kind) {
+  module$config <- normalize_module_config(module$config)
+  module$config$.module_kind <- kind
+  module
+}
+
+
+#' Construct a validated module kind for internal program interpreters
+#'
+#' Flex reads a validated primitive name from program source. Keeping this
+#' router private preserves that interpreter capability without restoring the
+#' public `module(type = ...)` dispatcher.
+#' @noRd
+construct_module_kind <- function(kind, signature, ...) {
+  switch(
+    kind,
+    predict = module(signature, ...),
+    react = react(signature, ...),
+    chain_of_thought = chain_of_thought(signature, ...),
+    multichain = multi_chain_comparison(signature, ...),
+    program_of_thought = program_of_thought(signature, ...),
+    codeact = code_act(signature, ...),
+    rlm = rlm_module(signature, ...),
+    flex = flex(signature, ...),
+    cli::cli_abort(
+      "Unsupported internal module kind {.val {kind}}",
+      class = "dsprrr_module_kind_error",
+      kind = kind
     )
   )
+}
 
-  code_execution_types <- c("program_of_thought", "codeact", "rlm")
-  factory_types <- c(code_execution_types, "flex")
-  if (!type %in% factory_types && !is.null(interpreter_factory)) {
-    cli::cli_abort(
-      "{.arg interpreter_factory} is only supported for code-executing module types.",
-      class = "dsprrr_module_type_argument_error"
-    )
-  }
-  if (!identical(type, "flex") && !is.null(module_src)) {
-    cli::cli_abort(
-      "{.arg module_src} is only supported when {.code type = \"flex\"}.",
-      class = "dsprrr_module_type_argument_error"
-    )
-  }
-  if (!identical(type, "flex") && !missing(max_predictor_calls)) {
-    cli::cli_abort(
-      "{.arg max_predictor_calls} is only supported when {.code type = \"flex\"}.",
-      class = "dsprrr_module_type_argument_error"
-    )
-  }
-  if (!identical(type, "flex") && !missing(max_tool_calls)) {
-    cli::cli_abort(
-      "{.arg max_tool_calls} is only supported when {.code type = \"flex\"}.",
-      class = "dsprrr_module_type_argument_error"
-    )
-  }
-  if (!identical(type, "flex") && !missing(source_format)) {
-    cli::cli_abort(
-      "{.arg source_format} is only supported when {.code type = \"flex\"}.",
-      class = "dsprrr_module_type_argument_error"
-    )
-  }
-  if (!identical(type, "flex") && !missing(require_sandbox)) {
-    cli::cli_abort(
-      "{.arg require_sandbox} is only supported when {.code type = \"flex\"}.",
-      class = "dsprrr_module_type_argument_error"
-    )
-  }
-  if (identical(type, "flex") && !is.null(runner)) {
-    cli::cli_abort(
-      c(
-        "Flex accepts {.arg interpreter_factory}, not a caller-owned {.arg runner}",
-        "i" = "A fresh invocation-owned interpreter isolates every Flex call."
-      ),
-      class = "dsprrr_interpreter_binding_error"
-    )
+#' Reject advanced behavior passed to `module()`
+#' @noRd
+reject_module_arguments <- function(...) {
+  dots <- rlang::dots_list(
+    ...,
+    .ignore_empty = "none",
+    .homonyms = "error",
+    .check_assign = TRUE
+  )
+  if (length(dots) == 0L) {
+    return(invisible(NULL))
   }
 
-  if (
-    type %in%
-      code_execution_types &&
-      is.null(runner) &&
-      is.null(interpreter_factory)
+  supplied <- names(dots)
+  supplied[is.na(supplied) | supplied == ""] <- "<unnamed>"
+  argument_list <- paste0("`", supplied, "`", collapse = ", ")
+
+  constructor_hint <- if ("type" %in% supplied) {
+    paste0(
+      "Choose the constructor directly: react(), chain_of_thought(), ",
+      "multi_chain_comparison(), program_of_thought(), code_act(), ",
+      "rlm_module(), or flex()."
+    )
+  } else if (any(supplied %in% c("tools", "max_iterations"))) {
+    "Use react() for tool use, or code_act() when code execution is also required."
+  } else if (any(supplied %in% c("M", "temperature", "inner_module"))) {
+    paste0(
+      "Use multi_chain_comparison() for multiple reasoning chains. ",
+      "For ordinary model temperature, use config = list(temperature = ...)."
+    )
+  } else if (
+    any(
+      supplied %in%
+        c(
+          "runner",
+          "interpreter_factory",
+          "max_iters",
+          "extract_answer"
+        )
+    )
   ) {
-    cli::cli_abort(
-      c(
-        "{type} requires a runner or interpreter_factory",
-        "i" = "Use {.code runner = r_code_runner()} for a caller-owned runner.",
-        "i" = "Use {.code interpreter_factory = r_code_runner} for a fresh runner per invocation."
-      ),
-      class = "dsprrr_interpreter_binding_error"
-    )
+    "Use program_of_thought(), code_act(), rlm_module(), or flex()."
+  } else {
+    "Remove the argument or choose the dedicated advanced constructor that owns it."
   }
 
-  # Create the appropriate R6 module based on type
-  mod <- switch(
-    type,
-    predict = PredictModule$new(
-      signature = signature,
-      template = template,
-      demos = demos,
-      config = config,
-      chat = chat
+  cli::cli_abort(
+    c(
+      "`module()` creates standard prediction modules and does not accept {argument_list}.",
+      "i" = constructor_hint
     ),
-    react = ReactModule$new(
-      signature = signature,
-      tools = tools %||% list(),
-      max_iterations = max_iterations,
-      template = template,
-      demos = demos,
-      config = config,
-      chat = chat
-    ),
-    chain_of_thought = PredictModule$new(
-      signature = with_reasoning(signature),
-      template = template,
-      demos = demos,
-      config = config,
-      chat = chat
-    ),
-    multichain = MultiChainComparisonModule$new(
-      signature = signature,
-      M = M,
-      temperature = temperature,
-      config = config,
-      chat = chat
-    ),
-    program_of_thought = {
-      ProgramOfThoughtModule$new(
-        signature = signature,
-        runner = runner,
-        max_iters = max_iters,
-        extract_answer = extract_answer,
-        config = config,
-        chat = chat,
-        interpreter_factory = interpreter_factory
-      )
-    },
-    codeact = {
-      CodeActModule$new(
-        signature = signature,
-        tools = tools %||% list(),
-        runner = runner,
-        max_iterations = max_iterations,
-        config = config,
-        chat = chat,
-        interpreter_factory = interpreter_factory
-      )
-    },
-    rlm = {
-      rlm_args <- list(
-        signature = signature,
-        runner = runner,
-        interpreter_factory = interpreter_factory,
-        tools = tools %||% list(),
-        config = config,
-        chat = chat
-      )
-      if (!missing(max_iters)) {
-        if (!missing(max_iterations)) {
-          cli::cli_abort(
-            "Supply only one of {.arg max_iterations} and {.arg max_iters}",
-            class = "dsprrr_rlm_argument_conflict"
-          )
-        }
-        rlm_args$max_iters <- max_iters
-      } else {
-        # Preserve the generic factory's historical RLM default of 10 while
-        # allowing an explicitly supplied DSPy 3.3 spelling to take effect.
-        rlm_args$max_iterations <- max_iterations
-      }
-      do.call(rlm_module, c(rlm_args, list(...)))
-    },
-    flex = {
-      rlang::check_dots_empty()
-      flex(
-        signature = signature,
-        module_src = module_src,
-        tools = tools %||% list(),
-        interpreter_factory = interpreter_factory,
-        source_format = source_format,
-        max_predictor_calls = max_predictor_calls,
-        max_tool_calls = max_tool_calls,
-        require_sandbox = require_sandbox,
-        config = config,
-        chat = chat
-      )
-    },
-    cli::cli_abort("Unknown module type: {type}")
+    class = "dsprrr_module_argument_error",
+    arguments = supplied
   )
+}
 
-  mod$config <- normalize_module_config(mod$config)
-  mod$config$.module_kind <- type
 
-  mod
+#' Reject arguments that belong to another constructor
+#' @noRd
+reject_constructor_arguments <- function(constructor, ..., hint = NULL) {
+  dots <- rlang::dots_list(
+    ...,
+    .ignore_empty = "none",
+    .homonyms = "error",
+    .check_assign = TRUE
+  )
+  if (length(dots) == 0L) {
+    return(invisible(NULL))
+  }
+
+  supplied <- names(dots)
+  supplied[is.na(supplied) | supplied == ""] <- "<unnamed>"
+  argument_list <- paste0("`", supplied, "`", collapse = ", ")
+  if (is.null(hint)) {
+    hint <- "Remove arguments that are not documented for this constructor."
+  }
+
+  cli::cli_abort(
+    c(
+      "{.fn {constructor}} does not accept {argument_list}.",
+      "i" = hint
+    ),
+    class = "dsprrr_module_argument_error",
+    constructor = constructor,
+    arguments = supplied
+  )
 }

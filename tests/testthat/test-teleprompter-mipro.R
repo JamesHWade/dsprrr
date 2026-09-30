@@ -1,5 +1,20 @@
 # Tests for MIPROv2 teleprompter
 
+mipro_test_metadata <- function(program) {
+  result <- optimization_result(program)
+  utils::modifyList(
+    result$extensions$miprov2,
+    list(
+      trial_history = result$trials,
+      best_config = result$best_params,
+      budget_summary = result$budget,
+      stop_reason = result$budget$stop_reason,
+      error_count = result$budget$total_errors,
+      partial = identical(result$status, "partial")
+    )
+  )
+}
+
 test_that("MIPROv2 can be created with defaults", {
   tp <- MIPROv2()
   expect_s3_class(tp, "dsprrr::MIPROv2")
@@ -22,20 +37,23 @@ test_that("MIPROv2 validates properties", {
     "positive integer"
   )
 
-  expect_error(
-    MIPROv2(init_temperature = 0),
-    "positive numeric"
-  )
+  task_model <- new_test_chat()
+  expect_identical(MIPROv2(task_model = task_model)@task_model, task_model)
+  expect_error(MIPROv2(task_model = function(...) NULL), "ellmer Chat")
+  expect_error(MIPROv2(task_model = list(chat = identity)), "ellmer Chat")
+
+  expect_error(MIPROv2(prompt_model = task_model), "unused argument")
+  expect_error(MIPROv2(init_temperature = 1), "unused argument")
 })
 
 test_that("MIPROv2 runs end-to-end with auto=light", {
   sig <- Signature(
-    inputs = list(input(name = "question", class = S7::class_character)),
+    inputs = list(input(name = "question", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Answer the question"
   )
 
-  mod <- module(sig, type = "predict")
+  mod <- module(sig)
 
   trainset <- data.frame(
     question = c(
@@ -49,34 +67,29 @@ test_that("MIPROv2 runs end-to-end with auto=light", {
 
   # Create a mock LLM that returns predictable results based on input
   call_count <- 0L
-  mock_llm <- local({
-    self <- structure(
-      list(
-        chat_structured = function(prompt, type, ...) {
-          call_count <<- call_count + 1L
-          # Extract the question from the prompt and return matching answer
-          if (grepl("2\\+2|2 \\+ 2", prompt)) {
-            list(answer = "4")
-          } else if (grepl("3\\+3|3 \\+ 3", prompt)) {
-            list(answer = "6")
-          } else if (grepl("4\\+4|4 \\+ 4", prompt)) {
-            list(answer = "8")
-          } else if (grepl("5\\+5|5 \\+ 5", prompt)) {
-            list(answer = "10")
-          } else {
-            list(answer = "unknown")
-          }
-        },
-        clone = function(...) self,
-        set_turns = function(turns) invisible(NULL)
-      ),
-      class = "Chat"
-    )
-    self
-  })
+  mock_llm <- new_test_chat(
+    chat_structured = function(prompt, type, ...) {
+      call_count <<- call_count + 1L
+      # Extract the question from the prompt and return matching answer
+      if (grepl("2\\+2|2 \\+ 2", prompt)) {
+        list(answer = "4")
+      } else if (grepl("3\\+3|3 \\+ 3", prompt)) {
+        list(answer = "6")
+      } else if (grepl("4\\+4|4 \\+ 4", prompt)) {
+        list(answer = "8")
+      } else if (grepl("5\\+5|5 \\+ 5", prompt)) {
+        list(answer = "10")
+      } else {
+        list(answer = "unknown")
+      }
+    }
+  )
 
   log_dir <- tempfile("mipro-log-")
-  dir.create(log_dir)
+  dir.create(log_dir, mode = "0700")
+  if (.Platform$OS.type == "unix") {
+    Sys.chmod(log_dir, mode = "0700", use_umask = FALSE)
+  }
 
   tp <- MIPROv2(
     metric = metric_exact_match(field = "answer"),
@@ -87,13 +100,13 @@ test_that("MIPROv2 runs end-to-end with auto=light", {
     log_dir = log_dir
   )
 
-  compiled <- compile(tp, mod, trainset, valset = trainset, .llm = mock_llm)
+  compiled <- compile(mod, tp, trainset, valset = trainset, .llm = mock_llm)
 
   expect_true(compiled$config$compiled)
   expect_equal(compiled$config$teleprompter, "MIPROv2")
   expect_true(length(compiled$demos) > 0)
 
-  optimizer <- compiled$config$optimizer
+  optimizer <- mipro_test_metadata(compiled)
   expect_true(length(optimizer$demo_candidates) > 0)
   expect_true(length(optimizer$instruction_candidates) > 0)
   expect_s3_class(optimizer$trial_history, "tbl_df")
@@ -105,19 +118,176 @@ test_that("MIPROv2 runs end-to-end with auto=light", {
   expect_true(file.exists(file.path(log_dir, "trials.jsonl")))
 })
 
+test_that("MIPROv2 tunes nested predictor instructions as graph components", {
+  runner <- list(
+    execute = function(code, context = list(), ...) {
+      list(success = TRUE, result = NULL)
+    },
+    policy = function() {
+      list(
+        backend = "test",
+        trust = "test-only",
+        sandboxed = TRUE,
+        persistent = TRUE
+      )
+    }
+  )
+  program <- rlm_module("question -> answer", runner = runner)
+  action_demos <- list(list(
+    inputs = list(state = "prior action state"),
+    output = list(reasoning = "inspect", code = "1 + 1")
+  ))
+  extract_demos <- list(list(
+    inputs = list(state = "prior extract state"),
+    output = "prior answer"
+  ))
+  program$generate_action$demos <- action_demos
+  program$extract$demos <- extract_demos
+  original_action <- program$generate_action$signature@instructions
+  original_extract <- program$extract$signature@instructions
+  trainset <- data.frame(question = "What is 2 + 2?", answer = "4")
+  evaluated <- list()
+
+  testthat::local_mocked_bindings(
+    resolve_mipro_settings = function(...) {
+      list(
+        trials = 4L,
+        minibatch_size = 1L,
+        full_eval_every = 1L,
+        demo_candidates = 1L,
+        instruction_candidates = 2L
+      )
+    },
+    optimizer_eval_program = function(
+      compiled,
+      budget,
+      stage,
+      unit_id,
+      ...
+    ) {
+      predictors <- dsprrr:::mipro_named_predictors(
+        compiled,
+        boundaries = "cross"
+      )
+      tuned <- vapply(
+        predictors,
+        function(predictor) {
+          grepl(
+            "Dataset summary:",
+            predictor$signature@instructions,
+            fixed = TRUE
+          )
+        },
+        logical(1)
+      )
+      evaluated[[length(evaluated) + 1L]] <<- tuned
+      dsprrr:::record_optimizer_outcome(budget, TRUE, stage)
+      dsprrr:::optimizer_budget_count_trial(budget, stage, unit_id)
+      dsprrr:::optimizer_budget_complete_unit(budget, unit_id)
+      dsprrr:::EvalResult(
+        mean_score = mean(tuned),
+        std_error = 0,
+        n_evaluated = 1L,
+        n_errors = 0L
+      )
+    },
+    .package = "dsprrr"
+  )
+
+  compiled <- compile(
+    program,
+    MIPROv2(
+      metric = function(...) 1,
+      auto = NULL,
+      num_candidates = 2L,
+      max_bootstrapped_demos = 0L,
+      seed = 41L
+    ),
+    trainset
+  )
+
+  expect_length(evaluated, 4L)
+  expect_setequal(
+    vapply(evaluated, paste, character(1), collapse = "/"),
+    c("FALSE/FALSE", "TRUE/FALSE", "FALSE/TRUE", "TRUE/TRUE")
+  )
+  expect_true(any(vapply(evaluated, all, logical(1))))
+  expect_match(
+    compiled$generate_action$signature@instructions,
+    "Dataset summary:",
+    fixed = TRUE
+  )
+  expect_match(
+    compiled$extract$signature@instructions,
+    "Dataset summary:",
+    fixed = TRUE
+  )
+  expect_identical(
+    program$generate_action$signature@instructions,
+    original_action
+  )
+  expect_identical(program$extract$signature@instructions, original_extract)
+  expect_identical(
+    compiled$signature@instructions,
+    program$signature@instructions
+  )
+  expect_identical(compiled$generate_action$demos, action_demos)
+  expect_identical(compiled$extract$demos, extract_demos)
+  expect_identical(
+    mipro_test_metadata(compiled)$candidate_scope,
+    "predictor_components"
+  )
+  expect_identical(mipro_test_metadata(compiled)$demo_mode, "preserved")
+  expect_identical(mipro_test_metadata(compiled)$effective_labeled_demos, 0L)
+  expect_identical(
+    mipro_test_metadata(compiled)$effective_bootstrapped_demos,
+    0L
+  )
+})
+
+test_that("MIPROv2 fails explicitly without nested predictor evidence", {
+  runner <- list(
+    execute = function(code, context = list(), ...) {
+      list(success = TRUE, result = NULL)
+    },
+    policy = function() {
+      list(
+        backend = "test",
+        trust = "test-only",
+        sandboxed = TRUE,
+        persistent = TRUE
+      )
+    }
+  )
+  program <- rlm_module("question -> answer", runner = runner)
+  trainset <- data.frame(question = "What is 2 + 2?", answer = "4")
+
+  expect_error(
+    compile(
+      program,
+      MIPROv2(
+        metric = function(...) 1,
+        max_bootstrapped_demos = 1L
+      ),
+      trainset
+    ),
+    class = "dsprrr_mipro_graph_bootstrap_unsupported"
+  )
+})
+
 test_that("MIPROv2 requires metric for compilation", {
   sig <- Signature(
-    inputs = list(input(name = "question", class = S7::class_character)),
+    inputs = list(input(name = "question", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Answer the question"
   )
 
-  mod <- module(sig, type = "predict")
+  mod <- module(sig)
   trainset <- data.frame(question = "test", answer = "test")
 
   tp <- MIPROv2(metric = NULL)
   expect_error(
-    compile(tp, mod, trainset),
+    compile(mod, tp, trainset),
     "requires a metric"
   )
 })
@@ -440,7 +610,16 @@ test_that("MIPROv2 propagates a typed budget stop into metadata", {
 
   testthat::local_mocked_bindings(
     generate_mipro_demo_candidates = function(...) {
-      list(list(id = "demo", demos = list(), params = list(id = "demo")))
+      list(
+        candidates = list(list(
+          id = "demo",
+          demos = list(),
+          params = list(id = "demo")
+        )),
+        state = NULL,
+        complete = TRUE,
+        budget = budget
+      )
     },
     generate_mipro_instruction_candidates = function(...) {
       list(list(
@@ -462,7 +641,7 @@ test_that("MIPROv2 propagates a typed budget stop into metadata", {
     .package = "dsprrr"
   )
 
-  program <- module(signature("question -> answer"), type = "predict")
+  program <- module(signature("question -> answer"))
   teleprompter <- MIPROv2(metric = function(...) 1)
   compiled <- dsprrr:::compile_mipro(
     teleprompter,
@@ -470,7 +649,7 @@ test_that("MIPROv2 propagates a typed budget stop into metadata", {
     data.frame(question = "test", answer = "test")
   )
 
-  metadata <- compiled$config$optimizer
+  metadata <- mipro_test_metadata(compiled)
   expect_identical(metadata$budget_summary, budget_summary)
   expect_identical(metadata$stop_reason, budget_summary$stop_reason)
   expect_equal(metadata$error_count, 1L)
@@ -492,7 +671,7 @@ test_that("MIPROv2 propagates num_threads into optimizer control", {
     .package = "dsprrr"
   )
 
-  program <- module(signature("question -> answer"), type = "predict")
+  program <- module(signature("question -> answer"))
   teleprompter <- MIPROv2(
     metric = function(...) 1,
     num_threads = 3L
@@ -544,4 +723,41 @@ test_that("run_discrete_bo UCB explores untried candidates first", {
 
   # First 3 trials should visit all candidates (exploration)
   expect_true(all(c("a", "b", "c") %in% visited[1:3]))
+})
+
+test_that("MIPRO records the full-evaluation selection outcome", {
+  candidates <- list(list(
+    id = "candidate",
+    params = list(style = "selected")
+  ))
+  result <- dsprrr:::run_discrete_bo(
+    candidates = candidates,
+    eval_fn = function(candidate, eval_type, trial_idx) {
+      dsprrr:::EvalResult(
+        mean_score = if (eval_type == "full") 0.8 else 0.99,
+        n_evaluated = 1L,
+        n_errors = 0L
+      )
+    },
+    control = dsprrr:::optimizer_control(),
+    max_trials = 2L,
+    minibatch_size = 1L,
+    full_eval_every = 2L
+  )
+
+  expect_equal(result$best_score, 0.8)
+  expect_identical(result$best_trial, 2L)
+  expect_gt(max(result$trial_history$mean_score), result$best_score)
+
+  compiled <- dsprrr:::mipro_finalize_program(
+    module(signature("question -> answer")),
+    settings = list(auto = "light", trials = 2L, full_eval_every = 2L),
+    minibatch_size = 1L,
+    demo_candidates = list(),
+    instruction_candidates = list(),
+    bo_result = result
+  )
+  optimization <- optimization_result(compiled)
+  expect_equal(optimization$best_score, 0.8)
+  expect_identical(optimization$best_trial, 2L)
 })

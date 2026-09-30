@@ -75,23 +75,36 @@ PredictModule <- R6::R6Class(
       request <- build_module_request(self, inputs)
       prompt <- request$prompt
       llm <- resolve_module_llm(self, .llm = .llm)
+      turns_before <- batch_chat_turns(llm)
       start_turn_count <- tryCatch(
         length(llm$get_turns()),
         error = function(e) 0L
       )
+      cache_state <- new.env(parent = emptyenv())
+      cache_state$status <- "unknown"
+      cache_observer <- function(status, ...) {
+        cache_state$status <- status
+        invisible(NULL)
+      }
 
       # Record start time
       start_time <- Sys.time()
+      run_before <- chat_last_run_id(llm)
 
       # Make LLM call (pass inputs for multimodal support)
+      decisions <- module_decisions(self)
       result <- tryCatch(
         {
           private$call_llm(
             llm = llm,
             request = request,
-            output_type = self$signature@output_type,
+            output_type = decision_request_type(
+              self$signature@output_type,
+              decisions
+            ),
             .cache = .cache,
-            rollout_id = rollout_id
+            rollout_id = rollout_id,
+            .observer = cache_observer
           )
         },
         error = function(e) {
@@ -102,6 +115,10 @@ PredictModule <- R6::R6Class(
           )
         }
       )
+      # Decision fields are decoded after the cache, so their numeric
+      # settings reinterpret cached evidence without new provider calls.
+      decoded <- decision_decode_response(result, decisions)
+      result <- decoded$output
 
       # Calculate metrics
       end_time <- Sys.time()
@@ -132,16 +149,27 @@ PredictModule <- R6::R6Class(
         error = function(e) list(user_turn, assistant_turn)
       )
 
-      # Extract token info from ellmer's AssistantTurn (has @tokens vector)
-      token_info <- if (
-        !is.null(assistant_turn) && !is.null(assistant_turn@tokens)
-      ) {
+      verified_usage <- chat_usage_metadata(llm, turns_before)
+      token_info <- if (!is.na(verified_usage$provider_calls)) {
+        verified_usage[c(
+          "input_tokens",
+          "output_tokens",
+          "cached_input_tokens",
+          "total_tokens"
+        )]
+      } else if (!is.null(assistant_turn) && !is.null(assistant_turn@tokens)) {
         tokens <- assistant_turn@tokens
+        input_tokens <- tokens[1]
+        output_tokens <- tokens[2]
         list(
-          input_tokens = tokens[1],
-          output_tokens = tokens[2],
+          input_tokens = input_tokens,
+          output_tokens = output_tokens,
           cached_input_tokens = tokens[3],
-          total_tokens = sum(tokens[1:2], na.rm = TRUE)
+          total_tokens = if (anyNA(c(input_tokens, output_tokens))) {
+            NA_integer_
+          } else {
+            as.integer(input_tokens + output_tokens)
+          }
         )
       } else {
         list(
@@ -152,12 +180,30 @@ PredictModule <- R6::R6Class(
         )
       }
 
-      # Get cost and duration from AssistantTurn
-      cost <- if (!is.null(assistant_turn)) assistant_turn@cost else NA_real_
-      duration_s <- if (!is.null(assistant_turn)) {
+      # Get cost and duration from every verified current-call assistant turn.
+      cost <- if (!is.na(verified_usage$provider_calls)) {
+        verified_usage$cost
+      } else if (!is.null(assistant_turn)) {
+        assistant_turn@cost
+      } else {
+        NA_real_
+      }
+      duration_s <- if (!is.na(verified_usage$provider_calls)) {
+        verified_usage$duration_s
+      } else if (!is.null(assistant_turn)) {
         assistant_turn@duration
       } else {
         NA_real_
+      }
+
+      provider_calls <- if (identical(cache_state$status, "hit")) {
+        0L
+      } else if (!is.na(verified_usage$provider_calls)) {
+        verified_usage$provider_calls
+      } else if (cache_state$status %in% c("miss", "bypass")) {
+        1L
+      } else {
+        NA_integer_
       }
 
       model <- tryCatch(llm$get_model(), error = function(e) NA_character_)
@@ -175,8 +221,19 @@ PredictModule <- R6::R6Class(
         total_tokens = token_info$total_tokens,
         cost = cost,
         duration_s = duration_s,
-        latency_ms = latency_ms # Our measured latency (includes R overhead)
+        latency_ms = latency_ms, # Our measured latency (includes R overhead)
+        cache = cache_state$status,
+        provider_calls = provider_calls
       )
+      if (!is.null(decoded$decisions)) {
+        metadata$decisions <- decoded$decisions
+      }
+      # A chat that records runs, such as a deputy Agent, made this call as one
+      # of its runs.
+      agent_run <- chat_new_run_receipt(llm, run_before)
+      if (!is.null(agent_run)) {
+        metadata$agent_run <- agent_run
+      }
 
       # Record trace if requested - store ellmer turns directly
       if (trace) {
@@ -192,8 +249,13 @@ PredictModule <- R6::R6Class(
           latency_ms = latency_ms,
           tokens = token_info,
           cost = cost,
-          model = model
+          model = model,
+          cache = cache_state$status,
+          provider_calls = provider_calls
         )
+        if (!is.null(agent_run)) {
+          trace_entry$agent_run <- agent_run
+        }
 
         # Optionally include full chat object for advanced replay
         if (isTRUE(self$config$store_chat_in_traces)) {
@@ -279,12 +341,15 @@ PredictModule <- R6::R6Class(
     #' Create a reset copy of the module
     #' @return New PredictModule with reset state
     reset_copy = function() {
-      PredictModule$new(
-        signature = self$signature,
-        template = self$template,
-        demos = list(),
-        config = list(),
-        chat = self$chat
+      artifact_copy_runtime(
+        self,
+        PredictModule$new(
+          signature = self$signature,
+          template = self$template,
+          demos = list(),
+          config = list(),
+          chat = self$chat
+        )
       )
     },
 
@@ -324,7 +389,7 @@ PredictModule <- R6::R6Class(
       # Copy state
       new_module$state <- lapply(self$state, function(x) x)
 
-      new_module
+      artifact_copy_runtime(self, new_module)
     },
 
     #' @description
@@ -336,10 +401,23 @@ PredictModule <- R6::R6Class(
         self$config$current_variant <- params$id
       }
 
-      if (!is.null(params$instructions) && !is.na(params$instructions)) {
+      # Exact lookups: `params$instructions` would partially match an
+      # `instructions_suffix` column and replace the instructions with it.
+      instructions <- params[["instructions", exact = TRUE]]
+      if (!is.null(instructions) && !is.na(instructions)) {
+        self$signature <- with_instructions(self$signature, instructions)
+        self$config$base_instructions <- NULL
+      }
+
+      suffix <- params[["instructions_suffix", exact = TRUE]]
+      if (!is.null(suffix) && !is.na(suffix)) {
+        # Append to the instructions the module had before any suffix, as
+        # GridSearchTeleprompter does, so repeated searches do not stack.
+        base <- self$config$base_instructions %||% self$signature@instructions
+        self$config$base_instructions <- base
         self$signature <- with_instructions(
           self$signature,
-          params$instructions
+          paste(base, suffix)
         )
       }
 
@@ -357,29 +435,19 @@ PredictModule <- R6::R6Class(
 
   private = list(
     # Build prompt from inputs
-    # Supports both glue-style { } and ellmer-style {{ }} delimiters
     build_prompt = function(inputs) {
       build_prompt(self, inputs)
     },
 
-    # Interpolate template with inputs, supporting both { } and {{ }} syntax
-    # Uses ellmer::interpolate() for {{ }} (ellmer-style), glue for { } (glue-style)
+    # Interpolate template inputs with the package's documented {name} syntax.
     interpolate_template = function(template, inputs) {
-      # Check for ellmer-style {{ }} syntax
-      if (grepl("\\{\\{[^}]+\\}\\}", template)) {
-        # ellmer-style - use ellmer::interpolate with !!!inputs
-        # ellmer::interpolate uses {{ }} delimiters
-        rlang::inject(ellmer::interpolate(template, !!!inputs))
-      } else {
-        # glue-style { } - current behavior for backward compatibility
-        glue::glue_data(
-          .x = inputs,
-          template,
-          .open = "{",
-          .close = "}",
-          .envir = parent.frame()
-        )
-      }
+      glue::glue_data(
+        .x = inputs,
+        template,
+        .open = "{",
+        .close = "}",
+        .envir = parent.frame()
+      )
     },
 
     # Format demonstrations for prompt
@@ -466,14 +534,16 @@ PredictModule <- R6::R6Class(
       request,
       output_type,
       .cache = NULL,
-      rollout_id = NULL
+      rollout_id = NULL,
+      .observer = NULL
     ) {
       call_llm_request(
         llm = llm,
         request = request,
         output_type = output_type,
         .cache = .cache,
-        rollout_id = rollout_id
+        rollout_id = rollout_id,
+        .observer = .observer
       )
     }
   ),
@@ -486,29 +556,8 @@ PredictModule <- R6::R6Class(
   )
 )
 
-#' Convert module demos to a tibble
-#'
-#' @description
-#' Converts the demos list from a compiled module into a tidy tibble format.
-#' Handles both flat outputs (single values) and nested outputs (named lists).
-#'
-#' @param module A Module object (typically a PredictModule with demos)
-#' @return A tibble with input columns and output column(s). For nested outputs,
-#'   output fields are flattened into separate columns.
-#'
-#' @examples
-#' \dontrun{
-#' # After compiling a module with LabeledFewShot
-#' compiled <- compile(LabeledFewShot(k = 3), module, trainset)
-#'
-#' # View demos as tibble
-#' module_demos_as_tibble(compiled)
-#'
-#' # Or use the active binding
-#' compiled$demo_table
-#' }
-#'
-#' @export
+#' Convert module demonstrations to the public demo-table representation
+#' @noRd
 module_demos_as_tibble <- function(module) {
   if (!inherits(module, "Module")) {
     cli::cli_abort("{.arg module} must be a Module object")

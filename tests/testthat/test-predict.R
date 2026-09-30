@@ -1,7 +1,7 @@
 test_that("PredictModule can be created with valid signature", {
   sig <- Signature(
     inputs = list(
-      input(name = "text", class = S7::class_character)
+      input(name = "text", type = "string")
     ),
     output_type = ellmer::type_string(),
     instructions = "Classify the text"
@@ -9,7 +9,6 @@ test_that("PredictModule can be created with valid signature", {
 
   pred <- module(
     signature = sig,
-    type = "predict",
     template = "Text: {text}"
   )
 
@@ -20,11 +19,63 @@ test_that("PredictModule can be created with valid signature", {
   expect_equal(pred$template, "Text: {text}")
 })
 
+test_that("predict.Module forwards .llm through the canonical dataset path", {
+  explicit_chat <- new_test_chat(model = "explicit")
+  forwarded <- NULL
+
+  testthat::local_mocked_bindings(
+    run_dataset = function(module, data, .llm = NULL, ...) {
+      forwarded <<- list(llm = .llm, dots = list(...))
+      tibble::as_tibble(data)
+    },
+    .package = "dsprrr"
+  )
+
+  mod <- module(signature("text -> answer"))
+  result <- stats::predict(
+    mod,
+    data.frame(text = "hello"),
+    .llm = explicit_chat,
+    .progress = FALSE
+  )
+
+  expect_identical(forwarded$llm, explicit_chat)
+  expect_identical(forwarded$dots, list(.progress = FALSE))
+  expect_s3_class(result, "tbl_df")
+  expect_identical(
+    names(formals(dsprrr:::predict.Module)),
+    c("object", "new_data", ".llm", "...")
+  )
+  expect_identical(
+    exists(
+      "predict.PredictModule",
+      envir = asNamespace("dsprrr"),
+      inherits = FALSE
+    ),
+    FALSE
+  )
+  expect_true(is.function(getS3method("predict", "Module")))
+  expect_null(getS3method("predict", "PredictModule", optional = TRUE))
+})
+
+test_that("predict.Module preserves zero-row no-Chat execution", {
+  testthat::local_mocked_bindings(
+    get_default_chat = function(...) stop("Chat resolution must not run"),
+    .package = "dsprrr"
+  )
+  mod <- module(signature("text -> answer"))
+
+  result <- stats::predict(mod, data.frame(text = character()))
+
+  expect_s3_class(result, "tbl_df")
+  expect_identical(nrow(result), 0L)
+  expect_identical(names(result), c("text", "result"))
+})
+
 test_that("module() validates signature must be Signature object", {
   expect_error(
     module(
       signature = "not a signature",
-      type = "predict",
       template = "Template"
     ),
     "First argument must be a Signature object"
@@ -50,7 +101,7 @@ test_that("PredictModule validates template must be character", {
 test_that("PredictModule accepts demos list", {
   sig <- Signature(
     inputs = list(
-      input(name = "text", class = S7::class_character)
+      input(name = "text", type = "string")
     ),
     output_type = ellmer::type_string(),
     instructions = "Classify sentiment"
@@ -69,7 +120,6 @@ test_that("PredictModule accepts demos list", {
 
   pred <- module(
     signature = sig,
-    type = "predict",
     template = "Text: {text}",
     demos = demos
   )
@@ -88,25 +138,22 @@ test_that("PredictModule accepts config list", {
 
   config <- list(
     temperature = 0.5,
-    max_tokens = 100,
-    model = "gpt-5-mini"
+    max_tokens = 100
   )
 
   pred <- module(
     signature = sig,
-    type = "predict",
     config = config
   )
 
   expect_equal(pred$config$temperature, 0.5)
   expect_equal(pred$config$max_tokens, 100)
-  expect_equal(pred$config$model, "gpt-5-mini")
 })
 
 test_that("PredictModule print method works", {
   sig <- Signature(
     inputs = list(
-      input(name = "text", class = S7::class_character)
+      input(name = "text", type = "string")
     ),
     output_type = ellmer::type_string(),
     instructions = "Classify the text"
@@ -114,7 +161,6 @@ test_that("PredictModule print method works", {
 
   pred <- module(
     signature = sig,
-    type = "predict",
     template = "Text: {text}"
   )
 
@@ -128,15 +174,14 @@ test_that("PredictModule print method works", {
 test_that("PredictModule with empty template works", {
   sig <- Signature(
     inputs = list(
-      input(name = "text", class = S7::class_character)
+      input(name = "text", type = "string")
     ),
     output_type = ellmer::type_string(),
     instructions = "Classify the text"
   )
 
   pred <- module(
-    signature = sig,
-    type = "predict"
+    signature = sig
   )
 
   expect_equal(pred$template, "")
@@ -145,7 +190,7 @@ test_that("PredictModule with empty template works", {
 test_that("PredictModule reset_copy works", {
   sig <- Signature(
     inputs = list(
-      input(name = "text", class = S7::class_character)
+      input(name = "text", type = "string")
     ),
     output_type = ellmer::type_string(),
     instructions = "Classify"
@@ -153,7 +198,6 @@ test_that("PredictModule reset_copy works", {
 
   pred <- module(
     signature = sig,
-    type = "predict",
     template = "Text: {text}",
     demos = list(list(inputs = list(text = "test"), output = "result")),
     config = list(temperature = 0.7)
@@ -170,7 +214,7 @@ test_that("PredictModule reset_copy works", {
 test_that("PredictModule deepcopy works", {
   sig <- Signature(
     inputs = list(
-      input(name = "text", class = S7::class_character)
+      input(name = "text", type = "string")
     ),
     output_type = ellmer::type_string(),
     instructions = "Classify"
@@ -178,7 +222,6 @@ test_that("PredictModule deepcopy works", {
 
   pred <- module(
     signature = sig,
-    type = "predict",
     template = "Text: {text}",
     demos = list(list(inputs = list(text = "test"), output = "result")),
     config = list(temperature = 0.7)
@@ -204,8 +247,7 @@ test_that("PredictModule is_compiled works", {
   )
 
   pred <- module(
-    signature = sig,
-    type = "predict"
+    signature = sig
   )
 
   expect_false(pred$is_compiled())
@@ -216,14 +258,13 @@ test_that("PredictModule is_compiled works", {
 
 test_that("module_demos_as_tibble converts simple demos to tibble", {
   sig <- Signature(
-    inputs = list(input(name = "text", class = S7::class_character)),
+    inputs = list(input(name = "text", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Classify"
   )
 
   pred <- module(
     signature = sig,
-    type = "predict",
     demos = list(
       list(inputs = list(text = "hello"), output = "positive"),
       list(inputs = list(text = "goodbye"), output = "negative")
@@ -240,14 +281,13 @@ test_that("module_demos_as_tibble converts simple demos to tibble", {
 
 test_that("module_demos_as_tibble handles nested outputs", {
   sig <- Signature(
-    inputs = list(input(name = "text", class = S7::class_character)),
+    inputs = list(input(name = "text", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Classify"
   )
 
   pred <- module(
     signature = sig,
-    type = "predict",
     demos = list(
       list(
         inputs = list(text = "hello"),
@@ -273,12 +313,12 @@ test_that("module_demos_as_tibble handles nested outputs", {
 
 test_that("module_demos_as_tibble returns empty tibble for no demos", {
   sig <- Signature(
-    inputs = list(input(name = "text", class = S7::class_character)),
+    inputs = list(input(name = "text", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Classify"
   )
 
-  pred <- module(signature = sig, type = "predict")
+  pred <- module(signature = sig)
 
   result <- module_demos_as_tibble(pred)
 
@@ -288,14 +328,13 @@ test_that("module_demos_as_tibble returns empty tibble for no demos", {
 
 test_that("demo_table active binding works", {
   sig <- Signature(
-    inputs = list(input(name = "text", class = S7::class_character)),
+    inputs = list(input(name = "text", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Classify"
   )
 
   pred <- module(
     signature = sig,
-    type = "predict",
     demos = list(
       list(inputs = list(text = "test"), output = "result")
     )

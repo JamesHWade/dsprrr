@@ -2,43 +2,43 @@
 % Please edit documentation in R/optimizer-accessors.R
 \name{config_diff}
 \alias{config_diff}
-\title{Compare Module Configuration Before and After Optimization}
+\title{Compare a module's settings with baseline values}
 \usage{
 config_diff(module, baseline = NULL)
 }
 \arguments{
-\item{module}{A DSPrrr module (preferably compiled).}
+\item{module}{A module.}
 
-\item{baseline}{Optional named list of baseline configuration values
-to compare against. If NULL, uses reasonable defaults.}
+\item{baseline}{Optional named list of baseline values; it overrides the
+default baseline entry by entry.}
 }
 \value{
-A tibble with columns:
-\itemize{
-\item \code{parameter}: Parameter name
-\item \code{before}: Value before optimization (or default)
-\item \code{after}: Current value
-\item \code{changed}: Logical indicating if value changed
-}
+A tibble with columns \code{parameter}, \code{before} and \code{after} (values
+formatted as text) and \code{changed} (logical).
 }
 \description{
-Show what configuration values changed during optimization.
-Useful for understanding the effect of optimization on module settings.
+\code{config_diff()} lists the values in \code{module$config} next to baseline values,
+changed rows first. Use it to see which settings an optimizer changed.
+}
+\details{
+The default baseline assumes provider defaults: \code{temperature = 1},
+\code{top_p = 1}, \code{frequency_penalty = 0} and \code{presence_penalty = 0}. A value
+the module never set is shown as \code{"<default>"} and counts as changed, as do
+internal fields such as \code{.module_kind}, so pass a \code{baseline} that matches
+your starting configuration for a meaningful comparison.
 }
 \examples{
-if (FALSE) {
-mod <- module(signature("text -> sentiment"), type = "predict")
-mod$optimize_grid(data, metric, parameters = list(temperature = c(0.3, 1.0)))
-config_diff(mod)
-}
+mod <- module(signature("text -> sentiment"), config = list(temperature = 0))
+config_diff(mod, baseline = list(temperature = 0.7))
 }
 \seealso{
-Other optimizer accessors:
+Other optimization results:
 \code{\link[=apply_best_config]{apply_best_config()}},
 \code{\link[=best_demos]{best_demos()}},
 \code{\link[=best_params]{best_params()}},
 \code{\link[=export_module_code]{export_module_code()}},
+\code{\link[=optimization_result]{optimization_result()}},
 \code{\link[=optimization_summary]{optimization_summary()}},
 \code{\link[=top_trials]{top_trials()}}
 }
-\concept{optimizer accessors}
+\concept{optimization results}

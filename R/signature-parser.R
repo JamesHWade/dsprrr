@@ -442,7 +442,7 @@ parse_type_string <- function(type_str, field_name = NULL) {
     if (length(types) == 2) {
       # Construct TypeObject directly because ellmer 0.5.0 deprecated the
       # `.additional_properties` factory argument while retaining the typed
-      # representation. This remains compatible with the 0.4.1 minimum.
+      # representation.
       return(ellmer::TypeObject(additional_properties = TRUE))
     }
     # Fallback to generic object

@@ -2,39 +2,94 @@
 % Please edit documentation in R/compile.R
 \name{compile}
 \alias{compile}
-\title{Compile S7 Generic and Methods}
+\title{Optimize a program with a teleprompter}
 \usage{
-compile(teleprompter, program, ...)
+compile(program, teleprompter, ...)
 }
 \arguments{
-\item{teleprompter}{A Teleprompter object}
+\item{program}{The module or pipeline to optimize. Programs made with
+\code{\link[=module_fn]{module_fn()}} cannot be compiled.}
 
-\item{program}{A module to optimize}
+\item{teleprompter}{A teleprompter object that sets the optimization
+strategy. Integer settings of teleprompters need integer literals, as in
+\code{LabeledFewShot(k = 3L)}; \code{k = 3} is an error.}
 
-\item{...}{Additional arguments including trainset (training data)}
+\item{...}{The training set and optimizer options:
+\itemize{
+\item \code{trainset} (required, third argument): a data frame with the program's
+input columns and the expected outputs.
+\item \code{valset}: an optional validation data frame, for teleprompters that
+use one. It may also be given as the fourth argument.
+\item \code{.llm}: an ellmer Chat for the program's calls (see \code{\link[=run]{run()}}).
+\item \code{.trace_context}: a named, JSON-compatible list copied into the
+metadata and traces of the calls made while compiling.
+}
+
+Some teleprompters take further arguments; see their help pages.}
 }
 \value{
-An optimized module
+A new, compiled program of the same kind as \code{program}. Check it
+with \code{compiled$is_compiled()}.
 }
 \description{
-Generic method for compiling/optimizing a module using a teleprompter.
+\code{compile()} improves a program (its demos, instructions or other settings)
+with a teleprompter such as \code{\link[=LabeledFewShot]{LabeledFewShot()}}, \code{\link[=BootstrapFewShot]{BootstrapFewShot()}} or
+\code{\link[=MIPROv2]{MIPROv2()}}, using a training set. It returns a new program and leaves the
+input unchanged. Its argument order suits the native pipe:
+\code{program |> compile(teleprompter, trainset)}.
 }
 \details{
-This file defines the compile generic and its methods for optimizing
-DSPrrr modules using teleprompters.
-Compile Generic
+Teleprompters that score candidates call the metric as
+\code{metric(prediction, expected)}, where \code{expected} is the whole training
+row, so give built-in metrics a \code{field}, as in
+\code{metric_exact_match(field = "sentiment")}. Compiling a program that is
+already compiled works but gives a warning.
 }
 \examples{
-\dontrun{
-classifier <- module(signature("text -> sentiment"), type = "predict")
-trainset <- dsp_trainset(
-  text = c("I love it!", "Terrible experience"),
-  sentiment = c("positive", "negative")
+classifier <- module(
+  signature("text -> sentiment: enum('positive', 'negative')")
 )
-optimized <- compile(LabeledFewShot(k = 2L), classifier, trainset)
+trainset <- data.frame(
+  text = c("I love it!", "Terrible experience", "Works great", "Broke in a day"),
+  sentiment = c("positive", "negative", "positive", "negative")
+)
+
+# LabeledFewShot copies training rows into the prompt as demos, so it
+# needs no model calls
+compiled <- classifier |> compile(LabeledFewShot(k = 2L), trainset)
+compiled$is_compiled()
+classifier$is_compiled()
+compiled$demo_table
+
+\dontrun{
+# BootstrapFewShot runs the program and keeps demos that pass the metric
+bootstrapped <- classifier |>
+  compile(
+    BootstrapFewShot(
+      metric = metric_exact_match(field = "sentiment"),
+      max_bootstrapped_demos = 2L
+    ),
+    trainset,
+    .llm = ellmer::chat_openai(model = "gpt-6-luna")
+  )
 }
 }
 \seealso{
-\code{\link[=compile_module]{compile_module()}} for the pipe-friendly wrapper with
-validation and friendlier argument order
+Other teleprompters:
+\code{\link[=AutoResearch]{AutoResearch()}},
+\code{\link[=BetterTogether]{BetterTogether()}},
+\code{\link[=BootstrapFewShot]{BootstrapFewShot()}},
+\code{\link[=BootstrapFewShotWithRandomSearch]{BootstrapFewShotWithRandomSearch()}},
+\code{\link[=COPRO]{COPRO()}},
+\code{\link[=GEPA]{GEPA()}},
+\code{\link[=GridSearchTeleprompter]{GridSearchTeleprompter()}},
+\code{\link[=KNNFewShot]{KNNFewShot()}},
+\code{\link[=LabeledFewShot]{LabeledFewShot()}},
+\code{\link[=MIPROv2]{MIPROv2()}},
+\code{\link[=MetaHarness]{MetaHarness()}},
+\code{\link[=Omni]{Omni()}},
+\code{\link[=ReAnchor]{ReAnchor()}},
+\code{\link[=SIMBA]{SIMBA()}},
+\code{\link[=Teleprompter]{Teleprompter()}}
 }
+\concept{teleprompters}

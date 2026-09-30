@@ -2,28 +2,51 @@
 % Please edit documentation in R/module-ensemble.R
 \name{reduce_weighted_vote}
 \alias{reduce_weighted_vote}
-\title{Weighted Vote Reducer}
+\title{Pick the ensemble output with the most total weight}
 \usage{
 reduce_weighted_vote(field = NULL)
 }
 \arguments{
-\item{field}{Optional field name to use for voting when outputs are lists.
-If NULL, uses the first field of the output.}
+\item{field}{The output field to vote on. With \code{NULL}, the first field.}
 }
 \value{
-A reduce function for use with \code{ensemble()}
+A function \verb{function(outputs, weights = NULL)} for the \code{reduce_fn}
+argument of \code{\link[=ensemble]{ensemble()}}.
 }
 \description{
-Creates a reduce function that uses weighted voting, where each module's
-vote is weighted by its weight (typically validation score).
+\code{reduce_weighted_vote()} makes a reducer for \code{\link[=ensemble]{ensemble()}} that adds up the
+\code{weights} of the modules behind each value and returns the output with the
+largest total. Without weights, every vote counts 1.
+}
+\details{
+Values are compared as strings. Ties go to the value that sorts first
+alphabetically. The reducer returns the whole output of the first module
+that gave the winning value.
 }
 \examples{
-\dontrun{
-# Weighted voting with validation scores
-ens <- ensemble(
-  modules,
-  reduce_fn = reduce_weighted_vote(),
-  weights = c(0.9, 0.85, 0.75)
+vote <- reduce_weighted_vote(field = "sentiment")
+outputs <- list(
+  list(sentiment = "positive"),
+  list(sentiment = "negative"),
+  list(sentiment = "positive")
 )
+vote(outputs)
+
+# The second module is trusted more than the other two together
+vote(outputs, weights = c(0.4, 0.9, 0.4))
 }
+\seealso{
+Other composition:
+\code{\link[=as_reward_fn]{as_reward_fn()}},
+\code{\link[=best_of_n]{best_of_n()}},
+\code{\link[=ensemble]{ensemble()}},
+\code{\link{module-graph}},
+\code{\link[=pipeline]{pipeline()}},
+\code{\link[=reduce_best_by_metric]{reduce_best_by_metric()}},
+\code{\link[=reduce_first]{reduce_first()}},
+\code{\link[=reduce_majority]{reduce_majority()}},
+\code{\link[=refine]{refine()}},
+\code{\link[=step]{step()}},
+\code{\link[=with_assertions]{with_assertions()}}
 }
+\concept{composition}

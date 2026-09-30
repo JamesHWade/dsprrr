@@ -2,8 +2,7 @@
 % Please edit documentation in R/teleprompter-harness.R
 \name{MetaHarness}
 \alias{MetaHarness}
-\alias{print.MetaHarness}
-\title{Meta-Harness Teleprompter}
+\title{Meta-Harness: fresh proposer sessions over a candidate frontier}
 \usage{
 MetaHarness(
   metric = NULL,
@@ -22,101 +21,119 @@ MetaHarness(
   max_candidates_per_iteration = 4L,
   frontier_size = 8L
 )
-
-\method{print}{MetaHarness}(x, ...)
 }
 \arguments{
-\item{metric}{Metric used to evaluate candidates.}
+\item{metric}{A metric function (required) used to evaluate candidates.}
 
-\item{metric_threshold}{Optional success threshold inherited from
-\link{Teleprompter}.}
+\item{metric_threshold}{Accepted for consistency with the other optimizers
+(see \code{\link[=Teleprompter]{Teleprompter()}}); not used.}
 
-\item{max_errors}{Consecutive optimizer error budget.}
+\item{max_errors}{Integer; stop after this many consecutive failed
+evaluations when \code{\link[=compile]{compile()}} gets no \code{control} (default \code{5L}).}
 
-\item{max_iterations}{Maximum evaluated experiments after the baseline.}
+\item{max_iterations}{Integer maximum number of evaluated experiments after
+the baseline (default \code{20L}).}
 
-\item{patience}{Stop after this many evaluated experiments without
-improvement.}
+\item{patience}{Integer; stop after this many evaluated experiments without
+improvement (default \code{6L}).}
 
-\item{target_score}{Optional score at which optimization stops.}
+\item{target_score}{Optional score at which the search stops.}
 
-\item{max_context_examples}{Maximum training examples exposed to the
-research agent.}
+\item{max_context_examples}{Integer maximum number of training rows shown to
+the agent (default \code{20L}).}
 
-\item{max_feedback_examples}{Maximum failed examples returned after each
-evaluation.}
+\item{max_feedback_examples}{Integer maximum number of failed rows returned
+after each evaluation (default \code{8L}).}
 
-\item{max_agent_steps}{Maximum consecutive sandbox or invalid actions before
-the harness requires evaluation progress.}
+\item{max_agent_steps}{Integer maximum number of consecutive sandbox or
+invalid actions before the agent must submit a candidate (default \code{4L}).}
 
-\item{sandbox}{Whether an OS-sandboxed runner is required. Defaults to TRUE.}
+\item{sandbox}{If \code{TRUE} (the default), \code{\link[=compile]{compile()}} requires a \code{runner}
+that advertises an OS sandbox. If \code{FALSE}, the agent cannot run code and
+\code{runner} is ignored.}
 
-\item{seed}{Optional random seed.}
+\item{seed}{Optional whole-number random seed.}
 
-\item{log_dir}{Optional directory for a durable \link{TrialLog}.}
+\item{log_dir}{Directory for a durable \link{TrialLog}, or \code{NULL} (the default).}
 
-\item{verbose}{Whether to report progress.}
+\item{verbose}{Whether to report progress (default \code{TRUE}).}
 
-\item{max_candidates_per_iteration}{Maximum candidates evaluated from one
-proposer batch.}
+\item{max_candidates_per_iteration}{Integer maximum number of candidates
+evaluated from one proposer batch (default \code{4L}).}
 
-\item{frontier_size}{Maximum scored candidates summarized to each proposer.}
-
-\item{x}{A MetaHarness object.}
-
-\item{...}{Additional arguments.}
+\item{frontier_size}{Integer maximum number of scored candidates summarized
+for each proposer (default \code{8L}).}
 }
 \value{
-A \code{MetaHarness} teleprompter.
+A \code{MetaHarness} object to pass to \code{\link[=compile]{compile()}}.
 }
 \description{
-Runs an outer-loop optimization harness that starts a fresh proposer session
-on every iteration. Each proposer sees the current frontier, candidate
-lineage, evaluation traces, and training context, then proposes a batch of
-joint program edits. The R outer loop validates and evaluates every unique
-candidate and alone decides what enters the frontier.
+\code{MetaHarness()} runs an outer optimization loop that starts a fresh
+proposer session on every iteration. Each proposer sees the current best
+candidates (the frontier), their lineage, evaluation traces and training
+context, then proposes a batch of program edits. The R loop validates and
+evaluates every unique candidate and alone decides what enters the
+frontier.
 }
 \details{
 \code{MetaHarness()} is inspired by the Meta-Harness engine in the
 \href{https://github.com/gepa-ai/gepa}{GEPA optimize-anything project} and the
-associated \href{https://arxiv.org/abs/2603.28052}{Meta-Harness paper}.
-It preserves the important separation between an untrusted coding proposer
-and a trusted evaluator while adapting the candidate representation to
-dsprrr module graphs.
+\href{https://arxiv.org/abs/2603.28052}{Meta-Harness paper}. It keeps the
+separation between an untrusted proposer and a trusted evaluator, adapted to
+dsprrr programs.
 
-A proposer may request one or more R analyses before submitting its batch.
-Those analyses execute only through \code{runner}; with the default
-\code{sandbox = TRUE}, the runner must advertise an OS sandbox such as
-\code{\link[=mcp_repl_runner]{mcp_repl_runner()}}. Proposer sessions are fresh by design, so each
-iteration must reason from the persisted frontier rather than hidden chat
-history. An ellmer \code{Chat} is cloned and reset automatically. A custom
-proposer must either provide \code{chat_structured()} and \code{clone()}, or be supplied
-as a zero-argument \code{.agent_llm} factory that returns a fresh compatible
-proposer on every call. Non-cloneable proposer objects are rejected.
+A proposer may request R analyses before submitting its batch. Those run
+only through \code{runner}, which must advertise an operating-system sandbox,
+such as \code{\link[=mcp_repl_runner]{mcp_repl_runner()}}, unless \code{sandbox = FALSE}. The proposer must be
+an ellmer \code{Chat}; it is cloned and reset before each iteration, so each
+iteration reasons from the saved frontier rather than from chat history.
 }
 \section{Compilation arguments}{
 
-In addition to the standard \code{\link[=compile]{compile()}} arguments, this teleprompter accepts
-\code{.agent_llm} for the proposer, \code{runner} for sandboxed analysis, \code{control} for
-optimizer budgets and checkpointing, and \code{objective} for multi-objective
-selection. Named arguments in \code{...}, such as \code{.cache}, are forwarded to
-candidate evaluation.
+Besides the standard \code{\link[=compile]{compile()}} arguments, this optimizer accepts
+\code{.agent_llm} (the proposer Chat; defaults to \code{.llm}), \code{runner} (for
+sandboxed analysis), \code{control} (an \code{\link[=optimizer_control]{optimizer_control()}} object for budgets
+and checkpoints) and \code{objective} (a text description of what to optimize
+for). Other named arguments, such as \code{.cache}, are passed to candidate
+evaluation.
 }
 
 \examples{
-\dontrun{
 harness <- MetaHarness(
   metric = metric_exact_match(field = "answer"),
   max_iterations = 8L,
   max_candidates_per_iteration = 4L
 )
+harness
+
+\dontrun{
 compiled <- compile(
-  harness,
   program,
+  harness,
   trainset,
   valset = valset,
-  .agent_llm = proposer_chat,
+  .llm = ellmer::chat_openai(model = "gpt-6-luna"),
+  .agent_llm = ellmer::chat_anthropic(model = "claude-sonnet-4-5"),
   runner = mcp_repl_runner()
 )
 }
 }
+\seealso{
+Other teleprompters:
+\code{\link[=AutoResearch]{AutoResearch()}},
+\code{\link[=BetterTogether]{BetterTogether()}},
+\code{\link[=BootstrapFewShot]{BootstrapFewShot()}},
+\code{\link[=BootstrapFewShotWithRandomSearch]{BootstrapFewShotWithRandomSearch()}},
+\code{\link[=COPRO]{COPRO()}},
+\code{\link[=GEPA]{GEPA()}},
+\code{\link[=GridSearchTeleprompter]{GridSearchTeleprompter()}},
+\code{\link[=KNNFewShot]{KNNFewShot()}},
+\code{\link[=LabeledFewShot]{LabeledFewShot()}},
+\code{\link[=MIPROv2]{MIPROv2()}},
+\code{\link[=Omni]{Omni()}},
+\code{\link[=ReAnchor]{ReAnchor()}},
+\code{\link[=SIMBA]{SIMBA()}},
+\code{\link[=Teleprompter]{Teleprompter()}},
+\code{\link[=compile]{compile()}}
+}
+\concept{teleprompters}

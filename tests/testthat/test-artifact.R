@@ -54,9 +54,8 @@ artifact_codec_fixtures <- function() {
   )
   programs <- list(
     predict = artifact_leaf(),
-    react = module(
+    react = react(
       signature("question -> answer"),
-      type = "react",
       tools = list(tool)
     ),
     pipeline = pipeline(artifact_leaf(), artifact_leaf("answer", "summary")),
@@ -121,10 +120,11 @@ expect_artifact_manifest_rejected <- function(artifact, info) {
 test_that("artifacts round-trip nested graphs and shared identity", {
   shared <- artifact_leaf()
   shared$demos <- list(list(text = "example", answer = "response"))
-  shared$state$compiled <- TRUE
-  shared$config$optimizer <- list(
-    method = "test-optimizer",
-    budget_summary = list(successes = 4L, errors = 0L)
+  dsprrr:::record_optimization_result(
+    shared,
+    optimizer = "TestOptimizer",
+    budget = list(successes = 4L, errors = 0L),
+    stop_reason = "completed"
   )
   vote <- ensemble(list(left = shared, right = shared))
   wrapped <- best_of_n(vote, N = 2L)
@@ -158,7 +158,7 @@ test_that("artifacts round-trip nested graphs and shared identity", {
   expect_identical(restored_vote$modules$left$demos, shared$demos)
   expect_identical(restored_vote$modules$left$is_compiled(), TRUE)
   expect_identical(
-    restored_vote$modules$left$config$optimizer$budget_summary$successes,
+    optimization_result(restored_vote$modules$left)$budget$successes,
     4L
   )
   expect_identical(
@@ -168,6 +168,356 @@ test_that("artifacts round-trip nested graphs and shared identity", {
   round_trip <- program_artifact(restored)
   expect_identical(round_trip$graph, artifact$graph)
   expect_identical(round_trip$integrity, artifact$integrity)
+})
+
+test_that("program artifact IDs are stable content addresses", {
+  program <- artifact_leaf()
+  artifact <- program_artifact(program)
+  expected <- paste0("sha256:", artifact$integrity$payload_sha256)
+
+  expect_identical(program_artifact_id(program), expected)
+  expect_identical(program_artifact_id(artifact), expected)
+  expect_match(expected, "^sha256:[0-9a-f]{64}$")
+
+  path <- tempfile(fileext = ".rds")
+  on.exit(unlink(path), add = TRUE)
+  save_program(program, path)
+  expect_identical(program_artifact_id(readRDS(path)), expected)
+  expect_identical(program_artifact_id(load_program(path)), expected)
+})
+
+test_that("program artifact IDs cover semantic and graph changes", {
+  base <- module(
+    signature("text -> answer", instructions = "Answer briefly")
+  )
+  changed_instruction <- module(
+    signature("text -> answer", instructions = "Answer with evidence")
+  )
+  changed_demo <- module(
+    signature("text -> answer", instructions = "Answer briefly")
+  )
+  changed_demo$demos <- list(list(text = "example", answer = "response"))
+  changed_graph <- pipeline(
+    base,
+    artifact_leaf("answer", "summary")
+  )
+
+  ids <- vapply(
+    list(base, changed_instruction, changed_demo, changed_graph),
+    program_artifact_id,
+    character(1)
+  )
+  expect_length(unique(ids), 4L)
+})
+
+test_that("restored programs retain source identity until semantic change", {
+  forward <- function(text, ...) list(answer = text)
+  registry <- list(forward_v1 = forward)
+  source <- program_artifact(
+    module_fn("text -> answer", forward),
+    registry = registry
+  )
+  source$metadata$r_version <- "1.0"
+  source$format_version <- as.numeric(source$format_version)
+  source <- artifact_rehash(source)
+  source_id <- program_artifact_id(source)
+  path <- withr::local_tempfile(fileext = ".rds")
+  saveRDS(source, path)
+
+  restored <- load_program(path, registry = registry)
+  current_artifact <- program_artifact(restored)
+  result <- run(restored, text = "hello", .return_format = "structured")
+  trace <- tail(restored$state$traces, 1L)[[1L]]
+
+  expect_identical(program_artifact_id(restored), source_id)
+  expect_false(identical(program_artifact_id(current_artifact), source_id))
+  expect_identical(result$metadata$program_artifact_id, source_id)
+  expect_identical(trace$program_artifact_id, source_id)
+  expect_identical(
+    program_artifact_id(restored$copy(deep = TRUE)),
+    source_id
+  )
+
+  changed_instruction <- restored$copy(deep = TRUE)
+  changed_instruction$signature@instructions <- "Use changed instructions."
+  expect_false(identical(
+    program_artifact_id(changed_instruction),
+    source_id
+  ))
+
+  changed_graph <- pipeline(
+    restored$copy(deep = TRUE),
+    artifact_leaf("answer", "summary")
+  )
+  expect_false(identical(program_artifact_id(changed_graph), source_id))
+
+  demo_source <- program_artifact(artifact_leaf())
+  demo_source$metadata$r_version <- "1.0"
+  demo_source <- artifact_rehash(demo_source)
+  changed_demo <- dsprrr:::restore_program_artifact(demo_source)
+  changed_demo$demos <- list(list(text = "example", answer = "response"))
+  expect_false(identical(
+    program_artifact_id(changed_demo),
+    program_artifact_id(demo_source)
+  ))
+})
+
+test_that("runtime state and credentials do not change program identity", {
+  first <- artifact_leaf()
+  second <- artifact_leaf()
+  first$config$api_key <- "first-runtime-secret"
+  second$config$api_key <- "second-runtime-secret"
+  expect_identical(program_artifact_id(first), program_artifact_id(second))
+
+  before <- program_artifact_id(first)
+  first$state$traces <- list(list(prompt = "runtime", output = "history"))
+  first$state$cache <- list(key = "runtime-cache")
+  expect_identical(program_artifact_id(first), before)
+})
+
+test_that("execution environment metadata remains part of program identity", {
+  artifact <- program_artifact(artifact_leaf())
+  changed_environment <- artifact
+  changed_environment$metadata$r_version <- "1.0"
+  changed_environment <- artifact_rehash(changed_environment)
+
+  changed_time <- artifact
+  changed_time$metadata$created_at <- "2030-01-01T00:00:00Z"
+
+  expect_false(identical(
+    program_artifact_id(artifact),
+    program_artifact_id(changed_environment)
+  ))
+  expect_identical(
+    program_artifact_id(artifact),
+    program_artifact_id(changed_time)
+  )
+})
+
+test_that("program artifact IDs reject malformed inputs and forged manifests", {
+  artifact <- program_artifact(artifact_leaf())
+  artifact$graph$nodes[[artifact$root]]$config$temperature <- 0.7
+
+  expect_error(
+    program_artifact_id(artifact),
+    class = "dsprrr_artifact_integrity_error"
+  )
+  expect_error(
+    program_artifact_id("not a program"),
+    class = "dsprrr_program_artifact_id_error"
+  )
+})
+
+test_that("runtime exclusions preserve identity after restore", {
+  artifact <- program_artifact(artifact_leaf())
+  excluded_fields <- c("traces", "cache")
+  artifact$exclusions <- lapply(
+    excluded_fields,
+    function(field) {
+      list(
+        path = paste0(
+          "graph.nodes.",
+          artifact$root,
+          ".state.",
+          field
+        ),
+        reason = "runtime-data"
+      )
+    }
+  )
+  artifact <- artifact_rehash(artifact)
+  expected_id <- program_artifact_id(artifact)
+
+  restored <- dsprrr:::restore_program_artifact(artifact)
+  reidentified <- program_artifact(restored)
+
+  expect_identical(program_artifact_id(restored), expected_id)
+  expect_identical(reidentified$exclusions, artifact$exclusions)
+})
+
+test_that("program artifact registries reject duplicate runtime aliases", {
+  forward <- function(text, ...) list(answer = text)
+  program <- module_fn("text -> answer", forward)
+
+  expect_error(
+    program_artifact_id(
+      program,
+      registry = list(forward_v1 = forward, forward_alias = forward)
+    ),
+    class = "dsprrr_artifact_registry_error"
+  )
+})
+
+test_that("artifact IDs remain readable across future dependency metadata", {
+  artifact <- program_artifact(artifact_leaf())
+  artifact$metadata$packages$dsprrr <- "999.0.0"
+  artifact <- artifact_rehash(artifact)
+
+  expect_error(
+    dsprrr:::artifact_validate_manifest(artifact),
+    class = "dsprrr_artifact_dependency_error"
+  )
+  expect_identical(
+    program_artifact_id(artifact),
+    paste0("sha256:", artifact$integrity$payload_sha256)
+  )
+})
+
+test_that("trusted restored programs keep identity recomputation explicit", {
+  forward <- function(text, ...) list(answer = text)
+  program <- module_fn("text -> answer", forward)
+  path <- withr::local_tempfile(fileext = ".rds")
+  save_program(program, path, trusted = TRUE)
+  artifact <- readRDS(path)
+  expected_id <- program_artifact_id(artifact)
+
+  restored <- load_program(path, trusted = TRUE)
+  condition <- rlang::catch_cnd(program_artifact_id(restored))
+  explicit <- program_artifact(restored, trusted = TRUE)
+  result <- run(restored, text = "hello", .return_format = "structured")
+
+  expect_s3_class(condition, "dsprrr_artifact_unsafe_value")
+  expect_null(dsprrr:::artifact_restored_identity(restored))
+  expect_identical(program_artifact_id(artifact), expected_id)
+  expect_match(program_artifact_id(explicit), "^sha256:[0-9a-f]{64}$")
+  expect_identical(result$metadata$program_artifact_id, NA_character_)
+})
+
+test_that("registry-backed identity remains bound through execution", {
+  forward <- function(text, ...) list(answer = paste0(text, "!"))
+  program <- module_fn("text -> answer", forward)
+  expected_id <- program_artifact_id(
+    program,
+    registry = list(forward_v1 = forward)
+  )
+
+  result <- run(
+    program,
+    text = "hello",
+    .return_format = "structured"
+  )
+  trace <- tail(program$state$traces, 1L)[[1L]]
+
+  expect_identical(result$output, list(answer = "hello!"))
+  expect_identical(result$metadata$program_artifact_id, expected_id)
+  expect_identical(trace$program_artifact_id, expected_id)
+  expect_identical(program_artifact_id(program), expected_id)
+})
+
+test_that("registry binding ignores ordinary registry-shaped data", {
+  forward <- function(text, ...) list(answer = text)
+  unused <- function(...) NULL
+  program <- module_fn(
+    "text -> answer",
+    forward,
+    config = list(marker = list(kind = "registry", id = "unused"))
+  )
+
+  program_artifact_id(
+    program,
+    registry = list(forward_v1 = forward, unused = unused)
+  )
+  runtime <- dsprrr:::artifact_detached_runtime(program)
+
+  expect_named(runtime$registry, "forward_v1")
+})
+
+test_that("composed programs gather registry bindings from child modules", {
+  forward <- function(text, ...) list(answer = text)
+  child <- module_fn("text -> answer", forward)
+  program_artifact_id(
+    child,
+    registry = list(forward_v1 = forward)
+  )
+
+  program <- pipeline(child)
+  program_id <- program_artifact_id(program)
+
+  expect_match(program_id, "^sha256:[0-9a-f]{64}$")
+  expect_named(
+    dsprrr:::artifact_detached_runtime(program)$registry,
+    "forward_v1"
+  )
+})
+
+test_that("registry-backed identity survives module copies", {
+  search <- function(query) paste("found", query)
+  tool <- ellmer::tool(
+    search,
+    description = "Search",
+    arguments = list(query = ellmer::type_string()),
+    name = "search"
+  )
+  program <- react(
+    signature("question -> answer"),
+    tools = list(tool)
+  )
+  expected_id <- program_artifact_id(
+    program,
+    registry = list(search_tool_v1 = tool)
+  )
+
+  optimizer_copy <- dsprrr:::copy_module(program)
+  public_copy <- program$copy(deep = TRUE)
+  bespoke_copy <- program$deepcopy()
+  expect_identical(program_artifact_id(optimizer_copy), expected_id)
+  expect_identical(program_artifact_id(public_copy), expected_id)
+  expect_identical(program_artifact_id(bespoke_copy), expected_id)
+
+  forward <- function(text, ...) {
+    list(answer = dsprrr:::current_trace_program_artifact_id())
+  }
+  tool_program <- module_fn("text -> answer", forward)
+  tool_program_id <- program_artifact_id(
+    tool_program,
+    registry = list(forward_v1 = forward)
+  )
+  deep_tool <- as_ellmer_tool(
+    tool_program,
+    name = "identity_tool",
+    output = "raw",
+    copy = "deep"
+  )
+
+  expect_identical(
+    deep_tool(text = "hello"),
+    list(answer = tool_program_id)
+  )
+})
+
+test_that("registry-backed identity survives reset copies", {
+  search <- function(query) paste("found", query)
+  tool <- ellmer::tool(
+    search,
+    description = "Search",
+    arguments = list(query = ellmer::type_string()),
+    name = "search"
+  )
+  program <- react(
+    signature("question -> answer"),
+    tools = list(tool)
+  )
+  expected_id <- program_artifact_id(
+    program,
+    registry = list(search_tool_v1 = tool)
+  )
+
+  reset <- program$reset_copy()
+  expect_identical(program_artifact_id(reset), expected_id)
+  expect_named(
+    dsprrr:::artifact_detached_runtime(reset)$registry,
+    "search_tool_v1"
+  )
+
+  composite <- pipeline(program)
+  composite_id <- program_artifact_id(program_artifact(composite))
+  expect_null(dsprrr:::artifact_detached_runtime(composite)$registry)
+  composite_reset <- composite$reset_copy()
+  expect_identical(program_artifact_id(composite_reset), composite_id)
+  expect_named(
+    dsprrr:::artifact_detached_runtime(composite_reset)$registry,
+    "search_tool_v1"
+  )
 })
 
 test_that("safe artifact lists preserve nested named and unnamed NULLs", {
@@ -226,10 +576,7 @@ test_that("signature schemas and complex strings round-trip exactly", {
 
   restored <- restore_module_config(program_artifact(program))
 
-  expect_identical(
-    signature_to_json_schema(restored$signature),
-    signature_to_json_schema(program$signature)
-  )
+  expect_identical(restored$signature, program$signature)
   expect_identical(restored$signature@instructions, sig@instructions)
   expect_identical(restored$template, complex)
   expect_identical(restored$demos, program$demos)
@@ -293,17 +640,21 @@ test_that("credentials and runtime history are excluded recursively", {
   program$config$nested <- list(access_token = sentinel, safe = "kept")
   program$config$named <- c(api_key = sentinel, safe = "kept")
   program$config$prompt <- sentinel
-  program$config$optimizer <- list(
-    method = "safe",
-    candidate_instructions = sentinel,
-    instruction_candidates = sentinel,
-    all_generations = sentinel,
-    trial_history = sentinel,
-    stop_reason = "complete"
+  dsprrr:::record_optimization_result(
+    program,
+    optimizer = "TestOptimizer",
+    best_params = list(temperature = 0.2, credentials = sentinel),
+    trials = tibble::tibble(prompt = sentinel),
+    stop_reason = "complete",
+    extensions = list(
+      method = "safe",
+      candidate_instructions = sentinel,
+      instruction_candidates = sentinel,
+      all_generations = sentinel,
+      trial_history = sentinel
+    )
   )
-  program$state$best_params <- list(temperature = 0.2, credentials = sentinel)
   program$state$traces <- list(list(prompt = sentinel, response = sentinel))
-  program$state$trials <- tibble::tibble(prompt = sentinel)
   program$state$optimization_history <- list(response = sentinel)
 
   artifact <- program_artifact(program)
@@ -320,14 +671,16 @@ test_that("credentials and runtime history are excluded recursively", {
   expect_identical(restored$config$nested$safe, "kept")
   expect_identical(restored$config$named, c(safe = "kept"))
   expect_null(restored$config$prompt)
-  expect_identical(restored$config$optimizer$method, "safe")
-  expect_identical(restored$config$optimizer$stop_reason, "complete")
-  expect_null(restored$config$optimizer$candidate_instructions)
-  expect_null(restored$config$optimizer$instruction_candidates)
-  expect_null(restored$config$optimizer$all_generations)
-  expect_null(restored$config$optimizer$trial_history)
-  expect_identical(restored$state$best_params$temperature, 0.2)
-  expect_null(restored$state$best_params$credentials)
+  result <- optimization_result(restored)
+  details <- result$extensions$test_optimizer
+  expect_identical(details$method, "safe")
+  expect_identical(result$stop_reason, "complete")
+  expect_null(details$candidate_instructions)
+  expect_null(details$instruction_candidates)
+  expect_null(details$all_generations)
+  expect_null(details$trial_history)
+  expect_identical(result$best_params$temperature, 0.2)
+  expect_null(result$best_params$credentials)
   expect_length(restored$state$traces, 0L)
   expect_length(restored$state$trials, 0L)
   expect_setequal(
@@ -687,13 +1040,18 @@ test_that("runtime fields are excluded across camel and acronym styles", {
 
 test_that("chat configuration records only provider and model", {
   sentinel <- "CHAT_HISTORY_SENTINEL"
-  fake_chat <- structure(
-    list(
-      api_key = sentinel,
-      turns = list(sentinel),
-      get_model = function() "safe-model"
+  fake_chat <- new_test_chat(
+    model = "safe-model",
+    turns = list(sentinel),
+    chat = function(prompt) "safe response"
+  )
+  fake_chat$api_key <- sentinel
+  provider_model <- list(
+    provider = paste0(
+      '{"class":"ellmer::Provider","name":"test",',
+      '"base_url":null}'
     ),
-    class = c("SafeProviderChat", "Chat")
+    model = "safe-model"
   )
   program <- artifact_leaf()
   program$chat <- fake_chat
@@ -704,13 +1062,13 @@ test_that("chat configuration records only provider and model", {
 
   expect_identical(
     artifact$graph$nodes[["$"]]$provider_model,
-    list(provider = "SafeProviderChat", model = "safe-model")
+    provider_model
   )
   expect_identical(grepl(sentinel, rendered, fixed = TRUE), FALSE)
   expect_null(restored$chat)
   expect_identical(
     dsprrr:::artifact_detached_runtime(restored)$chat,
-    list(provider = "SafeProviderChat", model = "safe-model")
+    provider_model
   )
 
   runner <- list(
@@ -736,7 +1094,7 @@ test_that("chat configuration records only provider and model", {
   expect_null(restored_rlm$sub_lm)
   expect_identical(
     dsprrr:::artifact_detached_runtime(restored_rlm)$sub_lm,
-    list(provider = "SafeProviderChat", model = "safe-model")
+    provider_model
   )
   restored_artifact <- program_artifact(restored)
   restored_rlm_artifact <- program_artifact(
@@ -885,9 +1243,8 @@ test_that("tools require registry IDs and round-trip by identity", {
     arguments = list(query = ellmer::type_string()),
     name = "search"
   )
-  program <- module(
+  program <- react(
     signature("question -> answer"),
-    type = "react",
     tools = list(tool)
   )
 
@@ -897,6 +1254,29 @@ test_that("tools require registry IDs and round-trip by identity", {
   artifact <- program_artifact(program, registry = registry)
   restored <- restore_module_config(artifact, registry = registry)
   expect_identical(restored$tools[[1]], tool)
+})
+
+test_that("artifact descriptors recognize only ellmer ToolDefs as tools", {
+  tool <- ellmer::tool(
+    \(query) query,
+    name = "search",
+    description = "Search",
+    arguments = list(query = ellmer::type_string())
+  )
+  bare_tool <- \(query) query
+  class(bare_tool) <- c("ToolDef", "function")
+  bare_object <- structure(
+    list(fun = \(query) query),
+    class = "ToolDef"
+  )
+
+  current <- dsprrr:::artifact_runtime_interface_descriptor(tool)
+  bare <- dsprrr:::artifact_runtime_interface_descriptor(bare_tool)
+  bare_list <- dsprrr:::artifact_runtime_interface_descriptor(bare_object)
+
+  expect_identical(current$type, "tool")
+  expect_identical(bare$type, "function")
+  expect_identical(bare_list$type, "list")
 })
 
 test_that("embedded runtime values require dual trusted opt-in", {
@@ -1011,9 +1391,8 @@ test_that("all built-in module codecs reconstruct", {
   leaf <- artifact_leaf()
   modules <- list(
     predict = leaf,
-    react = module(
+    react = react(
       signature("question -> answer"),
-      type = "react",
       tools = list(tool)
     ),
     pipeline = pipeline(artifact_leaf(), artifact_leaf("answer", "summary")),
@@ -1546,26 +1925,32 @@ test_that("arbitrary runtime objects honor registry and dual trusted opt-in", {
 test_that("generated optimizer prompts and demo payloads are excluded", {
   sentinel <- "SIMBA_GENERATED_SENTINEL"
   program <- artifact_leaf()
-  program$config$optimizer <- list(
-    steps = 3L,
+  dsprrr:::record_optimization_result(
+    program,
+    optimizer = "SIMBA",
     best_score = 0.9,
-    n_rules = 1L,
-    rules = sentinel,
-    demos_added = list(list(text = sentinel, answer = sentinel))
+    stop_reason = "completed",
+    extensions = list(
+      steps = 3L,
+      n_rules = 1L,
+      rules = sentinel,
+      demos_added = list(list(text = sentinel, answer = sentinel))
+    )
   )
 
   artifact <- program_artifact(program)
   rendered <- paste(capture.output(dput(artifact)), collapse = "\n")
   exported <- export_module_code(program, include_demos = FALSE)
-  optimizer <- artifact$graph$nodes[["$"]]$config$optimizer
+  result <- artifact$graph$nodes[["$"]]$optimization$provenance
+  details <- result$extensions$simba
 
   expect_false(grepl(sentinel, rendered, fixed = TRUE))
   expect_false(grepl(sentinel, exported, fixed = TRUE))
-  expect_identical(optimizer$steps, 3L)
-  expect_identical(optimizer$best_score, 0.9)
-  expect_identical(optimizer$n_rules, 1L)
-  expect_null(optimizer$rules)
-  expect_null(optimizer$demos_added)
+  expect_identical(details$steps, 3L)
+  expect_identical(result$best_score, 0.9)
+  expect_identical(details$n_rules, 1L)
+  expect_null(details$rules)
+  expect_null(details$demos_added)
 })
 
 test_that("local files atomically replace and preserve the old target on failure", {
@@ -1800,6 +2185,14 @@ test_that("malformed, unsupported, and corrupt artifacts fail with typed errors"
     rlang::catch_cnd(restore_module_config(unsupported)),
     "dsprrr_artifact_unsupported_version"
   )
+  for (version in c(3L, 4L)) {
+    historical <- artifact
+    historical$format_version <- version
+    expect_s3_class(
+      rlang::catch_cnd(restore_module_config(historical)),
+      "dsprrr_artifact_unsupported_version"
+    )
+  }
 
   corrupt <- artifact
   corrupt$graph$nodes[["$"]]$fields$template <- "tampered"
@@ -1880,7 +2273,7 @@ test_that("malformed, unsupported, and corrupt artifacts fail with typed errors"
 })
 
 test_that("only the current artifact schema reaches constructors", {
-  legacy <- list(
+  noncurrent_schema <- list(
     format_version = 2L,
     module_kind = "predict",
     signature = list(),
@@ -1898,7 +2291,7 @@ test_that("only the current artifact schema reaches constructors", {
     .package = "dsprrr"
   )
 
-  condition <- rlang::catch_cnd(restore_module_config(legacy))
+  condition <- rlang::catch_cnd(restore_module_config(noncurrent_schema))
   expect_s3_class(condition, "dsprrr_artifact_malformed")
   expect_false(constructor_called)
 
@@ -1922,9 +2315,9 @@ test_that("only the current artifact schema reaches constructors", {
       rm(list = method_name, envir = globalenv())
     }
   })
-  class(legacy) <- c("artifact_evil", "list")
+  class(noncurrent_schema) <- c("artifact_evil", "list")
 
-  condition <- rlang::catch_cnd(restore_module_config(legacy))
+  condition <- rlang::catch_cnd(restore_module_config(noncurrent_schema))
   expect_s3_class(condition, "dsprrr_artifact_malformed")
   expect_false(probe$called)
   expect_false(constructor_called)
@@ -1972,7 +2365,7 @@ test_that("pins transports the exact graph manifest", {
   restored <- restore_module_config(artifact)
 
   expect_identical(artifact$format, "dsprrr-program")
-  expect_identical(artifact$format_version, 4L)
+  expect_identical(artifact$format_version, 6L)
   expect_identical(
     artifact$integrity,
     dsprrr:::artifact_integrity(artifact)

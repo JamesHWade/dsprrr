@@ -125,7 +125,7 @@ gepa_set_component_candidate_lineage <- function(
   ancestors <- unique(as.character(ancestors))
   if (
     anyNA(c(parents, ancestors)) ||
-      any(!nzchar(c(parents, ancestors)))
+      !all(nzchar(c(parents, ancestors)))
   ) {
     cli::cli_abort(
       "GEPA candidate lineage IDs must be non-empty strings",
@@ -195,7 +195,7 @@ gepa_component_selector_ids <- function(
     !is.character(selected) ||
       length(selected) == 0L ||
       anyNA(selected) ||
-      any(!nzchar(selected)) ||
+      !all(nzchar(selected)) ||
       anyDuplicated(selected) ||
       !all(selected %in% ids)
   ) {
@@ -645,7 +645,8 @@ gepa_invalid_candidate_eval <- function(
     provider_calls = 0L,
     metric_calls = 0L,
     provider_usage_unknown = FALSE,
-    token_usage_unknown = FALSE
+    token_usage_unknown = FALSE,
+    trace_context = current_trace_context()
   )
 }
 
@@ -767,13 +768,13 @@ gepa_signature_contract <- function(signature) {
     list(
       name = input$name,
       description = input$description %||% "",
-      schema = ellmer_type_to_json_schema(input$type)
+      schema = flex_type_schema(input$type)
     )
   })
   outputs <- lapply(
     names(flex_signature_output_types(signature)),
     function(name) {
-      schema <- ellmer_type_to_json_schema(
+      schema <- flex_type_schema(
         flex_signature_output_types(signature)[[name]]
       )
       list(
@@ -791,10 +792,7 @@ gepa_signature_contract <- function(signature) {
 }
 
 gepa_flex_tool_contract <- function(tool, name) {
-  if (
-    inherits(tool, "ellmer::ToolDef") ||
-      inherits(tool, "ToolDef")
-  ) {
+  if (inherits(tool, "ellmer::ToolDef")) {
     props <- tryCatch(S7::props(tool), error = function(error) list())
     arguments <- props$arguments %||% NULL
     return(list(
@@ -804,7 +802,7 @@ gepa_flex_tool_contract <- function(tool, name) {
       arguments_schema = if (is.null(arguments)) {
         NULL
       } else {
-        ellmer_type_to_json_schema(arguments)
+        flex_type_schema(arguments)
       }
     ))
   }
@@ -1097,13 +1095,14 @@ gepa_propose_flex_source <- function(
     )
   }
   current <- module$module_src
-  if (is.null(.llm) || !is.function(.llm$chat_structured)) {
+  if (is.null(.llm)) {
     return(gepa_flex_proposal(
       "unchanged_no_proposer",
       current,
       unit_id = unit_id
     ))
   }
+  assert_ellmer_chat(.llm, arg = ".llm")
 
   prompt <- gepa_flex_reflection_prompt(
     module,
@@ -1227,9 +1226,10 @@ gepa_propose_component_instructions <- function(
   budget = NULL,
   unit_id = "gepa:component_reflection"
 ) {
-  if (is.null(.llm) || !is.function(.llm$chat_structured)) {
+  if (is.null(.llm)) {
     return(gepa_fallback_mutation(instruction, failed_examples))
   }
+  assert_ellmer_chat(.llm, arg = ".llm")
 
   prompt <- gepa_reflection_prompt(instruction, failed_examples)
   type <- ellmer::type_object(instructions = ellmer::type_string())
@@ -2086,9 +2086,7 @@ compile_gepa_components <- function(
   if (length(component_specs) == 0L) {
     optimized <- gepa_clone_component_program(program)
     budget_summary <- optimizer_budget_summary(budget)
-    optimized$config$compiled <- TRUE
-    optimized$config$teleprompter <- "GEPA"
-    optimized$config$optimizer <- list(
+    details <- list(
       selection = teleprompter@selection,
       population_size = teleprompter@population_size,
       generations = teleprompter@generations,
@@ -2124,7 +2122,6 @@ compile_gepa_components <- function(
       best_outputs_valset = if (track_best_outputs) list() else NULL,
       discovery_eval_counts = integer(),
       objective_pareto_front = list(),
-      pareto_frontier = list(),
       resume_supported = FALSE,
       search_state = list(
         schema_version = 1L,
@@ -2133,11 +2130,17 @@ compile_gepa_components <- function(
         next_generation = 1L
       ),
       all_generations = list(),
-      invalid_candidate_count = 0L,
-      error_count = budget_summary$total_errors,
-      budget_summary = budget_summary,
-      stop_reason = budget_summary$stop_reason,
-      partial = FALSE
+      invalid_candidate_count = 0L
+    )
+    record_optimization_result(
+      optimized,
+      optimizer = "GEPA",
+      status = "completed",
+      best_params = list(),
+      trials = tibble::tibble(),
+      budget = budget_summary,
+      stop_reason = "no_mutable_components",
+      extensions = details
     )
     if (!is.null(trial_log)) {
       trial_log$save()
@@ -2472,9 +2475,7 @@ compile_gepa_components <- function(
   )
   semantics <- gepa_component_semantics(track_best_outputs)
   budget_summary <- optimizer_budget_summary(budget)
-  optimized$config$compiled <- TRUE
-  optimized$config$teleprompter <- "GEPA"
-  optimized$config$optimizer <- list(
+  details <- list(
     selection = teleprompter@selection,
     population_size = teleprompter@population_size,
     generations = teleprompter@generations,
@@ -2509,9 +2510,6 @@ compile_gepa_components <- function(
     best_outputs_valset = validation_result$best_outputs_valset,
     discovery_eval_counts = validation_result$discovery_eval_counts,
     objective_pareto_front = objective_frontier,
-    # Compatibility alias for releases that exposed the multi-metric front as
-    # `pareto_frontier`; the validation-instance frontier is recorded above.
-    pareto_frontier = objective_frontier,
     resume_supported = FALSE,
     search_state = list(
       schema_version = 1L,
@@ -2529,11 +2527,49 @@ compile_gepa_components <- function(
         function(record) isTRUE(record$candidate_valid),
         logical(1)
       )
+    )
+  )
+  aggregate_scores <- validation_result$val_aggregate_scores
+  candidate_ids <- names(aggregate_scores)
+  if (is.null(candidate_ids)) {
+    candidate_ids <- names(validation_result$candidates)
+  }
+  if (
+    is.null(candidate_ids) || length(candidate_ids) != length(aggregate_scores)
+  ) {
+    candidate_ids <- as.character(seq_along(aggregate_scores))
+  }
+  trials <- tibble::tibble(
+    trial_id = seq_along(aggregate_scores),
+    candidate_id = candidate_ids,
+    score = as.numeric(aggregate_scores)
+  )
+  best_candidate_id <- best_record$candidate_id %||% NULL
+  best_trial <- match(best_candidate_id, trials$candidate_id)
+  best_score <- if (length(final_scores) == 0L || all(is.na(final_scores))) {
+    NULL
+  } else {
+    mean(final_scores, na.rm = TRUE)
+  }
+  record_optimization_result(
+    optimized,
+    optimizer = "GEPA",
+    status = if (optimizer_budget_stopped(budget)) "partial" else "completed",
+    best_score = best_score,
+    best_trial = if (length(best_trial) == 0L || is.na(best_trial)) {
+      NULL
+    } else {
+      best_trial
+    },
+    best_params = details$best_candidate %||% list(),
+    trials = trials,
+    lineage = list(
+      best_candidate_id = best_candidate_id,
+      parents = validation_result$parents
     ),
-    error_count = budget_summary$total_errors,
-    budget_summary = budget_summary,
-    stop_reason = budget_summary$stop_reason,
-    partial = optimizer_budget_stopped(budget)
+    budget = budget_summary,
+    stop_reason = optimization_stop_reason(budget_summary),
+    extensions = details
   )
 
   if (!is.null(trial_log)) {

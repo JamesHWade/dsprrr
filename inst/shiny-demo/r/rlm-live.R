@@ -106,7 +106,7 @@ run_live_rlm <- function(session, config) {
   sig_str <- paste0(.live_context$sig_inputs, " -> answer")
   question <- config$question
   provider <- config$provider %||% "openai"
-  model <- config$model %||% "gpt-5-mini"
+  model <- config$model %||% "gpt-6-luna"
   api_key <- config$api_key
 
   missing_pkgs <- c("future", "promises")[

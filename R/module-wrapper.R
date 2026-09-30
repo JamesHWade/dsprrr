@@ -1,10 +1,9 @@
-#' Wrapper Modules for Advanced Reasoning Patterns
+#' Wrapper modules: best-of-N selection and iterative refinement
 #'
-#' @description
-#' R6 classes that wrap existing modules to provide advanced execution patterns
-#' like retry with best-of-N selection and iterative refinement.
+#' The user-facing constructors are [best_of_n()] and [refine()].
 #'
 #' @name module-wrapper
+#' @noRd
 NULL
 
 #' BestOfN Wrapper Module
@@ -95,6 +94,13 @@ BestOfNModule <- R6::R6Class(
     },
 
     #' @description
+    #' Inputs the wrapped module fills in itself.
+    #' @return A character vector.
+    supplied_inputs = function() {
+      self$module$supplied_inputs()
+    },
+
+    #' @description
     #' Execute the module N times and return best result
     #'
     #' @param batch Named list or data frame of inputs
@@ -128,8 +134,7 @@ BestOfNModule <- R6::R6Class(
       first_metadata <- NULL
       first_chat <- NULL
       consecutive_failures <- 0
-      total_tokens <- 0
-      total_cost <- 0
+      n_errors <- 0L
 
       for (i in seq_len(self$N)) {
         # Run the wrapped module. rollout_id partitions the cache per attempt so
@@ -148,6 +153,7 @@ BestOfNModule <- R6::R6Class(
           },
           error = function(e) {
             consecutive_failures <<- consecutive_failures + 1
+            n_errors <<- n_errors + 1L
             cli::cli_warn(c(
               "Attempt {i} of {self$N} failed in BestOfN",
               "x" = e$message,
@@ -181,14 +187,6 @@ BestOfNModule <- R6::R6Class(
           first_result <- prediction
           first_metadata <- metadata
           first_chat <- chat_obj
-        }
-
-        # Accumulate token counts and costs
-        if (!is.null(metadata$total_tokens)) {
-          total_tokens <- total_tokens + metadata$total_tokens
-        }
-        if (!is.null(metadata$cost) && !is.na(metadata$cost)) {
-          total_cost <- total_cost + metadata$cost
         }
 
         # Score the result
@@ -247,6 +245,11 @@ BestOfNModule <- R6::R6Class(
         # best_score stays -Inf since no valid scores
       }
 
+      usage <- aggregate_module_usage_metadata(
+        lapply(attempts, function(attempt) attempt$metadata),
+        unknown_attempt = n_errors > 0L
+      )
+
       # Create aggregated metadata
       final_metadata <- list(
         timestamp = end_time,
@@ -256,8 +259,9 @@ BestOfNModule <- R6::R6Class(
         all_scores = vapply(attempts, function(a) a$score, numeric(1)),
         early_stopped = !is.infinite(best_score) &&
           best_score >= self$threshold,
-        total_tokens = total_tokens,
-        total_cost = total_cost,
+        total_tokens = usage$total_tokens,
+        cost = usage$cost,
+        provider_calls = usage$provider_calls,
         latency_ms = latency_ms
       )
 
@@ -366,14 +370,17 @@ BestOfNModule <- R6::R6Class(
     #' @description
     #' Create a reset copy of the module
     reset_copy = function() {
-      BestOfNModule$new(
-        module = self$module$reset_copy(),
-        N = self$N,
-        reward_fn = self$reward_fn,
-        threshold = self$threshold,
-        fail_count = self$fail_count,
-        config = list(),
-        chat = self$chat
+      artifact_copy_runtime(
+        self,
+        BestOfNModule$new(
+          module = self$module$reset_copy(),
+          N = self$N,
+          reward_fn = self$reward_fn,
+          threshold = self$threshold,
+          fail_count = self$fail_count,
+          config = list(),
+          chat = self$chat
+        )
       )
     },
 
@@ -397,46 +404,70 @@ BestOfNModule <- R6::R6Class(
   )
 )
 
-#' Create a BestOfN Wrapper Module
+#' Run a module up to N times and keep the best result
 #'
 #' @description
-#' Factory function to create a BestOfN wrapper around any module.
-#' Runs the module N times and returns the best result according to
-#' a reward function.
+#' `best_of_n()` wraps a module so that each [run()] calls it up to `N` times,
+#' scores every prediction with `reward_fn`, and returns the best one. It
+#' stops early as soon as a prediction scores at least `threshold`.
 #'
-#' @param module A Module object to wrap
-#' @param N Maximum number of attempts (default 3)
-#' @param reward_fn Reward function with signature `function(prediction, inputs)`,
-#'   returning a score between 0 and 1. Use `as_reward_fn()` to convert a metric.
-#'   If NULL, uses a default that returns 1.0 for all valid predictions.
-#' @param threshold Score threshold for early stopping (default 1.0)
-#' @param fail_count Maximum consecutive failures before erroring (default N)
-#' @param ... Additional arguments passed to the module constructor
+#' @param module The module to wrap.
+#' @param N Maximum number of attempts.
+#' @param reward_fn A function called as `reward_fn(prediction, inputs)`,
+#'   where `prediction` is the attempt's output (a named list) and `inputs`
+#'   are the inputs given to [run()]. It returns a score, usually between 0
+#'   and 1; logical values become 0 or 1. The default gives 1 to every
+#'   prediction, so with the default `threshold` the first attempt that
+#'   succeeds is returned and `N` only limits retries after errors.
+#'   [as_reward_fn()] turns a metric into a reward function.
+#' @param threshold Score at which to stop early. Default 1.
+#' @param fail_count Number of consecutive failed attempts after which to
+#'   give up with an error. Defaults to `N`.
+#' @param ... Passed to the wrapper: `chat` (an ellmer Chat, which defaults
+#'   to the wrapped module's chat) or `config`.
 #'
-#' @return A BestOfNModule object
+#' @details
+#' Each attempt uses its own partition of the response cache, so attempts
+#' get fresh responses even when caching is on. A failed attempt gives a
+#' warning and is skipped. If a reward function errors or returns `NA`, that
+#' attempt cannot be chosen; if no attempt has a score, the first successful
+#' prediction is returned.
+#'
+#' The returned module has a `get_attempts()` method that lists the attempts
+#' of the last run (or of all runs, with `all = TRUE`) with their scores.
+#' With `.return_format = "structured"`, the metadata also records
+#' `n_attempts`, `best_score`, `all_scores` and `early_stopped`.
+#'
+#' @return A module (an R6 object of class `BestOfNModule`) with the same
+#'   signature as `module`.
 #'
 #' @export
+#' @family composition
 #' @examples
-#' # Create a basic QA module
-#' qa <- module(signature("question -> answer"))
-#'
-#' # Wrap it with best-of-3 selection
-#' wrapper <- best_of_n(qa, N = 3)
-#'
-#' # With a custom reward function
-#' one_word_reward <- function(pred, inputs) {
-#'   words <- strsplit(as.character(pred$answer), "\\s+")[[1]]
-#'   if (length(words) == 1) 1.0 else 0.0
-#' }
-#' wrapper <- best_of_n(qa, N = 5, reward_fn = one_word_reward)
-#'
-#' # Using a metric-based reward function
-#' wrapper <- best_of_n(
-#'   qa,
-#'   N = 3,
-#'   reward_fn = as_reward_fn(metric_exact_match(field = "answer")),
-#'   threshold = 1.0
+#' # An offline stand-in for a model that phrases its answer differently
+#' # each time
+#' answerer <- module_fn(
+#'   "question -> answer",
+#'   function(question) sample(c("Paris", "It is Paris", "The capital is Paris"), 1)
 #' )
+#' one_word <- function(prediction, inputs) {
+#'   length(strsplit(prediction$answer, " ")[[1]]) == 1
+#' }
+#'
+#' set.seed(5)
+#' best <- best_of_n(answerer, N = 5L, reward_fn = one_word)
+#' run(best, question = "What is the capital of France?")
+#' best$get_attempts()
+#'
+#' \dontrun{
+#' qa <- module(signature("question -> answer"))
+#' concise <- best_of_n(qa, N = 3L, reward_fn = one_word)
+#' run(
+#'   concise,
+#'   question = "What is the capital of France?",
+#'   .llm = ellmer::chat_openai(model = "gpt-6-luna")
+#' )
+#' }
 best_of_n <- function(
   module,
   N = 3L,
@@ -455,30 +486,56 @@ best_of_n <- function(
   )
 }
 
-#' Convert a Metric to a Reward Function
+#' Turn a metric into a reward function
 #'
 #' @description
-#' Adapts a metric function (with signature `function(prediction, expected)`)
-#' to a reward function (with signature `function(prediction, inputs)`).
+#' `as_reward_fn()` adapts a metric, called as `metric(prediction, expected)`,
+#' into a reward function for [best_of_n()] and [refine()], called as
+#' `reward(prediction, inputs)`. The expected value is read from the inputs
+#' under `expected_field`.
 #'
-#' @param metric A metric function created with `metric_*()` functions
-#' @param expected_field Character. Name of the field in inputs that contains
-#'   the expected value. Default is "expected".
-#' @param prediction_field Character. If the prediction is a list, extract
-#'   this field before comparing. If NULL, uses the whole prediction.
+#' @param metric A metric, such as `metric_exact_match()`. The metric
+#'   receives `prediction_field` of the prediction and the bare expected
+#'   value, so do not give it a `field` of its own.
+#' @param expected_field Name of the input that holds the expected value.
+#' @param prediction_field Name of the prediction field to compare. With
+#'   `NULL`, the whole prediction is passed to the metric.
 #'
-#' @return A reward function suitable for `best_of_n()` and `refine()`
+#' @details
+#' Because the expected value travels with the inputs of [run()], the
+#' wrapped module receives it too, and [run()] warns that it is not declared
+#' in the signature. A module without a custom `template` writes every input
+#' into its prompt, so it would show the expected answer to the model. Give
+#' the wrapped module a `template` that leaves that field out, as in the
+#' example. If the input is missing, the reward is 0 with a warning.
+#'
+#' @return A function `function(prediction, inputs)` returning a numeric
+#'   score.
 #'
 #' @export
+#' @family composition
 #' @examples
-#' # Convert exact match metric to reward function
-#' reward <- as_reward_fn(metric_exact_match(), expected_field = "answer")
-#'
-#' # With field extraction
 #' reward <- as_reward_fn(
-#'   metric_exact_match(field = "sentiment"),
-#'   expected_field = "expected_sentiment"
+#'   metric_exact_match(ignore_case = TRUE),
+#'   expected_field = "expected",
+#'   prediction_field = "answer"
 #' )
+#' reward(list(answer = "paris"), list(question = "Capital?", expected = "Paris"))
+#' reward(list(answer = "Lyon"), list(question = "Capital?", expected = "Paris"))
+#'
+#' \dontrun{
+#' qa <- module(
+#'   signature("question -> answer"),
+#'   template = "Question: {question}\nReply with a single word."
+#' )
+#' checked <- best_of_n(qa, N = 3L, reward_fn = reward)
+#' run(
+#'   checked,
+#'   question = "What is the capital of France?",
+#'   expected = "Paris",
+#'   .llm = ellmer::chat_openai(model = "gpt-6-luna")
+#' )
+#' }
 as_reward_fn <- function(
   metric,
   expected_field = "expected",
@@ -620,6 +677,14 @@ RefineModule <- R6::R6Class(
     },
 
     #' @description
+    #' Inputs filled in by the wrapper or the wrapped module. The feedback
+    #' field is supplied by Refine, so callers never pass it.
+    #' @return A character vector.
+    supplied_inputs = function() {
+      union(super$supplied_inputs(), self$feedback_field)
+    },
+
+    #' @description
     #' Execute the module with iterative refinement
     #'
     #' @param batch Named list or data frame of inputs
@@ -654,10 +719,27 @@ RefineModule <- R6::R6Class(
       first_metadata <- NULL
       first_chat <- NULL
       consecutive_failures <- 0
-      total_tokens <- 0
-      total_cost <- 0
+      n_errors <- 0L
       current_batch <- batch
       previous_feedback <- NULL
+
+      # A wrapped module that declares the feedback field needs a value on the
+      # first attempt too, before any feedback exists.
+      wrapped_inputs <- vapply(
+        self$module$signature@inputs,
+        function(x) x$name,
+        character(1)
+      )
+      if (
+        self$feedback_field %in%
+          wrapped_inputs &&
+          is.null(current_batch[[self$feedback_field]])
+      ) {
+        current_batch <- private$inject_feedback(
+          current_batch,
+          "No feedback yet."
+        )
+      }
 
       for (i in seq_len(self$N)) {
         # Inject feedback from previous attempt (if any)
@@ -683,6 +765,7 @@ RefineModule <- R6::R6Class(
           },
           error = function(e) {
             consecutive_failures <<- consecutive_failures + 1
+            n_errors <<- n_errors + 1L
             cli::cli_warn(c(
               "Attempt {i} of {self$N} failed in Refine",
               "x" = e$message,
@@ -716,14 +799,6 @@ RefineModule <- R6::R6Class(
           first_result <- prediction
           first_metadata <- metadata
           first_chat <- chat_obj
-        }
-
-        # Accumulate token counts and costs
-        if (!is.null(metadata$total_tokens)) {
-          total_tokens <- total_tokens + metadata$total_tokens
-        }
-        if (!is.null(metadata$cost) && !is.na(metadata$cost)) {
-          total_cost <- total_cost + metadata$cost
         }
 
         # Score the result
@@ -793,6 +868,11 @@ RefineModule <- R6::R6Class(
         # best_score stays -Inf since no valid scores
       }
 
+      usage <- aggregate_module_usage_metadata(
+        lapply(attempts, function(attempt) attempt$metadata),
+        unknown_attempt = n_errors > 0L
+      )
+
       # Create aggregated metadata
       final_metadata <- list(
         timestamp = end_time,
@@ -803,8 +883,9 @@ RefineModule <- R6::R6Class(
         early_stopped = !is.infinite(best_score) &&
           best_score >= self$threshold,
         feedback_count = length(feedback_history),
-        total_tokens = total_tokens,
-        total_cost = total_cost,
+        total_tokens = usage$total_tokens,
+        cost = usage$cost,
+        provider_calls = usage$provider_calls,
         latency_ms = latency_ms
       )
 
@@ -879,16 +960,19 @@ RefineModule <- R6::R6Class(
     #' @description
     #' Create a reset copy of the module
     reset_copy = function() {
-      RefineModule$new(
-        module = self$module$reset_copy(),
-        N = self$N,
-        reward_fn = self$reward_fn,
-        threshold = self$threshold,
-        fail_count = self$fail_count,
-        feedback_template = self$feedback_template,
-        feedback_field = self$feedback_field,
-        config = list(),
-        chat = self$chat
+      artifact_copy_runtime(
+        self,
+        RefineModule$new(
+          module = self$module$reset_copy(),
+          N = self$N,
+          reward_fn = self$reward_fn,
+          threshold = self$threshold,
+          fail_count = self$fail_count,
+          feedback_template = self$feedback_template,
+          feedback_field = self$feedback_field,
+          config = list(),
+          chat = self$chat
+        )
       )
     }
   ),
@@ -955,46 +1039,77 @@ RefineModule <- R6::R6Class(
   )
 )
 
-#' Create a Refine Wrapper Module
+#' Retry a module with feedback until it scores well
 #'
 #' @description
-#' Factory function to create a Refine wrapper around any module.
-#' Extends BestOfN with iterative refinement using feedback.
+#' `refine()` works like [best_of_n()], but after an attempt scores below
+#' `threshold` it passes feedback about that attempt into the next one. The
+#' feedback is the `feedback_template` filled in with the attempt's score,
+#' its prediction and the inputs; it says only what the template says.
 #'
-#' @param module A Module object to wrap
-#' @param N Maximum number of attempts (default 3)
-#' @param reward_fn Reward function with signature `function(prediction, inputs)`,
-#'   returning a score between 0 and 1
-#' @param threshold Score threshold for early stopping (default 1.0)
-#' @param fail_count Maximum consecutive failures before erroring (default N)
-#' @param feedback_template Template for generating feedback. Uses glue syntax
-#'   with available variables: `\{score\}`, `\{prediction\}`, and input field names.
-#' @param feedback_field Name of the input field to inject feedback into
-#' @param ... Additional arguments passed to the module constructor
+#' @inheritParams best_of_n
+#' @param reward_fn A function called as `reward_fn(prediction, inputs)`,
+#'   returning a score, usually between 0 and 1. The default gives 1 to every
+#'   prediction, so pass a real reward function.
+#' @param feedback_template A glue template for the feedback. It can use
+#'   `{score}` (rounded to 3 digits), `{prediction}` (the output fields
+#'   written as `field: value`, separated by `; `) and any input field. The
+#'   default is "Previous attempt scored \{score\}. The answer was:
+#'   \{prediction\}. Please try again with improvements."
+#' @param feedback_field Name of the input that carries the feedback.
 #'
-#' @return A RefineModule object
+#' @details
+#' If the wrapped module's signature declares `feedback_field` as an input,
+#' the first attempt receives "No feedback yet." and later attempts receive
+#' the filled-in template; callers never pass it to [run()]. If the signature
+#' does not declare it, the feedback is still passed to the wrapped module: a
+#' prediction module without a custom template then adds it to the prompt as
+#' an extra `feedback:` line on retries.
+#'
+#' The returned module has `get_attempts()` and `get_feedback_history()`
+#' methods for the last run (or all runs, with `all = TRUE`).
+#'
+#' @return A module (an R6 object of class `RefineModule`) with the same
+#'   signature as `module`.
 #'
 #' @export
+#' @family composition
 #' @examples
-#' # Create a QA module - include feedback in signature for refinement
-#' # RefineModule will automatically inject feedback on subsequent attempts
-#' qa <- module(signature("question, feedback -> answer"))
-#'
-#' # Wrap with refinement
-#' one_word_reward <- function(pred, inputs) {
-#'   words <- strsplit(as.character(pred$answer), "\\s+")[[1]]
-#'   if (length(words) == 1) 1.0 else 0.0
+#' one_word <- function(prediction, inputs) {
+#'   length(strsplit(prediction$answer, " ")[[1]]) == 1
 #' }
 #'
+#' # An offline stand-in for a model that shortens its answer once it gets
+#' # feedback
+#' drafter <- module_fn(
+#'   "question, feedback -> answer",
+#'   function(question, feedback) {
+#'     if (feedback == "No feedback yet.") "The capital of France is Paris." else "Paris"
+#'   }
+#' )
+#' refined <- refine(
+#'   drafter,
+#'   N = 3L,
+#'   reward_fn = one_word,
+#'   feedback_template = "Your answer '{prediction}' scored {score}. Reply with one word."
+#' )
+#' run(refined, question = "What is the capital of France?")
+#' refined$get_feedback_history()
+#'
+#' \dontrun{
+#' qa <- module(signature("question, feedback -> answer"))
 #' refined <- refine(
 #'   qa,
-#'   N = 3,
-#'   reward_fn = one_word_reward,
-#'   feedback_template = "Score: {score}. Your answer '{prediction}' was too long. Give a single word."
+#'   N = 3L,
+#'   reward_fn = one_word,
+#'   feedback_template = "Your answer '{prediction}' was too long. Give a single word."
 #' )
-#'
-#' # When running, only provide 'question' - feedback is auto-injected:
-#' # result <- run(refined, question = "What is the capital of France?", .llm = llm)
+#' run(
+#'   refined,
+#'   question = "What is the capital of France?",
+#'   .llm = ellmer::chat_openai(model = "gpt-6-luna")
+#' )
+#' }
 refine <- function(
   module,
   N = 3L,

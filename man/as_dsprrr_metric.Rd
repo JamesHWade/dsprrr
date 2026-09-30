@@ -2,7 +2,7 @@
 % Please edit documentation in R/vitals.R
 \name{as_dsprrr_metric}
 \alias{as_dsprrr_metric}
-\title{Adapt a vitals scorer for use as a dsprrr metric}
+\title{Use a vitals scorer as a dsprrr metric}
 \usage{
 as_dsprrr_metric(
   vitals_scorer,
@@ -12,24 +12,88 @@ as_dsprrr_metric(
 )
 }
 \arguments{
-\item{vitals_scorer}{A function that accepts a tibble/data frame and returns
-a tibble with a \code{score} column (following vitals conventions).}
+\item{vitals_scorer}{A scorer function that takes a samples tibble and
+returns a list (or data frame) with a \code{score} element, such as
+\code{vitals::detect_includes()}.}
 
-\item{input_column}{Name of the column to populate with the example input.
-If the column is absent in \code{expected_row}, \code{NA} is supplied.}
+\item{input_column}{Name of the input column, in both the data and the
+sample (default \code{"input"}).}
 
-\item{target_column}{Name of the column holding the ground-truth label inside
-the vitals sample tibble.}
+\item{target_column}{Name of the expected-answer column, in both the data
+and the sample (default \code{"target"}).}
 
-\item{result_column}{Name of the column that receives the model prediction.}
+\item{result_column}{Name of the sample column that receives the prediction
+(default \code{"result"}).}
 }
 \value{
-A metric function with signature \verb{function(prediction, expected_row)}
-returning numeric values in \verb{[0, 1]} or \code{NA} when the scorer output cannot
-be interpreted.
+A metric function \verb{function(prediction, expected_row)} that returns
+a number, usually in \verb{[0, 1]}, or \code{NA}.
 }
 \description{
-Converts a vitals scorer function into a per-example metric compatible with
-DSPrrr compilation and evaluation. The scorer is invoked on a single-row
-tibble constructed from the prediction and the expected row.
+\code{as_dsprrr_metric()} turns a vitals scorer into a per-example metric that
+\code{\link[=evaluate]{evaluate()}}, \code{\link[=optimize_grid]{optimize_grid()}} and the optimizers can call. Each call
+builds a one-row vitals sample from the prediction and the data row, runs
+the scorer, and converts its grade to a number.
 }
+\details{
+The sample has three columns. The \code{input_column} and \code{target_column}
+columns are copied from the data column of the same name (\code{NA} when the row
+has no such column), and \code{result_column} holds the prediction. vitals'
+built-in scorers read the columns \code{input}, \code{target} and \code{result}, so keep
+the defaults with them and give your data a \code{target} column (and an \code{input}
+column for model-graded scorers). The other names are for scorers of your
+own that read different columns.
+
+Grades are converted as follows: numbers are kept, \code{TRUE}/\code{FALSE} become
+1/0, and \code{"C"}/\code{"correct"}/\code{"pass"}, \code{"I"}/\code{"incorrect"}/\code{"fail"} and
+\code{"P"}/\code{"partial"} become 1, 0 and 0.5. Anything else gives \code{NA} with a
+warning.
+}
+\examples{
+# A scorer written in the vitals style
+exact_match <- function(samples) {
+  list(score = as.numeric(samples$result[[1]] == samples$target[[1]]))
+}
+metric <- as_dsprrr_metric(exact_match)
+metric("yes", data.frame(input = "Continue?", target = "yes"))
+
+\dontshow{if (rlang::is_installed("vitals")) withAutoprint(\{ # examplesIf}
+# A vitals scorer; the data needs a `target` column
+includes <- as_dsprrr_metric(vitals::detect_includes())
+includes("The capital is Paris.", data.frame(target = "Paris"))
+\dontshow{\}) # examplesIf}
+}
+\seealso{
+Other integrations:
+\code{\link[=as_dsprrr_traces]{as_dsprrr_traces()}},
+\code{\link[=as_ellmer_tool]{as_ellmer_tool()}},
+\code{\link[=as_vitals_cost]{as_vitals_cost()}},
+\code{\link[=as_vitals_samples]{as_vitals_samples()}},
+\code{\link[=as_vitals_solver]{as_vitals_solver()}},
+\code{\link[=as_vitals_task]{as_vitals_task()}},
+\code{\link[=create_search_tool]{create_search_tool()}},
+\code{\link[=llm_predict]{llm_predict()}},
+\code{\link[=ragnar_tool]{ragnar_tool()}},
+\code{\link[=reasoning_effort]{reasoning_effort()}},
+\code{\link[=register_dsprrr_engine]{register_dsprrr_engine()}},
+\code{\link[=summarize_traces_df]{summarize_traces_df()}},
+\code{\link[=temperature]{temperature()}},
+\code{\link[=top_p]{top_p()}},
+\code{\link[=use_dsprrr_template]{use_dsprrr_template()}},
+\code{\link[=validate_workflow]{validate_workflow()}},
+\code{\link{vitals_metrics}}
+
+Other metrics:
+\code{\link[=evaluate]{evaluate()}},
+\code{\link[=metric_contains]{metric_contains()}},
+\code{\link[=metric_custom]{metric_custom()}},
+\code{\link[=metric_exact_match]{metric_exact_match()}},
+\code{\link[=metric_f1]{metric_f1()}},
+\code{\link[=metric_field_match]{metric_field_match()}},
+\code{\link[=metric_threshold]{metric_threshold()}},
+\code{\link[=metric_with_feedback]{metric_with_feedback()}},
+\code{\link[=metric_with_trace]{metric_with_trace()}},
+\code{\link{vitals_metrics}}
+}
+\concept{integrations}
+\concept{metrics}

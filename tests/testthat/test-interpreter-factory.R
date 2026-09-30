@@ -42,7 +42,7 @@ factory_test_runner <- function(
         secret = "must-not-enter-metadata"
       )
     },
-    close = function() {
+    shutdown = function() {
       log$closed <- c(log$closed, id)
       if (!is.null(close_error)) {
         stop(close_error)
@@ -69,9 +69,7 @@ factory_test_factory <- function(log, result = NULL, close_error = NULL) {
 }
 
 factory_test_pot_chat <- function(error = NULL) {
-  chat <- NULL
-  chat <- list(
-    clone = function() chat,
+  new_test_chat(
     chat_structured = function(prompt, type, ...) {
       if (!is.null(error)) {
         stop(error)
@@ -80,7 +78,21 @@ factory_test_pot_chat <- function(error = NULL) {
     },
     chat = function(prompt, ...) "42"
   )
-  chat
+}
+
+factory_test_rlm_chat <- function() {
+  new_test_chat(
+    chat_structured = function(prompt, type, ...) {
+      list(
+        reasoning = "Return this row's question",
+        code = "SUBMIT(answer = .context$question)"
+      )
+    },
+    chat = function(prompt, ...) {
+      stop("recursive queries are disabled in this test", call. = FALSE)
+    },
+    model = "factory-rlm-test"
+  )
 }
 
 test_that("interpreter factories are validated without being invoked", {
@@ -136,22 +148,21 @@ test_that("interpreter factories are validated without being invoked", {
   )
 })
 
-test_that("module factory exposes Flex and invocation-owned runtimes", {
+test_that("explicit constructors expose Flex and invocation-owned runtimes", {
   log <- factory_test_log()
   factory <- factory_test_factory(log)
   sig <- signature("question -> answer")
 
   runtime_modules <- list(
-    module(
+    program_of_thought(
       sig,
-      type = "program_of_thought",
       interpreter_factory = factory
     ),
-    module(sig, type = "codeact", interpreter_factory = factory),
-    module(sig, type = "rlm", interpreter_factory = factory)
+    code_act(sig, interpreter_factory = factory),
+    rlm_module(sig, interpreter_factory = factory)
   )
   flex_module <- suppressWarnings(
-    module(sig, type = "flex", max_predictor_calls = 7L)
+    flex(sig, max_predictor_calls = 7L)
   )
 
   expect_true(all(vapply(
@@ -166,135 +177,50 @@ test_that("module factory exposes Flex and invocation-owned runtimes", {
 
   expect_error(
     suppressWarnings(
-      module(sig, type = "flex", max_predictor_call = 7L)
+      flex(sig, max_predictor_call = 7L)
     ),
-    "`...` must be empty"
+    class = "dsprrr_argument_name_error"
   )
 })
 
-test_that("module factory rejects type-specific arguments for other types", {
+test_that("module rejects arguments owned by advanced constructors", {
   sig <- signature("question -> answer")
 
   expect_error(
-    module(sig, type = "predict", interpreter_factory = function() NULL),
-    class = "dsprrr_module_type_argument_error"
+    module(sig, interpreter_factory = function() NULL),
+    class = "dsprrr_module_argument_error"
   )
   expect_error(
-    module(sig, type = "predict", module_src = "{}"),
-    class = "dsprrr_module_type_argument_error"
+    module(sig, module_src = "{}"),
+    class = "dsprrr_module_argument_error"
   )
   expect_error(
-    module(sig, type = "predict", max_predictor_calls = 100L),
-    class = "dsprrr_module_type_argument_error"
+    module(sig, max_predictor_calls = 100L),
+    class = "dsprrr_module_argument_error"
   )
   expect_error(
-    module(sig, type = "predict", source_format = "json"),
-    class = "dsprrr_module_type_argument_error"
+    module(sig, source_format = "json"),
+    class = "dsprrr_module_argument_error"
   )
   expect_error(
-    module(sig, type = "predict", require_sandbox = FALSE),
-    class = "dsprrr_module_type_argument_error"
+    module(sig, require_sandbox = FALSE),
+    class = "dsprrr_module_argument_error"
   )
   expect_error(
-    suppressWarnings(module(
+    suppressWarnings(flex(
       sig,
-      type = "flex",
       runner = factory_test_runner(1L)
     )),
-    class = "dsprrr_interpreter_binding_error"
+    class = "dsprrr_module_argument_error"
   )
 
-  # Preserve the pre-existing generic-factory behavior for runner.
-  expect_s3_class(
-    module(sig, type = "predict", runner = factory_test_runner(1L)),
-    "PredictModule"
+  expect_error(
+    module(sig, runner = factory_test_runner(1L)),
+    class = "dsprrr_module_argument_error"
   )
 })
 
-test_that("new factory arguments preserve existing positional APIs", {
-  log <- factory_test_log()
-  runner <- factory_test_runner(1L, log)
-
-  pot <- program_of_thought(
-    "question -> answer",
-    runner,
-    5L,
-    FALSE
-  )
-  codeact <- code_act(
-    "question -> answer",
-    list(),
-    runner,
-    6L
-  )
-  rlm <- rlm_module(
-    "question -> answer",
-    runner,
-    7L,
-    8L,
-    900L,
-    NULL,
-    TRUE,
-    list()
-  )
-
-  expect_identical(pot$runner, runner)
-  expect_identical(pot$max_iters, 5L)
-  expect_false(pot$extract_answer)
-  expect_identical(codeact$runner, runner)
-  expect_identical(codeact$max_iterations, 6L)
-  expect_identical(rlm$runner, runner)
-  expect_identical(rlm$max_iterations, 7L)
-  expect_identical(rlm$max_llm_calls, 8L)
-  expect_identical(rlm$max_output_chars, 900L)
-  expect_true(rlm$verbose)
-
-  expect_identical(
-    names(formals(program_of_thought))[seq_len(5L)],
-    c("signature", "runner", "max_iters", "extract_answer", "...")
-  )
-  expect_identical(
-    names(formals(code_act))[seq_len(5L)],
-    c("signature", "tools", "runner", "max_iterations", "...")
-  )
-  expect_identical(
-    names(formals(rlm_module))[seq_len(10L)],
-    c(
-      "signature",
-      "runner",
-      "max_iterations",
-      "max_llm_calls",
-      "max_output_chars",
-      "sub_lm",
-      "verbose",
-      "tools",
-      "max_iters",
-      "..."
-    )
-  )
-  expect_identical(
-    names(formals(module))[seq_len(15L)],
-    c(
-      "signature",
-      "type",
-      "tools",
-      "max_iterations",
-      "M",
-      "temperature",
-      "runner",
-      "max_iters",
-      "extract_answer",
-      "template",
-      "demos",
-      "config",
-      "chat",
-      "...",
-      "interpreter_factory"
-    )
-  )
-})
-
-test_that("factory-created runners are fresh and closed per invocation", {
+test_that("factory-created runners are fresh and shut down per invocation", {
   log <- factory_test_log()
   factory <- factory_test_factory(log)
   module <- program_of_thought(
@@ -329,7 +255,10 @@ test_that("factory runners use start and shutdown lifecycle methods", {
   events <- character()
   factory <- function() {
     list(
-      start = function() events <<- c(events, "start"),
+      start = function() {
+        events <<- c(events, "start")
+        invisible(NULL)
+      },
       execute = function(code, context = list()) {
         events <<- c(events, "execute")
         list(success = TRUE, result = 42)
@@ -337,7 +266,10 @@ test_that("factory runners use start and shutdown lifecycle methods", {
       policy = function() {
         list(backend = "lifecycle-test", trust = "test", sandboxed = TRUE)
       },
-      shutdown = function() events <<- c(events, "shutdown")
+      shutdown = function() {
+        events <<- c(events, "shutdown")
+        invisible(NULL)
+      }
     )
   }
   module <- program_of_thought(
@@ -359,7 +291,10 @@ test_that("terminal interpreter failures are not repaired or reused", {
   events <- character()
   factory <- function() {
     list(
-      start = function() events <<- c(events, "start"),
+      start = function() {
+        events <<- c(events, "start")
+        invisible(NULL)
+      },
       execute = function(code, context = list()) {
         events <<- c(events, "execute")
         list(
@@ -372,7 +307,10 @@ test_that("terminal interpreter failures are not repaired or reused", {
       policy = function() {
         list(backend = "terminal-test", trust = "test", sandboxed = TRUE)
       },
-      shutdown = function() events <<- c(events, "shutdown")
+      shutdown = function() {
+        events <<- c(events, "shutdown")
+        invisible(NULL)
+      }
     )
   }
   module <- program_of_thought(
@@ -411,24 +349,24 @@ test_that("CodeAct does not retry a terminal tool interpreter", {
       policy = function() {
         list(backend = "codeact-terminal", trust = "test", sandboxed = TRUE)
       },
-      shutdown = function() shutdowns <<- shutdowns + 1L
+      shutdown = function() {
+        shutdowns <<- shutdowns + 1L
+        invisible(NULL)
+      }
     )
   }
   registered <- list()
   chat_calls <- 0L
-  chat <- NULL
-  chat <- list(
-    clone = function() chat,
-    register_tool = function(tool) {
-      registered[[as.character(tool@name)]] <<- tool
-      invisible(NULL)
-    },
+  chat <- new_test_chat(
     chat = function(prompt, ...) {
       chat_calls <<- chat_calls + 1L
       registered$execute_r_code(code = "1 + 1")
-    },
-    get_turns = function() list()
+    }
   )
+  chat$register_tool <- function(tool) {
+    registered[[as.character(tool@name)]] <<- tool
+    invisible(NULL)
+  }
   module <- code_act(
     "question -> answer",
     interpreter_factory = factory,
@@ -491,7 +429,7 @@ test_that("runtime mutation cannot bypass the runner/factory XOR", {
   expect_length(log$created, 0L)
 })
 
-test_that("caller-owned runners are reused and never automatically closed", {
+test_that("caller-owned runners are reused and never automatically shut down", {
   log <- factory_test_log()
   runner <- factory_test_runner(7L, log)
   module <- program_of_thought(
@@ -521,20 +459,15 @@ test_that("leases close on module and runner protocol errors", {
       )
     },
     code_act = function(factory) {
-      chat <- NULL
-      chat <- list(
-        clone = function() chat,
-        register_tool = function(tool) stop("CodeAct failed")
-      )
+      chat <- new_test_chat()
+      chat$register_tool <- function(tool) stop("CodeAct failed")
       code_act(
         "question -> answer",
         interpreter_factory = factory
       )$forward(list(question = "test"), .llm = chat)
     },
     rlm = function(factory) {
-      chat <- NULL
-      chat <- list(
-        clone = function() chat,
+      chat <- new_test_chat(
         chat_structured = function(...) stop("RLM failed")
       )
       rlm_module(
@@ -574,7 +507,7 @@ test_that("leases reject an unusable close contract before execution", {
   factory <- function() {
     log$created <- c(log$created, 1L)
     runner <- factory_test_runner(1L, log)
-    runner$close <- function(force) {
+    runner$shutdown <- function(force) {
       if (isTRUE(force)) {
         log$closed <- c(log$closed, 1L)
       }
@@ -683,7 +616,10 @@ test_that("invalid factory runners are closed when possible", {
   invalid_factory <- function() {
     list(
       execute = function(code, context = list()) NULL,
-      close = function() closes <<- closes + 1L
+      shutdown = function() {
+        closes <<- closes + 1L
+        invisible(NULL)
+      }
     )
   }
 
@@ -708,7 +644,10 @@ test_that("factory runner cleanup preserves policy interrupts", {
     list(
       execute = function(code, context = list()) NULL,
       policy = function() stop(interrupt),
-      close = function() closes <<- closes + 1L
+      shutdown = function() {
+        closes <<- closes + 1L
+        invisible(NULL)
+      }
     )
   }
 
@@ -724,25 +663,24 @@ test_that("factory runner cleanup preserves policy interrupts", {
   expect_identical(closes, 1L)
 })
 
-test_that("a valid close fallback cleans up an invalid shutdown contract", {
-  closes <- 0L
+test_that("factory runners must implement a valid shutdown contract", {
   factory <- function() {
     list(
       execute = function(code, context = list()) {
         list(success = TRUE, result = 1)
       },
       policy = function() {
-        list(backend = "cleanup-fallback", trust = "test", sandboxed = TRUE)
+        list(backend = "invalid-shutdown", trust = "test", sandboxed = TRUE)
       },
       shutdown = function(required) invisible(required),
-      close = function() closes <<- closes + 1L
+      close = function() invisible(NULL)
     )
   }
 
-  lease <- dsprrr:::acquire_code_runner(NULL, factory, "test module")
-  expect_identical(lease$cleanup_method, "close")
-  expect_null(dsprrr:::close_code_runner_lease(lease))
-  expect_identical(closes, 1L)
+  expect_error(
+    dsprrr:::acquire_code_runner(NULL, factory, "test module"),
+    class = "dsprrr_interpreter_factory_error"
+  )
 })
 
 test_that("runner results are normalized and malformed results fail closed", {
@@ -762,7 +700,8 @@ test_that("runner results are normalized and malformed results fail closed", {
   repairable <- dsprrr:::validate_code_runner_result(list(
     success = FALSE,
     result = NULL,
-    error = "bad submitted code"
+    error = "bad submitted code",
+    error_type = "execution"
   ))
   expect_identical(repairable$error_type, "execution")
   expect_true(repairable$retryable)
@@ -841,21 +780,25 @@ test_that("runner policies reject ambiguous or malformed metadata", {
 test_that("CodeAct retained tools cannot outlive a factory lease", {
   log <- factory_test_log()
   registered <- list()
-  chat <- NULL
-  chat <- list(
-    clone = function() chat,
-    register_tool = function(tool) {
-      registered[[as.character(tool@name)]] <<- tool
-      invisible(NULL)
-    },
-    chat = function(prompt, ...) "done",
-    get_turns = function() {
-      list(list(
+  turns <- list()
+  chat <- new_test_chat(
+    chat = function(prompt, ...) {
+      turns <<- list(list(
         role = "assistant",
         contents = list("done")
       ))
+      "done"
+    },
+    get_turns = function() turns,
+    set_turns = function(value) {
+      turns <<- value
+      invisible(NULL)
     }
   )
+  chat$register_tool <- function(tool) {
+    registered[[as.character(tool@name)]] <<- tool
+    invisible(NULL)
+  }
   module <- code_act(
     "question -> answer",
     interpreter_factory = factory_test_factory(log)
@@ -963,6 +906,74 @@ test_that("factory batches reject controls the adapter cannot enforce", {
     )
   }
   expect_length(log$created, 0L)
+})
+
+test_that("factory RLM batches forward cache control to action and fallback", {
+  skip_if_not_installed("callr")
+  observed <- logical()
+  testthat::local_mocked_bindings(
+    cached_chat_structured = function(
+      llm,
+      prompt,
+      output_type,
+      rollout_id = NULL,
+      .cache = NULL,
+      .observer = NULL
+    ) {
+      observed <<- c(observed, .cache)
+      if (is.function(.observer)) {
+        if (isTRUE(.cache)) {
+          .observer("miss", "cache_miss")
+        } else {
+          .observer("bypass", "disabled")
+        }
+      }
+      fields <- names(output_type@properties)
+      if (identical(fields, c("reasoning", "code"))) {
+        return(list(reasoning = "Inspect before fallback", code = "1 + 1"))
+      }
+      list(answer = "done")
+    },
+    .package = "dsprrr"
+  )
+  make_module <- function() {
+    rlm_module(
+      "question -> answer: string",
+      interpreter_factory = function() {
+        r_code_runner(timeout = 10, persistent = TRUE)
+      },
+      max_iterations = 1L,
+      max_llm_calls = 0L
+    )
+  }
+  chat <- factory_test_rlm_chat()
+
+  enabled <- suppressWarnings(run_dataset(
+    make_module(),
+    data.frame(question = c("first", "second")),
+    .llm = chat,
+    .cache = TRUE,
+    .progress = FALSE
+  ))
+  expect_identical(
+    enabled$result,
+    list(list(answer = "done"), list(answer = "done"))
+  )
+  expect_identical(observed, rep(TRUE, 4L))
+
+  observed <- logical()
+  disabled <- suppressWarnings(run_dataset(
+    make_module(),
+    data.frame(question = c("first", "second")),
+    .llm = chat,
+    .cache = FALSE,
+    .progress = FALSE
+  ))
+  expect_identical(
+    disabled$result,
+    list(list(answer = "done"), list(answer = "done"))
+  )
+  expect_identical(observed, rep(FALSE, 4L))
 })
 
 test_that("run_async owns an isolated profile after default topology stops", {
@@ -1170,16 +1181,11 @@ test_that("factory-backed batches support isolated mirai concurrency", {
       shutdown = function() cat("shutdown\n", file = log_path, append = TRUE)
     )
   }
-  chat <- NULL
-  chat <- structure(
-    list(
-      clone = function() chat,
-      chat_structured = function(...) {
-        list(code = "ignored", explanation = "test")
-      },
-      chat = function(...) "unused"
-    ),
-    class = "Chat"
+  chat <- new_test_chat(
+    chat_structured = function(...) {
+      list(code = "ignored", explanation = "test")
+    },
+    chat = function(...) "unused"
   )
   module <- program_of_thought(
     "question -> answer",
@@ -1205,11 +1211,389 @@ test_that("factory-backed batches support isolated mirai concurrency", {
   expect_length(module$get_executions(), 2L)
 })
 
-test_that("built-in runners become terminal after close", {
+test_that("factory RLM mirai batches restore ordered canonical traces", {
+  skip_if_not_installed("callr")
+  skip_if_not_installed("mirai")
+  skip_if(nzchar(Sys.getenv("R_COVR")), "mirai workers interfere with covr")
+
+  clear_prompt_history()
+  withr::defer(clear_prompt_history())
+  withr::local_options(list(dsprrr.rlm_trace_limit = 1L))
+
+  chat <- factory_test_rlm_chat()
+  module <- rlm_module(
+    "question -> answer: string",
+    interpreter_factory = function() {
+      dsprrr::r_code_runner(timeout = 10, persistent = TRUE)
+    },
+    max_iterations = 1L,
+    max_llm_calls = 0L,
+    chat = chat
+  )
+
+  initial <- run(
+    module,
+    question = "before",
+    .progress = FALSE
+  )
+  expect_identical(initial$answer, "before")
+  cursor <- dsprrr:::evaluation_trace_cursor(module)
+
+  testthat::local_mocked_bindings(
+    new_dsprrr_mirai_profile = function() "rlm-trace-test",
+    shutdown_dsprrr_mirai_profile = function(...) TRUE,
+    .package = "dsprrr"
+  )
+  testthat::local_mocked_bindings(
+    daemons = function(...) invisible(TRUE),
+    mirai_map = function(.x, .f, .args, ...) {
+      lapply(.x, function(input_set) {
+        package_state <- get(".dsprrr_env", envir = asNamespace("dsprrr"))
+        history_before <- package_state$prompt_history
+        generation_before <- package_state$prompt_history_generation
+        worker_args <- .args
+        worker_args$module <- .args$module$deepcopy()
+        worker_args$llm <- .args$llm$clone(deep = TRUE)
+        worker_args$namespace_path <- file.path(
+          tempdir(),
+          "no-source-package"
+        )
+        tryCatch(
+          do.call(.f, c(list(input_set = input_set), worker_args)),
+          finally = {
+            package_state$prompt_history <- history_before
+            package_state$prompt_history_generation <- generation_before
+          }
+        )
+      })
+    },
+    .package = "mirai"
+  )
+
+  observed <- list()
+  metric <- metric_with_trace(
+    function(
+      prediction,
+      expected,
+      program_trace
+    ) {
+      observed[[length(observed) + 1L]] <<- program_trace
+      as.numeric(identical(prediction$answer, expected$answer[[1L]]))
+    },
+    field = "answer"
+  )
+  data <- tibble::tibble(
+    question = c("second", "third"),
+    answer = c("second", "third")
+  )
+
+  result <- evaluate(
+    module,
+    data,
+    metric,
+    .concurrency = concurrency_control(
+      backend = "mirai",
+      max_active = 2L
+    ),
+    .progress = FALSE
+  )
+
+  expect_identical(result$scores, c(1, 1))
+  expect_identical(module$state$trace_sequence, 3)
+  expect_length(module$state$traces, 1L)
+  expect_identical(
+    vapply(
+      module$state$traces,
+      function(trace) trace$output$answer,
+      character(1)
+    ),
+    "third"
+  )
+  expect_identical(
+    vapply(
+      module$state$traces,
+      function(trace) trace$metadata$batch_index,
+      integer(1)
+    ),
+    2L
+  )
+  expect_length(module$get_repl_history(), 1L)
+  expect_identical(
+    module$get_repl_history()[[1L]]$final_answer$answer,
+    "third"
+  )
+
+  new_events <- dsprrr:::new_evaluation_trace_events(module, cursor)
+  expect_identical(
+    vapply(new_events, function(trace) trace$output$answer, character(1)),
+    "third"
+  )
+  expect_length(observed, 2L)
+  expect_true(all(vapply(
+    observed,
+    function(trace) {
+      identical(trace$status, "ok") && length(trace$events) == 1L
+    },
+    logical(1)
+  )))
+  expect_identical(
+    vapply(
+      observed,
+      function(trace) trace$events[[1L]]$output$answer,
+      character(1)
+    ),
+    c("second", "third")
+  )
+
+  history <- .dsprrr_env$prompt_history
+  expect_length(history, 3L)
+  expect_identical(
+    vapply(history, `[[`, character(1), "source"),
+    rep("RLMModule", 3L)
+  )
+  expect_identical(
+    vapply(history, `[[`, character(1), "response"),
+    c(
+      '{"answer":"before"}',
+      '{"answer":"second"}',
+      '{"answer":"third"}'
+    )
+  )
+  expect_identical(dsprrr:::prompt_history_generation(), 3)
+})
+
+test_that("factory RLM mirai workers preserve explicit cache control", {
+  skip_if_not_installed("callr")
+  skip_if_not_installed("mirai")
+
+  clear_prompt_history()
+  withr::defer(clear_prompt_history())
+  observed <- logical()
+  worker_cache <- list()
+  testthat::local_mocked_bindings(
+    cached_chat_structured = function(
+      llm,
+      prompt,
+      output_type,
+      rollout_id = NULL,
+      .cache = NULL,
+      .observer = NULL
+    ) {
+      observed <<- c(observed, .cache)
+      if (is.function(.observer)) {
+        if (isTRUE(.cache)) {
+          .observer("miss", "cache_miss")
+        } else {
+          .observer("bypass", "disabled")
+        }
+      }
+      fields <- names(output_type@properties)
+      if (identical(fields, c("reasoning", "code"))) {
+        return(list(reasoning = "Inspect before fallback", code = "1 + 1"))
+      }
+      list(answer = "done")
+    },
+    new_dsprrr_mirai_profile = function() "rlm-cache-test",
+    shutdown_dsprrr_mirai_profile = function(...) TRUE,
+    .package = "dsprrr"
+  )
+  testthat::local_mocked_bindings(
+    daemons = function(...) invisible(TRUE),
+    mirai_map = function(.x, .f, .args, ...) {
+      worker_cache[[length(worker_cache) + 1L]] <<- .args$cache
+      lapply(.x, function(input_set) {
+        package_state <- get(".dsprrr_env", envir = asNamespace("dsprrr"))
+        history_before <- package_state$prompt_history
+        generation_before <- package_state$prompt_history_generation
+        worker_args <- .args
+        worker_args$module <- .args$module$deepcopy()
+        worker_args$llm <- .args$llm$clone(deep = TRUE)
+        worker_args$namespace_path <- file.path(
+          tempdir(),
+          "no-source-package"
+        )
+        tryCatch(
+          do.call(.f, c(list(input_set = input_set), worker_args)),
+          finally = {
+            package_state$prompt_history <- history_before
+            package_state$prompt_history_generation <- generation_before
+          }
+        )
+      })
+    },
+    .package = "mirai"
+  )
+  make_module <- function() {
+    rlm_module(
+      "question -> answer: string",
+      interpreter_factory = function() {
+        r_code_runner(timeout = 10, persistent = TRUE)
+      },
+      max_iterations = 1L,
+      max_llm_calls = 0L,
+      chat = factory_test_rlm_chat()
+    )
+  }
+
+  for (cache in c(TRUE, FALSE)) {
+    observed <- logical()
+    result <- suppressWarnings(run_dataset(
+      make_module(),
+      data.frame(question = c("first", "second")),
+      .cache = cache,
+      .concurrency = concurrency_control(
+        backend = "mirai",
+        max_active = 2L
+      ),
+      .progress = FALSE
+    ))
+
+    expect_identical(
+      result$result,
+      list(list(answer = "done"), list(answer = "done"))
+    )
+    expect_identical(observed, rep(cache, 4L))
+  }
+  expect_identical(worker_cache, list(TRUE, FALSE))
+})
+
+test_that("bounded sequential factory traces remain available to evaluation", {
+  skip_if_not_installed("callr")
+
+  clear_prompt_history()
+  withr::defer(clear_prompt_history())
+  withr::local_options(list(dsprrr.rlm_trace_limit = 1L))
+
+  chat <- factory_test_rlm_chat()
+  module <- rlm_module(
+    "question -> answer: string",
+    interpreter_factory = function() {
+      dsprrr::r_code_runner(timeout = 10, persistent = TRUE)
+    },
+    max_iterations = 1L,
+    max_llm_calls = 0L,
+    chat = chat
+  )
+  observed <- list()
+  metric <- metric_with_trace(
+    function(prediction, expected, program_trace) {
+      observed[[length(observed) + 1L]] <<- program_trace
+      as.numeric(identical(prediction$answer, expected$answer[[1L]]))
+    },
+    field = "answer"
+  )
+  data <- tibble::tibble(
+    question = c("first", "second"),
+    answer = c("first", "second")
+  )
+
+  result <- evaluate(
+    module,
+    data,
+    metric,
+    .concurrency = concurrency_control(backend = "sequential"),
+    .progress = FALSE
+  )
+
+  expect_identical(result$scores, c(1, 1))
+  expect_identical(
+    vapply(
+      observed,
+      function(trace) trace$events[[1L]]$output$answer,
+      character(1)
+    ),
+    c("first", "second")
+  )
+  expect_identical(
+    vapply(observed, `[[`, character(1), "status"),
+    c("ok", "ok")
+  )
+  expect_length(module$state$traces, 1L)
+  expect_identical(module$state$traces[[1L]]$output$answer, "second")
+})
+
+test_that("sequential factory RLM batches retain traces across failed rows", {
+  skip_if_not_installed("callr")
+
+  clear_prompt_history()
+  withr::defer(clear_prompt_history())
+
+  chat <- new_test_chat(
+    chat_structured = function(prompt, type, ...) {
+      if (grepl("Preview: bad", prompt, fixed = TRUE)) {
+        stop("scripted action failure", call. = FALSE)
+      }
+      list(
+        reasoning = "Return this row's question",
+        code = "SUBMIT(answer = .context$question)"
+      )
+    },
+    chat = function(prompt, ...) {
+      stop("recursive queries are disabled in this test", call. = FALSE)
+    },
+    model = "factory-sequential-trace-test"
+  )
+
+  module <- rlm_module(
+    "question -> answer: string",
+    interpreter_factory = function() {
+      dsprrr::r_code_runner(timeout = 10, persistent = TRUE)
+    },
+    max_iterations = 1L,
+    max_llm_calls = 0L,
+    chat = chat
+  )
+  observed <- list()
+  metric <- metric_with_trace(
+    function(prediction, expected, program_trace) {
+      observed[[length(observed) + 1L]] <<- program_trace
+      as.numeric(identical(prediction$answer, expected$answer[[1L]]))
+    },
+    field = "answer"
+  )
+  data <- tibble::tibble(
+    question = c("good-1", "bad", "good-2"),
+    answer = c("good-1", "bad", "good-2")
+  )
+
+  result <- evaluate(
+    module,
+    data,
+    metric,
+    .concurrency = concurrency_control(backend = "sequential"),
+    .progress = FALSE
+  )
+
+  expect_identical(result$scores, c(1, NA, 1))
+  expect_length(observed, 2L)
+  expect_true(all(vapply(
+    observed,
+    function(trace) length(trace$events) == 1L,
+    logical(1)
+  )))
+  expect_identical(
+    vapply(
+      observed,
+      function(trace) trace$events[[1L]]$output$answer,
+      character(1)
+    ),
+    c("good-1", "good-2")
+  )
+  expect_identical(
+    vapply(
+      module$state$traces,
+      function(trace) trace$metadata$batch_index,
+      integer(1)
+    ),
+    c(1L, 3L)
+  )
+})
+
+test_that("built-in runners become terminal after shutdown", {
   skip_if_not_installed("callr")
   runner <- r_code_runner(timeout = 1)
-  runner$close()
-  expect_invisible(runner$close())
+  runner$shutdown()
+  expect_invisible(runner$shutdown())
   expect_error(
     runner$execute("1 + 1"),
     class = "dsprrr_interpreter_closed_error"
@@ -1223,11 +1607,14 @@ test_that("built-in runners become terminal after close", {
     sandbox = "workspace-write",
     sandbox_verified = TRUE,
     oversized_output = "files",
-    close_connection = function() closes <<- closes + 1L,
+    close_connection = function() {
+      closes <<- closes + 1L
+      invisible(NULL)
+    },
     connection_owned = TRUE
   )
-  mcp$close()
-  mcp$close()
+  mcp$shutdown()
+  mcp$shutdown()
   expect_identical(closes, 1L)
   expect_error(
     mcp$execute("1 + 1"),

@@ -4,7 +4,10 @@
 create_mock_module_structured <- function(
   input_names = "input",
   output_fields = list(answer = "default"),
-  transform_fn = NULL
+  transform_fn = NULL,
+  cost = 0.0005,
+  provider_calls = 1L,
+  total_tokens = 50
 ) {
   sig <- dsprrr::signature(
     inputs = lapply(input_names, function(n) dsprrr::input(name = n)),
@@ -41,17 +44,32 @@ create_mock_module_structured <- function(
         output = list(output),
         chat = list(NULL),
         metadata = list(list(
-          total_tokens = 50,
-          cost = 0.0005,
+          total_tokens = total_tokens,
+          cost = cost,
+          provider_calls = provider_calls,
           model = "mock-model"
         ))
       )
     },
     reset_copy = function() {
-      create_mock_module_structured(input_names, output_fields, transform_fn)
+      create_mock_module_structured(
+        input_names,
+        output_fields,
+        transform_fn,
+        cost,
+        provider_calls,
+        total_tokens
+      )
     },
     copy = function(deep = TRUE) {
-      create_mock_module_structured(input_names, output_fields, transform_fn)
+      create_mock_module_structured(
+        input_names,
+        output_fields,
+        transform_fn,
+        cost,
+        provider_calls,
+        total_tokens
+      )
     }
   )
   class(mock_mod) <- c("MockModule", "Module", "R6")
@@ -207,9 +225,43 @@ test_that("PipelineModule aggregates metadata", {
   expect_equal(metadata$n_steps, 2)
   # Each mock module returns 50 tokens
   expect_equal(metadata$total_tokens, 100)
-  expect_equal(metadata$total_cost, 0.001)
+  expect_equal(metadata$cost, 0.001)
+  expect_identical(metadata$provider_calls, 2L)
+  expect_false("total_cost" %in% names(metadata))
   expect_true(!is.null(metadata$step_metadata))
   expect_length(metadata$step_metadata, 2)
+
+  usage <- optimizer_metadata_usage(pipeline, metadata)
+  expect_equal(usage$total_cost, 0.001)
+  expect_identical(usage$provider_calls, 2L)
+})
+
+test_that("PipelineModule does not report partial usage totals", {
+  pipeline <- PipelineModule$new(
+    steps = list(
+      create_mock_module_structured(
+        input_names = "q",
+        output_fields = list(a = "1"),
+        cost = NA_real_,
+        total_tokens = NA_real_
+      ),
+      create_mock_module_structured(
+        input_names = "a",
+        output_fields = list(b = "2"),
+        cost = 0.5
+      )
+    )
+  )
+
+  metadata <- pipeline$forward(list(q = "test"))$metadata[[1L]]
+
+  expect_true(is.na(metadata$cost))
+  expect_true(is.na(metadata$total_tokens))
+  expect_identical(metadata$provider_calls, 2L)
+
+  usage <- optimizer_metadata_usage(pipeline, metadata)
+  expect_true(is.na(usage$total_cost))
+  expect_true(is.na(usage$total_tokens))
 })
 
 test_that("PipelineModule errors on missing input", {
@@ -495,163 +547,6 @@ test_that("step() accepts static inputs via ...", {
 })
 
 # ============================================================================
-# map_inputs() Helper Tests
-# ============================================================================
-
-test_that("map_inputs() creates PipelineMappedModule", {
-  mod <- module(signature("context -> a"))
-  mapped <- map_inputs(mod, answer = "context")
-
-  expect_s3_class(mapped, "PipelineMappedModule")
-  expect_equal(mapped$mapping, list(answer = "context"))
-})
-
-test_that("map_inputs() validates module argument", {
-  expect_error(
-    map_inputs("not a module", a = "b"),
-    "requires a Module"
-  )
-})
-
-test_that("map_inputs() warns with no mappings", {
-  mod <- module(signature("q -> a"))
-  expect_warning(
-    result <- map_inputs(mod),
-    "no mappings"
-  )
-  # Should return consistent PipelineMappedModule type
-
-  expect_s3_class(result, "PipelineMappedModule")
-})
-
-test_that("map_inputs() errors on unnamed arguments", {
-  mod <- module(signature("context -> a"))
-
-  expect_error(
-    map_inputs(mod, "context"),
-    "requires named arguments"
-  )
-})
-
-test_that("map_inputs() works with %>>%", {
-  mod1 <- create_mock_module_structured(
-    input_names = "q",
-    output_fields = list(answer = "42"),
-    transform_fn = function(inputs) list(answer = "the answer")
-  )
-  mod2 <- create_mock_module_structured(
-    input_names = "context",
-    output_fields = list(result = "done"),
-    transform_fn = function(inputs) {
-      list(result = paste0("Got: ", inputs$context))
-    }
-  )
-
-  pipeline <- mod1 %>>% map_inputs(mod2, answer = "context")
-  result <- pipeline$forward(list(q = "test"))
-
-  output <- result$output[[1]]
-  expect_equal(output$result, "Got: the answer")
-})
-
-# ============================================================================
-# with_inputs() Helper Tests
-# ============================================================================
-
-test_that("with_inputs() creates PipelineMappedModule", {
-  mod <- module(signature("q, style -> a"))
-  mapped <- with_inputs(mod, style = "formal")
-
-  expect_s3_class(mapped, "PipelineMappedModule")
-  expect_equal(mapped$static_inputs, list(style = "formal"))
-})
-
-test_that("with_inputs() validates module argument", {
-  expect_error(
-    with_inputs("not a module", a = "b"),
-    "requires a Module"
-  )
-})
-
-test_that("with_inputs() warns with no inputs", {
-  mod <- module(signature("q -> a"))
-  expect_warning(
-    result <- with_inputs(mod),
-    "no inputs"
-  )
-  # Should return consistent PipelineMappedModule type
-  expect_s3_class(result, "PipelineMappedModule")
-})
-
-# ============================================================================
-# select_outputs() Helper Tests
-# ============================================================================
-
-test_that("select_outputs() creates PipelineMappedModule", {
-  mod <- module(signature("q -> a"))
-  mapped <- select_outputs(mod, "answer")
-
-  expect_s3_class(mapped, "PipelineMappedModule")
-  expect_equal(mapped$output_select, "answer")
-})
-
-test_that("select_outputs() validates module argument", {
-  expect_error(
-    select_outputs("not a module", "a"),
-    "requires a Module"
-  )
-})
-
-test_that("select_outputs() errors on non-character fields", {
-  mod <- module(signature("q -> a"))
-
-  expect_error(
-    select_outputs(mod, 1, 2, 3),
-    "requires character field names"
-  )
-})
-
-test_that("select_outputs() errors on empty fields", {
-  mod <- module(signature("q -> a"))
-
-  expect_error(
-    select_outputs(mod),
-    "requires at least one field name"
-  )
-})
-
-test_that("select_outputs() works with %>>%", {
-  # mod1 outputs both 'answer' and 'reasoning'
-  mod1 <- create_mock_module_structured(
-    input_names = "q",
-    output_fields = list(answer = "42", reasoning = "because"),
-    transform_fn = function(inputs) {
-      list(answer = "the answer", reasoning = "steps")
-    }
-  )
-  # mod2 only needs 'answer'
-  mod2 <- create_mock_module_structured(
-    input_names = "answer",
-    output_fields = list(result = "done"),
-    transform_fn = function(inputs) {
-      list(result = paste0("Got: ", inputs$answer))
-    }
-  )
-
-  # select_outputs on mod1 filters ITS outputs before passing downstream
-  # Syntax: select_outputs(producing_module, fields_to_keep) %>>% consuming_module
-  pipeline <- select_outputs(mod1, "answer") %>>% mod2
-
-  # Check that output_select is properly transferred to PipelineStep for mod1 (step 1)
-  expect_equal(pipeline$steps[[1]]@output_select, "answer")
-
-  # Execute the pipeline - mod2 receives only 'answer', not 'reasoning'
-  result <- pipeline$forward(list(q = "test"))
-  output <- result$output[[1]]
-  expect_equal(output$result, "Got: the answer")
-})
-
-# ============================================================================
 # Integration Tests
 # ============================================================================
 
@@ -729,7 +624,12 @@ test_that("Pipeline handles simple (non-object) outputs", {
       tibble::tibble(
         output = list(list(a = "simple string")),
         chat = list(NULL),
-        metadata = list(list(total_tokens = 10, cost = 0.0001, model = "mock"))
+        metadata = list(list(
+          total_tokens = 10,
+          cost = 0.0001,
+          provider_calls = 1L,
+          model = "mock"
+        ))
       )
     }
   )

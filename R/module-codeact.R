@@ -1,116 +1,97 @@
-#' CodeAct Module
+#' CodeAct module
 #'
 #' @description
-#' A hybrid agent module that combines tool calling with R code execution.
-#' The model can choose between calling registered tools or generating R code
-#' to solve problems. This enables flexible agentic workflows that leverage
-#' both external tools and computational capabilities.
-#'
-#' @details
-#' CodeAct extends the ReAct pattern by adding an `execute_r_code` tool that
-#' allows the agent to write and run R code. The execution flow is:
-#'
-#' 1. Agent receives the task and available tools (including code execution)
-#' 2. Agent iteratively calls tools or executes code until it has enough info
-#' 3. Agent produces final structured answer
-#'
-#' Security: Code execution requires explicit opt-in via `runner` or
-#' `interpreter_factory`.
-#' The built-in runner uses a separate process but is NOT a security sandbox.
-#' Inspect `runner$policy()` before execution. For untrusted inputs, provide a
-#' runner backed by OS-level sandboxing.
-#'
-#' Runner lifecycle: supply exactly one runtime source. `runner` is
-#' caller-owned, reused across calls, and never closed by dsprrr. The backend determines
-#' whether execution state persists and whether `reset()` is available;
-#' serialize access to stateful backends. `interpreter_factory` is a
-#' zero-argument function that returns a fresh runner implementing `execute()`,
-#' `policy()`, optional `start()`, and terminal `shutdown()` or `close()`. The
-#' module owns that runner for one invocation and shuts it down exactly once on
-#' success, error, or interrupt. Any retained code tool becomes terminal after
-#' shutdown.
-#'
-#' [run_async()] supports factory-backed CodeAct in an isolated mirai process.
-#' It rejects caller-owned runners. [stream_async()] and a module's `$stream()`
-#' method remain unavailable because streaming would bypass execution. The
-#' [run_stream()] one-shot `forward()` fallback remains available.
-#'
-#' @examples
-#' \dontrun{
-#' # Create a runner for code execution
-#' runner <- r_code_runner(timeout = 30)
-#'
-#' # Create a CodeAct agent with custom tools
-#' search_tool <- ellmer::tool(
-#'   function(query) "Search results...",
-#'   description = "Search for information"
-#' )
-#'
-#' agent <- code_act(
-#'   signature = "question -> answer",
-#'   tools = list(search = search_tool),
-#'   runner = runner
-#' )
-#'
-#' # The agent can now search AND compute
-#' result <- run(agent,
-#'   question = "What is 10% of France's population?",
-#'   .llm = llm
-#' )
-#' }
+#' A tool-calling agent that can also write and run R code. Documented with
+#' [code_act()].
 #'
 #' @name module-codeact
+#' @noRd
 NULL
 
-
-#' Create a CodeAct Module
+#' Create a CodeAct agent that calls tools and runs R code
 #'
 #' @description
-#' Factory function to create a CodeActModule that can use both tools and
-#' R code execution to solve problems.
-#' Use [run()] to execute it. [run_async()] supports factory-backed modules;
-#' async streaming and module `$stream()` reject CodeAct. [run_stream()]
-#' preserves the synchronous `forward()` fallback unless a matching
-#' token-stream request is active; that request is rejected first.
+#' `code_act()` creates an agent module that works on a task step by step. In
+#' each step the model either calls one of your tools or writes R code, which
+#' `runner` executes; it sees the result and continues until it can give the
+#' final answer. Use it when a task needs both external tools and computation.
+#' Run it with [run()].
 #'
-#' @param signature A Signature object or string notation defining inputs/outputs
-#' @param tools List of ellmer ToolDef objects for the agent to use. Non-empty
-#'   list element names become the registered tool names; unnamed elements keep
-#'   their ToolDef name. Effective names may contain only letters, numbers,
-#'   hyphens, and underscores.
-#' @param runner Optional caller-owned code runner implementing `execute()` and
-#'   `policy()`. It is retained, never automatically closed, and must not be
-#'   shared concurrently when persistent.
-#' @param max_iterations Maximum outer agent iterations and maximum tool calls
-#'   within one invocation (default 10). Exceeding the inner tool-call budget
+#' @details
+#' CodeAct extends the ReAct pattern of [react()] with a built-in
+#' `execute_r_code` tool. The name `execute_r_code` is reserved.
+#'
+#' Code runs only through the runtime you supply, as either `runner` or
+#' `interpreter_factory`; see [r_code_runner()] for how each is owned and shut
+#' down. [r_code_runner()] runs code in a separate process with your
+#' permissions and is not a sandbox. For untrusted input, use a sandboxed
+#' runner such as [mcp_repl_runner()]; `runner$policy()` shows what a runner
+#' enforces. A stateful `runner` must not be used by two calls at the same
+#' time.
+#'
+#' [run_async()] supports CodeAct with an `interpreter_factory`, in a separate
+#' mirai process, but rejects a caller-owned `runner`. Token streaming with
+#' [stream_async()] or the module's `$stream()` method is unavailable, because
+#' it would bypass code execution. [run_stream()] runs the module as one
+#' non-streaming call and rejects requests for token streaming.
+#'
+#' @param signature A [signature()] object or a signature string such as
+#'   `"question -> answer"`.
+#' @param tools A list of ellmer tools created with [ellmer::tool()]. Non-empty
+#'   list names become the tool names; unnamed elements keep their own names.
+#'   Names may contain only letters, numbers, hyphens and underscores.
+#' @param runner A code runner you own, such as [r_code_runner()]. It is
+#'   reused across calls and never shut down by dsprrr.
+#' @param max_iterations Integer maximum number of agent steps, and of tool
+#'   calls within one call (default `10L`). Exceeding the tool-call limit
 #'   raises a `dsprrr_codeact_iteration_limit` error.
-#' @param interpreter_factory Optional zero-argument function returning a fresh
-#'   runner with `execute()`, `policy()`, optional `start()`, and idempotent
-#'   terminal `shutdown()` or `close()`.
-#'   Supply exactly one of `runner` and `interpreter_factory`.
-#' @param ... Additional arguments passed to the module
+#' @param interpreter_factory A function with no arguments that returns a fresh
+#'   runner for each call. Supply exactly one of `runner` and
+#'   `interpreter_factory`.
+#' @param config Optional module configuration, such as runtime settings.
+#' @param chat Optional ellmer Chat stored on the module.
+#' @param ... Must be empty.
 #'
-#' @return A CodeActModule object
+#' @return A CodeAct module.
 #'
 #' @export
-#' @examples
-#' \dontrun{
-#' runner <- r_code_runner(timeout = 30)
+#' @family program constructors
+#' @family code execution
+#' @examplesIf rlang::is_installed("callr")
+#' search_tool <- ellmer::tool(
+#'   function(query) paste("No results for", query),
+#'   description = "Search the product catalog",
+#'   arguments = list(query = ellmer::type_string("Search terms")),
+#'   name = "search"
+#' )
+#'
 #' agent <- code_act(
 #'   "question -> answer",
-#'   tools = list(),
-#'   runner = runner
+#'   tools = list(search = search_tool),
+#'   runner = r_code_runner(timeout = 30)
 #' )
-#' result <- run(agent, question = "Calculate 2^10", .llm = llm)
+#' agent
+#'
+#' \dontrun{
+#' run(
+#'   agent,
+#'   question = "What is 10% of 2,450?",
+#'   .llm = ellmer::chat_openai(model = "gpt-6-luna")
+#' )
 #' }
 code_act <- function(
   signature,
   tools = list(),
   runner = NULL,
+  interpreter_factory = NULL,
   max_iterations = 10L,
-  ...,
-  interpreter_factory = NULL
+  config = list(),
+  chat = NULL,
+  ...
 ) {
+  reject_partial_argument_matches(sys.call(), sys.function())
+  reject_constructor_arguments("code_act", ...)
+
   binding <- normalize_code_runner_binding(
     runner = runner,
     interpreter_factory = interpreter_factory,
@@ -132,14 +113,16 @@ code_act <- function(
 
   max_iterations <- normalize_codeact_iterations(max_iterations)
 
-  CodeActModule$new(
+  mod <- CodeActModule$new(
     signature = signature,
     tools = tools,
     runner = binding$runner,
     interpreter_factory = binding$interpreter_factory,
     max_iterations = max_iterations,
-    ...
+    config = config,
+    chat = chat
   )
+  stamp_module_kind(mod, "codeact")
 }
 
 normalize_codeact_iterations <- function(value) {
@@ -172,12 +155,10 @@ validate_codeact_tools <- function(tools) {
 
   valid_tools <- vapply(
     tools,
-    function(tool) {
-      inherits(tool, "ellmer::ToolDef") || inherits(tool, "ToolDef")
-    },
+    \(tool) inherits(tool, "ellmer::ToolDef"),
     logical(1)
   )
-  if (any(!valid_tools)) {
+  if (!all(valid_tools)) {
     invalid <- which(!valid_tools)
     cli::cli_abort(
       c(
@@ -201,7 +182,7 @@ validate_codeact_tools <- function(tools) {
   intrinsic_names <- codeact_tool_names(tools)
   tool_names <- ifelse(nzchar(declared_names), declared_names, intrinsic_names)
   valid_names <- grepl("^[A-Za-z0-9_-]+$", tool_names)
-  if (any(!valid_names)) {
+  if (!all(valid_names)) {
     cli::cli_abort(
       c(
         "CodeAct tool names may contain only letters, numbers, - and _",
@@ -343,13 +324,10 @@ CodeActModule <- R6::R6Class(
       }
 
       # Get LLM - need to clone for fresh conversation
-      base_llm <- .llm %||% self$chat %||% get_default_chat()
-      if (is.null(base_llm)) {
-        cli::cli_abort("No LLM provided. Pass .llm or set a default chat.")
-      }
+      base_llm <- resolve_module_llm(self, .llm = .llm)
 
       # Clone the chat for a fresh conversation
-      llm <- base_llm$clone()
+      llm <- clone_ellmer_chat(base_llm, arg = ".llm", reset_turns = TRUE)
 
       with_code_runner_lease(
         self$runner,
@@ -559,14 +537,17 @@ CodeActModule <- R6::R6Class(
     #' Create a fresh copy of this module
     #' @return New CodeActModule with same settings
     reset_copy = function() {
-      CodeActModule$new(
-        signature = self$signature,
-        tools = self$tools,
-        runner = self$runner,
-        interpreter_factory = self$interpreter_factory,
-        max_iterations = self$max_iterations,
-        config = self$config,
-        chat = self$chat
+      artifact_copy_runtime(
+        self,
+        CodeActModule$new(
+          signature = self$signature,
+          tools = self$tools,
+          runner = self$runner,
+          interpreter_factory = self$interpreter_factory,
+          max_iterations = self$max_iterations,
+          config = self$config,
+          chat = self$chat
+        )
       )
     },
 
@@ -584,7 +565,7 @@ CodeActModule <- R6::R6Class(
         interpreter_factory = self$interpreter_factory
       )
       copied$state <- lapply(self$state, identity)
-      copied
+      artifact_copy_runtime(self, copied)
     },
 
     #' @description

@@ -5,12 +5,11 @@ test_that("get_output extracts output from structured result", {
   result <- list(output = "hello", metadata = list())
   expect_equal(get_output(result), "hello")
 
-  # List with predictions (evaluation style)
-  result <- list(predictions = list("a", "b"), mean_score = 0.5)
-  expect_equal(get_output(result), list("a", "b"))
-
   # Plain value
   expect_equal(get_output("value"), "value")
+
+  unclassed_evaluation <- list(predictions = list("a", "b"))
+  expect_identical(get_output(unclassed_evaluation), unclassed_evaluation)
 })
 
 test_that("get_output works with dsprrr_batch_result", {

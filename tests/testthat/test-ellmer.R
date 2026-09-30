@@ -1,11 +1,10 @@
-# Tests for ellmer integration (as_ellmer_tool, register_dsprrr_tool)
+# Tests for ellmer module-as-tool integration
 
 test_that("as_ellmer_tool creates tool with correct function signature", {
   skip_if_not_installed("ellmer")
 
   mod <- module(
-    signature("text -> sentiment"),
-    type = "predict"
+    signature("text -> sentiment")
   )
 
   tool <- as_ellmer_tool(
@@ -32,8 +31,7 @@ test_that("as_ellmer_tool creates tool with multiple inputs", {
   skip_if_not_installed("ellmer")
 
   mod <- module(
-    signature("context, question -> answer"),
-    type = "predict"
+    signature("context, question -> answer")
   )
 
   tool <- as_ellmer_tool(
@@ -51,19 +49,14 @@ test_that("as_ellmer_tool function can be invoked with mock LLM", {
   skip_if_not_installed("ellmer")
 
   # Create mock LLM that returns predictable output
-  mock_llm <- structure(
-    list(
-      chat_structured = function(prompt, type, ...) {
-        list(sentiment = "positive")
-      },
-      last_turn = function(...) NULL
-    ),
-    class = "Chat"
+  mock_llm <- new_test_chat(
+    chat_structured = function(prompt, type, ...) {
+      list(sentiment = "positive")
+    }
   )
 
   mod <- module(
-    signature("text -> sentiment"),
-    type = "predict"
+    signature("text -> sentiment")
   )
 
   tool <- as_ellmer_tool(
@@ -85,8 +78,7 @@ test_that("as_ellmer_tool passes annotations through to ellmer", {
   skip_if_not_installed("ellmer")
 
   mod <- module(
-    signature("text -> sentiment"),
-    type = "predict"
+    signature("text -> sentiment")
   )
 
   tool <- as_ellmer_tool(
@@ -100,6 +92,98 @@ test_that("as_ellmer_tool passes annotations through to ellmer", {
 
   expect_true(tool@annotations$read_only_hint)
   expect_false(tool@annotations$destructive_hint)
+  expect_null(tool@annotations$open_world_hint)
+})
+
+test_that("as_ellmer_tool marks prediction modules read-only and closed-world", {
+  predicts <- list(
+    module = module(signature("text -> sentiment")),
+    chain_of_thought = chain_of_thought("question -> answer"),
+    with_reasoning = module(with_reasoning("question -> answer")),
+    knn = dsprrr:::KNNFewShotModule$new(
+      module = module(signature("text -> answer")),
+      k = 1L,
+      vectorizer = function(texts) matrix(1, nrow = length(texts)),
+      input_text = function(row) "x",
+      train_embeddings = matrix(1, nrow = 1),
+      trainset_demos = list(list(text = "x", answer = "y"))
+    )
+  )
+  expected <- ellmer::tool_annotations(
+    read_only_hint = TRUE,
+    open_world_hint = FALSE
+  )
+
+  expect_identical(
+    vapply(predicts, function(x) class(x)[[1L]], character(1)),
+    c(
+      module = "PredictModule",
+      chain_of_thought = "PredictModule",
+      with_reasoning = "PredictModule",
+      knn = "KNNFewShotModule"
+    )
+  )
+  for (kind in names(predicts)) {
+    tool <- as_ellmer_tool(predicts[[kind]], name = "predict_tool")
+    expect_identical(tool@annotations, expected, info = kind)
+  }
+})
+
+test_that("as_ellmer_tool claims nothing for modules that can run code or tools", {
+  factory <- function() r_code_runner()
+  reward_fn <- function(args, pred) 1
+  others <- list(
+    module_fn = module_fn("text -> answer", function(text) list(answer = text)),
+    react = react("question -> answer"),
+    code_act = code_act("question -> answer", interpreter_factory = factory),
+    program_of_thought = program_of_thought(
+      "question -> answer",
+      interpreter_factory = factory
+    ),
+    rlm = rlm_module("question -> answer", interpreter_factory = factory),
+    flex = suppressWarnings(flex("question -> answer")),
+    pipeline = pipeline(module(signature("question -> answer"))),
+    best_of_n = best_of_n(
+      module(signature("question -> answer")),
+      reward_fn = reward_fn
+    ),
+    knn_react = dsprrr:::KNNFewShotModule$new(
+      module = react("text -> answer"),
+      k = 1L,
+      vectorizer = function(texts) matrix(1, nrow = length(texts)),
+      input_text = function(row) "x",
+      train_embeddings = matrix(1, nrow = 1),
+      trainset_demos = list(list(text = "x", answer = "y"))
+    )
+  )
+
+  for (kind in names(others)) {
+    tool <- as_ellmer_tool(others[[kind]], name = "other_tool")
+    expect_identical(tool@annotations, list(), info = kind)
+  }
+})
+
+test_that("as_ellmer_tool uses explicit annotations as given", {
+  mod <- module(signature("text -> sentiment"))
+  custom <- ellmer::tool_annotations(
+    read_only_hint = FALSE,
+    destructive_hint = TRUE
+  )
+
+  none <- as_ellmer_tool(mod, name = "plain", annotations = list())
+  given <- as_ellmer_tool(mod, name = "custom", annotations = custom)
+  fn_given <- as_ellmer_tool(
+    module_fn("text -> answer", function(text) list(answer = text)),
+    name = "fn_custom",
+    annotations = ellmer::tool_annotations(read_only_hint = TRUE)
+  )
+
+  expect_identical(none@annotations, list())
+  expect_identical(given@annotations, custom)
+  expect_identical(
+    fn_given@annotations,
+    ellmer::tool_annotations(read_only_hint = TRUE)
+  )
 })
 
 test_that("as_ellmer_tool supports output serialization modes", {
@@ -162,16 +246,6 @@ test_that("as_ellmer_tool rejects non-Module input", {
   )
 })
 
-test_that("register_dsprrr_tool rejects non-Chat input", {
-  skip_if_not_installed("ellmer")
-
-  mod <- module(signature("text -> answer"), type = "predict")
-  expect_error(
-    register_dsprrr_tool(list(), mod),
-    "must be an ellmer Chat"
-  )
-})
-
 test_that("as_ellmer_tool copy = 'deep' avoids mutating source traces", {
   skip_if_not_installed("ellmer")
   local_reset_cache()
@@ -204,7 +278,7 @@ test_that("as_ellmer_tool preserves structured argument schemas", {
     output_type = ellmer::type_string()
   )
 
-  tool <- as_ellmer_tool(module(sig, type = "predict"), name = "structured")
+  tool <- as_ellmer_tool(module(sig), name = "structured")
 
   payload_type <- tool@arguments@properties$payload
 
@@ -220,8 +294,7 @@ test_that("as_ellmer_tool generates description from signature if not provided",
   skip_if_not_installed("ellmer")
 
   mod <- module(
-    signature("text -> sentiment", instructions = "Analyze the sentiment"),
-    type = "predict"
+    signature("text -> sentiment", instructions = "Analyze the sentiment")
   )
 
   tool <- as_ellmer_tool(mod, name = "test_tool")
@@ -234,8 +307,7 @@ test_that("as_ellmer_tool generates fallback description without instructions", 
   skip_if_not_installed("ellmer")
 
   mod <- module(
-    signature("text -> sentiment"),
-    type = "predict"
+    signature("text -> sentiment")
   )
 
   tool <- as_ellmer_tool(mod, name = "test_tool")
@@ -248,8 +320,7 @@ test_that("as_ellmer_tool generates name from signature if not provided", {
   skip_if_not_installed("ellmer")
 
   mod <- module(
-    signature("text -> sentiment"),
-    type = "predict"
+    signature("text -> sentiment")
   )
 
   tool <- as_ellmer_tool(mod, description = "Test tool")
@@ -259,77 +330,11 @@ test_that("as_ellmer_tool generates name from signature if not provided", {
   expect_true(nzchar(tool@name))
 })
 
-test_that("register_dsprrr_tool registers tool with chat", {
-  skip_if_not_installed("ellmer")
-
-  # Create a mock chat that tracks registered tools
-  registered_tools <- list()
-  mock_chat <- structure(
-    list(
-      register_tool = function(tool) {
-        registered_tools <<- c(registered_tools, list(tool))
-      }
-    ),
-    class = "Chat"
-  )
-
-  mod <- module(
-    signature("text -> sentiment"),
-    type = "predict"
-  )
-
-  result <- register_dsprrr_tool(
-    mock_chat,
-    mod,
-    name = "sentiment_tool",
-    description = "Analyze sentiment"
-  )
-
-  # Should return chat invisibly
-  expect_identical(result, mock_chat)
-
-  # Should have registered one tool
-  expect_length(registered_tools, 1)
-  expect_equal(registered_tools[[1]]@name, "sentiment_tool")
-})
-
-test_that("register_dsprrr_tool forwards ellmer tool options", {
-  skip_if_not_installed("ellmer")
-  local_reset_cache()
-
-  registered_tools <- list()
-  mock_chat <- structure(
-    list(
-      register_tool = function(tool) {
-        registered_tools <<- c(registered_tools, list(tool))
-      }
-    ),
-    class = "Chat"
-  )
-
-  mod <- module_fn("text -> answer", function(text, ...) list(answer = text))
-
-  register_dsprrr_tool(
-    mock_chat,
-    mod,
-    name = "answer_tool",
-    annotations = ellmer::tool_annotations(read_only_hint = TRUE),
-    output = "json",
-    copy = "deep"
-  )
-
-  expect_length(registered_tools, 1)
-  expect_true(registered_tools[[1]]@annotations$read_only_hint)
-  expect_equal(registered_tools[[1]](text = "hello"), "{\"answer\":\"hello\"}")
-  expect_length(mod$state$traces, 0)
-})
-
 test_that("as_ellmer_tool function environment has access to run", {
   skip_if_not_installed("ellmer")
 
   mod <- module(
-    signature("text -> answer"),
-    type = "predict"
+    signature("text -> answer")
   )
 
   tool <- as_ellmer_tool(mod, name = "test", description = "test")
@@ -348,18 +353,14 @@ test_that("as_ellmer_tool handles errors from module", {
   skip_if_not_installed("ellmer")
 
   # Create mock LLM that throws an error
-  mock_llm <- structure(
-    list(
-      chat_structured = function(prompt, type, ...) {
-        stop("API error")
-      }
-    ),
-    class = "Chat"
+  mock_llm <- new_test_chat(
+    chat_structured = function(prompt, type, ...) {
+      stop("API error")
+    }
   )
 
   mod <- module(
-    signature("text -> sentiment"),
-    type = "predict"
+    signature("text -> sentiment")
   )
 
   tool <- as_ellmer_tool(
@@ -392,16 +393,13 @@ test_that("as_ellmer_tool handles errors from module", {
 test_that("as_ellmer_tool error = 'return' signals a classed condition", {
   skip_if_not_installed("ellmer")
 
-  mock_llm <- structure(
-    list(
-      chat_structured = function(prompt, type, ...) {
-        stop("API error")
-      }
-    ),
-    class = "Chat"
+  mock_llm <- new_test_chat(
+    chat_structured = function(prompt, type, ...) {
+      stop("API error")
+    }
   )
 
-  mod <- module(signature("text -> sentiment"), type = "predict")
+  mod <- module(signature("text -> sentiment"))
   tool <- as_ellmer_tool(
     mod,
     name = "return_tool",

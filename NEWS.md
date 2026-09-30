@@ -2,7 +2,123 @@
 
 First development changelog. dsprrr is experimental; the API may change.
 
+## Breaking changes
+
+* dsprrr now requires ellmer >= 0.5.0. Runtime parameters such as
+  `temperature` are applied to the Chat's `Model` object, where ellmer 0.5.0
+  keeps request arguments. Provider inspection (cache keys, program artifacts,
+  and optimizer checkpoints) no longer reads the deprecated `Provider@model`,
+  `@params`, and `@extra_args` properties, so no deprecation warnings are
+  raised. Cache keys still include the model's params and extra arguments.
+
+* `module()` now constructs only standard prediction modules. Tool use and
+  other advanced execution semantics use explicit constructors such as
+  `react()`, `chain_of_thought()`, `program_of_thought()`, `code_act()`,
+  `rlm_module()`, and `flex()`; advanced arguments passed to `module()` fail
+  with a typed, actionable error instead of silently changing module type.
+  `compile(program, teleprompter, trainset)` is the only compilation entry point;
+  `compile_module()` and the shallow R6 `$predict()` and `$optimize()` aliases
+  have been removed. `stats::predict()` remains for data-frame interoperability,
+  `module_fn()` remains the custom-module extension seam, and the functional
+  `optimize_grid()` interface remains primary.
+
+* The public API now centers on `signature()`, `module()`, `run()`,
+  `run_dataset()`, `evaluate()`, and `compile()`. Redundant DSP-style wrappers,
+  typed-input convenience constructors, pipeline wrapper helpers, the separate
+  ensemble teleprompter, and one-line ellmer registration helpers have been
+  removed. Implementation classes such as `Signature`, `Assertion`,
+  `OptimizerControl`, and `Trial` are internal; their public constructor and
+  collection functions remain the supported interface. This reduces the
+  namespace from 188 to 161 exports and removes inert S3 registrations,
+  reducing them from 55 to 36, without removing module, optimizer,
+  integration, persistence, or inspection capabilities.
+
+* Runtime contracts are current-only. Program artifacts accept format version
+  6; persisted trial records require their complete versioned schema; batch
+  execution accepts `.concurrency` only; code runners implement `start()`,
+  `execute()`, and `shutdown()`; RLM uses `max_iterations`, `llm_query()`, and
+  `llm_query_batched()`; and Predict templates interpolate documented
+  `{field}` placeholders. Old versions and incomplete records fail closed
+  instead of being upgraded or defaulted.
+
+* `input()` is the single input-field constructor. Its `type` is either an
+  ellmer type or one of the exact labels `string`, `number`, `integer`,
+  `boolean`, `array`, and `object`; S7 classes, `class =`, synonyms, and unknown
+  type fallback are no longer accepted.
+
+* Existing private disk caches and trial logs on Unix must already use mode
+  `0700` for their directory and `0600` for their files, with no special mode
+  bits. dsprrr no longer repairs broader permissions and then reuses the stored
+  data; it fails closed before enumeration, deserialization, locking, or
+  mutation. To migrate an existing directory, run `chmod 700` on it and
+  `chmod 600` on its files; the reported reason names the exact path and
+  command. A directory that inherited a setgid bit from a shared parent is
+  rejected even though its permission triplet looks correct, and the reason
+  says so. A rejected disk cache is reported by `cache_stats()` as degraded
+  rather than silently dropping to memory-only.
+
+* Trial logs written before record schema versioning cannot be read. The
+  rejection names the missing `schema_version` rather than reporting a generic
+  parse failure, and `read_trials_jsonl()` now aborts instead of returning an
+  empty list when every record in a non-empty file is rejected. Re-run the
+  optimization to write a current log.
+
+* Undeclared dot-prefixed arguments to `run()`, `run_dataset()`, and
+  `evaluate()` are an error. Runtime arguments are formal parameters, so a
+  dot-prefixed name reaching `...` is a typo or an argument this version no
+  longer accepts; it is no longer absorbed as a signature field with a warning.
+  Calls passing the removed `.parallel` or `.parallel_method` are named
+  explicitly and pointed at `.concurrency`.
+
+* dsprrr does not expose or depend on an external Agent SDK compatibility
+  layer. The unused `signature_to_json_schema()` integration hook has been
+  removed. `as_ellmer_tool()` and `module_fn()` remain public because they are
+  native ellmer and custom-module extension points. Agentic harnesses and RLM
+  recursive queries retain separate proposer models, but `.agent_llm` and
+  `sub_lm` must now be ellmer `Chat` objects rather than factories or duck-typed
+  adapters. COPRO and SIMBA likewise accept only ellmer `Chat` prompt models.
+  MIPROv2's unused `prompt_model` and `init_temperature` properties have been
+  removed, and its effective `task_model` is now validated as an ellmer `Chat`.
+  The unused provider-capability guess table `provider_defaults()` has also
+  been removed; provider behavior belongs to the configured ellmer Chat. RAG
+  and parsnip now follow that same resolver instead of reconstructing providers
+  from `model` and `provider` strings.
+
 ## New features
+
+* Modules run through an agent runtime that follows ellmer's Chat protocol,
+  such as a deputy `Agent`, are now correlated with the agent's runs. dsprrr
+  passes the program ID and `.trace_context` to the agent as
+  `run_context$dsprrr`, and records the agent's run (`run_id`, `agent_id`,
+  `session_id` and `stop_reason`) as `agent_run` in each call's metadata and
+  trace. Plain ellmer Chats are called as before.
+
+* Experimental calibrated decision outputs, following DSPy 3.4's decision
+  types. `with_decisions()` attaches `decision_bool()`, `decision_score()`, or
+  `decision_choice()` to described boolean and enum outputs of a Predict
+  module. The model returns probability evidence, which dsprrr decodes locally
+  into ordinary logical or character values using per-field `threshold`,
+  `cuts`, and `weights`. These settings are not part of the request or the
+  cache key, so changing them re-decodes cached evidence.
+  `decision_evidence()` returns the probabilities, scores, levels, and
+  confidences behind each decision, and `decision_settings()` lists the
+  settings. Decision settings persist in program artifacts. Concurrent batch
+  backends and token streaming reject decision modules rather than returning
+  undecoded evidence.
+
+* Experimental `ReAnchor()` teleprompter, following DSPy 3.4's `ReAnchor`. It
+  fits decision thresholds, Score cuts, and Choice weights against a metric.
+  Candidates are the midpoints of gaps between observed evidence. A candidate
+  is kept only when it scores strictly better and passes a held-out fold
+  check, and the original configuration is restored when the fitted module
+  does not beat it. Fitting re-decodes recorded evidence, so it makes no
+  provider calls beyond one baseline pass and one evidence pass. The new
+  "Calibrated Decisions" article walks through both features.
+
+* The DSPy comparison article now uses DSPy 3.4.0 as its baseline. It covers
+  the LM transition, call-time RLM interpreter factories, the persistent
+  `LocalInterpreter`, the deprecation of `CodeAct` and `ProgramOfThought` in
+  DSPy 3.3.1, and objective-aware GEPA frontiers.
 
 * `flex()` lets GEPA optimize how a module executes—not only its instructions—
   with two source modes. The safe default is a bounded versioned JSON graph with
@@ -31,30 +147,75 @@ First development changelog. dsprrr is experimental; the API may change.
   validation rows drive selection, per-example winners, and optional retained
   outputs.
 
+* `optimization_result()` provides one read-only result contract across every
+  optimizer, including optimizer identity, completion or partial status,
+  baseline and best scores, winning parameters, trial evidence, lineage,
+  budget use, stop reason, and namespaced optimizer-specific extensions.
+  `best_params()`, `top_trials()`, and `optimization_summary()` now inspect this
+  contract rather than mutable module internals, and program artifacts preserve
+  the durable result schema and policy-safe evidence across save and restore (#131).
+
 * `program_of_thought()`, `code_act()`, and `rlm_module()` now accept an
   `interpreter_factory`: a zero-argument function that creates one fresh,
-  invocation-owned code runner, which dsprrr closes exactly once when the
+  invocation-owned code runner, which dsprrr shuts down exactly once when the
   invocation ends. A directly supplied `runner` remains caller-owned and is
   reused; whether state persists or can be reset is backend-specific. Supply
-  exactly one of `runner` and `interpreter_factory`.
+  exactly one of `runner` and `interpreter_factory`. RLM now requires the
+  selected runner to advertise `persistent = TRUE`; existing
+  `rlm_module(..., runner = r_code_runner())` calls must opt into
+  `r_code_runner(persistent = TRUE)` or use a persistent factory.
+
+* `r_code_runner(persistent = TRUE)` now keeps one callr process and execution
+  environment alive across `execute()` calls. A factory-backed RLM can stage a
+  large or rich R context once, preserve derived values between iterations, and
+  shut the process down with its invocation-owned lifecycle. The backend
+  remains trusted-input-only and retains the host user's permissions.
+
+* `rlm_module()` now exposes graph-visible `generate_action` and `extract`
+  predictors. GEPA and the agentic harnesses can tune both; nested MIPROv2 can
+  tune their instructions with `max_bootstrapped_demos = 0L`, while unsupported
+  child-demo bootstrapping and BootstrapFewShot or LabeledFewShot on programs
+  containing RLM fail explicitly. BootstrapFewShotWithRandomSearch rejects the
+  same ineligible graphs instead of returning an unchanged baseline marked as
+  compiled. `sub_lm = NULL` inherits the outer LM; recursive single and batch queries return
+  host-produced values through one nonce-bound, schema-checked ordered replay
+  ledger; incompatible typed `SUBMIT()` payloads become repairable
+  observations; and the default 10,000-character module excerpt preserves both
+  head and tail after any stricter runner limit. Structured results report
+  submission versus fallback source, bounded trajectory, requested recursive
+  calls, known provider-call attempts, complete usage when every contributing call
+  reports it, and runner policy. The one-call `rlm()` helper now creates a fresh
+  managed `mcp-repl` sandbox factory by default, while still accepting an
+  explicit runner or interpreter factory.
 
 * The code-runner protocol now has explicit `start()`/`shutdown()` lifecycle
   hooks, typed repairable execution versus terminal interpreter failures, and
   terminal-session invalidation. Code modules do not retry or reuse a runner
   after process/protocol failure and preserve the primary failure when teardown
-  also fails. RLM host tools now cross an authenticated replay bridge, so the
+  also fails. RLM host tools now cross a nonce-bound, schema-checked replay bridge, so the
   original live closure executes once on the host without being deparsed or
-  serialized into guest code. Factory-backed Program of Thought, CodeAct, and RLM modules support
-  isolated async and mirai batch workflows; caller-owned runners remain
-  sequential-only.
+  serialized into guest code. Factory-backed Program of Thought, CodeAct, and
+  RLM modules support isolated async and mirai `run_dataset()` workflows;
+  caller-owned runners remain sequential-only. Direct `run()` calls stage each
+  RLM input as one REPL variable regardless of its R length; explicit batches
+  use `run_dataset()`, with list-columns for rich per-row objects.
 
-* Program artifacts now write format version 4, persist either a runner or an
-  interpreter factory for code-executing modules, and preserve Flex source,
-  source language, predictor- and host-tool-call limits, sandbox requirement,
-  factory, and tools. Valid version 3 runner-only artifacts and the earlier
-  two- and six-field v4 Flex shapes remain readable:
-  dsprrr verifies their closed schema and integrity before upgrading them in
-  memory. Artifact construction and restoration never invoke a stored factory.
+* Program artifacts use format version 5, including graph-visible RLM action
+  and extraction predictors with their tuned instructions, demos, and optimizer
+  state. Restoration requires the complete closed v5 schema and verifies its
+  integrity. Artifact construction and restoration never invoke a stored
+  factory.
+
+* `program_artifact_id()` exposes the validated SHA-256 identity already stored
+  in each program artifact. Restored current-format programs retain their
+  validated source ID across compatible producer environments until the program
+  changes. `run()`, `run_dataset()`, `evaluate()`, `compile()`, and
+  `as_ellmer_tool()` accept strict JSON-compatible correlation context and carry
+  it through scalar and batch traces, evaluation results, optimizer trials,
+  Flex, and RLM. Execution and evaluation metadata also name the exact program
+  artifact identity. Correlation context rejects credential-like field names
+  and runtime objects, and never enters prompts, provider requests, cache keys,
+  or artifact identity.
 
 * DSPy 3.3 alignment adds immutable `with_instructions()` and
   `append_instructions()` transforms, plus `metric_with_trace()` for objectives
@@ -92,27 +253,110 @@ First development changelog. dsprrr is experimental; the API may change.
 
 ## Bug fixes
 
+* `mcp_repl_runner()` now runs code that takes longer than about 4 seconds.
+  mcptools waits only about 4 seconds for a reply, but `timeout` (30 seconds
+  by default) was passed to mcp-repl as its wait, so a slower reply was
+  dropped: the runner failed with "unsupported response type: NULL" and could
+  not be reused, and on a connection shared with another runner the late
+  reply could answer the next request. Each request now waits at most 3
+  seconds; dsprrr collects the output of longer code until it finishes, and
+  code still running after `timeout` seconds is interrupted and returned as a
+  timeout error. A missing reply, an interrupt that does not stop the code,
+  or an interrupted request makes the runner unusable, so a late reply can
+  never answer a later request.
+
+* `as_ellmer_tool()` now marks tools made from prediction modules (`module()`,
+  `chain_of_thought()`, and `KNNFewShot()` programs that wrap one) as
+  read-only and closed-world. Such a tool only sends its inputs to its chat's
+  model provider, but without annotations agent runtimes such as deputy
+  treated it as destructive and as needing network access, so it was refused
+  in read-only and plan modes. Modules that can run functions, tools or code
+  still get no annotations. `annotations = NULL` (the new default) infers
+  them; `annotations = list()` gives none, and annotations you pass are used
+  as given.
+
+* `react()` now rejects tools with duplicate names, and a ReAct module's
+  `$add_tool()` rejects a name it already has. ellmer registers tools on a
+  chat by name, so a second tool with the same name silently replaced the
+  first while the module still listed both. `$add_tool(tool, replace = TRUE)`
+  replaces a tool deliberately.
+
+* `metric_exact_match()` and `metric_f1()` now work without `field` in
+  `evaluate()`, `optimize_grid()`, and `compile()`. Those functions pass the
+  whole data row as `expected`, so every row used to fail with "Metric must
+  return a single logical or numeric score" (and `metric_f1()` scored against
+  every column). The metric now compares the one prediction field that is also
+  a data column, and asks for `field` when that is ambiguous. This also fixes
+  `optimize_grid()`'s default metric.
+
+* `refine()` and `rag_module()` programs now run through `run()`,
+  `run_dataset()` and `evaluate()`. Input validation used to demand the
+  `feedback` and `relevant_context` fields the modules fill in themselves. When a refined module declares `feedback`, the
+  first attempt receives "No feedback yet.".
+
+* ragnar integration matches ragnar's API: retrieval passes `top_k`,
+  `ragnar_tool()` returns an ellmer tool definition that `react()` and
+  `Chat$register_tool()` accept, and `create_search_tool()` builds its store
+  with `ragnar_store_create(embed = )`, `markdown_chunk()`, and
+  `ragnar_store_insert()`.
+
+* Print methods work in the installed package. Top-level
+  `S7::method(print, ...) <-` calls created a `print` binding in the
+  namespace, which sent every `S3method(print, ...)` registration to the
+  wrong methods table, so evaluation results, cache statistics, prompt
+  inspections, costs and optimizer objects printed as raw lists. The S7 print
+  methods are now registered in `.onLoad()`.
+
+* `evaluate(epochs = )` samples fresh responses in every epoch. Epochs after
+  the first now use their own cache partition; previously they replayed
+  epoch 1 from the response cache, so `score_std` and `ci_95` collapsed to 0
+  unless `.cache = FALSE` was set.
+
+* Image and other content inputs work in single `run()` calls, sequential
+  batches and `run_async()`. The prompt parts were passed to ellmer as one
+  list argument, which ellmer 0.5.0 rejects; only batches on the ellmer
+  backend worked.
+
+* Runtime parameters set on a module (`config$params`, `optimize_grid()`
+  grids, `reasoning_effort()`) now go through ellmer's standard `params`, so
+  ellmer sends them in each provider's format. `reasoning_effort` used to be
+  sent as a top-level field that OpenAI's Responses API does not accept; it is
+  now sent as `reasoning.effort`. Parameters ellmer does not know are still
+  sent verbatim. `is_reasoning_model()` recognizes the gpt-6 family.
+
+* `optimize_grid(parameters = )` no longer leaves `expand.grid()`'s
+  `out.attrs` attribute on `best_params`, which made `save_program()` and
+  `pin_module_config()` fail on grid-searched modules. Printing
+  `session_cost()` no longer errors when the cost is unknown.
+
+* `dsp_configure()` applies `temperature` to the chat (through
+  `ellmer::params()`) instead of only recording it, and honors `model` and
+  `api_key` when it detects the provider from environment variables.
+
+* `optimize_grid()`'s `instructions_suffix` parameter appends to the module's
+  instructions instead of replacing them.
+
+* `export_traces()` and `pin_trace()` leave out prompts and responses unless
+  `include_prompts` or `include_outputs` is `TRUE`, as documented.
+
 * DSPy 3.3 execution contracts are enforced in the R runtime: `rlm_module()`
-  accepts the `max_iters` alias, rejects duplicate, reserved, missing, and
-  ellipsis-style tool names, rejects unexpected invocation inputs, and no
-  longer stringifies arbitrary sub-LM responses. RLM submit/query control frames
-  now survive text-only runners through versioned, per-invocation authenticated
-  envelopes; malformed and duplicate frames fail closed, and one-query batches
-  retain their array shape. `code_act()` now limits tool calls executed inside
-  ellmer's internal tool loop and protects its built-in runner-tool namespace.
-  Authenticated decoding ignores valid stale frames while requiring exactly one
-  frame for the current invocation, and `SUBMIT()` rejects duplicate output
-  names. The generic `module()` factory now routes RLM's `max_iters` alias
-  instead of silently using its `max_iterations` default, and rejects supplying
-  both spellings. CodeAct list aliases are validated against ellmer's
-  provider-neutral tool-name grammar before registration. The RLM alias is
-  appended after the pre-existing positional arguments so older positional
-  calls retain their meaning.
+  rejects duplicate, reserved, missing, and ellipsis-style tool names, rejects
+  unexpected invocation inputs, and no longer stringifies arbitrary sub-LM
+  responses. RLM submit/query control
+  frames now survive text-only runners through versioned, per-invocation
+  nonce-bound envelopes; malformed and duplicate frames fail closed, and
+  one-query batches retain their array shape. `code_act()` now limits tool
+  calls executed inside ellmer's internal tool loop and protects its built-in
+  runner-tool namespace. Invocation-bound decoding ignores valid stale frames
+  while requiring exactly one frame for the current invocation, and `SUBMIT()`
+  rejects duplicate output names. The generic `module()` factory uses the same
+  `max_iterations` spelling and 20-iteration RLM default. CodeAct tool names are
+  validated against ellmer's provider-neutral grammar before registration.
 
 * Code-executing modules validate runner results consistently and preserve the
   primary execution error if teardown also fails. ProgramOfThought validates
   its runner and iteration bound at both public and direct-constructor
-  boundaries. Factory-created runners must expose a zero-argument `close()`
+  boundaries. Factory-created runners must expose a zero-argument `shutdown()`
   before module work begins. RLM ignores submit/query control values from
   failed runner results instead of allowing failure payloads to terminate or
   recurse.
@@ -123,6 +367,11 @@ First development changelog. dsprrr is experimental; the API may change.
   `forward()` fallback, while matching token-stream requests are preflighted
   across pipeline steps and rejected before provider work if they would bypass
   specialized execution or runner lifecycle contracts.
+
+* Composite and retry modules report canonical `provider_calls`, token fields,
+  and `cost` metadata. Nested usage is summed when every child reports it;
+  missing child usage and swallowed child failures remain unknown so finite
+  optimizer budgets fail closed instead of accepting partial totals.
 
 * Flex no longer silently accepts BootstrapFewShot demonstrations that its
   runtime cannot consume. Predictor-call limits may be `NULL`, declarative
@@ -155,18 +404,28 @@ First development changelog. dsprrr is experimental; the API may change.
   Optimizer instruction updates now replace signatures copy-on-write instead
   of mutating a shared signature object.
 
+* `TrialLog` now requires pre-existing private Unix log directories to be mode
+  exactly `0700` and pre-existing log files to be mode exactly `0600`, with no
+  special bits. Every existing ancestor must be owned by root or the effective
+  user, including sticky parents. Initialization and save-directory overrides
+  preflight every known target, including `metadata.json`, before locking,
+  reading, or mutating. Unsafe paths fail closed without silent repair; newly
+  created storage remains owner-only.
+
 * Agentic harness seeds are constrained to R's integer range and compile calls
   restore the caller's RNG state. MCP REPL reset now treats protocol-level
   errors as failures instead of silently succeeding.
 
 * `configure_cache()` now keeps persistent response envelopes in the
   platform-specific per-user cache directory by default. Unix cache directories
-  and files are bound to their effective owner, canonical identity, and private
-  POSIX modes before every serialized read or write. Unsafe or unverifiable
-  caches fall back to memory when enabled, or leave no cache tier active;
-  extended ACL and Windows inherited-ACL boundaries are reported honestly.
-  Project-local and shared caches require an explicit path, and disabling
-  privacy enforcement requires `disk_private = FALSE` (#dsprrr-etge).
+  and files are bound to their effective owner, canonical identity, and exact
+  private POSIX modes without special bits before every serialized read or
+  write. Every existing ancestor, including a sticky parent, must be owned by
+  root or the effective user. Unsafe or unverifiable caches fall back to memory
+  when enabled, or leave no cache tier active; extended ACL and Windows
+  inherited-ACL boundaries are reported honestly. Project-local and shared
+  caches require an explicit path, and disabling privacy enforcement requires
+  `disk_private = FALSE` (#dsprrr-etge).
 
 * Empty Predict batches and zero-row datasets now return correctly shaped
   empty results without resolving a provider or changing cache, trace, or
@@ -178,12 +437,14 @@ First development changelog. dsprrr is experimental; the API may change.
   as scalar calls. Direct `PredictModule$run()` batches now use the isolated,
   observable scheduler; unsupported custom and specialized modules reject
   vectorized execution before work instead of silently sharing mutable state
-  or bypassing specialized logic. `Module$predict()` retains named output
-  records for compatibility even though simple `run()` batches simplify a
-  single-field row. Native ellmer batches retain row failures for non-object
-  outputs through an internal typed wrapper, including valid optional `NULL`
-  values, and schemas whose optional nested presence is ambiguous use isolated
-  scalar rows instead of guessing between absent and present-empty values
+  or bypassing specialized logic. `run()` and `run_dataset()` retain named
+  declared output records consistently across
+  scalar, batch, and Flex execution, and all batch routes isolate mutable Chat
+  state per row. Native ellmer batches retain row failures
+  for non-object outputs through an internal typed wrapper, including valid
+  optional `NULL` values, and schemas whose optional nested presence is
+  ambiguous use isolated scalar rows instead of guessing between absent and
+  present-empty values.
   (#dsprrr-bbdm).
 
 * `concurrency_control()` now gives batch execution one enforceable contract
@@ -261,9 +522,11 @@ First development changelog. dsprrr is experimental; the API may change.
   for every module type, instead of triggering a spurious "unknown input"
   warning and being dropped for non-`PredictModule` modules (#dsprrr-jup).
   `PredictModule` (and the wrapper/few-shot modules that delegate to it) honor
-  it for the structured-output cache; modules that drive the LLM directly
-  (e.g. `RAGModule`, `ReActModule`, `RLMModule`) accept `.cache` but do not yet
-  route their own calls through the cache (#dsprrr-aa2).
+  it for the structured-output cache. RLM forwards it to the graph-visible
+  action and fallback predictors; recursive `llm_query()` calls and runner
+  execution remain uncached. Modules that drive the LLM directly (e.g.
+  `RAGModule` and `ReActModule`) accept `.cache` but do not yet route their own
+  calls through the cache (#dsprrr-aa2).
 
 * `BootstrapFewShot` now harvests demonstrations when the metric targets a
   specific output field (e.g. `metric_exact_match(field = "answer")`).

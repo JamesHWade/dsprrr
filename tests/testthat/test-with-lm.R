@@ -16,8 +16,7 @@ local_clean_scoped_lm <- function(.env = parent.frame()) {
 test_that("with_lm sets scoped LM within block", {
   local_clean_scoped_lm()
   # Create mock Chat object
-  mock_llm <- list(get_model = function() "mock-model")
-  class(mock_llm) <- "Chat"
+  mock_llm <- new_test_chat(model = "mock-model")
 
   # Verify scoped LM is NULL before
 
@@ -35,8 +34,7 @@ test_that("with_lm sets scoped LM within block", {
 })
 
 test_that("local_lm sets scoped LM until function exits", {
-  mock_llm <- list(get_model = function() "mock-model")
-  class(mock_llm) <- "Chat"
+  mock_llm <- new_test_chat(model = "mock-model")
 
   test_fn <- function() {
     local_lm(mock_llm)
@@ -51,10 +49,8 @@ test_that("local_lm sets scoped LM until function exits", {
 })
 
 test_that("with_lm nested contexts work correctly", {
-  outer_llm <- list(get_model = function() "outer-model")
-  class(outer_llm) <- "Chat"
-  inner_llm <- list(get_model = function() "inner-model")
-  class(inner_llm) <- "Chat"
+  outer_llm <- new_test_chat(model = "outer-model")
+  inner_llm <- new_test_chat(model = "inner-model")
 
   results <- with_lm(outer_llm, {
     before <- dsprrr:::get_scoped_lm()
@@ -86,39 +82,38 @@ test_that("with_lm validates input is Chat object", {
     with_lm("not a chat", {
       1 + 1
     }),
-    "must be an ellmer Chat object"
+    "must be an ellmer Chat R6 object"
   )
 
   expect_error(
     with_lm(list(foo = "bar"), {
       1 + 1
     }),
-    "must be an ellmer Chat object"
+    "must be an ellmer Chat R6 object"
   )
 
   expect_error(
     with_lm(42, {
       1 + 1
     }),
-    "must be an ellmer Chat object"
+    "must be an ellmer Chat R6 object"
   )
 })
 
 test_that("local_lm validates input", {
   expect_error(
     local_lm("not a chat"),
-    "must be an ellmer Chat object"
+    "must be an ellmer Chat R6 object"
   )
 
   expect_error(
     local_lm(list(foo = "bar")),
-    "must be an ellmer Chat object"
+    "must be an ellmer Chat R6 object"
   )
 })
 
 test_that("local_lm allows NULL to clear scoped LM", {
-  mock_llm <- list(get_model = function() "mock-model")
-  class(mock_llm) <- "Chat"
+  mock_llm <- new_test_chat(model = "mock-model")
 
   result <- with_lm(mock_llm, {
     # Clear the scoped LM explicitly
@@ -130,10 +125,8 @@ test_that("local_lm allows NULL to clear scoped LM", {
 })
 
 test_that("local_lm returns previous scoped LM invisibly", {
-  outer_llm <- list(get_model = function() "outer")
-  class(outer_llm) <- "Chat"
-  inner_llm <- list(get_model = function() "inner")
-  class(inner_llm) <- "Chat"
+  outer_llm <- new_test_chat(model = "outer")
+  inner_llm <- new_test_chat(model = "inner")
 
   with_lm(outer_llm, {
     old <- local_lm(inner_llm)
@@ -153,8 +146,7 @@ test_that("scoped LM is used by get_default_chat", {
   # Clear cached chat
   clear_default_chat()
 
-  mock_llm <- list(get_model = function() "scoped-model")
-  class(mock_llm) <- "Chat"
+  mock_llm <- new_test_chat(model = "scoped-model")
 
   result <- with_lm(mock_llm, {
     get_default_chat(create = FALSE)
@@ -164,10 +156,8 @@ test_that("scoped LM is used by get_default_chat", {
 })
 
 test_that("scoped LM is lower priority than explicit options", {
-  mock_scoped <- list(get_model = function() "scoped")
-  class(mock_scoped) <- "Chat"
-  mock_option <- list(get_model = function() "option")
-  class(mock_option) <- "Chat"
+  mock_scoped <- new_test_chat(model = "scoped")
+  mock_option <- new_test_chat(model = "option")
 
   withr::local_options(dsprrr.default_chat = mock_option)
 
@@ -188,8 +178,7 @@ test_that("scoped LM is lower priority than explicit options", {
 
 test_that("with_lm cleans up on error", {
   local_clean_scoped_lm()
-  mock_llm <- list(get_model = function() "mock")
-  class(mock_llm) <- "Chat"
+  mock_llm <- new_test_chat(model = "mock")
 
   # Note: withr::defer() cleanup on error is tricky in test context
   # because testthat's error handling can interfere with frame cleanup.
@@ -216,8 +205,7 @@ test_that("with_lm cleans up on error", {
 
 test_that("local_lm cleans up on error", {
   local_clean_scoped_lm()
-  mock_llm <- list(get_model = function() "mock")
-  class(mock_llm) <- "Chat"
+  mock_llm <- new_test_chat(model = "mock")
 
   test_fn <- function() {
     local_lm(mock_llm)
@@ -243,8 +231,7 @@ test_that("local_lm cleans up on error", {
 })
 
 test_that("with_lm returns value from code block", {
-  mock_llm <- list(get_model = function() "mock")
-  class(mock_llm) <- "Chat"
+  mock_llm <- new_test_chat(model = "mock")
 
   result <- with_lm(mock_llm, {
     x <- 1 + 2

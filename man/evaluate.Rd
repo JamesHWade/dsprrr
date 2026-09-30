@@ -2,109 +2,152 @@
 % Please edit documentation in R/evaluate.R
 \name{evaluate}
 \alias{evaluate}
-\title{Evaluate a DSPrrr module}
+\title{Score a module on a dataset}
 \usage{
 evaluate(module, ...)
 }
 \arguments{
-\item{module}{A DSPrrr module created with \code{\link[=module]{module()}}.}
+\item{module}{A module, such as one created with \code{\link[=module]{module()}} or
+\code{\link[=module_fn]{module_fn()}}.}
 
-\item{...}{Arguments passed to methods:
+\item{...}{Arguments for the evaluation:
 \itemize{
-\item \code{data}: A data frame or tibble containing columns that match the
-module's signature inputs plus any expected fields used by metric.
-\item \code{metric}: A function applied per example with signature
-\code{metric(prediction, expected_row)}, or a trace-aware metric created with
-\code{\link[=metric_with_trace]{metric_with_trace()}}.
-}
-
-Additional arguments passed to \code{\link[=run_dataset]{run_dataset()}}:
-\itemize{
-\item \code{.llm}: Optional ellmer chat object
-\item \code{.parallel}: Logical; whether to allow parallel execution
-\item \code{.concurrency}: A policy created by \code{\link[=concurrency_control]{concurrency_control()}}. Do not also
-pass \code{.parallel} when using an explicit policy.
-\item \code{.progress}: Logical; whether to display progress while evaluating
-\item \code{.return_format}: Character; \code{"simple"} returns just scores and predictions,
-\code{"structured"} (default) includes full metadata and data
-\item \code{epochs}: Integer; number of times to repeat evaluation for statistical
-significance (default = 1L). When > 1, each sample is evaluated multiple
-times to quantify variation.
+\item \code{data} (required, second argument): a data frame with one column per
+signature input, plus the columns the metric compares against.
+\item \code{metric} (required): a function called as \code{metric(prediction, expected)}
+for each row, where \code{prediction} is the row's output (a named list, as
+returned by \code{\link[=run]{run()}}) and \code{expected} is the whole data row as a one-row
+data frame. It returns a logical or numeric score, or
+\code{list(score = , feedback = )}. Built-in metrics take \code{field} to name the
+output and column to compare, as in
+\code{metric_exact_match(field = "sentiment")}. Metrics made with
+\code{\link[=metric_with_trace]{metric_with_trace()}} also receive the row's execution trace.
+\item \code{epochs}: how many times to run every row (default \code{1L}). Epochs after
+the first use their own cache partition, so each samples fresh
+responses. Repeating the same \code{evaluate()} call replays all epochs from
+the cache; pass \code{.cache = FALSE} to sample again.
+\item \code{.cache}: \code{NULL} (the default) follows \code{\link[=configure_cache]{configure_cache()}}; \code{FALSE}
+skips the response cache.
+\item \code{.llm}, \code{.concurrency}, \code{.progress}, \code{.trace_context}: as in
+\code{\link[=run_dataset]{run_dataset()}}.
+\item \code{.return_format}: \code{"structured"} (the default) or \code{"simple"}, which
+leaves out \code{metadata}, \code{traces}, \code{epoch_traces} and \code{data}.
 }}
 }
 \value{
-A list with elements. When \code{.return_format = "structured"} (default):
+A list of class \code{dsprrr_evaluation} with:
 \itemize{
-\item \code{mean_score}: numeric mean over all attempted rows, with run or metric
-failures contributing zero. With repeated epochs, the mean covers every
-attempted row-epoch.
-\item \code{scores}: per-example numeric scores (coerced from logical metrics).
-\item \code{predictions}: list of model outputs.
-\item \code{metadata}: list of metadata captured from \code{\link[=run]{run()}}.
-\item \code{n_evaluated}: number of successful evaluations.
-\item \code{n_errors}: number of rows with run or metric failures.
-\item \code{errors}: character vector with all error messages, when any.
-\item \code{n_run_errors}, \code{run_errors}: count and messages for module/LLM failures.
-\item \code{n_metric_errors}, \code{metric_errors}: count and messages for metric failures.
-\item \code{total_cost}: total evaluation cost, or \code{NA} when any call's cost is unknown.
-\item \code{feedbacks}: per-example textual feedback when the metric returns
-\code{list(score = , feedback = )} (see \code{\link[=metric_with_feedback]{metric_with_feedback()}});
-\code{NA} otherwise.
-\item \code{traces}: per-example trace envelopes supplied to trace-aware metrics.
-Each contains \code{row_id}, \code{epoch}, \code{status}, ordered module \code{events}, and
-per-row \code{metadata}. Trace events can contain prompts, inputs, and model
-responses, so treat them as potentially sensitive.
-\item \code{data}: input data augmented with prediction metadata.
+\item \code{mean_score}: the mean score, with failed rows counted as 0. With
+\code{epochs > 1}, the mean over every row and epoch.
+\item \code{scores}: one score per row (logical scores become 0 or 1), \code{NA} for
+failed rows. With \code{epochs > 1}, each row's mean across epochs, \code{NA} if
+any epoch failed.
+\item \code{predictions}: one output per row.
+\item \code{n_evaluated}: rows with a score.
+\item \code{n_errors}: rows where the call or the metric failed, with the messages
+in \code{errors}. \code{n_run_errors}/\code{run_errors} and
+\code{n_metric_errors}/\code{metric_errors} separate the two kinds.
+\item \code{total_cost}: total cost of the model calls, \code{NA} when any cost is
+unknown.
+\item \code{feedbacks}: the feedback text from metrics that return
+\code{list(score = , feedback = )} (see \code{\link[=metric_with_feedback]{metric_with_feedback()}}), otherwise
+\code{NA}.
+\item \code{program_artifact_id}, \code{trace_context}: the program's identity and the
+caller's correlation context.
+\item \code{metadata}: one list of call metadata per row.
+\item \code{traces}: one execution trace per row, as passed to trace-aware
+metrics. Traces can contain prompts, inputs and responses.
+\item \code{data}: the result of \code{run_dataset(.return_format = "structured")}.
 }
 
-When \code{epochs > 1}, additional fields are included:
-\itemize{
-\item \code{epoch_scores}: list of numeric vectors, one per epoch
-\item \code{epoch_traces}: list of row-aligned trace lists, one per epoch
-\item \code{score_std}: standard deviation of mean scores across epochs
-\item \code{ci_95}: 95\% confidence interval for the mean score (numeric vector of length 2)
-}
-
-When \code{.return_format = "simple"}:
-\itemize{
-\item \code{mean_score}, \code{scores}, \code{predictions}, \code{n_evaluated}, \code{n_errors}, \code{errors}
-(omits \code{metadata} and \code{data} for lighter-weight results)
-}
+With \code{epochs > 1}, the list also has \code{epoch_scores} (one score vector per
+epoch), \code{score_std} (the standard deviation of the epoch means), \code{ci_95}
+(a 95\% confidence interval for \code{mean_score}) and \code{epoch_traces}; the
+\code{predictions}, \code{metadata}, \code{traces} and \code{data} come from the last epoch.
+An empty \code{data} gives a warning and an \code{NA} mean score.
 }
 \description{
-Generic evaluation entry point for DSPrrr modules. Executes the module on a
-dataset, applies a metric to each example, and returns aggregate statistics
-together with the predictions and metadata required for downstream analysis.
+\code{evaluate()} runs a module on every row of a data frame (as
+\code{\link[=run_dataset]{run_dataset()}} does), scores each output with a metric, and returns the
+mean score together with the per-row scores, predictions and errors.
+}
+\details{
+A row whose call fails, or whose metric errors, gets an \code{NA} score and is
+counted in \code{n_errors}; \code{mean_score} counts it as 0, so failures lower the
+score instead of disappearing from it. Metric errors also raise a warning.
 }
 \examples{
+# A keyword rule stands in for a model, so this example runs offline
+rule <- module_fn(
+  "text -> sentiment",
+  function(text) {
+    if (grepl("love|great", text, ignore.case = TRUE)) "positive" else "negative"
+  }
+)
+testset <- data.frame(
+  text = c("I love it!", "Awful.", "Great value", "Not great"),
+  sentiment = c("positive", "negative", "positive", "negative")
+)
+
+result <- evaluate(rule, testset, metric = metric_exact_match(field = "sentiment"))
+result
+result$scores
+
+# A custom metric gets the prediction and the whole data row
+same_label <- function(prediction, expected) {
+  prediction$sentiment == expected$sentiment
+}
+evaluate(rule, testset, metric = same_label)$mean_score
+
 \dontrun{
 classifier <- module(
-  signature("text -> sentiment: enum('positive', 'negative', 'neutral')"),
-  type = "predict"
+  signature("text -> sentiment: enum('positive', 'negative')")
 )
-
-testset <- dsp_trainset(
-  text = c("I love it!", "Awful.", "It's fine."),
-  sentiment = c("positive", "negative", "neutral")
-)
-
+llm <- ellmer::chat_openai(model = "gpt-6-luna")
 result <- evaluate(
   classifier,
-  data = testset,
+  testset,
   metric = metric_exact_match(field = "sentiment"),
-  .llm = ellmer::chat_openai()
+  .llm = llm
 )
+result$n_errors
 
-result$mean_score # accuracy across the test set
-result$scores # per-example scores
-result$n_errors # examples where the metric failed
+# Run every row three times to see how much the score varies
+repeated <- evaluate(
+  classifier,
+  testset,
+  metric = metric_exact_match(field = "sentiment"),
+  .llm = llm,
+  epochs = 3L
+)
+repeated$ci_95
 }
 }
 \seealso{
-\itemize{
-\item \code{\link[=run]{run()}} for executing without metrics
-\item \code{\link[=run_dataset]{run_dataset()}} for batch execution without metrics
-\item \code{\link[=optimize_grid]{optimize_grid()}} for parameter optimization
-\item \code{\link[=metric_exact_match]{metric_exact_match()}}, \code{\link[=metric_contains]{metric_contains()}} for built-in metrics
+\code{\link[=optimize_grid]{optimize_grid()}} and \code{\link[=compile]{compile()}}, which use \code{evaluate()} to
+compare candidate programs.
+
+Other execution:
+\code{\link[=concurrency_control]{concurrency_control()}},
+\code{\link[=predict.Module]{predict.Module()}},
+\code{\link[=run]{run()}},
+\code{\link[=run_async]{run_async()}},
+\code{\link[=run_dataset]{run_dataset()}},
+\code{\link[=run_stream]{run_stream()}},
+\code{\link[=stream_async]{stream_async()}},
+\code{\link[=stream_listener]{stream_listener()}}
+
+Other metrics:
+\code{\link[=as_dsprrr_metric]{as_dsprrr_metric()}},
+\code{\link[=metric_contains]{metric_contains()}},
+\code{\link[=metric_custom]{metric_custom()}},
+\code{\link[=metric_exact_match]{metric_exact_match()}},
+\code{\link[=metric_f1]{metric_f1()}},
+\code{\link[=metric_field_match]{metric_field_match()}},
+\code{\link[=metric_threshold]{metric_threshold()}},
+\code{\link[=metric_with_feedback]{metric_with_feedback()}},
+\code{\link[=metric_with_trace]{metric_with_trace()}},
+\code{\link{vitals_metrics}}
 }
-}
+\concept{execution}
+\concept{metrics}

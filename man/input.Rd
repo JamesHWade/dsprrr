@@ -2,50 +2,51 @@
 % Please edit documentation in R/input.R
 \name{input}
 \alias{input}
-\title{Create an input specification for a Signature}
+\title{Describe one signature input}
 \usage{
 input(name, type = NULL, description = NULL, ...)
 }
 \arguments{
-\item{name}{Character string naming the input}
+\item{name}{The field name. Callers pass the value under this name, as in
+\code{run(mod, review = "...")}.}
 
-\item{type}{Input type specification. Can be:
-\itemize{
-\item An ellmer type object (e.g., \code{type_string()}, \code{type_number()})
-\item A string shortcut (e.g., "string", "number", "boolean")
-\item An S7 class (for backward compatibility)
-\item NULL/missing (defaults to string type)
-}}
+\item{type}{An ellmer type, one of the labels \code{"string"}, \code{"number"},
+\code{"integer"}, \code{"boolean"}, \code{"array"} (an array of strings) or \code{"object"},
+or \code{NULL} for a string.}
 
-\item{description}{Optional description of the input. When type is a string
-shortcut or NULL, this description will be passed to the ellmer type}
+\item{description}{Optional description. Unless the module has its own
+template, it is written above the value in the prompt, as
+\verb{# description}. With a label or \code{NULL} \code{type}, it also becomes the
+ellmer type's description.}
 
-\item{...}{Additional metadata for the input}
+\item{...}{Extra fields stored in the specification.}
 }
 \value{
-A list with class "dsprrr_input" containing the input specification
+A list of class \code{dsprrr_input} with elements \code{name}, \code{type} (an
+ellmer type) and \code{description}.
 }
 \description{
-Create an input specification with flexible type notation.
-Supports ellmer types, string shortcuts, or S7 classes for backward compatibility.
+\code{input()} describes one input field for the explicit form of
+\code{\link[=signature]{signature()}}: its name, its type and an optional description.
 }
 \examples{
-# Using ellmer types (recommended for consistency with outputs)
-input("text", ellmer::type_string())
-input("age", ellmer::type_number())
-input("active", ellmer::type_boolean())
+review <- input("review", description = "A customer review")
+stars <- input("stars", "integer")
+tags <- input("tags", ellmer::type_array(ellmer::type_string()))
 
-# Using string shortcuts (simple and readable)
-input("text", "string")
-input("count", "integer")
-input("score", "number")
-
-# Type optional (defaults to string)
-input("name")
-input("name", description = "User's name")
-
-# With ellmer types for structured data
-input("tags", ellmer::type_array(ellmer::type_string()))
-input("status", ellmer::type_enum(c("pending", "active", "done")))
+# Inputs make up the explicit form of a signature
+signature(
+  inputs = list(review, stars, tags),
+  output_type = ellmer::type_object(summary = ellmer::type_string())
+)
 
 }
+\seealso{
+Other signatures:
+\code{\link[=has_reasoning]{has_reasoning()}},
+\code{\link[=signature]{signature()}},
+\code{\link[=with_instructions]{with_instructions()}},
+\code{\link[=with_reasoning]{with_reasoning()}},
+\code{\link[=without_reasoning]{without_reasoning()}}
+}
+\concept{signatures}

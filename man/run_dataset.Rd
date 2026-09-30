@@ -3,7 +3,7 @@
 \name{run_dataset}
 \alias{run_dataset}
 \alias{run_dataset.Module}
-\title{Execute Module on Data}
+\title{Run a module on each row of a data frame}
 \usage{
 run_dataset(module, ...)
 
@@ -12,61 +12,86 @@ run_dataset(module, ...)
   data,
   .llm = NULL,
   .verbose = FALSE,
-  .parallel = FALSE,
-  .parallel_method = c("ellmer", "mirai"),
   .concurrency = NULL,
   .progress = TRUE,
   .return_format = "simple",
-  ...
+  ...,
+  .trace_context = list()
 )
 }
 \arguments{
-\item{module}{A DSPrrr module (e.g., created with \code{module()})}
+\item{module}{A module, such as one created with \code{\link[=module]{module()}} or
+\code{\link[=module_fn]{module_fn()}}.}
 
-\item{...}{Additional arguments passed to \code{\link[=run]{run()}}.}
+\item{...}{Only \code{.cache} is accepted here, with the same meaning as in
+\code{\link[=run]{run()}}. Any other dot-prefixed argument is an error.}
 
-\item{data}{A tibble or data frame with columns matching the module's inputs.}
+\item{data}{A data frame with one column per required signature input.
+Other columns (such as expected answers) are kept in the result but not
+sent to the module.}
 
-\item{.llm}{Optional ellmer Chat object for LLM calls}
+\item{.llm}{An ellmer Chat for all rows. See \code{\link[=run]{run()}} for how it is chosen
+when omitted.}
 
-\item{.verbose}{Logical whether to print verbose output}
+\item{.verbose}{If \code{TRUE}, print the rendered input section of each
+prompt.}
 
-\item{.parallel}{Logical whether to enable parallel processing}
+\item{.concurrency}{A policy from \code{\link[=concurrency_control]{concurrency_control()}}. The default runs
+rows one after another.}
 
-\item{.parallel_method}{Character, either "ellmer" (default) or "mirai".
-"ellmer" uses ellmer's \code{parallel_chat_structured()} for native async HTTP
-parallelism (more efficient, single process).
-"mirai" uses mirai for multi-process parallelism (requires \code{.llm = NULL}).}
+\item{.progress}{Show a progress bar. Default \code{TRUE}.}
 
-\item{.concurrency}{Optional batch policy created by
-\code{\link[=concurrency_control]{concurrency_control()}}. Do not combine it with \code{.parallel} or
-\code{.parallel_method}.}
+\item{.return_format}{\code{"simple"} (the default) or \code{"structured"}.}
 
-\item{.progress}{Logical whether to show progress bar}
-
-\item{.return_format}{Character either "simple" or "structured"}
+\item{.trace_context}{A named, JSON-compatible list copied into each row's
+metadata and traces. When omitted inside another dsprrr operation, the
+active context is inherited.}
 }
 \value{
-A tibble with the input columns plus a \code{result} list-column. With
-\code{.return_format = "structured"}, the tibble also contains \code{.error},
-\code{.metadata}, and \code{.chat}; \code{.error} is \code{NA} for successful rows and contains
-the LLM execution error message for failed rows.
+A tibble with the columns of \code{data} plus \code{result}, a list-column
+holding each row's output (a named list, as returned by \code{\link[=run]{run()}}). With
+\code{.return_format = "structured"}, it also has \code{.error} (\code{NA} for rows that
+succeeded), \code{.metadata} and \code{.chat}.
 }
 \description{
-Execute a module on a data frame/tibble with optimized batch processing.
-Zero-row data frames return a zero-row tibble with the same result columns
-as a non-empty call, without resolving a Chat or changing runtime state.
+\code{run_dataset()} runs a module once per row of \code{data}, taking each input from
+the column with the same name, and adds the outputs as a \code{result}
+list-column. It works for every module type, including those that
+\code{\link[=run]{run()}} only accepts one input at a time.
+}
+\details{
+A row that fails gets \code{NA} in \code{result} and a warning; with
+\code{.return_format = "structured"} its error message is in \code{.error}. A
+zero-row data frame returns a zero-row tibble with the same columns,
+without calling the model.
 }
 \examples{
-\dontrun{
-# Process data
-df <- tibble::tibble(
-  text = c("I love this!", "This is bad", "Okay product")
-)
+# A function-backed module runs without a model
+shout <- module_fn("text -> reply", function(text) toupper(text))
+reviews <- data.frame(text = c("great", "broken"), stars = c(5, 1))
+results <- run_dataset(shout, reviews)
+results
+results$result[[1]]$reply
 
-llm <- ellmer::chat_openai()
-results <- signature("text -> sentiment") |>
-  module(type = "predict") |>
-  run_dataset(df, .llm = llm)
+\dontrun{
+classify <- module(signature("text -> sentiment"))
+run_dataset(
+  classify,
+  reviews,
+  .llm = ellmer::chat_openai(model = "gpt-6-luna"),
+  .return_format = "structured"
+)
 }
 }
+\seealso{
+Other execution:
+\code{\link[=concurrency_control]{concurrency_control()}},
+\code{\link[=evaluate]{evaluate()}},
+\code{\link[=predict.Module]{predict.Module()}},
+\code{\link[=run]{run()}},
+\code{\link[=run_async]{run_async()}},
+\code{\link[=run_stream]{run_stream()}},
+\code{\link[=stream_async]{stream_async()}},
+\code{\link[=stream_listener]{stream_listener()}}
+}
+\concept{execution}

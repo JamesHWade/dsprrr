@@ -2,35 +2,79 @@
 % Please edit documentation in R/vitals.R
 \name{as_vitals_solver}
 \alias{as_vitals_solver}
-\title{Convert a dsprrr module into a vitals solver}
+\title{Use a dsprrr module as a vitals solver}
 \usage{
-as_vitals_solver(module, .llm = NULL, ...)
+as_vitals_solver(module, .llm = NULL, .concurrency = NULL, ...)
 }
 \arguments{
-\item{module}{A DSPrrr module (e.g., created via \code{\link[=module]{module()}}).}
+\item{module}{A module, such as one created with \code{\link[=module]{module()}}.}
 
-\item{.llm}{An ellmer chat object. If \code{NULL} (default), uses the module's
-stored chat or falls back to \code{\link[=get_default_chat]{get_default_chat()}}. The chat is cloned
-for each batch invocation.}
+\item{.llm}{An ellmer Chat. \code{NULL} (the default) uses the module's own chat
+or the default chat from \code{\link[=get_default_chat]{get_default_chat()}}, resolved when the solver is
+created. Each batch runs on a fresh clone.}
 
-\item{...}{Additional arguments forwarded to \code{\link[=run_dataset]{run_dataset()}}.}
+\item{.concurrency}{Optional policy from \code{\link[=concurrency_control]{concurrency_control()}}.}
+
+\item{...}{Further arguments passed to \code{\link[=run_dataset]{run_dataset()}}.}
 }
 \value{
-A function accepting a list of input objects and returning a list
-with components \code{result}, \code{solver_chat}, and optionally \code{solver_metadata}.
+A function \verb{function(inputs, ..., solver_chat)} that returns a list
+with \code{result} (character vector), \code{solver_chat} (the chats used) and, for
+non-text outputs, \code{solver_metadata}.
 }
 \description{
-Creates a function compatible with vitals Tasks that executes a DSPrrr
-module against batches of inputs. The solver uses \code{\link[=run_dataset]{run_dataset()}} internally,
-ensuring that the module's demos, templates, and input descriptions are
-properly used in prompt construction.
-
-For multi-input modules, the solver expects the vitals \code{input} column to
-contain nested data (list of tibbles/lists) where each element has fields
-matching the module's signature inputs. Use \code{\link[=as_vitals_task]{as_vitals_task()}} to
-automatically create this structure from a flat dataset.
-
-The solver uses ellmer's parallel processing for efficiency. For structured
-outputs, mock Chat objects are created for vitals logging compatibility
-(following the same pattern as vitals' \code{generate_structured()}).
+\code{as_vitals_solver()} wraps a module in a function that a vitals \code{Task} can
+call as its solver. The solver runs the module with \code{\link[=run_dataset]{run_dataset()}}, so the
+module's demonstrations, template and input descriptions are used as usual.
+\code{\link[=as_vitals_task]{as_vitals_task()}} builds the whole task in one step.
 }
+\details{
+vitals passes the solver a list of inputs. For a module with several
+inputs, each element must be a one-row data frame or list with fields named
+after the signature inputs; \code{\link[=as_vitals_task]{as_vitals_task()}} creates that structure from
+a flat data set.
+
+String and enum outputs, including a single string or enum field, are
+returned as plain text, which string scorers such as
+\code{vitals::detect_match()} can compare. Other outputs are returned as JSON,
+together with per-row metadata. Rows run one after another unless
+\code{.concurrency} asks for more.
+}
+\examples{
+\dontshow{if (rlang::is_installed("vitals")) withAutoprint(\{ # examplesIf}
+solver <- as_vitals_solver(
+  module(signature("question -> answer")),
+  .llm = ellmer::chat_openai(model = "gpt-6-luna")
+)
+
+\dontrun{
+tsk <- vitals::Task$new(
+  dataset = tibble::tibble(input = "What is 2 + 2?", target = "4"),
+  solver = solver,
+  scorer = vitals::detect_includes()
+)
+tsk$eval()
+}
+\dontshow{\}) # examplesIf}
+}
+\seealso{
+Other integrations:
+\code{\link[=as_dsprrr_metric]{as_dsprrr_metric()}},
+\code{\link[=as_dsprrr_traces]{as_dsprrr_traces()}},
+\code{\link[=as_ellmer_tool]{as_ellmer_tool()}},
+\code{\link[=as_vitals_cost]{as_vitals_cost()}},
+\code{\link[=as_vitals_samples]{as_vitals_samples()}},
+\code{\link[=as_vitals_task]{as_vitals_task()}},
+\code{\link[=create_search_tool]{create_search_tool()}},
+\code{\link[=llm_predict]{llm_predict()}},
+\code{\link[=ragnar_tool]{ragnar_tool()}},
+\code{\link[=reasoning_effort]{reasoning_effort()}},
+\code{\link[=register_dsprrr_engine]{register_dsprrr_engine()}},
+\code{\link[=summarize_traces_df]{summarize_traces_df()}},
+\code{\link[=temperature]{temperature()}},
+\code{\link[=top_p]{top_p()}},
+\code{\link[=use_dsprrr_template]{use_dsprrr_template()}},
+\code{\link[=validate_workflow]{validate_workflow()}},
+\code{\link{vitals_metrics}}
+}
+\concept{integrations}

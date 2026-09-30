@@ -2,31 +2,49 @@
 % Please edit documentation in R/module-ensemble.R
 \name{reduce_majority}
 \alias{reduce_majority}
-\title{Majority Vote Reducer}
+\title{Pick the most common ensemble output}
 \usage{
 reduce_majority(field = NULL, tie_breaker = "first")
 }
 \arguments{
-\item{field}{Optional field name to use for voting when outputs are lists.
-If NULL, uses the first field of the output.}
+\item{field}{The output field to vote on. With \code{NULL}, the first field.}
 
-\item{tie_breaker}{How to handle ties: "first" (default) returns the first
-occurrence, "random" picks randomly among tied values.}
+\item{tie_breaker}{\code{"first"} picks, among tied values, the one that
+occurs first; \code{"random"} picks one at random.}
 }
 \value{
-A reduce function for use with \code{ensemble()}
+A function \verb{function(outputs, weights = NULL)} for the \code{reduce_fn}
+argument of \code{\link[=ensemble]{ensemble()}}.
 }
 \description{
-Creates a reduce function that returns the most common output among
-the ensemble members. For structured outputs (lists), compares by
-the first field or a specified field.
+\code{reduce_majority()} makes a reducer for \code{\link[=ensemble]{ensemble()}} that returns the
+output whose value occurs most often. It is the default reducer.
+}
+\details{
+Values are compared as strings. If the ensemble has \code{weights}, each vote
+counts with its module's weight. The reducer returns the whole output of
+the first module that gave the winning value.
 }
 \examples{
-\dontrun{
-# Basic majority voting
-ens <- ensemble(modules, reduce_fn = reduce_majority())
-
-# Vote based on specific field
-ens <- ensemble(modules, reduce_fn = reduce_majority(field = "sentiment"))
+vote <- reduce_majority(field = "sentiment")
+vote(list(
+  list(sentiment = "positive", confidence = 0.6),
+  list(sentiment = "negative", confidence = 0.9),
+  list(sentiment = "positive", confidence = 0.8)
+))
 }
+\seealso{
+Other composition:
+\code{\link[=as_reward_fn]{as_reward_fn()}},
+\code{\link[=best_of_n]{best_of_n()}},
+\code{\link[=ensemble]{ensemble()}},
+\code{\link{module-graph}},
+\code{\link[=pipeline]{pipeline()}},
+\code{\link[=reduce_best_by_metric]{reduce_best_by_metric()}},
+\code{\link[=reduce_first]{reduce_first()}},
+\code{\link[=reduce_weighted_vote]{reduce_weighted_vote()}},
+\code{\link[=refine]{refine()}},
+\code{\link[=step]{step()}},
+\code{\link[=with_assertions]{with_assertions()}}
 }
+\concept{composition}

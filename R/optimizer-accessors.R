@@ -1,41 +1,40 @@
-#' Optimizer Convenience Functions
+#' Helpers for optimization results
 #'
-#' @description
-#' Helper functions for inspecting, extracting, and working with
-#' optimization results from compiled modules and trial logs.
+#' Functions for inspecting and reusing optimization results. Each function is
+#' documented on its own page.
 #'
 #' @name optimizer-accessors
+#' @noRd
 NULL
 
-#' Extract Best Parameters from a Module
+#' Best parameters found by an optimizer
 #'
 #' @description
-#' Get the best parameter configuration from an optimized module.
-#' This is the parameter set that achieved the highest (or lowest, for
-#' minimization) score during optimization.
+#' `best_params()` returns the winning parameter values recorded by [compile()]
+#' or [optimize_grid()], such as the best `temperature` of a grid search or the
+#' number of demonstrations chosen by [LabeledFewShot()]. It reads
+#' `optimization_result(module)$best_params`.
 #'
-#' @param module A DSPrrr module that has been optimized.
-#' @param flatten Logical; if TRUE (default), return a simple named list.
-#'   If FALSE, return the parameters as stored (may include nested structure).
+#' @param module A module returned by [compile()] or modified by
+#'   [optimize_grid()].
+#' @param flatten If `TRUE` (the default), length-one list elements are
+#'   unwrapped to plain values. If `FALSE`, the parameters are returned as
+#'   stored.
 #'
-#' @return A named list of the best parameters, or NULL if the module
-#'   has not been optimized.
+#' @return A named list of parameters. For a module that has not been
+#'   optimized, `NULL` with a warning.
 #'
 #' @export
-#' @family optimizer accessors
+#' @family optimization results
 #'
 #' @examples
-#' if (FALSE) {
-#' mod <- module(signature("text -> sentiment"), type = "predict")
-#' mod$optimize_grid(
-#'   data = train_data,
-#'   metric = metric_exact_match(),
-#'   parameters = list(temperature = c(0.3, 0.7, 1.0))
+#' classifier <- module(signature("text -> sentiment"))
+#' trainset <- data.frame(
+#'   text = c("I love it!", "Terrible experience", "It's okay"),
+#'   sentiment = c("positive", "negative", "neutral")
 #' )
-#' best_params(mod)
-#' # $temperature
-#' # [1] 0.7
-#' }
+#' compiled <- compile(classifier, LabeledFewShot(k = 2L), trainset)
+#' best_params(compiled)
 best_params <- function(module, flatten = TRUE) {
   if (!inherits(module, "Module")) {
     cli::cli_abort("{.arg module} must be a DSPrrr Module object")
@@ -46,7 +45,8 @@ best_params <- function(module, flatten = TRUE) {
     return(NULL)
   }
 
-  params <- module$state$best_params
+  result <- optimization_result(module)
+  params <- result$best_params
 
   if (is.null(params)) {
     return(NULL)
@@ -63,36 +63,43 @@ best_params <- function(module, flatten = TRUE) {
 }
 
 
-#' Extract Best Demos from a Compiled Module
+#' Demonstrations attached to a module
 #'
 #' @description
-#' Get the few-shot demonstration examples from a compiled module.
-#' Returns the demos that were selected during optimization (e.g., by
-#' LabeledFewShot or BootstrapFewShot teleprompters).
+#' `best_demos()` returns the few-shot demonstrations a module currently
+#' carries, such as those chosen by [LabeledFewShot()] or [BootstrapFewShot()].
 #'
-#' @param module A DSPrrr module that has been compiled with demos.
-#' @param as_tibble Logical; if TRUE, return demos as a tibble.
-#'   If FALSE (default), return as a list.
+#' @param module A module.
+#' @param as_tibble If `TRUE`, return a tibble with one row per demonstration
+#'   and one column per input and output field. If `FALSE` (the default),
+#'   return the list of demonstrations as stored.
 #'
-#' @return A list or tibble of demonstration examples, or NULL if
-#'   the module has no demos.
+#' @return A list or tibble of demonstrations, or `NULL` when the module has
+#'   none.
 #'
 #' @export
-#' @family optimizer accessors
+#' @family optimization results
 #'
 #' @examples
-#' if (FALSE) {
-#' tp <- LabeledFewShot(k = 4L)
-#' compiled <- compile(tp, mod, trainset)
-#' demos <- best_demos(compiled)
-#' }
+#' classifier <- module(signature("text -> sentiment"))
+#' trainset <- data.frame(
+#'   text = c("I love it!", "Terrible experience", "It's okay"),
+#'   sentiment = c("positive", "negative", "neutral")
+#' )
+#' compiled <- compile(classifier, LabeledFewShot(k = 2L), trainset)
+#' best_demos(compiled, as_tibble = TRUE)
+#'
+#' # An uncompiled module has none
+#' best_demos(classifier)
 best_demos <- function(module, as_tibble = FALSE) {
   if (!inherits(module, "Module")) {
     cli::cli_abort("{.arg module} must be a DSPrrr Module object")
   }
 
-  # PredictModule stores demos in $demos field, fall back to config$demos
-  demos <- module$demos %||% module$config$demos
+  if (!"demos" %in% names(module)) {
+    return(NULL)
+  }
+  demos <- module$demos
 
   if (is.null(demos) || length(demos) == 0) {
     return(NULL)
@@ -114,37 +121,37 @@ best_demos <- function(module, as_tibble = FALSE) {
 }
 
 
-#' Apply Best Configuration from One Module to Another
+#' Copy optimized settings to another module
 #'
 #' @description
-#' Copy the optimized configuration (best parameters, demos, etc.) from
-#' a compiled module to a new or existing module. Useful for transferring
-#' optimization results to a fresh module instance.
+#' `apply_best_config()` copies the best parameters, the demonstrations and
+#' the optimization result from an optimized module to another module, for
+#' example to reuse a compiled configuration on a module with a different
+#' chat.
 #'
-#' @param source A compiled DSPrrr module with optimization results.
-#' @param target A DSPrrr module to apply the configuration to.
-#'   If NULL, a copy of the source module is created.
-#' @param include Character vector specifying what to copy:
-#'   - "params": Best parameter values (temperature, etc.)
-#'   - "demos": Few-shot demonstration examples
-#'   - "all": Both params and demos (default)
+#' @param source An optimized module, returned by [compile()] or modified by
+#'   [optimize_grid()].
+#' @param target The module to update. It is modified in place. If `NULL`, a
+#'   fresh copy of `source` is created and updated.
+#' @param include What to copy: `"all"` (the default), `"params"` (the best
+#'   parameters, such as `temperature`) or `"demos"` (the demonstrations).
 #'
-#' @return The target module with the applied configuration (modified in place
-#'   if target was provided, otherwise a new module).
+#' @return The updated target module, invisibly.
 #'
 #' @export
-#' @family optimizer accessors
+#' @family optimization results
 #'
 #' @examples
-#' if (FALSE) {
-#' # Transfer optimization from one module to another
-#' optimized <- mod$optimize_grid(data, metric, parameters)
-#' new_mod <- module(signature, type = "predict")
-#' apply_best_config(optimized, new_mod)
+#' classifier <- module(signature("text -> sentiment"))
+#' trainset <- data.frame(
+#'   text = c("I love it!", "Terrible experience", "It's okay"),
+#'   sentiment = c("positive", "negative", "neutral")
+#' )
+#' compiled <- compile(classifier, LabeledFewShot(k = 2L), trainset)
 #'
-#' # Create a fresh copy with the optimized config
-#' fresh <- apply_best_config(optimized, target = NULL)
-#' }
+#' fresh <- module(signature("text -> sentiment"))
+#' apply_best_config(compiled, fresh, include = "demos")
+#' length(fresh$demos)
 apply_best_config <- function(
   source,
   target = NULL,
@@ -182,49 +189,65 @@ apply_best_config <- function(
   if (include %in% c("all", "demos")) {
     demos <- best_demos(source)
     if (!is.null(demos)) {
-      # PredictModule uses $demos field, other modules use config$demos
-      if ("demos" %in% names(target)) {
-        target$demos <- demos
-      } else {
-        target$config$demos <- demos
+      if (!"demos" %in% names(target)) {
+        cli::cli_abort(
+          c(
+            "{.arg target} does not support demonstrations",
+            "i" = "Use a Predict module when transferring {.val demos}."
+          ),
+          class = "dsprrr_demo_transfer_error"
+        )
       }
+      target$demos <- demos
     }
   }
 
-  # Mark as compiled if source was compiled
-  if (source$is_compiled()) {
-    target$state$compiled <- TRUE
-    target$state$best_score <- source$state$best_score
+  # Carry the complete result contract when the source was optimized.
+  source_result <- source$state$optimization_result
+  if (!is.null(source_result)) {
+    set_optimization_result(
+      target,
+      rlang::duplicate(source_result, shallow = FALSE)
+    )
   }
 
   invisible(target)
 }
 
 
-#' Get Top Performing Trials
+#' Highest-scoring optimization trials
 #'
 #' @description
-#' Extract the top k trials from a module's optimization history or
-#' a TrialLog, ranked by score.
+#' `top_trials()` returns the `k` best trials of an optimized module, taken
+#' from `optimization_result(x)$trials`, or of a [TrialLog].
 #'
-#' @param x A DSPrrr module with optimization trials, or a TrialLog object.
-#' @param k Integer; number of top trials to return. Default is 5.
-#' @param objective Optimization direction: "maximize" (default) or "minimize".
+#' @param x A module returned by [compile()] or modified by [optimize_grid()],
+#'   or a [TrialLog].
+#' @param k Integer number of trials to return (default `5L`).
+#' @param objective `"maximize"` (the default) sorts the highest scores first;
+#'   `"minimize"` sorts the lowest first.
 #'
-#' @return A tibble with the top k trials, including trial_id, score,
-#'   parameters, and other trial metadata.
+#' @return A tibble with the top `k` trials. Modules are sorted by `score`
+#'   (or `mean_score`), trial logs by `mean_score`. When there are no trials,
+#'   a warning and an empty tibble.
 #'
 #' @export
-#' @family optimizer accessors
+#' @family optimization results
 #'
 #' @examples
-#' if (FALSE) {
-#' # Get top 3 trials from module
-#' top_trials(mod, k = 3)
+#' \dontrun{
+#' classifier <- module(signature("text -> sentiment"))
+#' optimize_grid(
+#'   classifier,
+#'   data = devset,
+#'   metric = metric_exact_match(field = "sentiment"),
+#'   grid = data.frame(reasoning_effort = c("none", "low", "medium")),
+#'   .llm = ellmer::chat_openai(model = "gpt-6-luna")
+#' )
+#' top_trials(classifier, k = 2L)
 #'
-#' # Get top trials from a TrialLog
-#' log <- load_trial_log("path/to/logs")
-#' top_trials(log, k = 10, objective = "minimize")
+#' # Trials saved by an optimizer's `log_dir`
+#' top_trials(load_trial_log("logs/my-run"), k = 10L)
 #' }
 top_trials <- function(x, k = 5L, objective = c("maximize", "minimize")) {
   UseMethod("top_trials")
@@ -239,9 +262,15 @@ top_trials.Module <- function(
   objective <- match.arg(objective)
   k <- as.integer(k)
 
-  trials <- x$state$trials
+  result <- optimization_result(x)
+  trials <- result$trials %||% tibble::tibble()
+  if (!"score" %in% names(trials) && "mean_score" %in% names(trials)) {
+    trials$score <- trials$mean_score
+  }
 
-  if (!is.data.frame(trials) || nrow(trials) == 0) {
+  if (
+    !is.data.frame(trials) || nrow(trials) == 0 || !"score" %in% names(trials)
+  ) {
     cli::cli_warn("Module has no optimization trials")
     return(tibble::tibble(
       trial_id = integer(),
@@ -295,31 +324,32 @@ top_trials.TrialLog <- function(
 }
 
 
-#' Compare Module Configuration Before and After Optimization
+#' Compare a module's settings with baseline values
 #'
 #' @description
-#' Show what configuration values changed during optimization.
-#' Useful for understanding the effect of optimization on module settings.
+#' `config_diff()` lists the values in `module$config` next to baseline values,
+#' changed rows first. Use it to see which settings an optimizer changed.
 #'
-#' @param module A DSPrrr module (preferably compiled).
-#' @param baseline Optional named list of baseline configuration values
-#'   to compare against. If NULL, uses reasonable defaults.
+#' @details
+#' The default baseline assumes provider defaults: `temperature = 1`,
+#' `top_p = 1`, `frequency_penalty = 0` and `presence_penalty = 0`. A value
+#' the module never set is shown as `"<default>"` and counts as changed, as do
+#' internal fields such as `.module_kind`, so pass a `baseline` that matches
+#' your starting configuration for a meaningful comparison.
 #'
-#' @return A tibble with columns:
-#'   - `parameter`: Parameter name
-#'   - `before`: Value before optimization (or default)
-#'   - `after`: Current value
-#'   - `changed`: Logical indicating if value changed
+#' @param module A module.
+#' @param baseline Optional named list of baseline values; it overrides the
+#'   default baseline entry by entry.
+#'
+#' @return A tibble with columns `parameter`, `before` and `after` (values
+#'   formatted as text) and `changed` (logical).
 #'
 #' @export
-#' @family optimizer accessors
+#' @family optimization results
 #'
 #' @examples
-#' if (FALSE) {
-#' mod <- module(signature("text -> sentiment"), type = "predict")
-#' mod$optimize_grid(data, metric, parameters = list(temperature = c(0.3, 1.0)))
-#' config_diff(mod)
-#' }
+#' mod <- module(signature("text -> sentiment"), config = list(temperature = 0))
+#' config_diff(mod, baseline = list(temperature = 0.7))
 config_diff <- function(module, baseline = NULL) {
   if (!inherits(module, "Module")) {
     cli::cli_abort("{.arg module} must be a DSPrrr Module object")
@@ -388,43 +418,39 @@ config_diff <- function(module, baseline = NULL) {
 }
 
 
-#' Export Module Configuration as R Code
+#' Export a program as standalone R code
 #'
 #' @description
-#' Generate R code containing the complete program artifact and its restoration
-#' call. This preserves nested graphs and exact schemas without hand-rendering
-#' module fields.
+#' `export_module_code()` writes R code that rebuilds a program: the complete
+#' program artifact (see [program_artifact()]) followed by a call to
+#' [restore_module_config()]. Nested programs and exact output schemas are
+#' preserved.
 #'
-#' @param module A DSPrrr module to export.
-#' @param name Character; variable name for the module in generated code.
-#'   Default is "mod".
-#' @param include_demos Logical; whether to include demonstration examples
-#'   in the generated code. Default is TRUE.
-#' @param file Optional file path to write the code to. If NULL (default),
-#'   returns the code as a character string. Existing files are atomically
-#'   replaced only after the staged output parses successfully.
-#' @param registry Named runtime registry; see [program-artifact].
-#' @param trusted Whether trusted runtime values may be embedded. Standalone
-#'   code export rejects registry and embedded runtime references.
+#' @param module A module or composed program.
+#' @param name Variable name for the program in the generated code (default
+#'   `"mod"`).
+#' @param include_demos Whether to include the demonstrations (default
+#'   `TRUE`).
+#' @param file Optional path. When given, the code is written there; an
+#'   existing file is replaced only after the new code parses.
+#' @param registry,trusted As in [program_artifact()]. Standalone code cannot
+#'   embed registry or trusted runtime references, so programs that need them
+#'   are rejected; use [save_program()] for those.
 #'
-#' @return If `file` is NULL, returns the R code as a character string. If
-#'   `file` is specified, writes it atomically and returns the code invisibly.
+#' @return The code as a single string, invisibly when `file` is given.
 #'
 #' @export
-#' @family optimizer accessors
+#' @family optimization results
+#' @family persistence
 #'
 #' @examples
-#' if (FALSE) {
-#' mod <- module(signature("text -> sentiment"), type = "predict")
-#' mod$optimize_grid(data, metric, parameters = list(temperature = c(0.3, 1.0)))
+#' mod <- module(signature("text -> sentiment"))
+#' path <- tempfile(fileext = ".R")
+#' export_module_code(mod, name = "sentiment_mod", file = path)
 #'
-#' # Get code as string
-#' code <- export_module_code(mod)
-#' cat(code)
-#'
-#' # Write to file
-#' export_module_code(mod, file = "optimized_module.R")
-#' }
+#' # Running the file rebuilds the program
+#' source(path)
+#' sentiment_mod
 export_module_code <- function(
   module,
   name = "mod",
@@ -496,106 +522,118 @@ export_module_code <- function(
 }
 
 
-#' Get Optimization Summary
+#' Summarize an optimization result
 #'
 #' @description
-#' Get a concise summary of optimization results for a module.
-#' Combines information from trials, best parameters, and cost tracking.
+#' `optimization_summary()` condenses [optimization_result()] into the numbers
+#' most often reported: the number of trials, the best score and parameters,
+#' the score range, the total cost and the improvement over the baseline.
 #'
-#' @param module A DSPrrr module with optimization history.
+#' @param module A module returned by [compile()] or modified by
+#'   [optimize_grid()].
+#' @param x A `dsprrr_optimization_summary` object.
+#' @param ... Unused.
 #'
-#' @return A list with:
-#'   - `n_trials`: Number of trials evaluated
-#'   - `best_score`: Best score achieved
-#'   - `best_trial`: ID of the best trial
-#'   - `best_params`: Best parameter configuration
-#'   - `score_range`: Min and max scores across trials
-#'   - `total_cost`: Total cost of optimization (if tracked)
-#'   - `improvement`: Score improvement from first to best trial
+#' @return A `dsprrr_optimization_summary` list with `n_trials`,
+#'   `best_score`, `best_trial`, `best_params`, `score_range` (minimum and
+#'   maximum trial scores), `total_cost` (when trials record it),
+#'   `improvement` (best score minus the baseline or first score) and
+#'   `compiled`. `print()` shows it and returns it invisibly.
 #'
 #' @export
-#' @family optimizer accessors
+#' @family optimization results
 #'
 #' @examples
-#' if (FALSE) {
-#' mod$optimize_grid(data, metric, parameters)
-#' summary <- optimization_summary(mod)
-#' print(summary)
+#' classifier <- module(signature("text -> sentiment"))
+#' trainset <- data.frame(
+#'   text = c("I love it!", "Terrible experience", "It's okay"),
+#'   sentiment = c("positive", "negative", "neutral")
+#' )
+#' compiled <- compile(classifier, LabeledFewShot(k = 2L), trainset)
+#' optimization_summary(compiled)$best_params
+#'
+#' \dontrun{
+#' # After a search with several trials, printing gives an overview
+#' optimize_grid(
+#'   classifier,
+#'   data = trainset,
+#'   metric = metric_exact_match(field = "sentiment"),
+#'   grid = data.frame(reasoning_effort = c("none", "low")),
+#'   .llm = ellmer::chat_openai(model = "gpt-6-luna")
+#' )
+#' optimization_summary(classifier)
 #' }
 optimization_summary <- function(module) {
   if (!inherits(module, "Module")) {
     cli::cli_abort("{.arg module} must be a DSPrrr Module object")
   }
 
-  trials <- module$state$trials
+  result <- optimization_result(module)
+  trials <- result$trials %||% tibble::tibble()
 
   if (!is.data.frame(trials) || nrow(trials) == 0) {
     return(structure(
       list(
         n_trials = 0L,
-        best_score = NA_real_,
-        best_trial = NA_integer_,
-        best_params = NULL,
+        best_score = result$best_score %||% NA_real_,
+        best_trial = result$best_trial %||% NA_integer_,
+        best_params = result$best_params %||% list(),
         score_range = c(NA_real_, NA_real_),
         total_cost = NA_real_,
         improvement = NA_real_,
-        compiled = FALSE
+        compiled = !is.null(result)
       ),
       class = "dsprrr_optimization_summary"
     ))
   }
 
-  scores <- trials$score
+  scores <- if ("score" %in% names(trials)) {
+    trials$score
+  } else if ("mean_score" %in% names(trials)) {
+    trials$mean_score
+  } else {
+    rep(NA_real_, nrow(trials))
+  }
   valid_scores <- scores[!is.na(scores)]
 
-  # Calculate improvement (first valid score to best)
-  first_score <- valid_scores[1]
-  best_score <- module$state$best_score %||% max(valid_scores, na.rm = TRUE)
+  first_score <- result$baseline_score
+  if (is.na(first_score) && length(valid_scores) > 0L) {
+    first_score <- valid_scores[[1]]
+  }
+  best_score <- result$best_score
   improvement <- if (!is.na(first_score) && !is.na(best_score)) {
     best_score - first_score
   } else {
     NA_real_
   }
 
-  # Prefer the explicit per-trial cost column. Older trial logs may only carry
-  # cost inside their evaluation objects.
-  total_cost <- tryCatch(
-    {
-      costs <- if ("total_cost" %in% names(trials)) {
-        trials$total_cost
-      } else {
-        vapply(
-          trials$evaluation,
-          function(e) {
-            if (is.list(e)) e$total_cost %||% NA_real_ else NA_real_
-          },
-          numeric(1)
-        )
-      }
-      sum_cost_values(costs)
-    },
-    error = function(e) NA_real_
-  )
+  total_cost <- if ("total_cost" %in% names(trials)) {
+    tryCatch(sum_cost_values(trials$total_cost), error = function(e) NA_real_)
+  } else {
+    NA_real_
+  }
+  score_range <- if (length(valid_scores) > 0L) {
+    range(valid_scores)
+  } else {
+    c(NA_real_, NA_real_)
+  }
 
   structure(
     list(
       n_trials = nrow(trials),
       best_score = best_score,
-      best_trial = module$state$best_trial,
-      best_params = module$state$best_params,
-      score_range = range(valid_scores, na.rm = TRUE),
+      best_trial = result$best_trial,
+      best_params = result$best_params,
+      score_range = score_range,
       total_cost = total_cost,
       improvement = improvement,
-      compiled = module$is_compiled()
+      compiled = !is.null(result)
     ),
     class = "dsprrr_optimization_summary"
   )
 }
 
-
-#' Print method for optimization summary
-#' @param x An optimization summary object
-#' @param ... Additional arguments (unused)
+#' @rdname optimization_summary
 #' @export
 print.dsprrr_optimization_summary <- function(x, ...) {
   cli::cli_h3("Optimization Summary")
@@ -607,7 +645,6 @@ print.dsprrr_optimization_summary <- function(x, ...) {
 
   status_icon <- if (x$compiled) cli::symbol$tick else cli::symbol$cross
   cli::cli_text("{status_icon} Compiled: {.val {x$compiled}}")
-
   cli::cli_text("{.field Trials}: {x$n_trials}")
   cli::cli_text(
     "{.field Best Score}: {round(x$best_score, 4)} (trial {x$best_trial})"
@@ -622,11 +659,9 @@ print.dsprrr_optimization_summary <- function(x, ...) {
       "{.field Improvement}: {direction}{round(x$improvement, 4)}"
     )
   }
-
   if (!is.na(x$total_cost) && x$total_cost > 0) {
     cli::cli_text("{.field Total Cost}: ${format(x$total_cost, digits = 4)}")
   }
-
   if (!is.null(x$best_params) && length(x$best_params) > 0) {
     cli::cli_text("{.field Best Parameters}:")
     for (name in names(x$best_params)) {
@@ -636,12 +671,8 @@ print.dsprrr_optimization_summary <- function(x, ...) {
       }
     }
   }
-
   invisible(x)
 }
-
-
-# ---- Helper Functions ----
 
 #' Format a value for display
 #' @noRd

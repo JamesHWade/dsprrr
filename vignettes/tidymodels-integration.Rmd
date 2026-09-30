@@ -1,8 +1,8 @@
 ---
-title: "tidymodels Integration"
+title: "Use dsprrr with tidymodels"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{tidymodels Integration}
+  %\VignetteIndexEntry{Use dsprrr with tidymodels}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -13,242 +13,130 @@ knitr::opts_chunk$set(
   comment = "#>",
   eval = FALSE
 )
+has_dials <- requireNamespace("dials", quietly = TRUE)
+has_parsnip <- requireNamespace("parsnip", quietly = TRUE)
 ```
+
+This page shows how dsprrr fits with tidymodels today: score module output
+with yardstick, and build grids for `optimize_grid()` with dials. It also
+explains what the parsnip model `llm_predict()` does, and why it can't be
+fitted yet.
 
 ```{r setup}
+#| eval: true
+#| message: false
 library(dsprrr)
-library(ellmer)
-# library(parsnip)
-# library(tune)
-# library(dials)
 ```
 
-## Introduction
+## Score predictions with yardstick
 
-dsprrr provides full integration with the tidymodels ecosystem, allowing you to use LLM-based predictions alongside traditional machine learning models. This enables:
+Run the module over a data frame with `run_dataset()`, which keeps every column
+and adds a `result` list column. Turn the predicted field into a factor with
+the truth's levels, and any yardstick metric works:
 
-- Consistent model specification with parsnip
-- Hyperparameter tuning with tune
-- Cross-validation with rsample
-- Workflow composition with workflows
+```{r}
+library(yardstick)
 
-## The `llm_predict` Model Specification
+reviews <- tibble::tibble(
+  text = c("Arrived broken.", "Works great.", "It's a chair."),
+  sentiment = factor(c("negative", "positive", "neutral"))
+)
+classify <- module(
+  signature("text -> sentiment: enum('negative', 'neutral', 'positive')")
+)
 
-dsprrr registers an `llm_predict` model type with parsnip:
-
-```{r llm-spec}
-# Create an LLM prediction model specification
-llm_spec <- llm_predict(
-  mode = "classification",
-  signature = "text -> sentiment: enum('positive', 'negative', 'neutral')"
-) |>
-  set_engine("dsprrr", model = "gpt-4o-mini")
-
-print(llm_spec)
-```
-
-## Fitting Models
-
-Use standard parsnip fitting:
-
-```{r fit}
-# Training data (for classification, y determines output levels)
-train_data <- tibble::tibble(
-  text = c(
-    "I love this product!",
-    "This is terrible",
-    "It's okay I guess"
+scored <- run_dataset(
+  classify,
+  reviews,
+  .llm = ellmer::chat_openai(model = "gpt-6-luna")
+)
+scored$.pred_class <- factor(
+  vapply(
+    scored$result,
+    \(r) if (is.list(r)) r$sentiment else NA_character_,
+    character(1)
   ),
-  sentiment = factor(c("positive", "negative", "neutral"))
+  levels = levels(scored$sentiment)
 )
 
-# Fit the model
-llm_fit <- llm_spec |>
-  fit(sentiment ~ text, data = train_data)
+accuracy(scored, truth = sentiment, estimate = .pred_class)
+conf_mat(scored, truth = sentiment, estimate = .pred_class)
 ```
 
-## Making Predictions
+A row whose call failed holds `NA` in `result`, hence the `is.list()` check.
+Setting `levels` matters: yardstick refuses a prediction factor whose levels
+differ from the truth's, which happens whenever some class is never predicted.
 
-```{r predict}
-# New data
-new_data <- tibble::tibble(
-  text = c("Amazing quality!", "Worst purchase ever")
-)
+## Build grids with dials
 
-# Predict
-predictions <- predict(llm_fit, new_data)
-predictions
-```
-
-## Hyperparameter Tuning
-
-dsprrr provides dials-compatible parameter functions:
+`temperature()`, `top_p()` and `reasoning_effort()` are dials parameter
+objects. `temperature()` and `top_p()` default to the range 0 to 1:
 
 ```{r dials-params}
-# Temperature parameter
+#| eval: !expr has_dials
 temperature()
-temperature(range = c(0.1, 0.9))
-
-# Top-p parameter
-top_p()
-top_p(range = c(0.5, 1.0))
-
-# Reasoning effort (for reasoning models)
 reasoning_effort()
+dials::grid_regular(temperature(), levels = 3)
 ```
 
-### Tuning with tune
+`optimize_grid()` takes such a grid directly, or a `dials::parameters()` set to
+build one from. It tries each row on the data and keeps the best settings in
+the module:
 
-```{r tune}
-# Create a tunable specification
-llm_spec_tune <- llm_predict(
+```{r}
+optimize_grid(
+  classify,
+  data = reviews,
+  metric = metric_exact_match(field = "sentiment"),
+  grid = dials::grid_regular(temperature(), levels = 3),
+  # gpt-6-luna accepts temperature only with reasoning turned off
+  .llm = ellmer::chat_openai(
+    model = "gpt-6-luna",
+    params = ellmer::params(reasoning_effort = "none")
+  )
+)
+module_trials(classify)
+```
+
+`module_parameters(classify)` suggests a parameter set for a module. To tune
+how much a reasoning model thinks, use a `reasoning_effort()` grid instead; see
+[Models, providers and streaming](models-and-providers.html).
+
+## The parsnip model
+
+When parsnip is loaded, dsprrr registers a model type, `llm_predict()`, with
+the engine `"dsprrr"` for classification and regression:
+
+```{r parsnip-spec}
+#| eval: !expr has_parsnip
+library(parsnip)
+
+spec <- llm_predict(
   mode = "classification",
-  signature = "text -> sentiment",
-  temperature = tune()
+  signature = "text -> sentiment: enum('negative', 'neutral', 'positive')",
+  temperature = 0
 ) |>
-  set_engine("dsprrr", model = "gpt-4o-mini")
-
-# Create resampling folds
-# library(rsample)
-# folds <- vfold_cv(train_data, v = 3)
-
-# Define grid
-# grid <- grid_regular(temperature(), levels = 3)
-
-# Tune
-# tune_results <- tune_grid(
-#   llm_spec_tune,
-#   sentiment ~ text,
-#   resamples = folds,
-#   grid = grid
-# )
+  set_engine("dsprrr")
+spec
 ```
 
-## Using with Workflows
+Fitting this model does not learn from the training data. The engine's fit
+step builds a zero-shot module from `signature` (or, without one, from the
+predictor names and the outcome's distinct values, such as
+`text -> output: enum('negative', 'positive')`), puts `temperature` and
+`top_p` in the module's config, and records the predictor names. The
+training rows are not used as examples. `predict()` then runs the module on
+`new_data` with the default Chat, so call `set_default_chat()` first. It
+returns `.pred_class` for classification, as a factor with only the levels that
+were predicted, or `.pred` for regression.
 
-Combine LLM predictions with preprocessing:
+With parsnip 1.6.0, `fit()` and `fit_xy()` on this specification currently
+stop with "no applicable method for 'filter' applied to an object of class
+"NULL"", because the engine registers no predictor encoding. The same failure
+stops `tune::tune_grid()` and workflows, which fit models through these
+functions.
+Until that is fixed, the module and `run_dataset()` approach at the top of this
+page gives the same zero-shot predictions.
 
-```{r workflow}
-# library(workflows)
-# library(recipes)
-
-# Create a recipe (if needed for preprocessing)
-# rec <- recipe(sentiment ~ text, data = train_data)
-
-# Create workflow
-# wf <- workflow() |>
-#   add_recipe(rec) |>
-#   add_model(llm_spec)
-
-# Fit workflow
-# wf_fit <- fit(wf, data = train_data)
-```
-
-## dsprrr's Native Optimization
-
-While tidymodels integration is powerful, dsprrr also provides its own optimization:
-
-```{r native-optimize}
-# Create module directly
-mod <- module(
-  signature("text -> sentiment: enum('positive', 'negative', 'neutral')"),
-  type = "predict"
-)
-
-# Use module_parameters() to get dials-compatible parameters
-params <- module_parameters(mod)
-params
-
-# For reasoning models, parameters auto-adjust
-params_reasoning <- module_parameters(mod, model = "o3")
-params_reasoning
-```
-
-### Grid Search with dsprrr
-
-```{r dsprrr-grid}
-train_data <- tibble::tibble(
-  text = c("Great!", "Terrible!", "Okay"),
-  target = c("positive", "negative", "neutral")
-)
-
-# Native grid search
-# optimize_grid(
-#   mod,
-#   data = train_data,
-#   metric = metric_exact_match(),
-#   parameters = list(temperature = c(0.3, 0.7, 1.0))
-# )
-
-# View results
-# module_trials(mod)
-# module_metrics(mod)
-```
-
-## Comparison: tidymodels vs dsprrr Native
-
-| Feature | tidymodels | dsprrr Native |
-|---------|-----------|---------------|
-| Cross-validation | Built-in | Manual |
-| Preprocessing | recipes | Manual |
-| Grid search | tune_grid() | optimize_grid() |
-| Random search | tune_bayes() | Not yet |
-| Metrics | yardstick | Custom + yardstick |
-| Reasoning models | Manual config | Auto-detect |
-
-**When to use tidymodels:**
-- Need cross-validation
-- Complex preprocessing pipelines
-- Ensemble with traditional ML models
-- Familiar with tidymodels API
-
-**When to use dsprrr native:**
-- Quick optimization
-- Prompt/instruction tuning
-- Teleprompter-based optimization
-- Reasoning model support
-
-## Advanced: Custom Model Engines
-
-Register custom engines for specific providers:
-
-```{r custom-engine}
-# dsprrr auto-registers on package load
-# But you can manually register:
-register_dsprrr_engine()
-
-# Check registered engines
-# parsnip::show_model_info("llm_predict")
-```
-
-## Integration with vitals
-
-dsprrr also integrates with vitals for LLM evaluation:
-
-```{r vitals}
-# library(vitals)
-
-# Convert module to vitals solver
-# solver <- as_vitals_solver(mod)
-
-# Use with vitals evaluation framework
-# results <- vitals::evaluate(solver, test_data)
-
-# Convert vitals scorer to dsprrr metric
-# my_metric <- as_dsprrr_metric(vitals::exact_match)
-```
-
-## Summary
-
-tidymodels integration provides:
-
-1. **`llm_predict()`**: parsnip model specification for LLM predictions
-2. **dials parameters**: `temperature()`, `top_p()`, `reasoning_effort()`
-3. **Workflow compatibility**: Works with recipes, workflows, and rsample
-4. **tune integration**: Hyperparameter tuning with `tune_grid()`
-
-Choose between tidymodels for full ML ecosystem integration or dsprrr's native optimization for LLM-specific features like:
-- Prompt optimization
-- Teleprompter compilation
-- Reasoning model auto-detection
-- Module persistence with pins
+For evaluation with graded or repeated samples, see
+[Evaluate with vitals](vitals-recipes.html).

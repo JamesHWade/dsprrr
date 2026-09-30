@@ -2,55 +2,45 @@
 % Please edit documentation in R/chat-default.R
 \name{dsprrr_sitrep}
 \alias{dsprrr_sitrep}
-\title{dsprrr Situation Report}
+\title{Report dsprrr's configuration}
 \usage{
 dsprrr_sitrep()
 }
 \value{
-Invisibly returns a list with configuration details:
-\itemize{
-\item \code{has_default_chat}: Logical, whether a default chat is configured
-\item \code{provider}: Character, name of the default provider
-\item \code{model}: Character, name of the default model
-\item \code{api_keys}: Named list of API key availability (logical)
-\item \code{n_calls}: Integer, number of LLM calls this session
-\item \code{prompt_history_count}: Integer, entries in prompt history
-\item \code{prompt_history_max}: Integer, maximum history size
-\item \code{ellmer_version}: Character, installed ellmer version
-\item \code{dsprrr_version}: Character, installed dsprrr version
-}
+A list, invisibly, with \code{dsprrr_version}, \code{ellmer_version},
+\code{has_default_chat}, \code{provider} and \code{model} of the default chat,
+\code{api_keys} (whether \code{OPENAI_API_KEY}, \code{ANTHROPIC_API_KEY} and
+\code{GOOGLE_API_KEY} are set), \code{n_calls} and \code{prompt_history_count} (entries
+in the prompt history), \code{prompt_history_max}, and the cache settings and
+state (\code{cache_enabled}, \code{cache_disk_path}, \code{cache_disk_private},
+\code{cache_degraded}, \code{cache_privacy_status} and, when caching is on,
+\code{cache_stats}). Once calls have been recorded, it also has
+\code{total_tokens_in}, \code{total_tokens_out} and \code{total_cost}.
 }
 \description{
-Displays a comprehensive overview of your dsprrr configuration,
-including API keys, default chat settings, prompt history, and
-package versions. Inspired by \code{usethis::git_sitrep()}.
+\code{dsprrr_sitrep()} prints what dsprrr will use and what it has done this
+session: package versions, the default chat, which API keys are set, the
+prompt history, dsprrr options and the response cache. It is modelled on
+\code{usethis::git_sitrep()} and is a good first step when calls do not behave
+as expected.
+}
+\details{
+The default chat shown is the one \code{\link[=get_default_chat]{get_default_chat()}} returns with
+\code{create = FALSE}, so a chat that would be created from an API key on first
+use is reported as not configured. The report makes no model calls.
 }
 \examples{
-\dontrun{
-dsprrr_sitrep()
-#> dsprrr configuration
-#> ────────────────────────────────────────────────────────
-#>
-#> ── Packages ──
-#> ✔ ellmer 0.2.0 (OK)
-#> ✔ dsprrr 0.1.0
-#>
-#> ── Default Chat ──
-#> ✔ OpenAI (gpt-4o-mini)
-#>   Source: Auto-detected from OPENAI_API_KEY
-#>
-#> ── API Keys ──
-#> ✔ OPENAI_API_KEY
-#> ✔ ANTHROPIC_API_KEY
-#> ✖ GOOGLE_API_KEY
-#>
-#> ── Session State ──
-#> • Prompt history: 12 / 100 entries
-#> • LLM calls: 15
-#> • Tokens: 2,450 in / 890 out
-#>
-#> ── Options ──
-#> • dsprrr.verbose: TRUE
-#> • dsprrr.quiet: FALSE
+status <- dsprrr_sitrep()
+status$has_default_chat
 }
+\seealso{
+Other configuration:
+\code{\link[=cache_stats]{cache_stats()}},
+\code{\link[=clear_cache]{clear_cache()}},
+\code{\link[=configure_cache]{configure_cache()}},
+\code{\link[=dsp_configure]{dsp_configure()}},
+\code{\link[=get_default_chat]{get_default_chat()}},
+\code{\link[=is_reasoning_model]{is_reasoning_model()}},
+\code{\link[=with_lm]{with_lm()}}
 }
+\concept{configuration}

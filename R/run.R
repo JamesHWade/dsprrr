@@ -1,91 +1,104 @@
-#' Execute an LLM Module
+#' Run a module on named inputs
 #'
 #' @description
-#' Execute a module with the provided inputs to generate LLM output.
-#' This is the primary function for running modules created with `module()`.
+#' `run()` calls a module with inputs named after its signature's input fields
+#' and returns the outputs. Give a vector instead of a single value to run a
+#' batch: each element is one call, and length-1 inputs are recycled.
 #'
-#' Supports both single inputs and batch processing. Batch execution can be
-#' parallelised, but is conservative by default to avoid reusing LLM clients
-#' across workers.
+#' @param module A module, such as one created with [module()],
+#'   [chain_of_thought()], [react()], [module_fn()] or [pipeline()].
+#' @param ... Inputs named after the signature's input fields, followed by any
+#'   of the runtime arguments described below. RLM modules ([rlm_module()])
+#'   treat every value as one context object whatever its length; use
+#'   [run_dataset()] to run them several times.
 #'
-#' @param module A DSPrrr module (e.g., created with `module()`)
-#' @param ... Named arguments corresponding to the module's signature inputs.
-#'   Can be single values or vectors for batch processing. Additional parameters:
-#'   \describe{
-#'     \item{.llm}{An ellmer chat object for LLM interaction (optional)}
-#'     \item{.verbose}{Logical indicating whether to print debug information}
-#'     \item{.parallel}{Logical indicating whether to process batch inputs in parallel (default FALSE).}
-#'     \item{.parallel_method}{Character, either "ellmer" (default) or "mirai".
-#'       "ellmer" uses ellmer's `parallel_chat_structured()` for native async HTTP
-#'       parallelism (more efficient, single process).
-#'       "mirai" uses mirai for multi-process parallelism (requires `.llm = NULL`
-#'       so each worker can create an independent client).}
-#'     \item{.concurrency}{A validated policy created by
-#'       [concurrency_control()]. When supplied, do not also pass `.parallel` or
-#'       `.parallel_method`.}
-#'     \item{.progress}{Logical indicating whether to show progress bar for batch processing (default TRUE)}
-#'     \item{.return_format}{Character, either "simple" (default) or "structured".
-#'       "simple" returns just the output, "structured" returns list with output, chat, and metadata.}
-#'     \item{.cache}{Logical or NULL. Per-call cache control. If NULL (default), uses global config.
-#'       If TRUE, attempts to use cache (no effect if caching globally disabled).
-#'       If FALSE, bypasses cache for this call only.}
-#'   }
+#' @section Runtime arguments:
+#' These arguments start with a dot so they cannot clash with input names.
+#' Any other dot-prefixed name is an error.
+#' \describe{
+#'   \item{`.llm`}{An ellmer Chat to use for this call. It takes precedence
+#'     over the chat stored on the module, a chat set with [with_lm()] or
+#'     [local_lm()], and the default chat; see [get_default_chat()] for the
+#'     full order. An agent that follows ellmer's Chat protocol, such as a
+#'     deputy `Agent`, also works; see `vignette("models-and-providers")`.}
+#'   \item{`.cache`}{`NULL` (the default) follows [configure_cache()].
+#'     `FALSE` skips the response cache for this call. `TRUE` uses it when
+#'     caching is enabled globally and has no effect otherwise.}
+#'   \item{`.concurrency`}{A policy from [concurrency_control()] for batch
+#'     inputs. The default runs rows one after another.}
+#'   \item{`.return_format`}{`"simple"` (the default) returns the outputs;
+#'     `"structured"` also returns the Chat and call metadata (see Value).}
+#'   \item{`.show_prompt`}{If `TRUE`, print a preview before the call: the
+#'     instructions (first 200 characters), the input field names, the output
+#'     type and the number of demos. It does not show the filled-in prompt;
+#'     use [get_last_prompt()] after the call for that.}
+#'   \item{`.trace_context`}{A named, JSON-compatible list copied into the
+#'     call metadata and traces, for example `list(request_id = "abc")`. It is
+#'     never sent to the model and is not part of cache keys. Credential-like
+#'     field names and runtime objects are rejected.}
+#'   \item{`.progress`}{Show a progress bar for batch inputs. Default
+#'     `TRUE`.}
+#'   \item{`.verbose`}{If `TRUE`, print the rendered input section of each
+#'     prompt. Default `FALSE`.}
+#' }
 #'
 #' @details
-#' **Retry Behavior:** ellmer automatically retries failed requests up to 3 times
-#' (configurable via `options(ellmer_max_tries = n)`). This handles transient
-#' errors like rate limits and connection failures. See ellmer documentation
-#' for more details.
+#' ellmer retries failed requests (see `options(ellmer_max_tries = )`). A
+#' failure that remains raises an error for a single input. In a batch, a
+#' failed row becomes `NA` with a warning, and with
+#' `.return_format = "structured"` its message is in `metadata$error`.
 #'
-#' Zero-length inputs form an empty batch only when every input is zero length.
-#' Empty batches return immediately without resolving a Chat or touching cache,
-#' trace, or prompt-history state. Mixing zero-length and non-empty inputs is an
-#' error.
+#' Batches must have inputs of one common length, or length 1. If every input
+#' has length zero, `run()` returns an empty list without calling the model.
+#' Modules with their own execution loop, such as [react()], accept single
+#' inputs only; use [run_dataset()] for them.
 #'
-#' Scalar and batch Predict calls record one trace per attempted row. Structured
-#' metadata reports usage, error, cache, backend, and batch-index fields. Native
-#' ellmer and mirai workers return row records that are committed to module and
-#' global trace state by the parent in input order. Specialized Predict
-#' subclasses, such as ReAct, preserve their scalar `forward()` method and
-#' currently reject vectorized inputs rather than bypassing specialized logic.
+#' An input can also be an ellmer content object, such as
+#' `ellmer::content_image_file("receipt.png")`; prediction modules send it to
+#' the model along with the text of the prompt.
 #'
-#' @return For single inputs with .return_format="simple": The parsed output according to the module's signature.
-#'   For single inputs with .return_format="structured": A list with components:
-#'   - output: The parsed output
-#'   - chat: The ellmer chat object used
-#'   - metadata: Additional metadata (tokens used, latency, etc.)
+#' Each call records a trace on the module (see [export_traces()]).
+#' Prediction modules also add every model call to the session's prompt
+#' history (see [inspect_history()]).
 #'
-#'   For batch inputs: A list of results matching the input length. Empty
-#'   batches return a zero-length list (with class `dsprrr_batch_result` for
-#'   structured output).
+#' @return With `.return_format = "simple"`, the outputs as a named list with
+#'   one element per output field, for example `list(answer = "4")`. A
+#'   signature whose output type is a bare ellmer type (such as
+#'   `ellmer::type_enum()`) returns the bare value instead. A batch returns a
+#'   list with one such result per input element.
+#'
+#'   With `.return_format = "structured"`, a list of class `dsprrr_result`
+#'   with elements `output` (as above), `chat` (the ellmer Chat used) and
+#'   `metadata` (model, prompt, token counts, cost, latency, cache status and
+#'   error). A batch returns a list of these with class `dsprrr_batch_result`.
+#'   Use [get_output()], [get_metadata()] or [get_cost()] to read them.
 #' @export
+#' @family execution
 #' @examples
+#' # A function-backed module runs without a model
+#' shout <- module_fn("text -> reply", function(text) toupper(text))
+#' run(shout, text = "hello")
+#'
 #' \dontrun{
-#' # Single input
-#' llm <- ellmer::chat_openai()
-#' result <- signature("text -> sentiment") |>
-#'   module(type = "predict") |>
-#'   run(text = "I love this!", .llm = llm)
+#' llm <- ellmer::chat_openai(model = "gpt-6-luna")
+#' classify <- module(
+#'   signature("text -> sentiment: enum('positive', 'negative', 'neutral')")
+#' )
 #'
-#' # Batch processing
-#' results <- signature("text -> sentiment") |>
-#'   module(type = "predict") |>
-#'   run(text = c("I love this!", "This is bad"), .llm = llm)
+#' # One input returns a named list
+#' result <- run(classify, text = "I love this!", .llm = llm)
+#' result$sentiment
 #'
-#' # Structured return
-#' result <- signature("text -> sentiment") |>
-#'   module(type = "predict") |>
-#'   run(text = "Great!", .llm = llm, .return_format = "structured")
-#' # Access: result$output, result$chat, result$metadata
+#' # A vector runs a batch: one result per element
+#' run(classify, text = c("I love this!", "This is bad"), .llm = llm)
 #'
-#' # Configure ellmer retry behavior (if needed)
-#' options(ellmer_max_tries = 5)
+#' # Structured results carry the Chat and call metadata
+#' res <- run(classify, text = "Great!", .llm = llm, .return_format = "structured")
+#' res$metadata$cost
+#'
+#' # Skip the response cache for one call
+#' run(classify, text = "Great!", .llm = llm, .cache = FALSE)
 #' }
-#' @seealso
-#' * [dsp()] for one-shot LLM calls without creating a module
-#' * [run_dataset()] for running a module on a data frame
-#' * [evaluate()] for running with metric evaluation
-#' * [module()] for creating modules
 run <- function(module, ...) {
   UseMethod("run")
 }
@@ -164,11 +177,12 @@ batch_input_contract <- function(inputs) {
 #' Classify module inputs without confusing schema collections with batches
 #'
 #' Flex owns exact recursive validation for its scalar array and object fields.
-#' Their R lengths describe one schema value, not a collection of dataset rows,
-#' and Flex batch execution goes through [run_dataset()] instead.
+#' RLM stages each supplied value as one REPL variable, regardless of its R
+#' length. Those lengths therefore describe scalar module inputs, not dataset
+#' rows. Explicit Flex and RLM batch execution goes through [run_dataset()].
 #' @noRd
 module_input_contract <- function(module, inputs) {
-  if (inherits(module, "FlexModule")) {
+  if (inherits(module, c("FlexModule", "RLMModule"))) {
     return(list(
       kind = "scalar",
       size = 1L,
@@ -177,6 +191,16 @@ module_input_contract <- function(module, inputs) {
   }
 
   batch_input_contract(inputs)
+}
+
+
+#' Recycle module inputs using module-specific scalar object semantics
+#' @noRd
+module_batch_recycle_input <- function(module, value, size) {
+  if (inherits(module, "RLMModule") && is.data.frame(value)) {
+    return(rep(list(value), size))
+  }
+  batch_recycle_input(value, size)
 }
 
 #' Treat opaque runtime values as scalar batch inputs
@@ -232,27 +256,43 @@ run.Module <- function(
   ...,
   .llm = NULL,
   .verbose = FALSE,
-  .parallel = FALSE,
-  .parallel_method = c("ellmer", "mirai"),
   .concurrency = NULL,
   .progress = TRUE,
   .return_format = "simple",
   .show_prompt = FALSE,
-  .cache = NULL
+  .cache = NULL,
+  .trace_context = list()
 ) {
-  parallel_missing <- missing(.parallel)
-  parallel_method_missing <- missing(.parallel_method)
-  concurrency_missing <- missing(.concurrency)
-  concurrency <- resolve_concurrency_control(
-    .concurrency = .concurrency,
-    concurrency_missing = concurrency_missing,
-    .parallel = .parallel,
-    parallel_missing = parallel_missing,
-    .parallel_method = .parallel_method,
-    parallel_method_missing = parallel_method_missing
+  if (!is.null(.llm)) {
+    assert_ellmer_chat(.llm, arg = ".llm")
+  } else {
+    assert_ellmer_chat(module$chat, arg = "module$chat", allow_null = TRUE)
+  }
+  trace_context_supplied <- !missing(.trace_context)
+  trace_context <- trace_context_resolve(
+    .trace_context,
+    supplied = trace_context_supplied
   )
-  explicit_concurrency <- !concurrency_missing && !is.null(.concurrency)
-  .parallel_method <- match.arg(.parallel_method)
+  trace_cursor <- evaluation_trace_cursor(module)
+  previous_trace_context <- trace_context_enter(
+    trace_context,
+    program = module,
+    inherit_program_id = !trace_context_supplied
+  )
+  invocation_trace_fields <- trace_context_fields()
+  on.exit(
+    {
+      trace_context_restore(previous_trace_context)
+      trace_context_annotate_module_traces(
+        module,
+        trace_cursor,
+        fields = invocation_trace_fields
+      )
+    },
+    add = TRUE
+  )
+
+  concurrency <- resolve_concurrency_control(.concurrency)
   .return_format <- match.arg(.return_format, c("simple", "structured"))
   validate_cache_arg(.cache)
 
@@ -313,17 +353,22 @@ run.Module <- function(
     if (interpreter_workflow_module(module)) {
       inputs <- lapply(
         inputs,
-        batch_recycle_input,
-        size = input_contract$size
+        function(value) {
+          module_batch_recycle_input(module, value, input_contract$size)
+        }
       )
-      return(run_factory_interpreter_batch(
-        module = module,
-        inputs = inputs,
-        n = input_contract$size,
-        .llm = .llm,
-        .progress = .progress,
-        .return_format = .return_format,
-        .concurrency = concurrency_runtime
+      return(trace_context_annotate_result(
+        run_factory_interpreter_batch(
+          module = module,
+          inputs = inputs,
+          n = input_contract$size,
+          .llm = .llm,
+          .progress = .progress,
+          .return_format = .return_format,
+          .concurrency = concurrency_runtime,
+          .cache = .cache
+        ),
+        fields = invocation_trace_fields
       ))
     }
     unsupported_control <- is.finite(concurrency$max_errors) ||
@@ -342,7 +387,12 @@ run.Module <- function(
         module_class = class(module)[1]
       )
     }
-    inputs <- lapply(inputs, batch_recycle_input, size = input_contract$size)
+    inputs <- lapply(
+      inputs,
+      function(value) {
+        module_batch_recycle_input(module, value, input_contract$size)
+      }
+    )
     results <- run_scalar_dataset_rows(
       module = module,
       input_args = inputs,
@@ -358,7 +408,10 @@ run.Module <- function(
     if (identical(.return_format, "structured")) {
       class(results) <- c("dsprrr_batch_result", "list")
     }
-    return(results)
+    return(trace_context_annotate_result(
+      results,
+      fields = invocation_trace_fields
+    ))
   }
 
   # Delegate to the module's run method
@@ -371,13 +424,13 @@ run.Module <- function(
   )
   if (!is.null(concurrency_runtime)) {
     execution_args$.concurrency_runtime <- concurrency_runtime
-  } else if (explicit_concurrency) {
-    execution_args$.concurrency <- concurrency
   } else {
-    execution_args$.parallel <- .parallel
-    execution_args$.parallel_method <- .parallel_method
+    execution_args$.concurrency <- concurrency
   }
-  do.call(module$run, c(inputs, execution_args))
+  trace_context_annotate_result(
+    do.call(module$run, c(inputs, execution_args)),
+    fields = invocation_trace_fields
+  )
 }
 
 #' @export
@@ -386,25 +439,38 @@ run.PredictModule <- function(
   ...,
   .llm = NULL,
   .verbose = FALSE,
-  .parallel = FALSE,
-  .parallel_method = c("ellmer", "mirai"),
   .concurrency = NULL,
   .progress = TRUE,
   .return_format = "simple",
   .show_prompt = FALSE,
-  .cache = NULL
+  .cache = NULL,
+  .trace_context = list()
 ) {
-  parallel_missing <- missing(.parallel)
-  parallel_method_missing <- missing(.parallel_method)
-  concurrency_missing <- missing(.concurrency)
-  concurrency <- resolve_concurrency_control(
-    .concurrency = .concurrency,
-    concurrency_missing = concurrency_missing,
-    .parallel = .parallel,
-    parallel_missing = parallel_missing,
-    .parallel_method = .parallel_method,
-    parallel_method_missing = parallel_method_missing
+  trace_context_supplied <- !missing(.trace_context)
+  trace_context <- trace_context_resolve(
+    .trace_context,
+    supplied = trace_context_supplied
   )
+  trace_cursor <- evaluation_trace_cursor(module)
+  previous_trace_context <- trace_context_enter(
+    trace_context,
+    program = module,
+    inherit_program_id = !trace_context_supplied
+  )
+  invocation_trace_fields <- trace_context_fields()
+  on.exit(
+    {
+      trace_context_restore(previous_trace_context)
+      trace_context_annotate_module_traces(
+        module,
+        trace_cursor,
+        fields = invocation_trace_fields
+      )
+    },
+    add = TRUE
+  )
+
+  concurrency <- resolve_concurrency_control(.concurrency)
 
   # Validate .cache parameter
   validate_cache_arg(.cache)
@@ -427,7 +493,8 @@ run.PredictModule <- function(
     missing = if (inherits(module, "FlexModule")) "ignore" else "error",
     extra = if (inherits(module, "FlexModule")) "error" else "warn",
     type = if (inherits(module, "FlexModule")) "error" else "warn",
-    context = "inputs"
+    context = "inputs",
+    supplied = module$supplied_inputs()
   )
 
   input_contract <- module_input_contract(module, inputs)
@@ -460,37 +527,46 @@ run.PredictModule <- function(
     inputs <- lapply(inputs, batch_recycle_input, size = input_contract$size)
 
     # Process batch
-    return(run_batch(
-      module,
-      inputs,
-      input_contract$size,
-      .llm,
-      .verbose,
-      .progress,
-      .return_format,
-      .cache,
-      concurrency
+    return(trace_context_annotate_result(
+      run_batch(
+        module,
+        inputs,
+        input_contract$size,
+        .llm,
+        .verbose,
+        .progress,
+        .return_format,
+        .cache,
+        concurrency
+      ),
+      fields = invocation_trace_fields
     ))
   }
 
   if (!identical(class(module)[1], "PredictModule")) {
-    return(run_predict_forward(
+    return(trace_context_annotate_result(
+      run_predict_forward(
+        module = module,
+        inputs = inputs,
+        .llm = .llm,
+        .verbose = .verbose,
+        .return_format = .return_format,
+        .cache = .cache
+      ),
+      fields = invocation_trace_fields
+    ))
+  }
+
+  trace_context_annotate_result(
+    run_predict_scalar(
       module = module,
       inputs = inputs,
       .llm = .llm,
       .verbose = .verbose,
       .return_format = .return_format,
       .cache = .cache
-    ))
-  }
-
-  run_predict_scalar(
-    module = module,
-    inputs = inputs,
-    .llm = .llm,
-    .verbose = .verbose,
-    .return_format = .return_format,
-    .cache = .cache
+    ),
+    fields = invocation_trace_fields
   )
 }
 
@@ -503,6 +579,21 @@ normalize_module_config <- function(config) {
 
   if (!is.list(config)) {
     cli::cli_abort("{.arg config} must be a list")
+  }
+
+  invalid_chat_fields <- intersect(
+    names(config),
+    c("provider", "model", "api_args", "base_url", "credentials")
+  )
+  if (length(invalid_chat_fields) > 0L) {
+    cli::cli_abort(
+      c(
+        "Chat configuration does not belong in {.arg config}",
+        "i" = "Invalid fields: {.field {invalid_chat_fields}}",
+        "i" = "Attach an ellmer Chat with {.arg chat} or configure the default Chat."
+      ),
+      class = "dsprrr_module_config_error"
+    )
   }
 
   params <- config$params %||% list()
@@ -534,12 +625,6 @@ runtime_param_names <- function() {
   )
 }
 
-#' Legacy config fields that should no longer create Chat clients
-#' @noRd
-legacy_chat_config_fields <- function() {
-  c("provider", "model", "api_args", "base_url", "credentials")
-}
-
 #' Infer the logical module kind
 #' @noRd
 module_kind <- function(module) {
@@ -565,38 +650,23 @@ resolve_module_llm <- function(
   create = TRUE,
   extra_params = NULL
 ) {
-  ignored_fields <- intersect(
-    names(module$config %||% list()),
-    legacy_chat_config_fields()
-  )
+  llm_arg <- if (!is.null(.llm)) {
+    ".llm"
+  } else if (!is.null(module$chat)) {
+    "module$chat"
+  } else {
+    "default Chat"
+  }
   llm <- .llm %||% module$chat %||% get_default_chat(create = FALSE)
 
   if (is.null(llm)) {
-    if (length(ignored_fields) > 0) {
-      cli::cli_abort(c(
-        "Module config no longer creates Chat clients",
-        "i" = "Ignored fields: {.field {ignored_fields}}",
-        "i" = "Attach a Chat with {.code module(..., chat = chat)} or pass {.code .llm = chat}",
-        "i" = "Or configure a default Chat with {.code set_default_chat()} or {.code dsp_configure()}"
-      ))
-    }
-
     if (!create) {
       return(NULL)
     }
 
     llm <- get_default_chat(create = TRUE)
-  } else if (length(ignored_fields) > 0) {
-    cli::cli_warn(
-      c(
-        "Ignoring module config fields that no longer create Chats",
-        "i" = "Ignored fields: {.field {ignored_fields}}",
-        "i" = "Runtime now comes from {.arg .llm}, {.code module$chat}, or the default Chat"
-      ),
-      .frequency = "once",
-      .frequency_id = paste0("legacy-chat-config-", module_kind(module))
-    )
   }
+  llm <- assert_ellmer_chat(llm, arg = llm_arg)
 
   params <- module_runtime_params(module, extra_params = extra_params)
   if (length(params) == 0) {
@@ -624,73 +694,78 @@ module_runtime_params <- function(module, extra_params = NULL) {
 #' Clone a Chat and apply runtime params to its provider
 #' @noRd
 apply_chat_params <- function(chat, params) {
-  if (is.null(chat) || length(params) == 0) {
+  if (is.null(chat)) {
+    return(chat)
+  }
+  chat <- assert_ellmer_chat(chat, arg = "chat")
+  if (length(params) == 0) {
     return(chat)
   }
 
-  cloned <- tryCatch(
-    {
-      if (is.function(chat$clone)) {
-        chat$clone(deep = TRUE)
-      } else {
-        cli::cli_warn(
-          c(
-            "Chat object does not support cloning",
-            "i" = "Runtime parameters will be applied to the original Chat",
-            "i" = "This may cause unexpected behavior in batch/optimization contexts"
-          ),
-          .frequency = "once",
-          .frequency_id = "chat-clone-unsupported"
-        )
-        chat
-      }
-    },
-    error = function(e) {
-      cli::cli_warn(
-        c(
-          "Failed to clone Chat for parameter isolation",
-          "x" = e$message,
-          "i" = "Runtime parameters will be applied to the original Chat"
-        ),
-        .frequency = "once",
-        .frequency_id = "chat-clone-failed"
-      )
-      chat
-    }
-  )
+  cloned <- clone_ellmer_chat(chat, arg = "chat", reset_turns = FALSE)
 
   provider <- tryCatch(
     cloned$.__enclos_env__$private$provider,
     error = function(e) NULL
   )
   if (is.null(provider)) {
-    return(cloned)
+    cli::cli_abort(
+      "Cannot apply runtime parameters because the cloned Chat has no provider",
+      class = "dsprrr_chat_params_error"
+    )
   }
 
-  existing_args <- tryCatch(provider@extra_args, error = function(e) list())
-  if (is.null(existing_args)) {
-    existing_args <- list()
+  # ellmer >= 0.5.0 sends request arguments from the Chat's Model object.
+  model <- tryCatch(
+    cloned$.__enclos_env__$private$model,
+    error = function(e) {
+      cli::cli_abort(
+        "Cannot access the cloned Chat model",
+        class = "dsprrr_chat_params_error",
+        parent = e
+      )
+    }
+  )
+  if (!inherits(model, "ellmer::Model")) {
+    cli::cli_abort(
+      "Cannot apply runtime parameters because the cloned Chat has no model",
+      class = "dsprrr_chat_params_error"
+    )
   }
 
-  for (name in names(params)) {
+  # Standard ellmer parameters go through the Model's params so ellmer
+  # translates them for each provider (OpenAI's Responses API expects
+  # `reasoning.effort`, not `reasoning_effort`). Anything else is sent
+  # verbatim as an extra request argument.
+  standard <- names(params) %in% setdiff(names(formals(ellmer::params)), "...")
+  model_params <- model@params %||% list()
+  for (name in names(params)[standard]) {
+    model_params[[name]] <- params[[name]]
+  }
+  existing_args <- model@extra_args %||% list()
+  for (name in names(params)[!standard]) {
     existing_args[[name]] <- params[[name]]
   }
 
   tryCatch(
     {
-      cloned$.__enclos_env__$private$provider@extra_args <- existing_args
+      model@params <- model_params
+      model@extra_args <- existing_args
+      private <- cloned$.__enclos_env__$private
+      private$model <- model
+      # Keep the Provider's attached Model in sync, as Chat$set_model() does.
+      attr(private$provider, ".model") <- model
     },
     error = function(e) {
       param_names <- paste(names(params), collapse = ", ")
-      cli::cli_warn(
+      cli::cli_abort(
         c(
           "Failed to apply runtime parameters to Chat provider",
           "x" = "Parameters not applied: {.field {param_names}}",
-          "i" = "The module will run with the provider's default settings",
           "i" = "Error: {e$message}"
         ),
-        .frequency = "once",
-        .frequency_id = "chat-params-failed"
+        class = "dsprrr_chat_params_error",
+        parent = e
       )
     }
   )
@@ -777,9 +852,9 @@ verified_chat_turn_delta <- function(chat, turns_before) {
   turns_after[seq.int(before_n + 1L, length(turns_after))]
 }
 
-#' Extract usage metadata from a verified current-call assistant turn
+#' Extract usage metadata from verified current-call assistant turns
 #'
-#' @param chat An ellmer Chat or compatible object
+#' @param chat An ellmer Chat object
 #' @param turns_before Verified Chat history captured immediately before the call
 #' @return Named list of token and cost fields; unknown values remain `NA`
 #' @noRd
@@ -793,30 +868,66 @@ chat_usage_metadata <- function(chat, turns_before = NULL) {
       turn_delta
     )
   }
-  assistant_turn <- if (length(assistant_turns) > 0L) {
-    assistant_turns[[length(assistant_turns)]]
-  } else {
-    NULL
-  }
-  if (is.null(assistant_turn)) {
+  if (length(assistant_turns) == 0L) {
     return(list(
       input_tokens = NA_integer_,
       output_tokens = NA_integer_,
       cached_input_tokens = NA_integer_,
       total_tokens = NA_integer_,
       cost = NA_real_,
-      duration_s = NA_real_
+      duration_s = NA_real_,
+      provider_calls = NA_integer_
     ))
   }
 
-  tokens <- tryCatch(assistant_turn@tokens, error = function(e) NULL)
-  input_tokens <- as.integer(tokens[1] %||% NA_integer_)
-  output_tokens <- as.integer(tokens[2] %||% NA_integer_)
-  cached_input_tokens <- as.integer(tokens[3] %||% NA_integer_)
+  strict_sum <- function(values, integer = FALSE) {
+    values <- vapply(
+      values,
+      function(value) {
+        if (
+          !is.numeric(value) ||
+            length(value) != 1L ||
+            is.na(value) ||
+            !is.finite(value) ||
+            value < 0
+        ) {
+          return(NA_real_)
+        }
+        as.numeric(value)
+      },
+      numeric(1)
+    )
+    if (length(values) == 0L || anyNA(values)) {
+      return(if (integer) NA_integer_ else NA_real_)
+    }
+    total <- sum(values)
+    if (
+      integer &&
+        (total > .Machine$integer.max || total != floor(total))
+    ) {
+      return(NA_integer_)
+    }
+    if (integer) as.integer(total) else total
+  }
+  tokens <- lapply(assistant_turns, function(turn) {
+    tryCatch(turn@tokens, error = function(e) NULL)
+  })
+  token_field <- function(index) {
+    lapply(tokens, function(value) {
+      if (length(value) < index) NA_real_ else value[[index]]
+    })
+  }
+  input_tokens <- strict_sum(token_field(1L), integer = TRUE)
+  output_tokens <- strict_sum(token_field(2L), integer = TRUE)
+  cached_input_tokens <- strict_sum(token_field(3L), integer = TRUE)
   total_tokens <- if (anyNA(c(input_tokens, output_tokens))) {
     NA_integer_
+  } else if (
+    as.double(input_tokens) + as.double(output_tokens) > .Machine$integer.max
+  ) {
+    NA_integer_
   } else {
-    input_tokens + output_tokens
+    as.integer(input_tokens + output_tokens)
   }
 
   list(
@@ -824,11 +935,13 @@ chat_usage_metadata <- function(chat, turns_before = NULL) {
     output_tokens = output_tokens,
     cached_input_tokens = cached_input_tokens,
     total_tokens = total_tokens,
-    cost = tryCatch(assistant_turn@cost, error = function(e) NA_real_),
-    duration_s = tryCatch(
-      assistant_turn@duration,
-      error = function(e) NA_real_
-    )
+    cost = strict_sum(lapply(assistant_turns, function(turn) {
+      tryCatch(turn@cost, error = function(e) NA_real_)
+    })),
+    duration_s = strict_sum(lapply(assistant_turns, function(turn) {
+      tryCatch(turn@duration, error = function(e) NA_real_)
+    })),
+    provider_calls = as.integer(length(assistant_turns))
   )
 }
 
@@ -967,6 +1080,7 @@ canonical_run_metadata <- function(
       latency_ms = latency_ms
     ),
     concurrency_metadata(),
+    trace_context_fields(),
     usage
   )
 }
@@ -1064,6 +1178,8 @@ canonical_run_trace <- function(
     )],
     cost = metadata$cost,
     model = metadata$model,
+    program_artifact_id = metadata$program_artifact_id,
+    trace_context = metadata$trace_context,
     metadata = metadata
   )
   if (isTRUE(store_chat)) {
@@ -1119,6 +1235,7 @@ commit_run_traces <- function(module, traces) {
     )
   }
 
+  traces <- lapply(traces, trace_context_annotate_event)
   module$state$traces <- append(module$state$traces, traces)
   for (trace in traces) {
     add_to_global_history(trace, source = "PredictModule")
@@ -1159,6 +1276,7 @@ process_batch_item <- function(
 
   started_at <- Sys.time()
   turns_before <- batch_chat_turns(llm)
+  run_before <- chat_last_run_id(llm)
   cache_state <- new.env(parent = emptyenv())
   cache_state$status <- "unknown"
   cache_observer <- function(status, ...) {
@@ -1166,18 +1284,21 @@ process_batch_item <- function(
     invisible(NULL)
   }
 
-  response <- tryCatch(
-    call_llm_request(
-      llm = llm,
-      request = request,
-      output_type = module$signature@output_type,
-      .cache = .cache,
-      .observer = cache_observer
-    ),
+  decoded <- tryCatch(
+    module_structured_call(module, function(output_type) {
+      call_llm_request(
+        llm = llm,
+        request = request,
+        output_type = output_type,
+        .cache = .cache,
+        .observer = cache_observer
+      )
+    }),
     error = function(e) e
   )
   ended_at <- Sys.time()
-  error <- if (inherits(response, "condition")) response else NULL
+  error <- if (inherits(decoded, "condition")) decoded else NULL
+  response <- if (is.null(error)) decoded$output else decoded
   usage <- if (is.null(error)) {
     chat_usage_metadata(llm, turns_before = turns_before)
   } else {
@@ -1195,6 +1316,12 @@ process_batch_item <- function(
     batch_index = index,
     cache = cache_state$status
   )
+  if (is.null(error) && !is.null(decoded$decisions)) {
+    metadata$decisions <- decoded$decisions
+  }
+  # A chat that records runs, such as a deputy Agent, made this call as one of
+  # its runs, including a run that ended in an error.
+  metadata$agent_run <- chat_new_run_receipt(llm, run_before)
 
   if (!is.null(error)) {
     return(create_error_result(
@@ -1229,7 +1356,7 @@ process_batch_item <- function(
     store_chat = isTRUE(module$config$store_chat_in_traces)
   )
   result <- if (.return_format == "simple") {
-    extract_simple_output(response, module$signature@output_type)
+    response
   } else {
     list(output = response, chat = completed_chat, metadata = metadata)
   }
@@ -1247,6 +1374,9 @@ process_batch_item <- function(
 #' logging Chat instead.
 #' @noRd
 batch_chat_turns <- function(chat) {
+  if (!is_ellmer_chat(chat)) {
+    return(NULL)
+  }
   get_turns <- tryCatch(chat$get_turns, error = function(e) NULL)
   if (!is.function(get_turns)) {
     return(NULL)
@@ -1297,16 +1427,17 @@ completed_batch_chat <- function(prompt, response, chat, turns_before = NULL) {
 #'   AssistantTurn representing the exchange
 #' @noRd
 mock_batch_chat <- function(prompt, response, chat, turns_before = NULL) {
-  provider <- if (cache_is_trusted_ellmer_chat(chat)) {
+  trusted <- cache_is_trusted_ellmer_chat(chat)
+  provider <- if (trusted) {
     chat$get_provider()
   } else {
-    ellmer::Provider(
-      name = "dsprrr",
-      model = "synthetic-batch-history",
-      base_url = ""
-    )
+    ellmer::Provider(name = "dsprrr", base_url = "")
   }
-  mock <- utils::getFromNamespace("Chat", "ellmer")$new(provider = provider)
+  model <- if (trusted) ellmer_chat_model(chat) else NULL
+  mock <- utils::getFromNamespace("Chat", "ellmer")$new(
+    provider = provider,
+    model = model %||% ellmer::Model(name = "synthetic-batch-history")
+  )
 
   prompt_contents <- if (
     is.list(prompt) &&
@@ -1358,31 +1489,6 @@ mock_batch_chat <- function(prompt, response, chat, turns_before = NULL) {
     )
   }
   mock
-}
-
-#' Extract simple output from LLM response
-#'
-#' For single-field outputs, extract just the field value.
-#'
-#' @param response The LLM response
-#' @param output_type The signature output type
-#' @return Extracted value or full response
-#' @noRd
-extract_simple_output <- function(response, output_type) {
-  if (
-    inherits(output_type, "ellmer::TypeObject") &&
-      length(output_type@properties) == 1
-  ) {
-    field_name <- names(output_type@properties)[1]
-    # Safely check if response is a list or environment with the field
-    if (
-      (is.list(response) || is.environment(response)) &&
-        field_name %in% names(response)
-    ) {
-      return(response[[field_name]])
-    }
-  }
-  response
 }
 
 #' Create error result for batch processing
@@ -1665,8 +1771,8 @@ run_predict_scalar <- function(
   error <- attr(item, "dsprrr_error_condition", exact = TRUE)
   commit_run_traces(module, list(trace))
   item <- strip_run_trace(item)
-  # Scalar calls historically return the caller's stateful Chat. The completed
-  # branch is needed only for canonical trace reconstruction.
+  # Scalar calls return the caller's Chat. The completed branch is needed only
+  # for canonical trace reconstruction.
   item$chat <- llm
 
   if (!is.null(error)) {
@@ -1679,9 +1785,8 @@ run_predict_scalar <- function(
   }
 
   if (.return_format == "simple") {
-    # Preserve the scalar `run()` contract: structured provider responses stay
-    # named so callers can address declared output fields. Batch rows retain
-    # their historical single-field simplification in `process_batch_item()`.
+    # Structured provider responses stay named so callers can address declared
+    # output fields consistently across scalar and batch execution.
     item$output
   } else {
     structure(item, class = "dsprrr_result")
@@ -1771,8 +1876,7 @@ ellmer_parallel_schema_runtime <- function(module, runtime) {
     "ellmer batch conversion cannot preserve absent versus present-empty",
     "values for this output schema"
   )
-  may_fallback <- identical(runtime$requested_backend, "auto") ||
-    isTRUE(runtime$legacy)
+  may_fallback <- identical(runtime$requested_backend, "auto")
   if (!may_fallback) {
     cli::cli_abort(
       c(
@@ -1804,13 +1908,18 @@ run_batch <- function(
   .progress,
   .return_format,
   .cache = NULL,
-  .concurrency,
-  .isolate_rows = TRUE
+  .concurrency
 ) {
   if (n == 0L) {
     return(empty_batch_result(.return_format))
   }
   .concurrency <- ellmer_parallel_schema_runtime(module, .concurrency)
+  if (!identical(.concurrency$effective_backend, "sequential")) {
+    assert_decisions_supported(
+      module,
+      paste0("the ", .concurrency$effective_backend, " batch backend")
+    )
+  }
   input_sets <- lapply(seq_len(n), function(i) lapply(inputs, `[[`, i))
 
   # The backend is fully normalized before any Chat or topology is resolved.
@@ -1824,8 +1933,7 @@ run_batch <- function(
       .return_format,
       .progress,
       .cache,
-      .concurrency,
-      .isolate_rows
+      .concurrency
     )
   } else if (identical(.concurrency$effective_backend, "ellmer")) {
     # Use ellmer's parallel_chat_structured for native parallelism
@@ -1841,7 +1949,7 @@ run_batch <- function(
       .concurrency
     )
   } else {
-    # Default: mirai-based parallelism
+    # Use mirai-based parallelism
     results <- run_batch_parallel(
       module,
       input_sets,
@@ -1877,8 +1985,7 @@ run_batch_sequential <- function(
   .return_format,
   .progress,
   .cache = NULL,
-  .concurrency = NULL,
-  .isolate_rows = TRUE
+  .concurrency = NULL
 ) {
   if (is.null(.concurrency)) {
     .concurrency <- normalize_concurrency_runtime(
@@ -1886,11 +1993,7 @@ run_batch_sequential <- function(
     )
   }
   baseline_llm <- resolve_module_llm(module, .llm = .llm)
-  row_llms <- if (isTRUE(.isolate_rows)) {
-    batch_chat_branches(baseline_llm, n)
-  } else {
-    rep(list(baseline_llm), n)
-  }
+  row_llms <- batch_chat_branches(baseline_llm, n)
   results <- vector("list", n)
 
   # Create progress bar if requested
@@ -2008,766 +2111,75 @@ run_batch_sequential <- function(
   collect_backend_traces(results)
 }
 
-#' Find mutable environments reachable from a Chat's state surface
+#' Read and validate one current Chat history
 #' @noRd
-batch_chat_state_environments <- function(chat, normalize_source = FALSE) {
-  found <- character()
-  seen <- new.env(hash = TRUE, parent = emptyenv())
-  expanded <- new.env(hash = TRUE, parent = emptyenv())
-  source_visiting <- new.env(hash = TRUE, parent = emptyenv())
-  runtime_environments <- new.env(hash = TRUE, parent = emptyenv())
-  source_environments <- new.env(hash = TRUE, parent = emptyenv())
-  trusted_ellmer <- cache_is_trusted_ellmer_chat(chat)
-
-  immutable_environment <- function(env) {
-    identical(env, emptyenv()) ||
-      identical(env, baseenv()) ||
-      (trusted_ellmer && isNamespace(env))
-  }
-
-  shared_scope <- function(env) {
-    identical(env, baseenv()) ||
-      identical(env, globalenv()) ||
-      isNamespace(env) ||
-      startsWith(environmentName(env), "package:")
-  }
-
-  binding_is_lazy <- function(env, name) {
-    isTRUE(unname(rlang::env_binding_are_lazy(env, name))[[1]])
-  }
-
-  runtime_attributes <- function(value) {
-    attributes(value) %||% list()
-  }
-
-  canonical_source_reference <- function(value) {
-    value_attributes <- attributes(value)
-    is.integer(value) &&
-      length(value) == 8L &&
-      !anyNA(value) &&
-      inherits(value, "srcref") &&
-      length(class(value)) == 1L &&
-      !is.null(value_attributes) &&
-      setequal(names(value_attributes), c("srcfile", "class")) &&
-      is.environment(attr(value, "srcfile", exact = TRUE))
-  }
-
-  source_file_schema <- function(source_file) {
-    source_class <- class(source_file)
-    source_attributes <- attributes(source_file)
-    schema <- if (identical(source_class, "srcfile")) {
-      list(
-        required = c("Enc", "encoding", "filename", "timestamp", "wd"),
-        allowed = c(
-          "Enc",
-          "encoding",
-          "filename",
-          "timestamp",
-          "wd",
-          "lines",
-          "parseData"
-        )
-      )
-    } else if (identical(source_class, c("srcfilecopy", "srcfile"))) {
-      list(
-        required = c(
-          "Enc",
-          "filename",
-          "fixedNewlines",
-          "isFile",
-          "lines",
-          "timestamp",
-          "wd"
-        ),
-        allowed = c(
-          "Enc",
-          "filename",
-          "fixedNewlines",
-          "isFile",
-          "lines",
-          "parseData",
-          "timestamp",
-          "wd"
-        )
-      )
-    } else if (identical(source_class, c("srcfilealias", "srcfile"))) {
-      list(
-        required = c("filename", "original"),
-        allowed = c("filename", "original", "parseData")
-      )
-    } else {
-      NULL
-    }
-    members <- ls(source_file, all.names = TRUE)
-    if (
-      is.null(schema) ||
-        !identical(parent.env(source_file), emptyenv()) ||
-        !identical(names(source_attributes), "class") ||
-        !all(schema$required %in% members) ||
-        !all(members %in% schema$allowed)
-    ) {
-      cli::cli_abort(
-        c(
-          "Cannot prove opaque Chat isolation",
-          "x" = "State contains noncanonical source metadata."
-        ),
-        class = "dsprrr_chat_isolation_error"
-      )
-    }
-    schema
-  }
-
-  check_binding <- function(env, name) {
-    if (bindingIsActive(name, env)) {
-      cli::cli_abort(
-        c(
-          "Cannot prove opaque Chat isolation",
-          "x" = "State references active binding {.field {name}}."
-        ),
-        class = "dsprrr_chat_isolation_error"
-      )
-    }
-    if (binding_is_lazy(env, name)) {
-      cli::cli_abort(
-        c(
-          "Cannot prove opaque Chat isolation",
-          "x" = "State references delayed binding {.field {name}}."
-        ),
-        class = "dsprrr_chat_isolation_error"
-      )
-    }
-    invisible(NULL)
-  }
-
-  known_safe_shared_binding <- function(env, name) {
-    base_scope <- identical(env, baseenv()) ||
-      identical(env, asNamespace("base"))
-    package_scope <- isNamespace(env) ||
-      startsWith(environmentName(env), "package:")
-    if (!base_scope && !package_scope) {
-      return(FALSE)
-    }
-    check_binding(env, name)
-    if (!bindingIsLocked(name, env)) {
-      return(FALSE)
-    }
-    value <- get(name, envir = env, inherits = FALSE)
-    if (is.atomic(value) || is.null(value)) {
-      return(TRUE)
-    }
-    if (!is.function(value)) {
-      return(FALSE)
-    }
-    function_environment <- environment(value)
-    is.null(function_environment) ||
-      identical(function_environment, baseenv()) ||
-      isNamespace(function_environment)
-  }
-
-  mark_seen <- function(value) {
-    address <- rlang::obj_address(value)
-    already_seen <- exists(address, envir = seen, inherits = FALSE)
-    if (!already_seen) {
-      assign(address, TRUE, envir = seen)
-    }
-    already_seen
-  }
-
-  record <- function(env, role = "runtime") {
-    if (immutable_environment(env)) {
-      return(invisible(NULL))
-    }
-    address <- rlang::obj_address(env)
-    current <- if (identical(role, "source")) {
-      source_environments
-    } else {
-      runtime_environments
-    }
-    opposite <- if (identical(role, "source")) {
-      runtime_environments
-    } else {
-      source_environments
-    }
-    if (exists(address, envir = opposite, inherits = FALSE)) {
-      cli::cli_abort(
-        c(
-          "Cannot prove opaque Chat isolation",
-          "x" = "A source metadata environment is also reachable as ordinary runtime state."
-        ),
-        class = "dsprrr_chat_isolation_error"
-      )
-    }
-    assign(address, TRUE, envir = current)
-    if (!mark_seen(env)) {
-      found <<- c(found, address)
-    }
-    invisible(NULL)
-  }
-
-  unsupported <- function(value) {
+batch_chat_history <- function(chat, stage = "batch execution") {
+  chat <- assert_ellmer_chat(chat, arg = "chat")
+  getter <- tryCatch(chat[["get_turns"]], error = function(e) NULL)
+  if (!is.function(getter)) {
     cli::cli_abort(
-      c(
-        "Cannot prove opaque Chat isolation",
-        "x" = "State contains unsupported {.code {typeof(value)}} data."
-      ),
+      "Cannot inspect the Chat history for {stage}",
       class = "dsprrr_chat_isolation_error"
     )
   }
 
-  visit_attributes <- function(value) {
-    value_attributes <- runtime_attributes(value)
-    if (length(value_attributes) == 0L) {
-      return(invisible(NULL))
-    }
-    attribute_names <- names(value_attributes)
-    source_carrier <- is.function(value) ||
-      is.language(value) ||
-      is.pairlist(value) ||
-      is.expression(value)
-    for (index in seq_along(value_attributes)) {
-      source_edge <- source_carrier &&
-        attribute_names[[index]] %in% c("srcref", "wholeSrcref") &&
-        canonical_source_reference(value_attributes[[index]])
-      visit(value_attributes[[index]], source_metadata = source_edge)
-    }
-    invisible(NULL)
-  }
-
-  visit_source_file <- function(source_file) {
-    source_file_schema(source_file)
-    record(source_file, role = "source")
-    address <- rlang::obj_address(source_file)
-    if (exists(address, envir = expanded, inherits = FALSE)) {
-      return(invisible(NULL))
-    }
-    if (exists(address, envir = source_visiting, inherits = FALSE)) {
+  turns <- tryCatch(
+    getter(),
+    error = function(e) {
       cli::cli_abort(
-        c(
-          "Cannot prove opaque Chat isolation",
-          "x" = "Source metadata contains a cyclic alias."
-        ),
-        class = "dsprrr_chat_isolation_error"
+        "Cannot inspect the Chat history for {stage}",
+        class = "dsprrr_chat_isolation_error",
+        parent = e
       )
     }
-    assign(address, TRUE, envir = source_visiting)
-    on.exit(rm(list = address, envir = source_visiting), add = TRUE)
-
-    members <- ls(source_file, all.names = TRUE)
-    for (name in members) {
-      if (bindingIsActive(name, source_file)) {
-        cli::cli_abort(
-          c(
-            "Cannot prove opaque Chat isolation",
-            "x" = "Source metadata references active binding {.field {name}}."
-          ),
-          class = "dsprrr_chat_isolation_error"
-        )
-      }
-      if (binding_is_lazy(source_file, name)) {
-        if (!name %in% c("lines", "parseData")) {
-          cli::cli_abort(
-            c(
-              "Cannot prove opaque Chat isolation",
-              "x" = "Source metadata references unexpected delayed binding {.field {name}}."
-            ),
-            class = "dsprrr_chat_isolation_error"
-          )
-        }
-        if (isTRUE(normalize_source)) {
-          if (
-            environmentIsLocked(source_file) ||
-              bindingIsLocked(name, source_file)
-          ) {
-            cli::cli_abort(
-              c(
-                "Cannot prove opaque Chat isolation",
-                "x" = "Executable source metadata retains locked delayed binding {.field {name}}."
-              ),
-              class = "dsprrr_chat_isolation_error"
-            )
-          }
-          rm(list = name, envir = source_file)
-          if (identical(name, "lines")) {
-            assign(name, character(), envir = source_file)
-          }
-        }
-        next
-      }
-      member <- get(name, envir = source_file, inherits = FALSE)
-      if (identical(name, "original")) {
-        if (!is.environment(member) || !inherits(member, "srcfile")) {
-          cli::cli_abort(
-            c(
-              "Cannot prove opaque Chat isolation",
-              "x" = "Source metadata contains an invalid alias target."
-            ),
-            class = "dsprrr_chat_isolation_error"
-          )
-        }
-        visit_source_file(member)
-      } else {
-        visit(member)
-      }
-    }
-    assign(address, TRUE, envir = expanded)
-    invisible(NULL)
-  }
-
-  visit <- function(value, source_metadata = FALSE) {
-    if (is.null(value)) {
-      return(invisible(NULL))
-    }
-    if (
-      trusted_ellmer &&
-        (inherits(value, "ellmer::Provider") ||
-          inherits(value, "ellmer::ToolDef"))
-    ) {
-      return(invisible(NULL))
-    }
-    if (canonical_source_reference(value)) {
-      if (!isTRUE(source_metadata)) {
-        cli::cli_abort(
-          c(
-            "Cannot prove opaque Chat isolation",
-            "x" = "A source reference is reachable as ordinary runtime state."
-          ),
-          class = "dsprrr_chat_isolation_error"
-        )
-      }
-      visit_source_file(attr(value, "srcfile", exact = TRUE))
-      return(invisible(NULL))
-    }
-    if (is.function(value)) {
-      if (mark_seen(value)) {
-        return(invisible(NULL))
-      }
-      env <- environment(value)
-      if (!is.null(env)) {
-        # A closure's enclosing package/namespace is not itself proof of
-        # mutable state. Inspect every referenced binding below and allow only
-        # locked scalar/function bindings. Local environments remain part of
-        # the identity proof because they are copied per branch.
-        shared_function_scope <- !trusted_ellmer && shared_scope(env)
-        if (!immutable_environment(env) && !shared_function_scope) {
-          record(env)
-        }
-        self <- NULL
-        if (exists("self", envir = env, inherits = FALSE)) {
-          check_binding(env, "self")
-          self <- get("self", envir = env, inherits = FALSE)
-        }
-        r6_clone_method <- inherits(self, "R6") &&
-          identical(
-            value,
-            tryCatch(self$clone, error = function(e) NULL)
-          )
-        if (!trusted_ellmer && !r6_clone_method) {
-          calls <- all.names(body(value), functions = TRUE, unique = TRUE)
-          dynamic_state_calls <- c(
-            ":::",
-            "as.environment",
-            "asNamespace",
-            "assign",
-            "baseenv",
-            "bquote",
-            "delayedAssign",
-            "do.call",
-            "dynGet",
-            "env_bind",
-            "env_bind_active",
-            "env_bind_lazy",
-            "env_get",
-            "env_get_list",
-            "env_parent",
-            "env_parents",
-            "env_poke",
-            "env_unbind",
-            "environment",
-            "environment<-",
-            "eval",
-            "eval.parent",
-            "exists",
-            "get",
-            "get0",
-            "getAnywhere",
-            "getExportedValue",
-            "getFromNamespace",
-            "getLoadedDLLs",
-            "getNativeSymbolInfo",
-            "getNamespace",
-            "getNamespaceExports",
-            "getNamespaceImports",
-            "getNamespaceInfo",
-            "getNamespaceName",
-            "getNamespaceUsers",
-            "getNamespaceVersion",
-            "globalenv",
-            "global_env",
-            "library",
-            "loadNamespace",
-            "loadedNamespaces",
-            "lockBinding",
-            "makeActiveBinding",
-            "mget",
-            "ns_env",
-            "namespaceExport",
-            "namespaceImport",
-            "parse",
-            "parent.env",
-            "parent.env<-",
-            "parent.frame",
-            "pos.to.env",
-            "pkg_env",
-            "require",
-            "rm",
-            "source",
-            "substitute",
-            "sys.source",
-            "sys.call",
-            "sys.calls",
-            "sys.frame",
-            "sys.function",
-            "topenv",
-            "unlockBinding",
-            "assignInNamespace",
-            "attach",
-            "detach",
-            "dyn.load",
-            "dyn.unload"
-          )
-          if (any(calls %in% dynamic_state_calls)) {
-            cli::cli_abort(
-              c(
-                "Cannot prove opaque Chat isolation",
-                "x" = "A Chat closure uses dynamic environment access."
-              ),
-              class = "dsprrr_chat_isolation_error"
-            )
-          }
-          globals <- codetools::findGlobals(
-            value,
-            merge = FALSE
-          )
-          property_roots <- character()
-          find_property_roots <- function(expr) {
-            if (is.call(expr)) {
-              operator <- if (is.symbol(expr[[1]])) {
-                as.character(expr[[1]])
-              } else {
-                ""
-              }
-              if (operator %in% c("$", "$<-", "@", "@<-")) {
-                target <- expr[[2]]
-                while (
-                  is.call(target) &&
-                    is.symbol(target[[1]]) &&
-                    as.character(target[[1]]) %in% c("$", "@")
-                ) {
-                  target <- target[[2]]
-                }
-                if (is.symbol(target)) {
-                  property_roots <<- c(
-                    property_roots,
-                    as.character(target)
-                  )
-                }
-              }
-              lapply(as.list(expr)[-1], find_property_roots)
-            } else if (is.pairlist(expr) || is.expression(expr)) {
-              lapply(expr, find_property_roots)
-            }
-            invisible(NULL)
-          }
-          find_property_roots(body(value))
-          find_property_roots(formals(value))
-          referenced <- unique(c(
-            globals$variables,
-            globals$functions,
-            property_roots
-          ))
-          referenced <- setdiff(referenced, names(formals(value)))
-          for (name in referenced) {
-            current <- env
-            repeat {
-              if (identical(current, emptyenv())) {
-                break
-              }
-              if (exists(name, envir = current, inherits = FALSE)) {
-                check_binding(current, name)
-                if (shared_scope(current)) {
-                  if (!known_safe_shared_binding(current, name)) {
-                    cli::cli_abort(
-                      c(
-                        "Cannot prove opaque Chat isolation",
-                        "x" = "Closure state {.field {name}} resolves from shared environment {.envvar {environmentName(current)}}."
-                      ),
-                      class = "dsprrr_chat_isolation_error"
-                    )
-                  }
-                } else {
-                  record(current)
-                  visit(get(name, envir = current, inherits = FALSE))
-                }
-                break
-              }
-              current <- parent.env(current)
-            }
-          }
-        }
-      }
-      visit_attributes(value)
-      return(invisible(NULL))
-    }
-    if (is.environment(value)) {
-      if (immutable_environment(value)) {
-        return(invisible(NULL))
-      }
-      if (!trusted_ellmer && shared_scope(value)) {
-        cli::cli_abort(
-          c(
-            "Cannot prove opaque Chat isolation",
-            "x" = "State reaches shared environment {.envvar {environmentName(value)}}."
-          ),
-          class = "dsprrr_chat_isolation_error"
-        )
-      }
-      record(value)
-      address <- rlang::obj_address(value)
-      if (exists(address, envir = expanded, inherits = FALSE)) {
-        return(invisible(NULL))
-      }
-      assign(address, TRUE, envir = expanded)
-      members <- ls(value, all.names = TRUE)
-      for (name in members) {
-        check_binding(value, name)
-        member <- tryCatch(
-          get(name, envir = value, inherits = FALSE),
-          error = function(e) unsupported(value)
-        )
-        visit(member)
-      }
-      return(invisible(NULL))
-    }
-    if (inherits(value, "S7_object")) {
-      if (!any(startsWith(class(value), "ellmer::"))) {
-        unsupported(value)
-      }
-      if (mark_seen(value)) {
-        return(invisible(NULL))
-      }
-      properties <- tryCatch(
-        S7::props(value),
-        error = function(e) unsupported(value)
-      )
-      lapply(properties, visit)
-      return(invisible(NULL))
-    }
-    if (isS4(value)) {
-      if (mark_seen(value)) {
-        return(invisible(NULL))
-      }
-      lapply(methods::slotNames(value), function(name) {
-        visit(methods::slot(value, name))
-      })
-      visit_attributes(value)
-      return(invisible(NULL))
-    }
-    if (is.list(value) || is.pairlist(value) || is.expression(value)) {
-      if (mark_seen(value)) {
-        return(invisible(NULL))
-      }
-      lapply(value, visit)
-      visit_attributes(value)
-      return(invisible(NULL))
-    }
-    if (is.language(value)) {
-      visit(as.list(value))
-      visit_attributes(value)
-      return(invisible(NULL))
-    }
-    if (typeof(value) %in% c("externalptr", "weakref")) {
-      unsupported(value)
-    }
-    if (
-      is.atomic(value) ||
-        typeof(value) %in% c("symbol", "builtin", "special")
-    ) {
-      visit_attributes(value)
-      return(invisible(NULL))
-    }
-    unsupported(value)
-  }
-
-  visit(chat)
-  unique(found)
-}
-
-#' Read Chat turns when an inspection method is available
-#' @noRd
-batch_chat_history <- function(chat) {
-  getter <- tryCatch(chat$get_turns, error = function(e) NULL)
-  if (!is.function(getter)) {
-    return(NULL)
-  }
-  turns <- tryCatch(getter(), error = function(e) e)
-  if (inherits(turns, "condition") || !is.list(turns)) {
+  )
+  if (!is.list(turns)) {
     cli::cli_abort(
-      "Cannot inspect Chat history for batch isolation",
-      class = "dsprrr_chat_isolation_error",
-      parent = if (inherits(turns, "condition")) turns else NULL
+      "The Chat history for {stage} must be a list",
+      class = "dsprrr_chat_isolation_error"
     )
   }
   turns
 }
 
-#' Create one isolated Chat without invoking opaque clone methods
+#' Create one independent current Chat while preserving its history
 #' @noRd
-batch_chat_copy <- function(chat, stage, source_state = NULL) {
-  if (is.null(source_state)) {
-    source_state <- list(
-      environments = batch_chat_state_environments(chat),
-      history = batch_chat_history(chat)
-    )
-  }
-  branch <- if (cache_is_trusted_ellmer_chat(chat)) {
-    tryCatch(
-      chat$clone(deep = TRUE),
-      error = function(e) {
-        cli::cli_abort(
-          "Cannot deep-clone ellmer Chat for the {stage}",
-          class = "dsprrr_chat_isolation_error",
-          parent = e
-        )
-      }
-    )
-  } else {
-    tryCatch(
-      unserialize(serialize(chat, connection = NULL, version = 3)),
-      error = function(e) {
-        cli::cli_abort(
-          c(
-            "Cannot isolate the Chat for batch execution",
-            "x" = "The opaque Chat could not be copied for the {stage}."
-          ),
-          class = "dsprrr_chat_isolation_error",
-          parent = e
-        )
-      }
-    )
-  }
-
-  if (
-    is.null(branch) ||
-      identical(rlang::obj_address(branch), rlang::obj_address(chat))
-  ) {
-    cli::cli_abort(
-      c(
-        "Cannot isolate the Chat for batch execution",
-        "x" = "Copying returned the original mutable Chat for the {stage}."
-      ),
-      class = "dsprrr_chat_isolation_error"
-    )
-  }
-
-  branch_envs <- batch_chat_state_environments(
-    branch,
-    normalize_source = !cache_is_trusted_ellmer_chat(chat)
+batch_chat_copy <- function(chat, stage) {
+  starting_history <- batch_chat_history(chat, stage)
+  branch <- clone_ellmer_chat(
+    chat,
+    arg = "chat",
+    reset_turns = FALSE
   )
-  if (length(intersect(source_state$environments, branch_envs)) > 0L) {
+  if (!identical(batch_chat_history(branch, stage), starting_history)) {
     cli::cli_abort(
-      c(
-        "Cannot isolate the Chat for batch execution",
-        "x" = "The {stage} still shares mutable environment-backed state."
-      ),
-      class = "dsprrr_chat_isolation_error"
+      "The cloned Chat did not preserve the exact history for {stage}",
+      class = c("dsprrr_chat_clone_error", "dsprrr_chat_isolation_error")
     )
   }
-
-  source_history <- source_state$history
-  branch_history <- batch_chat_history(branch)
-  if (
-    !is.null(source_history) &&
-      !identical(source_history, branch_history)
-  ) {
-    setter <- tryCatch(branch$set_turns, error = function(e) NULL)
-    if (is.function(setter)) {
-      tryCatch(
-        setter(rlang::duplicate(source_history, shallow = FALSE)),
-        error = function(e) NULL
-      )
-      branch_history <- batch_chat_history(branch)
-    }
-  }
-  if (
-    xor(is.null(source_history), is.null(branch_history)) ||
-      (!is.null(source_history) && !identical(source_history, branch_history))
-  ) {
-    cli::cli_abort(
-      c(
-        "Cannot isolate the Chat for batch execution",
-        "x" = "The {stage} did not preserve the exact starting history."
-      ),
-      class = "dsprrr_chat_isolation_error"
-    )
-  }
-
   branch
 }
 
-#' Create independent Chat branches for sequential batch rows
-#'
-#' Every row receives an isolated copy of the caller's starting state. Canonical
-#' ellmer Chats use their deep-clone contract; opaque Chats are copied without
-#' calling custom clone methods and rejected if any mutable environments remain
-#' shared.
+#' Create independent current Chat branches for batch rows
 #' @noRd
 batch_chat_branches <- function(chat, n) {
-  if (n == 0) {
+  if (n == 0L) {
     return(list())
   }
 
-  source_state <- list(
-    environments = batch_chat_state_environments(chat),
-    history = batch_chat_history(chat)
-  )
+  chat <- assert_ellmer_chat(chat, arg = "chat")
   branches <- lapply(seq_len(n), function(i) {
-    batch_chat_copy(
-      chat,
-      paste0("branch for row ", i),
-      source_state = source_state
-    )
+    batch_chat_copy(chat, paste0("row ", i))
   })
-
   branch_ids <- vapply(branches, rlang::obj_address, character(1))
-  branch_envs <- lapply(branches, batch_chat_state_environments)
-  shared_branch_state <- anyDuplicated(branch_ids) > 0L ||
-    any(vapply(
-      seq_along(branches),
-      function(i) {
-        if (i == 1L) {
-          return(FALSE)
-        }
-        length(intersect(
-          branch_envs[[i]],
-          unique(unlist(branch_envs[seq_len(i - 1L)], use.names = FALSE))
-        )) >
-          0L
-      },
-      logical(1)
-    ))
-  if (shared_branch_state) {
+  if (anyDuplicated(branch_ids) > 0L) {
     cli::cli_abort(
-      c(
-        "Cannot isolate the Chat for batch execution",
-        "x" = "Multiple rows received shared mutable Chat state."
-      ),
-      class = "dsprrr_chat_isolation_error"
+      "Chat cloning returned the same object for multiple batch rows",
+      class = c("dsprrr_chat_clone_error", "dsprrr_chat_isolation_error")
     )
   }
-
   branches
 }
-
 #' Reconstruct one scalar value from ellmer's vectorized batch representation
 #' @noRd
 ellmer_parallel_scalar_value <- function(value, type) {
@@ -3213,7 +2625,7 @@ run_batch_ellmer_parallel <- function(
         c(
           "Parallel LLM call failed",
           "x" = e$message,
-          "i" = "Try sequential processing with {.code .parallel = FALSE}"
+          "i" = "Try {.code .concurrency = concurrency_control(backend = \"sequential\")}"
         ),
         parent = e
       )
@@ -3332,9 +2744,6 @@ run_batch_ellmer_parallel <- function(
         output_fields,
         c(token_fields, "total_tokens", "cost", "duration_s")
       )] <- NULL
-      # Ellmer reports total wall time for the parallel group. Preserve the
-      # historical per-row estimate while keeping one canonical metadata shape.
-      metadata$latency_ms <- total_latency / n
 
       if (!is.null(error)) {
         error_chat <- batch_chat_copy(
@@ -3377,7 +2786,7 @@ run_batch_ellmer_parallel <- function(
         store_chat = isTRUE(module$config$store_chat_in_traces)
       )
       result <- if (.return_format == "simple") {
-        extract_simple_output(response, module$signature@output_type)
+        response
       } else {
         list(output = response, chat = completed_chat, metadata = metadata)
       }
@@ -3696,7 +3105,7 @@ mirai_worker_result <- function(
     store_chat = isTRUE(module$config$store_chat_in_traces)
   )
   result <- if (.return_format == "simple") {
-    extract_simple_output(record$response, module$signature@output_type)
+    record$response
   } else {
     list(output = record$response, chat = completed_chat, metadata = metadata)
   }
@@ -3714,15 +3123,8 @@ run_batch_parallel <- function(
   .return_format,
   .progress,
   .cache = NULL,
-  .concurrency = NULL
+  .concurrency
 ) {
-  if (is.null(.concurrency)) {
-    .concurrency <- normalize_concurrency_runtime(concurrency_control(
-      backend = "mirai",
-      max_active = getOption("dsprrr.max_active", 10L),
-      total_timeout = getOption("dsprrr.parallel_timeout", 600)
-    ))
-  }
   requests <- lapply(input_sets, function(input_set) {
     build_module_request(module, input_set)
   })
@@ -4260,18 +3662,22 @@ build_prompt <- function(module, inputs) {
   # Add the main template with inputs
   if (nchar(module$template) > 0) {
     if (grepl("\\{\\{[^}]+\\}\\}", module$template)) {
-      filled_template <- rlang::inject(
-        ellmer::interpolate(module$template, !!!inputs)
-      )
-    } else {
-      filled_template <- glue::glue_data(
-        .x = inputs,
-        module$template,
-        .open = "{",
-        .close = "}",
-        .envir = parent.frame()
+      cli::cli_abort(
+        c(
+          "Predict templates use single-brace placeholders",
+          "x" = "Found a double-brace placeholder in {.arg template}.",
+          "i" = "Use one brace pair around each declared input name."
+        ),
+        class = "dsprrr_template_syntax_error"
       )
     }
+    filled_template <- glue::glue_data(
+      .x = inputs,
+      module$template,
+      .open = "{",
+      .close = "}",
+      .envir = parent.frame()
+    )
     prompt_parts <- c(prompt_parts, filled_template)
   } else {
     # Auto-generate template from inputs
@@ -4432,77 +3838,108 @@ call_llm <- function(
   )
 }
 
-#' Execute Module on Data
+#' Run a module on each row of a data frame
 #'
 #' @description
-#' Execute a module on a data frame/tibble with optimized batch processing.
-#' Zero-row data frames return a zero-row tibble with the same result columns
-#' as a non-empty call, without resolving a Chat or changing runtime state.
+#' `run_dataset()` runs a module once per row of `data`, taking each input from
+#' the column with the same name, and adds the outputs as a `result`
+#' list-column. It works for every module type, including those that
+#' [run()] only accepts one input at a time.
 #'
-#' @param module A DSPrrr module (e.g., created with `module()`)
-#' @param data A tibble or data frame with columns matching the module's inputs.
-#' @param ... Additional arguments passed to [run()].
+#' @param module A module, such as one created with [module()] or
+#'   [module_fn()].
+#' @param data A data frame with one column per required signature input.
+#'   Other columns (such as expected answers) are kept in the result but not
+#'   sent to the module.
+#' @param ... Only `.cache` is accepted here, with the same meaning as in
+#'   [run()]. Any other dot-prefixed argument is an error.
 #'
-#' @return A tibble with the input columns plus a `result` list-column. With
-#'   `.return_format = "structured"`, the tibble also contains `.error`,
-#'   `.metadata`, and `.chat`; `.error` is `NA` for successful rows and contains
-#'   the LLM execution error message for failed rows.
+#' @details
+#' A row that fails gets `NA` in `result` and a warning; with
+#' `.return_format = "structured"` its error message is in `.error`. A
+#' zero-row data frame returns a zero-row tibble with the same columns,
+#' without calling the model.
+#'
+#' @return A tibble with the columns of `data` plus `result`, a list-column
+#'   holding each row's output (a named list, as returned by [run()]). With
+#'   `.return_format = "structured"`, it also has `.error` (`NA` for rows that
+#'   succeeded), `.metadata` and `.chat`.
 #' @export
+#' @family execution
 #' @examples
-#' \dontrun{
-#' # Process data
-#' df <- tibble::tibble(
-#'   text = c("I love this!", "This is bad", "Okay product")
-#' )
+#' # A function-backed module runs without a model
+#' shout <- module_fn("text -> reply", function(text) toupper(text))
+#' reviews <- data.frame(text = c("great", "broken"), stars = c(5, 1))
+#' results <- run_dataset(shout, reviews)
+#' results
+#' results$result[[1]]$reply
 #'
-#' llm <- ellmer::chat_openai()
-#' results <- signature("text -> sentiment") |>
-#'   module(type = "predict") |>
-#'   run_dataset(df, .llm = llm)
+#' \dontrun{
+#' classify <- module(signature("text -> sentiment"))
+#' run_dataset(
+#'   classify,
+#'   reviews,
+#'   .llm = ellmer::chat_openai(model = "gpt-6-luna"),
+#'   .return_format = "structured"
+#' )
 #' }
 run_dataset <- function(module, ...) {
   UseMethod("run_dataset")
 }
 
 #' @rdname run_dataset
-#' @param .llm Optional ellmer Chat object for LLM calls
-#' @param .verbose Logical whether to print verbose output
-#' @param .parallel Logical whether to enable parallel processing
-#' @param .parallel_method Character, either "ellmer" (default) or "mirai".
-#'   "ellmer" uses ellmer's `parallel_chat_structured()` for native async HTTP
-#'   parallelism (more efficient, single process).
-#'   "mirai" uses mirai for multi-process parallelism (requires `.llm = NULL`).
-#' @param .concurrency Optional batch policy created by
-#'   [concurrency_control()]. Do not combine it with `.parallel` or
-#'   `.parallel_method`.
-#' @param .progress Logical whether to show progress bar
-#' @param .return_format Character either "simple" or "structured"
+#' @param .llm An ellmer Chat for all rows. See [run()] for how it is chosen
+#'   when omitted.
+#' @param .verbose If `TRUE`, print the rendered input section of each
+#'   prompt.
+#' @param .concurrency A policy from [concurrency_control()]. The default runs
+#'   rows one after another.
+#' @param .progress Show a progress bar. Default `TRUE`.
+#' @param .return_format `"simple"` (the default) or `"structured"`.
+#' @param .trace_context A named, JSON-compatible list copied into each row's
+#'   metadata and traces. When omitted inside another dsprrr operation, the
+#'   active context is inherited.
 #' @export
 run_dataset.Module <- function(
   module,
   data,
   .llm = NULL,
   .verbose = FALSE,
-  .parallel = FALSE,
-  .parallel_method = c("ellmer", "mirai"),
   .concurrency = NULL,
   .progress = TRUE,
   .return_format = "simple",
-  ...
+  ...,
+  .trace_context = list()
 ) {
-  parallel_missing <- missing(.parallel)
-  parallel_method_missing <- missing(.parallel_method)
-  concurrency_missing <- missing(.concurrency)
-  concurrency <- resolve_concurrency_control(
-    .concurrency = .concurrency,
-    concurrency_missing = concurrency_missing,
-    .parallel = .parallel,
-    parallel_missing = parallel_missing,
-    .parallel_method = .parallel_method,
-    parallel_method_missing = parallel_method_missing
+  validate_runtime_dot_arguments(
+    match.call(expand.dots = FALSE),
+    allowed_names = ".cache"
   )
-  explicit_concurrency <- !concurrency_missing && !is.null(.concurrency)
-  .parallel_method <- match.arg(.parallel_method)
+  trace_context_supplied <- !missing(.trace_context)
+  trace_context <- trace_context_resolve(
+    .trace_context,
+    supplied = trace_context_supplied
+  )
+  trace_cursor <- evaluation_trace_cursor(module)
+  previous_trace_context <- trace_context_enter(
+    trace_context,
+    program = module,
+    inherit_program_id = !trace_context_supplied
+  )
+  invocation_trace_fields <- trace_context_fields()
+  on.exit(
+    {
+      trace_context_restore(previous_trace_context)
+      trace_context_annotate_module_traces(
+        module,
+        trace_cursor,
+        fields = invocation_trace_fields
+      )
+    },
+    add = TRUE
+  )
+
+  concurrency <- resolve_concurrency_control(.concurrency)
   .return_format <- match.arg(.return_format, c("simple", "structured"))
   dots <- list(...)
   if (".cache" %in% names(dots)) {
@@ -4517,10 +3954,23 @@ run_dataset.Module <- function(
     ))
   }
 
-  # Get required input names from signature
+  # Get declared and required input names from signature
   sig_inputs <- module$signature@inputs
   if (length(sig_inputs) > 0) {
-    required_names <- vapply(sig_inputs, function(x) x$name, character(1))
+    declared_names <- vapply(sig_inputs, function(x) x$name, character(1))
+    required <- vapply(
+      sig_inputs,
+      function(x) tryCatch(isTRUE(x$type@required), error = function(e) TRUE),
+      logical(1)
+    )
+    # Inputs the module fills in itself (retrieved context, refine feedback)
+    # are not expected as data columns.
+    supplied <- if (is.function(module$supplied_inputs)) {
+      module$supplied_inputs()
+    } else {
+      character()
+    }
+    required_names <- setdiff(declared_names[required], supplied)
     missing_cols <- setdiff(required_names, names(data))
 
     if (length(missing_cols) > 0) {
@@ -4548,6 +3998,7 @@ run_dataset.Module <- function(
       cli::cli_abort(msg)
     }
   } else {
+    declared_names <- character(0)
     required_names <- character(0)
   }
 
@@ -4562,8 +4013,9 @@ run_dataset.Module <- function(
   }
 
   # Extract input columns as list
-  if (length(required_names) > 0) {
-    input_args <- as.list(data[required_names])
+  provided_input_names <- intersect(declared_names, names(data))
+  if (length(provided_input_names) > 0) {
+    input_args <- as.list(data[provided_input_names])
   } else {
     # Rows still represent distinct evaluation attempts for a zero-input
     # signature. Dataset-only columns (for example metric truth) are not module
@@ -4572,19 +4024,48 @@ run_dataset.Module <- function(
   }
 
   # Run batch processing
-  execution_args <- if (explicit_concurrency) {
-    list(.concurrency = concurrency)
-  } else {
-    list(
-      .parallel = .parallel,
-      .parallel_method = .parallel_method
-    )
-  }
+  execution_args <- list(.concurrency = concurrency)
   specialized_predict <- inherits(module, "PredictModule") &&
     !identical(class(module)[1], "PredictModule")
-  scalar_row_adapter <- specialized_predict || length(required_names) == 0L
+  factory_interpreter_adapter <- inherits(module, "RLMModule") &&
+    factory_interpreter_module(module)
+  scalar_row_adapter <- (specialized_predict ||
+    inherits(module, "RLMModule") ||
+    length(input_args) == 0L) &&
+    !factory_interpreter_adapter
 
-  results <- if (scalar_row_adapter) {
+  results <- if (factory_interpreter_adapter) {
+    runtime_chat <- resolve_dataset_row_chat(module, .llm)
+    concurrency_runtime <- normalize_concurrency_runtime(
+      concurrency,
+      .llm = .llm,
+      .chat = runtime_chat
+    )
+    concurrency_runtime <- normalize_factory_interpreter_batch_runtime(
+      concurrency_runtime,
+      explicit_llm = !is.null(.llm)
+    )
+    factory_rows <- run_factory_interpreter_batch(
+      module = module,
+      inputs = input_args,
+      n = nrow(data),
+      .llm = .llm,
+      .progress = .progress,
+      .return_format = .return_format,
+      .concurrency = concurrency_runtime,
+      .cache = dots$.cache %||% NULL
+    )
+    if (identical(.return_format, "simple") && nrow(data) == 1L) {
+      row_trace_events <- attr(
+        factory_rows,
+        "dsprrr_row_trace_events",
+        exact = TRUE
+      )
+      factory_rows <- factory_rows[[1L]]
+      attr(factory_rows, "dsprrr_row_trace_events") <- row_trace_events
+    }
+    factory_rows
+  } else if (scalar_row_adapter) {
     concurrent_request <- concurrency$backend %in%
       c("ellmer", "mirai") ||
       (identical(concurrency$backend, "auto") && concurrency$max_active > 1L)
@@ -4706,11 +4187,22 @@ run_dataset.Module <- function(
     results <- list(results)
   }
 
+  row_trace_events <- attr(
+    results,
+    "dsprrr_row_trace_events",
+    exact = TRUE
+  )
+  # This attribute is an evaluation-internal transport channel. Remove it from
+  # the list before assigning dataset result columns so it cannot leak onto the
+  # public list-column; restore it only on the returned data frame below.
+  attr(results, "dsprrr_row_trace_events") <- NULL
+
   error_conditions <- attr(
     results,
     "dsprrr_error_conditions",
     exact = TRUE
   )
+  attr(results, "dsprrr_error_conditions") <- NULL
   if (is.null(error_conditions)) {
     error_conditions <- lapply(
       results,
@@ -4723,12 +4215,9 @@ run_dataset.Module <- function(
   # Add results to data
   if (.return_format == "simple") {
     if (nrow(data) == 1L) {
-      # `run()` preserves named scalar responses, while dataset rows use the
-      # same simplified shape as rows produced by vectorized batch execution.
-      results <- list(extract_simple_output(
-        results,
-        module$signature@output_type
-      ))
+      # A scalar `run()` returns one output record; store that record as the
+      # single element of the dataset's result list-column.
+      results <- list(results)
     } else if (length(results) != nrow(data)) {
       results <- list(results)
     }
@@ -4745,8 +4234,18 @@ run_dataset.Module <- function(
     data$.chat <- lapply(results, `[[`, "chat")
   }
 
-  output <- tibble::as_tibble(data)
+  output <- trace_context_annotate_result(
+    tibble::as_tibble(data),
+    fields = invocation_trace_fields
+  )
   attr(output, "dsprrr_error_conditions") <- error_conditions
+  if (!is.null(row_trace_events)) {
+    attr(output, "dsprrr_row_trace_events") <- lapply(
+      row_trace_events,
+      trace_context_annotate_events,
+      fields = invocation_trace_fields
+    )
+  }
   output
 }
 
@@ -4787,8 +4286,13 @@ run_scalar_dataset_rows <- function(
   dots
 ) {
   results <- vector("list", n)
+  row_trace_events <- vector("list", n)
   row_llms <- if (is.null(.runtime_chat)) {
     rep(list(NULL), n)
+  } else if (inherits(module, "RLMModule")) {
+    # RLMModule creates and clears a fresh action Chat inside each forward()
+    # call, so the dataset layer does not create another branch here.
+    rep(list(.runtime_chat), n)
   } else {
     batch_chat_branches(.runtime_chat, n)
   }
@@ -4803,7 +4307,7 @@ run_scalar_dataset_rows <- function(
 
   for (i in seq_len(n)) {
     row_inputs <- lapply(input_args, `[[`, i)
-    trace_count_before <- length(module$state$traces %||% list())
+    trace_count_before <- evaluation_trace_cursor(module)
     history_generation_before <- prompt_history_generation()
     row_result <- tryCatch(
       do.call(
@@ -4843,12 +4347,10 @@ run_scalar_dataset_rows <- function(
       row_index = i,
       runtime = .concurrency_runtime
     )
-    if (identical(.return_format, "simple")) {
-      results[i] <- list(extract_simple_output(
-        results[[i]],
-        module$signature@output_type
-      ))
-    }
+    row_trace_events[[i]] <- new_evaluation_trace_events(
+      module,
+      trace_count_before
+    )
     results[i] <- list(annotate_concurrency_result(
       results[[i]],
       .concurrency_runtime,
@@ -4868,6 +4370,7 @@ run_scalar_dataset_rows <- function(
   if (!is.null(progress_id)) {
     cli::cli_progress_done(id = progress_id)
   }
+  attr(results, "dsprrr_row_trace_events") <- row_trace_events
   if (identical(.return_format, "simple") && n == 1L) {
     results[[1]]
   } else {
@@ -4889,12 +4392,7 @@ reconcile_dataset_row_observability <- function(
   fields$batch_index <- as.integer(row_index)
 
   traces <- module$state$traces %||% list()
-  trace_count_after <- length(traces)
-  trace_indices <- if (trace_count_after > trace_count_before) {
-    seq.int(trace_count_before + 1L, trace_count_after)
-  } else {
-    integer()
-  }
+  trace_indices <- evaluation_trace_indices(module, trace_count_before)
   patched_traces <- vector("list", length(trace_indices))
   for (offset in seq_along(trace_indices)) {
     index <- trace_indices[[offset]]
@@ -4979,6 +4477,7 @@ show_prompt_preview <- function(module) {
 #' Print method for dsprrr_batch_result
 #' @param x A dsprrr_batch_result object
 #' @param ... Additional arguments (unused)
+#' @noRd
 #' @export
 print.dsprrr_batch_result <- function(x, ...) {
   n <- length(x)

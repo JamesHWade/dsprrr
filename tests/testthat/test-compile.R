@@ -1,64 +1,80 @@
-mock_llm <- structure(
-  list(
-    chat_structured = function(prompt, type, ...) {
-      if (inherits(type, "ellmer::TypeObject")) {
-        # Return minimal structured response
-        props <- names(type@properties)
-        stats::setNames(
-          lapply(props, function(name) {
-            if (grepl("confidence", name, fixed = TRUE)) {
-              0.5
-            } else {
-              "mock"
-            }
-          }),
-          props
-        )
-      } else {
-        "mock"
-      }
+mock_llm <- new_test_chat(
+  chat_structured = function(prompt, type, ...) {
+    if (inherits(type, "ellmer::TypeObject")) {
+      # Return minimal structured response
+      props <- names(type@properties)
+      stats::setNames(
+        lapply(props, function(name) {
+          if (grepl("confidence", name, fixed = TRUE)) {
+            0.5
+          } else {
+            "mock"
+          }
+        }),
+        props
+      )
+    } else {
+      "mock"
     }
-  ),
-  class = "Chat"
+  }
 )
 
-test_that("compile_module validates inputs", {
+test_that("compile validates inputs", {
   sig <- Signature(
-    inputs = list(input(name = "text", class = S7::class_character)),
+    inputs = list(input(name = "text", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Test"
   )
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
 
   # Invalid teleprompter
   expect_error(
-    compile_module(mod, "not a teleprompter", data.frame()),
+    compile(mod, "not a teleprompter", data.frame()),
     "must be a Teleprompter object"
   )
 
   # Invalid trainset
   tp <- LabeledFewShot()
   expect_error(
-    compile_module(mod, tp, "not a data frame"),
-    "trainset must be a data frame"
+    compile(mod, tp, "not a data frame"),
+    "must be a data frame"
   )
 
   # Valid inputs
   trainset <- data.frame(text = "test", label = "result")
-  result <- compile_module(mod, tp, trainset)
+  result <- compile(mod, tp, trainset)
   expect_true(inherits(result, "Module"))
 })
 
-test_that("compile_module works with different teleprompters", {
+test_that("compile entry points require a current ellmer Chat", {
+  mod <- module(signature("text -> answer"))
+  tp <- LabeledFewShot()
+  trainset <- data.frame(text = character(), answer = character())
+
+  expect_error(
+    compile(
+      mod,
+      tp,
+      trainset,
+      .llm = structure(list(), class = "Chat")
+    ),
+    class = "dsprrr_chat_type_error"
+  )
+  expect_error(
+    compile(mod, tp, trainset, .llm = function() new_test_chat()),
+    class = "dsprrr_chat_type_error"
+  )
+})
+
+test_that("compile works with different teleprompters", {
   # Create module
   sig <- Signature(
-    inputs = list(input(name = "question", class = S7::class_character)),
+    inputs = list(input(name = "question", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Answer the question"
   )
   mod <- module(
     signature = sig,
-    type = "predict",
     template = "Q: {question}\nA:"
   )
 
@@ -75,7 +91,7 @@ test_that("compile_module works with different teleprompters", {
 
   # Test with LabeledFewShot
   tp_labeled <- LabeledFewShot(k = 2L)
-  compiled_labeled <- compile_module(mod, tp_labeled, trainset)
+  compiled_labeled <- compile(mod, tp_labeled, trainset)
   expect_length(compiled_labeled$demos, 2)
   expect_true(compiled_labeled$config$compiled)
   expect_equal(compiled_labeled$config$teleprompter, "LabeledFewShot")
@@ -96,22 +112,21 @@ test_that("compile_module works with different teleprompters", {
   )
 
   # This will use mock evaluation in the current implementation
-  compiled_grid <- compile_module(mod, tp_grid, trainset, .llm = mock_llm)
+  compiled_grid <- compile(mod, tp_grid, trainset, .llm = mock_llm)
   expect_true(compiled_grid$config$compiled)
   expect_equal(compiled_grid$config$teleprompter, "GridSearchTeleprompter")
   expect_true("best_variant" %in% names(compiled_grid$config))
   expect_true("all_scores" %in% names(compiled_grid$config))
 })
 
-test_that("compile_module warns on recompilation", {
+test_that("compile warns on recompilation", {
   sig <- Signature(
-    inputs = list(input(name = "x", class = S7::class_character)),
+    inputs = list(input(name = "x", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Test"
   )
   mod <- module(
     signature = sig,
-    type = "predict",
     config = list(compiled = TRUE, teleprompter = "PreviousOptimizer")
   )
   # Set compiled state for warning test
@@ -121,110 +136,18 @@ test_that("compile_module warns on recompilation", {
   tp <- LabeledFewShot()
 
   expect_warning(
-    compile_module(mod, tp, trainset),
+    compile(mod, tp, trainset),
     "already compiled"
-  )
-})
-
-test_that("dsp_trainset creates training data correctly", {
-  # From scratch
-  trainset <- dsp_trainset(
-    text = c("hello", "world"),
-    label = c("greeting", "noun")
-  )
-  expect_equal(nrow(trainset), 2)
-  expect_equal(trainset$text, c("hello", "world"))
-  expect_equal(trainset$label, c("greeting", "noun"))
-
-  # With existing data frame
-  base_df <- data.frame(id = 1:2)
-  trainset2 <- dsp_trainset(
-    .data = base_df,
-    text = c("hello", "world")
-  )
-  expect_equal(nrow(trainset2), 2)
-  expect_equal(trainset2$id, 1:2)
-  expect_equal(trainset2$text, c("hello", "world"))
-
-  # Error cases
-  expect_error(dsp_trainset(), "Must provide either data arguments")
-  expect_error(
-    dsp_trainset(x = 1:2, y = 1:3),
-    "same length"
-  )
-
-  # Empty trainset warning
-  expect_warning(
-    empty <- dsp_trainset(.data = data.frame()),
-    "empty training set"
-  )
-  expect_equal(nrow(empty), 0)
-})
-
-test_that("evaluate_dsp evaluates modules", {
-  sig <- Signature(
-    inputs = list(input(name = "text", class = S7::class_character)),
-    output_type = ellmer::type_string(),
-    instructions = "Classify"
-  )
-  mod <- module(signature = sig, type = "predict")
-
-  dataset <- data.frame(
-    text = c("hello", "world"),
-    expected = c("greeting", "noun")
-  )
-
-  metric <- function(prediction, expected) {
-    identical(prediction, expected$expected)
-  }
-
-  # Mock evaluation (actual would need LLM)
-  results <- evaluate_dsp(
-    module = mod,
-    data = dataset,
-    metric = metric,
-    .llm = mock_llm,
-    verbose = FALSE
-  )
-
-  expect_true(is.list(results))
-  expect_true("mean_score" %in% names(results))
-  expect_true("scores" %in% names(results))
-  expect_true("n_evaluated" %in% names(results))
-  expect_true("n_errors" %in% names(results))
-  expect_equal(length(results$scores), nrow(dataset))
-
-  # Empty data
-  expect_warning(
-    empty_results <- evaluate_dsp(
-      module = mod,
-      data = data.frame(),
-      metric = metric,
-      verbose = FALSE
-    ),
-    "Empty data provided"
-  )
-  expect_true(is.na(empty_results$mean_score))
-  expect_equal(empty_results$n_evaluated, 0)
-
-  # Invalid inputs
-  expect_error(
-    evaluate_dsp(mod, "not a df", metric),
-    "must be a data frame"
-  )
-  expect_error(
-    evaluate_dsp(mod, dataset, "not a function"),
-    "must be a function"
   )
 })
 
 test_that("compile workflow with validation set", {
   sig <- Signature(
-    inputs = list(input(name = "text", class = S7::class_character)),
+    inputs = list(input(name = "text", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Classify sentiment"
   )
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
 
   trainset <- data.frame(
     text = c("love it", "hate it", "okay", "great", "terrible"),
@@ -254,7 +177,7 @@ test_that("compile workflow with validation set", {
     verbose = FALSE
   )
 
-  compiled <- compile_module(mod, tp, trainset, valset, .llm = mock_llm)
+  compiled <- compile(mod, tp, trainset, valset, .llm = mock_llm)
   expect_true(compiled$config$compiled)
 
   # The validation set should have been used for evaluation
@@ -267,8 +190,8 @@ test_that("compile integration with module pipeline", {
   # 1. Create signature using string notation
   sig <- Signature(
     inputs = list(
-      input(name = "context", class = S7::class_character),
-      input(name = "question", class = S7::class_character)
+      input(name = "context", type = "string"),
+      input(name = "question", type = "string")
     ),
     output_type = ellmer::type_object(
       answer = ellmer::type_string(),
@@ -284,7 +207,7 @@ test_that("compile integration with module pipeline", {
   )
 
   # 3. Prepare training data
-  trainset <- dsp_trainset(
+  trainset <- data.frame(
     context = c(
       "The sky is blue during the day.",
       "Water boils at 100 degrees Celsius.",
@@ -295,12 +218,13 @@ test_that("compile integration with module pipeline", {
       "At what temperature does water boil?",
       "What is the capital of France?"
     ),
-    answer = c("blue", "100 degrees Celsius", "Paris")
+    answer = c("blue", "100 degrees Celsius", "Paris"),
+    stringsAsFactors = FALSE
   )
 
   # 4. Compile with LabeledFewShot
   tp <- LabeledFewShot(k = 2L)
-  compiled_qa <- compile_module(qa_mod, tp, trainset)
+  compiled_qa <- compile(qa_mod, tp, trainset)
 
   expect_true(inherits(compiled_qa, "Module"))
   expect_true(compiled_qa$is_compiled())
@@ -322,36 +246,27 @@ test_that("compile integration with module pipeline", {
 
 test_that("evaluate generic executes modules", {
   sig <- Signature(
-    inputs = list(input(name = "text", class = S7::class_character)),
+    inputs = list(input(name = "text", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Echo"
   )
-  mod <- module(signature = sig, type = "predict", template = "{text}")
+  mod <- module(signature = sig, template = "{text}")
 
   dataset <- data.frame(text = c("A", "B"), stringsAsFactors = FALSE)
 
-  eval_llm <- local({
-    self <- structure(
-      list(
-        chat_structured = function(prompt, ...) {
-          # Return the final line of the prompt (the input text)
-          lines <- strsplit(prompt, "\n")[[1]]
-          tail(lines, 1L)
-        },
-        clone = function(...) self,
-        set_turns = function(turns) invisible(NULL)
-      ),
-      class = "Chat"
-    )
-    self
-  })
+  eval_llm <- new_test_chat(
+    chat_structured = function(prompt, ...) {
+      # Return the final line of the prompt (the input text)
+      lines <- strsplit(prompt, "\n")[[1]]
+      tail(lines, 1L)
+    }
+  )
 
   results <- evaluate(
     mod,
     dataset,
     metric = function(pred, row) identical(pred, row$text),
     .llm = eval_llm,
-    .parallel = FALSE,
     .progress = FALSE
   )
 
@@ -362,11 +277,11 @@ test_that("evaluate generic executes modules", {
 
 test_that("evaluate returns dsprrr_evaluation class", {
   sig <- Signature(
-    inputs = list(input(name = "text", class = S7::class_character)),
+    inputs = list(input(name = "text", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Classify"
   )
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
 
   dataset <- data.frame(
     text = c("hello", "world"),
@@ -398,11 +313,11 @@ test_that("evaluate returns dsprrr_evaluation class", {
 
 test_that("dsprrr_evaluation print method handles errors", {
   sig <- Signature(
-    inputs = list(input(name = "text", class = S7::class_character)),
+    inputs = list(input(name = "text", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Classify"
   )
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
 
   # Create evaluation with some errors (metric fails)
   dataset <- data.frame(
@@ -437,11 +352,11 @@ test_that("evaluate() counts failed rows as 0 in mean_score (dsprrr-tn1)", {
   # number that drives optimizer selection. A failing row must count as 0 so a
   # config that errors on hard examples cannot outrank a robust one.
   sig <- Signature(
-    inputs = list(input(name = "text", class = S7::class_character)),
+    inputs = list(input(name = "text", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Classify"
   )
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
 
   dataset <- data.frame(
     text = c("a", "b"),
@@ -472,15 +387,14 @@ test_that("evaluate() counts failed rows as 0 in mean_score (dsprrr-tn1)", {
 })
 
 test_that("evaluate preserves run failures instead of replacing them with metric errors", {
-  mod <- module(signature("text -> answer"), type = "predict")
-  mock_llm <- structure(
-    list(chat_structured = function(prompt, ...) {
+  mod <- module(signature("text -> answer"))
+  mock_llm <- new_test_chat(
+    chat_structured = function(prompt, ...) {
       if (grepl("fail", prompt, fixed = TRUE)) {
         stop("primary provider failure")
       }
       "ok"
-    }),
-    class = "Chat"
+    }
   )
   metric_calls <- 0L
   metric <- function(prediction, expected) {

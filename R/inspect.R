@@ -1,53 +1,40 @@
-#' Prompt Visibility and Inspection
+#' Prompt visibility and inspection
 #'
-#' @description
-#' Functions for inspecting LLM prompts and responses. These tools help with
-#' debugging by showing exactly what was sent to the LLM and what was returned.
+#' The user-facing functions are [get_last_prompt()], [inspect_history()] and
+#' [clear_prompt_history()].
 #'
 #' @name prompt-visibility
+#' @noRd
 NULL
 
 # Initialize global prompt history in .dsprrr_env (done in chat-default.R)
 # .dsprrr_env$prompt_history <- list()
 # .dsprrr_env$prompt_history_max <- 100
 
-#' Get the Last Prompt
+#' Show the most recent prompt and response
 #'
 #' @description
-#' Returns detailed information about the most recent LLM call, including
-#' the prompt sent, response received, and metadata like tokens and cost.
-#' Works with both `dsp()` calls and module-based calls.
+#' `get_last_prompt()` returns the most recent model call in the prompt
+#' history: the prompt that was sent, the response, and the model, tokens,
+#' cost and duration. Printing it shows a "Prompt Inspection" block with
+#' Prompt, Response and Metadata sections (long prompts and responses are cut
+#' at 500 characters). Use it to see exactly what a module sent.
 #'
-#' @return A `dsprrr_prompt_inspection` object containing:
-#'   - `prompt`: The full prompt sent to the LLM
-#'   - `response`: The LLM's response
-#'   - `model`: The model used
-#'   - `tokens_in`: Input tokens used
-#'   - `tokens_out`: Output tokens generated
-#'   - `cost`: Cost in USD (if available)
-#'   - `timestamp`: When the call was made
-#'   - `source`: Where the call originated ("dsp()" or module name)
-#'
-#' Returns `NULL` if no LLM calls have been made.
+#' @return A list of class `dsprrr_prompt_inspection` with `prompt` (the full
+#'   prompt, including the instructions), `response`, `model`, `tokens_in`,
+#'   `tokens_out`, `cost` (in US dollars, when known), `duration_s`,
+#'   `timestamp`, `source` (the module class that made the call),
+#'   `program_artifact_id` and `trace_context`. If no call has been recorded,
+#'   `NULL`, invisibly, with a message.
 #'
 #' @export
+#' @family inspection
 #' @examples
 #' \dontrun{
-#' # Make an LLM call
-#' dsp("question -> answer", question = "What is 2+2?")
-#'
-#' # Inspect what happened
+#' qa <- module(signature("question -> answer"))
+#' run(qa, question = "What is 2 + 2?", .llm = ellmer::chat_openai(model = "gpt-6-luna"))
 #' get_last_prompt()
-#' #> ─── Last Prompt ───────────────────────────────────
-#' #> System: Given the fields `question`, produce the fields `answer`.
-#' #>
-#' #> User: question: What is 2+2?
-#' #>
-#' #> ─── Response ──────────────────────────────────────
-#' #> Assistant: {"answer": "4"}
-#' #>
-#' #> ─── Metadata ──────────────────────────────────────
-#' #> Model: gpt-4o-mini | Tokens: 45 in, 12 out | Cost: $0.0001
+#' get_last_prompt()$prompt
 #' }
 get_last_prompt <- function() {
   history <- .dsprrr_env$prompt_history
@@ -61,41 +48,50 @@ get_last_prompt <- function() {
   create_prompt_inspection(entry)
 }
 
-#' Inspect LLM Call History
+#' List recent model calls
 #'
 #' @description
-#' Returns a tibble of recent LLM calls across all modules and `dsp()` calls.
-#' Similar to DSPy's `dspy.inspect_history(n)`.
+#' `inspect_history()` returns the most recent model calls of the session as
+#' a tibble, across all modules, like DSPy's `dspy.inspect_history()`. It can
+#' also write them to a plain-text transcript.
 #'
-#' @param n Number of recent calls to return. Default is 10.
-#' @param include_prompts Logical; whether to include full prompt text.
-#'   Default is TRUE.
-#' @param include_responses Logical; whether to include full response text.
-#'   Default is TRUE.
-#' @param file Optional file path or writable connection. When supplied, a
-#'   human-readable transcript of the selected history is written without ANSI
-#'   styling.
+#' @details
+#' The history is kept in memory for the session and holds the most recent
+#' 100 calls by default (`options(dsprrr.prompt_history_max = )`). Prediction
+#' modules ([module()], [chain_of_thought()]) and [rag_module()], [react()],
+#' [rlm_module()] and [flex()] modules add their calls to it; calls made
+#' inside wrappers and pipelines, and by [run_async()] or [run_stream()], are
+#' not recorded. [clear_prompt_history()] empties it.
 #'
-#' @return A tibble with one row per LLM call containing:
-#'   - `timestamp`: When the call was made
-#'   - `source`: Where the call originated ("dsp()" or module class name)
-#'   - `model`: The model used
-#'   - `tokens_in`: Input tokens
-#'   - `tokens_out`: Output tokens
-#'   - `cost`: Cost in USD (if available)
-#'   - `duration_s`: Duration in seconds (if available)
-#'   - `prompt`: Full prompt text (if `include_prompts = TRUE`)
-#'   - `response`: Full response text (if `include_responses = TRUE`)
+#' @param n Number of recent calls to return.
+#' @param include_prompts If `TRUE` (the default), include the full prompt
+#'   text.
+#' @param include_responses If `TRUE` (the default), include the full
+#'   response text.
+#' @param file A file path or writable connection. If given, the selected
+#'   calls are also written there as a plain-text transcript.
+#'
+#' @return A tibble with one row per call and columns `timestamp`, `source`
+#'   (the module class that made the call), `model`, `tokens_in`,
+#'   `tokens_out`, `cost` (in US dollars, when known), `duration_s`,
+#'   `program_artifact_id`, `trace_context`, and `prompt` and `response`
+#'   when requested. With no recorded calls, an empty tibble and a message.
 #'
 #' @export
+#' @family inspection
 #' @examples
-#' \dontrun{
-#' # View last 5 LLM calls
+#' # Empty until a module has called a model
 #' inspect_history(n = 5)
 #'
-#' # Get history as tibble for analysis
+#' \dontrun{
+#' qa <- module(signature("question -> answer"))
+#' run(qa, question = "What is 2 + 2?", .llm = ellmer::chat_openai(model = "gpt-6-luna"))
+#'
 #' history <- inspect_history(n = 20)
-#' sum(history$cost)  # Total cost
+#' sum(history$cost, na.rm = TRUE)
+#'
+#' # A plain-text transcript for sharing
+#' inspect_history(n = 20, file = tempfile(fileext = ".txt"))
 #' }
 inspect_history <- function(
   n = 10,
@@ -155,6 +151,25 @@ inspect_history <- function(
       entries,
       function(e) e$duration_s %||% NA_real_,
       numeric(1)
+    ),
+    program_artifact_id = vapply(
+      entries,
+      function(entry) {
+        id <- entry$program_artifact_id %||% NA_character_
+        if (
+          !is.character(id) ||
+            length(id) != 1L ||
+            is.na(id)
+        ) {
+          return(NA_character_)
+        }
+        id
+      },
+      character(1)
+    ),
+    trace_context = lapply(
+      entries,
+      function(entry) entry$trace_context %||% list()
     )
   )
 
@@ -246,19 +261,21 @@ format_history_transcript <- function(entries) {
   paste(blocks, collapse = "\n\n---\n\n")
 }
 
-#' Clear Prompt History
+#' Clear the prompt history
 #'
 #' @description
-#' Clears the global prompt history. Useful for testing or to free memory.
+#' `clear_prompt_history()` empties the session's prompt history, which
+#' [get_last_prompt()], [inspect_history()] and [session_cost()] read. Module
+#' traces are kept; see [clear_traces()] for those.
 #'
-#' @return Invisibly returns the number of entries cleared.
+#' @return The number of entries removed, invisibly. A message reports it
+#'   when the history was not empty.
 #'
 #' @export
+#' @family inspection
 #' @examples
-#' \dontrun{
-#' # Clear history
-#' clear_prompt_history()
-#' }
+#' removed <- clear_prompt_history()
+#' removed
 clear_prompt_history <- function() {
   n_cleared <- length(.dsprrr_env$prompt_history %||% list())
   .dsprrr_env$prompt_history <- list()
@@ -310,11 +327,12 @@ prompt_history_generation_delta <- function(before, after) {
   }
 }
 
-# Internal: Add an entry to the global prompt history
-# Called from dsp.R and module-predict.R
+# Internal: Add an entry to the global prompt history from module execution.
 add_to_global_history <- function(trace, source = "unknown") {
   tryCatch(
     {
+      trace <- trace_context_annotate_event(trace)
+
       # Initialize history if needed
       if (is.null(.dsprrr_env$prompt_history)) {
         .dsprrr_env$prompt_history <- list()
@@ -366,7 +384,6 @@ add_to_global_history <- function(trace, source = "unknown") {
 
 # Internal: Extract a standardized history entry from a trace
 extract_history_entry <- function(trace, source) {
-  # Handle different trace formats (dsp() vs module)
   entry <- list(
     timestamp = trace$timestamp %||% Sys.time(),
     source = source
@@ -423,22 +440,26 @@ extract_history_entry <- function(trace, source) {
     )
   }
 
-  # Try legacy metadata fields
-  if (is.null(entry$tokens_in) && !is.null(trace$input_tokens)) {
-    entry$tokens_in <- as.integer(trace$input_tokens)
+  metadata <- trace$metadata %||% list()
+  if (is.null(entry$tokens_in) && !is.null(metadata$input_tokens)) {
+    entry$tokens_in <- as.integer(metadata$input_tokens)
   }
-  if (is.null(entry$tokens_out) && !is.null(trace$output_tokens)) {
-    entry$tokens_out <- as.integer(trace$output_tokens)
+  if (is.null(entry$tokens_out) && !is.null(metadata$output_tokens)) {
+    entry$tokens_out <- as.integer(metadata$output_tokens)
   }
-  if (is.null(entry$cost) && !is.null(trace$cost)) {
-    entry$cost <- trace$cost
+  if (is.null(entry$cost) && !is.null(metadata$cost)) {
+    entry$cost <- metadata$cost
   }
-  if (is.null(entry$duration_s) && !is.null(trace$duration_s)) {
-    entry$duration_s <- trace$duration_s
+  if (is.null(entry$duration_s) && !is.null(metadata$duration_s)) {
+    entry$duration_s <- metadata$duration_s
   }
 
   # Extract model name
   entry$model <- trace$model %||% NA_character_
+  entry$program_artifact_id <- trace$program_artifact_id %||%
+    current_trace_program_artifact_id()
+  entry$trace_context <- trace$trace_context %||% current_trace_context()
+  entry$metadata <- trace_context_annotate_metadata(metadata)
 
   entry
 }
@@ -507,7 +528,9 @@ create_prompt_inspection <- function(entry) {
       cost = entry$cost %||% NA_real_,
       duration_s = entry$duration_s %||% NA_real_,
       timestamp = entry$timestamp %||% Sys.time(),
-      source = entry$source %||% "unknown"
+      source = entry$source %||% "unknown",
+      program_artifact_id = entry$program_artifact_id %||% NA_character_,
+      trace_context = entry$trace_context %||% list()
     ),
     class = "dsprrr_prompt_inspection"
   )

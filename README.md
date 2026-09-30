@@ -12,82 +12,42 @@ experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](h
 coverage](https://codecov.io/gh/JamesHWade/dsprrr/graph/badge.svg)](https://app.codecov.io/gh/JamesHWade/dsprrr)
 <!-- badges: end -->
 
-dsprrr adds signatures, optimization, and tracing on top of
-[ellmer](https://ellmer.tidyverse.org). It implements ideas from
-[DSPy](https://dspy.ai) for R.
+dsprrr lets you write LLM features in R as small programs instead of
+prompt strings. You declare a task’s inputs and typed outputs; dsprrr
+builds the prompt, calls the model through
+[ellmer](https://ellmer.tidyverse.org), and returns an R list with the
+types you asked for. Once you have labeled examples, you can score the
+program with a metric and let an optimizer tune its instructions and
+few-shot examples against that score. The design follows
+[DSPy](https://dspy.ai).
 
-**The problem:** Hand-tuned prompts are fragile. They break when you
-switch models, change requirements, or scale up. dsprrr treats prompts
-as programs that can be systematically improved using your data.
-
-**Use cases:**
-
-- RAG pipelines where you want to optimize retrieval + generation
-  together
-- Classification or extraction tasks with labeled examples to learn from
-- Multi-step agents where you need to trace what went wrong
-- Any LLM workflow you want to improve without manually rewriting
-  prompts
-
-**When to just use ellmer:** If you have a prompt that works and don’t
-need to optimize it with data. ellmer already tracks conversation
-history and token costs.
+If you have a prompt that already works and no data to measure it
+against, plain ellmer is enough. dsprrr earns its keep when you want
+typed outputs across many inputs, a score you can track, or a prompt
+tuned on examples instead of by hand.
 
 ## Installation
+
+dsprrr is not on CRAN yet. Install the development version from GitHub:
 
 ``` r
 # install.packages("pak")
 pak::pak("JamesHWade/dsprrr")
 ```
 
-## What dsprrr adds
+You also need credentials for a model provider, for example
+`OPENAI_API_KEY` in your `.Renviron`.
 
-### Signatures
+## Example
 
-A compact notation for defining LLM inputs and outputs:
+A signature names the inputs and outputs of a task:
 
 ``` r
 library(dsprrr)
-#> 
-#> Attaching package: 'dsprrr'
-#> The following object is masked from 'package:stats':
-#> 
-#>     step
-#> The following object is masked from 'package:methods':
-#> 
-#>     signature
 
-# Arrow notation: inputs -> output
-signature("question -> answer")
-#> 
-#> ── Signature ──
-#> 
-#> ── Inputs
-#> • question: "string" - Input: question
-#> 
-#> ── Output
-#> Type: "object(answer: string)"
-#> 
-#> ── Instructions
-#> Given the fields `question`, produce the fields `answer`.
-
-# Multiple inputs
-signature("context, question -> answer")
-#> 
-#> ── Signature ──
-#> 
-#> ── Inputs
-#> • context: "string" - Input: context
-#> • question: "string" - Input: question
-#> 
-#> ── Output
-#> Type: "object(answer: string)"
-#> 
-#> ── Instructions
-#> Given the fields `context`, `question`, produce the fields `answer`.
-
-# Typed outputs (uses ellmer types under the hood)
-signature("review -> rating: enum('1', '2', '3', '4', '5')")
+signature(
+  "review -> sentiment: enum('positive', 'negative', 'neutral'), stars: int, summary: string"
+)
 #> 
 #> ── Signature ──
 #> 
@@ -95,227 +55,83 @@ signature("review -> rating: enum('1', '2', '3', '4', '5')")
 #> • review: "string" - Input: review
 #> 
 #> ── Output
-#> Type: "object(rating: enum(1, 2, 3, 4, 5))"
+#> Type: "object(sentiment: enum(positive, negative, neutral), stars: integer,
+#> summary: string)"
 #> 
 #> ── Instructions
-#> Given the fields `review`, produce the fields `rating`.
-
-# With instructions
-signature("text -> summary", instructions = "Maximum 50 words.")
-#> 
-#> ── Signature ──
-#> 
-#> ── Inputs
-#> • text: "string" - Input: text
-#> 
-#> ── Output
-#> Type: "object(summary: string)"
-#> 
-#> ── Instructions
-#> Maximum 50 words.
+#> Given the fields `review`, produce the fields `sentiment`, `stars`, `summary`.
 ```
 
-### Modules
-
-Reusable, stateful wrappers around LLM calls:
+`module()` turns it into something you can run with any ellmer chat:
 
 ``` r
-library(ellmer)
+chat <- ellmer::chat_openai(model = "gpt-6-luna")
 
-# Create a module from a signature
-mod <- module(signature("text -> sentiment"), type = "predict")
+analyzer <- module(signature(
+  "review -> sentiment: enum('positive', 'negative', 'neutral'), stars: int, summary: string"
+))
 
-# Run it
-run(mod, text = "This is great!", .llm = chat_openai())
-
-# Or convert an existing Chat
-classifier <- chat_openai() |>
-  as_module("text -> sentiment: enum('positive', 'negative', 'neutral')")
-
-classifier$predict(text = "Terrible experience")
-```
-
-### Pipelines
-
-Chain modules together with the `%>>%` operator. Outputs flow
-automatically to inputs:
-
-``` r
-# Chain three modules together
-qa_pipeline <- mod_extract %>>% mod_answer %>>% mod_format
-
-# Run the pipeline
-result <- run(qa_pipeline, document = "...", .llm = chat_openai())
-
-# With explicit field mapping when names don't match
-rag_pipeline <- pipeline(
-  mod_retrieve,
-  step(mod_answer, map = c(documents = "context")),
-  mod_summarize
-)
-```
-
-### Optimization
-
-Automatically improve programs using training data. dsprrr implements
-several optimizers inspired by DSPy:
-
-- **LabeledFewShot**: Add examples from your training set as
-  demonstrations
-- **MIPROv2**: Joint optimization of instructions and examples using
-  Bayesian search
-- **GEPA**: Reflection-based complete-program optimization with
-  validation-example and multi-objective Pareto selection
-- **AutoResearch and MetaHarness**: Agentic, sandboxed search over
-  multi-module instructions and templates
-
-`flex()` gives GEPA a different search target: not only what a predictor
-says, but how the module executes. It can vary predictor choice, control
-flow, deterministic R, and selected tools.
-
-``` r
-# Compile with few-shot examples
-optimized <- compile(
-  LabeledFewShot(k = 3),
-  mod,
-  trainset = my_labeled_data
-)
-
-# Grid search over parameters
-mod$optimize_grid(
-  devset = dev_data,
-  metric = metric_exact_match(),
-  parameters = list(temperature = c(0.1, 0.5, 1.0))
-)
-```
-
-### Tracing
-
-ellmer tracks individual chat history and costs. dsprrr adds
-module-level traces across pipelines—useful for debugging multi-step
-workflows:
-
-``` r
-mod$trace_summary()
-export_traces(mod)
-```
-
-## Quick example
-
-``` r
-library(dsprrr)
-library(ellmer)
-
-# Define what you want
-sig <- signature(
-  "context, question -> answer",
-  instructions = "Answer based only on the given context."
-)
-
-# Create a module
-mod <- module(sig, type = "predict")
-
-# Run it
 result <- run(
-  mod,
-  context = "R is a programming language for statistical computing.",
-  question = "What is R used for?",
-  .llm = chat_openai()
+  analyzer,
+  review = "I've been using this blender for 6 months now. It's incredibly powerful and easy to clean. The only downside is it's quite loud. Overall, I'm very happy with it.",
+  .llm = chat
 )
+str(result)
+#> List of 3
+#>  $ sentiment: chr "positive"
+#>  $ stars    : int 4
+#>  $ summary  : chr "Powerful and easy-to-clean blender, but a bit loud."
 ```
 
-## Module types
+That output was recorded from a real call to `gpt-4.1` in the
+[structured outputs
+tutorial](https://jameshwade.github.io/dsprrr/articles/tutorial-structured-outputs.html);
+`gpt-6-luna` may word the summary differently.
 
-| Type | Use case |
-|----|----|
-| `predict` | Basic text generation |
-| `react` | Tool use (wraps ellmer tools) |
-| `chain_of_thought` | Step-by-step reasoning |
-| `multichain` | Ensemble reasoning with multiple chains |
-| `program_of_thought` | Generate and execute R code |
-| `codeact` | Combine tools with R code execution |
-| `rlm` | Explore large context through an R REPL |
-| `flex` | Let GEPA optimize how a module uses predictors, R logic, and selected tools (experimental) |
+To measure and improve a module, give it labeled rows and a metric:
 
 ``` r
-# ReAct agent with tools
-agent <- module(
-  signature("question -> answer"),
-  type = "react",
-  tools = list(my_search_tool)
+scores <- evaluate(
+  analyzer,
+  labeled_reviews,
+  metric = metric_exact_match(field = "sentiment"),
+  .llm = chat
 )
+scores$mean_score
 
-# Chain of thought
-mod <- module(signature("question -> answer"), type = "chain_of_thought")
+optimized <- analyzer |>
+  compile(
+    BootstrapFewShot(metric = metric_exact_match(field = "sentiment")),
+    trainset = labeled_reviews,
+    .llm = chat
+  )
 ```
 
-### Optimize the program, not only the prompt
+## What’s included
 
-Most optimizers improve instructions inside a workflow you designed.
-`flex()` lets GEPA change the workflow itself: which predictors run,
-where deterministic R is enough, and when to call a selected tool.
+| Area                 | Functions                                                                                                                          |
+|----------------------|------------------------------------------------------------------------------------------------------------------------------------|
+| Define tasks         | `signature()`, `input()`, `with_instructions()`                                                                                    |
+| Run them             | `module()`, `run()`, `run_dataset()`, `run_async()`, `run_stream()`                                                                |
+| Other ways to answer | `chain_of_thought()`, `react()`, `best_of_n()`, `refine()`, `ensemble()`, `program_of_thought()`, `code_act()`                     |
+| Compose              | `pipeline()`, `%>>%`, `module_fn()`                                                                                                |
+| Measure              | `evaluate()`, `metric_exact_match()`, `metric_f1()`, vitals bridges                                                                |
+| Optimize             | `compile()` with `LabeledFewShot()`, `BootstrapFewShot()`, `MIPROv2()`, `GEPA()`, `COPRO()`, `SIMBA()` and more; `optimize_grid()` |
+| Inspect              | `get_last_prompt()`, `inspect_history()`, `summarize_traces()`, `session_cost()`                                                   |
+| Save                 | `save_program()`, `pin_module_config()`                                                                                            |
 
-The worked example begins with a support router that asks a model about
-every ticket. In a deterministic GEPA replay, Flex selects a hybrid:
-known incident codes use a catalog lookup; ambiguous prose still uses a
-predictor. It preserves holdout accuracy while cutting predictor calls
-in half.
+Experimental: `rlm_module()` (a model explores a large R object by
+writing code), `flex()` (GEPA rewrites a whole program),
+`with_decisions()` and `ReAnchor()` (calibrated decisions), `Omni()` and
+agentic optimization harnesses.
 
-> Flex did not find a better prompt. It found that half the tickets did
-> not need one.
+## Learn more
 
-Executable candidates require a fresh OS-sandboxed interpreter. See
-[Flex: Optimize the Whole
-Program](https://jameshwade.github.io/dsprrr/articles/flex-optimization.html)
-for the complete demo, and [Advanced
-Modules](https://jameshwade.github.io/dsprrr/articles/advanced-modules.html)
-for code-runner ownership and async support.
-
-## ellmer compatibility
-
-dsprrr uses ellmer for all LLM calls. The integration is
-straightforward:
-
-| ellmer                         | dsprrr equivalent               |
-|--------------------------------|---------------------------------|
-| `chat_openai()`                | Pass to `run(..., .llm = )`     |
-| `type_string()`, `type_enum()` | Used inside signatures          |
-| `tool()`                       | Pass to `module(..., tools = )` |
-| `chat$chat_structured()`       | `dsp(chat, signature, ...)`     |
-
-## Learning more
-
-**Start here:** - [Getting
-Started](https://jameshwade.github.io/dsprrr/articles/getting-started.html)
-— Choose your learning path
-
-**Tutorial sequence** (learn step by step): 1. [Your First LLM
-Call](https://jameshwade.github.io/dsprrr/articles/tutorial-hello-world.html)
-2. [Building a
-Classifier](https://jameshwade.github.io/dsprrr/articles/tutorial-build-classifier.html)
-3. [Structured
-Outputs](https://jameshwade.github.io/dsprrr/articles/tutorial-structured-outputs.html)
-4. [Improving with
-Examples](https://jameshwade.github.io/dsprrr/articles/tutorial-improve-with-demos.html)
-5.
-[Optimization](https://jameshwade.github.io/dsprrr/articles/tutorial-optimize-your-module.html)
-6.
-[Production](https://jameshwade.github.io/dsprrr/articles/tutorial-deploy-to-production.html)
-
-**How-to guides:** - [Compile &
-Optimize](https://jameshwade.github.io/dsprrr/articles/compilation-optimization.html) -
-[Build RAG
-Pipelines](https://jameshwade.github.io/dsprrr/articles/rag-workflows.html)
-
-**Concepts:** - [The DSPy
-Philosophy](https://jameshwade.github.io/dsprrr/articles/concepts-dspy-philosophy.html) -
-[How Optimization
-Works](https://jameshwade.github.io/dsprrr/articles/concepts-optimization-theory.html)
-
-**Reference:** - [Quick
-Reference](https://jameshwade.github.io/dsprrr/articles/cheatsheet.html) -
-[API
-Documentation](https://jameshwade.github.io/dsprrr/reference/index.html)
+The [documentation site](https://jameshwade.github.io/dsprrr/) has six
+tutorials that start from a first call ([Tutorial
+1](https://jameshwade.github.io/dsprrr/articles/tutorial-hello-world.html)),
+how-to guides, concept articles, and a [guide for DSPy
+users](https://jameshwade.github.io/dsprrr/articles/dspy-comparison.html).
 
 ## Status
 

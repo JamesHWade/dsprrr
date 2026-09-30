@@ -4,59 +4,91 @@
 # Generates multiple candidate programs with different configurations and
 # selects the best based on validation set performance.
 
-#' BootstrapFewShotWithRandomSearch Teleprompter
+#' BootstrapFewShot with random search over candidate programs
 #'
 #' @include teleprompter.R teleprompter-bootstrap.R optimizer-core.R optimizer-logging.R
 #'
 #' @description
-#' A teleprompter that extends BootstrapFewShot with random search over
-#' multiple candidate programs. It generates several candidate configurations
-#' and selects the best based on validation set performance.
+#' `BootstrapFewShotWithRandomSearch()` compiles several candidate programs,
+#' scores each one on a validation set, and returns the best. Use it when a
+#' single [BootstrapFewShot()] run is too sensitive to which demonstrations it
+#' happens to collect. [compile()] requires a `valset`.
 #'
-#' The optimizer generates candidates including:
-#' 1. Uncompiled baseline program
-#' 2. LabeledFewShot-only program
-#' 3. BootstrapFewShot with unshuffled examples
-#' 4. BootstrapFewShot with various random seeds
+#' @details
+#' `num_candidate_programs` candidates are built in this order:
 #'
-#' @param metric A metric function for evaluating predictions (required).
-#' @param metric_threshold Minimum score for a demo to be accepted.
-#'   If NULL, accepts any successful prediction. Default is NULL.
-#' @param max_errors Maximum number of errors allowed during optimization.
-#'   Default is 10.
-#' @param num_candidate_programs Number of candidate programs to generate.
-#'   Default is 16.
-#' @param num_threads Number of threads for parallel evaluation. If 1,
-#'   runs sequentially. Default is 1.
-#' @param stop_at_score Early stopping threshold. If a candidate achieves
-#'   this score or higher, stop searching. Default is NULL (no early stop).
-#' @param max_bootstrapped_demos Maximum bootstrapped demos per candidate.
-#'   Default is 4.
-#' @param max_labeled_demos Maximum labeled demos per candidate.
-#'   Default is 16.
-#' @param max_rounds Number of bootstrap rounds per candidate. Default is 1.
-#' @param teacher_settings List of settings for the teacher model.
-#'   If NULL, defaults to `list(temperature = 0.7)`.
-#' @param seed Random seed for reproducibility. Default is NULL.
-#' @param log_dir Directory for trial logging. Default is NULL.
+#' 1. `baseline`: the uncompiled program.
+#' 2. `labeled_only`: [LabeledFewShot()] with `k = max_labeled_demos`.
+#' 3. `bootstrap_unshuffled`: [BootstrapFewShot()] with the settings below.
+#' 4. `bootstrap_seed_<n>`: further [BootstrapFewShot()] runs, each given a
+#'    random seed.
 #'
+#' Each candidate is scored on `valset`, and the highest mean score wins (ties
+#' go to the earlier candidate). BootstrapFewShot does not currently shuffle
+#' the training rows, so the seeded candidates see the rows in the same order
+#' and differ only when the model's outputs differ. With dsprrr's response
+#' cache on, repeated identical requests return identical outputs.
+#'
+#' The ranked candidates are stored in
+#' `optimization_result(compiled)$extensions$bootstrap_few_shot_with_random_search$candidate_programs`.
+#' Programs containing Flex or RLM modules are rejected.
+#'
+#' @param metric A metric function (required), such as
+#'   `metric_exact_match(field = "answer")`. It scores candidates on `valset`
+#'   and is passed to each [BootstrapFewShot()] candidate.
+#' @param metric_threshold Passed to each [BootstrapFewShot()] candidate: the
+#'   minimum score for a bootstrapped output to become a demonstration. `NULL`
+#'   (the default) keeps any output that scores above 0.
+#' @param max_errors Integer; stop after this many consecutive failed
+#'   evaluations when [compile()] gets no `control` (default `5L`).
+#' @param num_candidate_programs Integer number of candidates, including the
+#'   three fixed ones (default `16L`).
+#' @param num_threads Integer number of validation rows scored at the same time
+#'   (default `1L`, sequential). Ignored when [compile()] gets a `control`,
+#'   whose own `num_threads` applies.
+#' @param stop_at_score Stop as soon as a candidate scores at least this value,
+#'   or `NULL` (the default) to score every candidate.
+#' @param max_bootstrapped_demos,max_labeled_demos,max_rounds,teacher_settings
+#'   Passed to each [BootstrapFewShot()] candidate (defaults `4L`, `16L`, `1L`
+#'   and `NULL`). `teacher_settings` is currently not applied.
+#' @param seed Integer seed, such as `42L`, used to draw the candidates' seeds
+#'   and to sample the `labeled_only` demonstrations. A double such as `42`
+#'   currently makes the `labeled_only` candidate fail with a warning.
+#' @param log_dir Directory for a [TrialLog] with one trial per scored
+#'   candidate, or `NULL` (the default).
+#'
+#' @return A `BootstrapFewShotWithRandomSearch` object to pass to [compile()].
+#' @family teleprompters
 #' @export
 #'
 #' @examples
-#' \dontrun{
-#' # Create a BootstrapFewShotWithRandomSearch teleprompter
 #' tp <- BootstrapFewShotWithRandomSearch(
 #'   metric = metric_exact_match(field = "answer"),
-#'   num_candidate_programs = 8L,
-#'   num_threads = 4L,
-#'   stop_at_score = 0.95
+#'   num_candidate_programs = 6L,
+#'   max_labeled_demos = 2L,
+#'   stop_at_score = 0.95,
+#'   seed = 42L
 #' )
+#' tp
 #'
-#' # Compile with validation set (required)
-#' compiled <- compile(tp, qa_module, trainset, valset = valset, .llm = llm)
-#'
-#' # Access ranked candidates
-#' compiled$config$optimizer$candidate_programs
+#' \dontrun{
+#' qa <- module(signature("question -> answer"))
+#' trainset <- data.frame(
+#'   question = c("Capital of France?", "Capital of Peru?", "Capital of Chad?"),
+#'   answer = c("Paris", "Lima", "N'Djamena")
+#' )
+#' valset <- data.frame(
+#'   question = c("Capital of Japan?", "Capital of Kenya?"),
+#'   answer = c("Tokyo", "Nairobi")
+#' )
+#' compiled <- compile(
+#'   qa,
+#'   tp,
+#'   trainset,
+#'   valset = valset,
+#'   .llm = ellmer::chat_openai(model = "gpt-6-luna")
+#' )
+#' top_trials(compiled)
 #' }
 BootstrapFewShotWithRandomSearch <- S7::new_class(
   "BootstrapFewShotWithRandomSearch",
@@ -198,6 +230,10 @@ compile_bootstrap_rs <- function(
       "BootstrapFewShotWithRandomSearch currently only supports Module objects"
     )
   }
+  bootstrap_assert_demo_eligible(
+    program,
+    optimizer_name = "BootstrapFewShotWithRandomSearch"
+  )
 
   if (!is.data.frame(trainset)) {
     cli::cli_abort("{.arg trainset} must be a data frame")
@@ -282,6 +318,7 @@ compile_bootstrap_rs <- function(
   best_candidate <- NULL
   best_program <- NULL
   partial_program <- copy_module(program)
+  threshold_reached <- FALSE
 
   for (i in seq_along(candidates)) {
     if (optimizer_budget_stopped(budget)) {
@@ -524,6 +561,22 @@ compile_bootstrap_rs <- function(
         !is.na(score) &&
         score >= teleprompter@stop_at_score
     ) {
+      optimizer_budget_set_stop(
+        budget,
+        optimizer_budget_reason(
+          code = "stop_at_score",
+          stage = "bootstrap_rs_validation",
+          resource = "score",
+          limit = teleprompter@stop_at_score,
+          observed = score,
+          unit_id = validation_unit_id,
+          message = sprintf(
+            "Reached target score (%s)",
+            format(teleprompter@stop_at_score)
+          )
+        )
+      )
+      threshold_reached <- TRUE
       cli::cli_alert_success(
         "Early stop: reached target score {teleprompter@stop_at_score}"
       )
@@ -576,32 +629,50 @@ compile_bootstrap_rs <- function(
     }
   }
 
-  # Update program state
-  best_program$state$compiled <- TRUE
-  best_program$config$compiled <- TRUE
-  best_program$config$teleprompter <- "BootstrapFewShotWithRandomSearch"
   budget_summary <- optimizer_budget_summary(budget)
-  best_program$config$optimizer <- list(
-    num_candidates_evaluated = length(results),
-    best_candidate = if (!is.null(best_candidate)) {
-      best_candidate$name
+  candidate_programs <- lapply(ranked_results, function(r) {
+    list(
+      name = r$name,
+      score = r$score,
+      config = r$config,
+      complete = isTRUE(r$complete),
+      error = r$error_message %||% NA_character_
+    )
+  })
+  candidate_trials <- tibble::tibble(
+    trial_id = seq_along(candidate_programs),
+    name = vapply(candidate_programs, `[[`, character(1), "name"),
+    score = vapply(candidate_programs, `[[`, numeric(1), "score"),
+    parameters = lapply(candidate_programs, `[[`, "config"),
+    complete = vapply(candidate_programs, `[[`, logical(1), "complete"),
+    error = vapply(candidate_programs, `[[`, character(1), "error")
+  )
+  best_name <- if (!is.null(best_candidate)) {
+    best_candidate$name
+  } else {
+    NA_character_
+  }
+  best_trial <- match(best_name, candidate_trials$name)
+  record_optimization_result(
+    best_program,
+    optimizer = "BootstrapFewShotWithRandomSearch",
+    status = if (optimizer_budget_stopped(budget) && !threshold_reached) {
+      "partial"
     } else {
-      NA_character_
+      "completed"
     },
-    best_score = if (is.finite(best_score)) best_score else NA_real_,
-    best_complete = !is.null(best_candidate),
-    candidate_programs = lapply(ranked_results, function(r) {
-      list(
-        name = r$name,
-        score = r$score,
-        config = r$config,
-        complete = isTRUE(r$complete)
-      )
-    }),
-    error_count = budget_summary$total_errors,
-    budget_summary = budget_summary,
-    stop_reason = budget_summary$stop_reason,
-    partial = optimizer_budget_stopped(budget)
+    best_score = if (is.finite(best_score)) best_score else NULL,
+    best_trial = if (is.na(best_trial)) NULL else best_trial,
+    best_params = best_candidate %||% list(),
+    trials = candidate_trials,
+    lineage = list(best_candidate = best_name),
+    budget = budget_summary,
+    stop_reason = optimization_stop_reason(budget_summary),
+    extensions = list(
+      num_candidates_evaluated = length(results),
+      best_complete = !is.null(best_candidate),
+      candidate_programs = candidate_programs
+    )
   )
 
   best_program
@@ -692,7 +763,7 @@ compile_candidate <- function(
       sample = TRUE,
       seed = config$seed %||% 123L
     )
-    compiled <- compile(tp, program, trainset)
+    compiled <- compile(program, tp, trainset)
     compiled$config$candidate_type <- "labeled"
     return(compiled)
   }
@@ -710,8 +781,8 @@ compile_candidate <- function(
       seed = config$seed
     )
     compiled <- compile(
-      tp,
       program,
+      tp,
       trainset,
       .llm = .llm,
       control = control,
@@ -728,11 +799,8 @@ compile_candidate <- function(
   cli::cli_abort("Unknown candidate type: {config$type}")
 }
 
-#' Print method for BootstrapFewShotWithRandomSearch
-#' @param x A BootstrapFewShotWithRandomSearch object
-#' @param ... Additional arguments (unused)
-#' @export
-print.BootstrapFewShotWithRandomSearch <- function(x, ...) {
+# Print a BootstrapFewShotWithRandomSearch object through its S7 method.
+print_bootstrap_few_shot_random_search <- function(x, ...) {
   cli::cli_h3("BootstrapFewShotWithRandomSearch Teleprompter")
 
   cli::cli_text("{.field num_candidate_programs}: {x@num_candidate_programs}")
@@ -755,7 +823,3 @@ print.BootstrapFewShotWithRandomSearch <- function(x, ...) {
 
   invisible(x)
 }
-
-# Register S7 print method
-S7::method(print, BootstrapFewShotWithRandomSearch) <-
-  print.BootstrapFewShotWithRandomSearch

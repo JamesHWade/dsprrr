@@ -1,63 +1,96 @@
 # SIMBA Teleprompter
 #
-# Self-improving optimization via hard example mining.
+# Stochastic introspective mini-batch ascent, adapted to dsprrr.
 
-#' SIMBA Teleprompter
+#' SIMBA: stochastic introspective mini-batch ascent
 #'
 #' @include teleprompter.R optimizer-core.R optimizer-logging.R
 #'
 #' @description
-#' SIMBA (self-improving via hard example mining) iteratively samples
-#' mini-batches, identifies high-variability examples, and generates
-#' improvement rules or demonstrations to improve performance.
-#'
-#' The optimizer:
-#' 1. Evaluates baseline performance on the training set (or validation set).
-#' 2. Repeats for up to `max_steps`:
-#'    - Samples a mini-batch
-#'    - Runs multiple candidates to measure variability
-#'    - Identifies hard examples
-#'    - Generates a rule and/or adds demos
-#'    - Evaluates improvement and keeps changes if better
+#' `SIMBA()` finds the training rows the program struggles with, turns them
+#' into an instruction rule and demonstrations, and keeps the change when the
+#' program's score improves. Each step works on a random mini-batch, which is
+#' where the name (stochastic introspective mini-batch ascent) comes from.
 #'
 #' @details
+#' The program is first scored on `valset` (or `trainset`). Each of up to
+#' `max_steps` steps then:
+#'
+#' 1. Samples `bsize` rows of `trainset` and runs the current program on them
+#'    `num_candidates` times.
+#' 2. Rates each row's difficulty as one minus its mean score plus the share
+#'    of runs that disagree with the most common output, and takes the
+#'    hardest rows (at most `max_demos`).
+#' 3. Asks `prompt_model` for a rule based on those rows and appends it to the
+#'    instructions. Without `prompt_model`, the rule is the first hard row
+#'    written out, as in `SIMBA rule: question: ..., expected: ...`.
+#' 4. Adds the hard rows as demonstrations, keeping the latest `max_demos`.
+#' 5. Scores the changed program and keeps it only if the score improves.
+#'
+#' The search stops at the first step that does not improve the score. With
+#' dsprrr's response cache on (the default), the repeated runs in step 1
+#' return the same cached output, so difficulty reduces to one minus the mean
+#' score; call `configure_cache(enable = FALSE)` to measure disagreement.
+#'
 #' ## Differences from DSPy's SIMBA
 #'
-#' This is an adapted implementation: it mines hard (high-variability)
-#' examples and asks an LLM to generate improvement rules, but it does not
-#' reproduce every detail of DSPy's stochastic introspective mini-batch
-#' ascent (e.g., trajectory-level introspection across candidate programs).
-#' Expect qualitatively similar behavior, not identical results.
+#' This is an adapted implementation. It mines hard examples and asks a model
+#' for improvement rules, but it does not reproduce every detail of DSPy's
+#' SIMBA, such as introspection over trajectories of several candidate
+#' programs. Expect similar behavior, not identical results.
 #'
-#' @param metric A metric function for evaluating predictions (required).
-#' @param metric_threshold Minimum score required to be considered successful.
-#'   If NULL, uses the metric's default threshold.
-#' @param max_errors Maximum number of errors allowed during optimization.
-#'   Default is 5.
-#' @param bsize Mini-batch size for hard example mining. Default is 32.
-#' @param num_candidates Number of candidate runs per example to measure
-#'   variability. Default is 6.
-#' @param max_steps Maximum number of optimization steps. Default is 8.
-#' @param max_demos Maximum number of demonstrations to keep. Default is 4.
-#' @param prompt_model Optional LLM for rule generation (reflection).
-#' @param seed Random seed for reproducibility. Default is 0.
-#' @param log_dir Directory for trial logging. Default is NULL.
+#' @param metric A metric function (required), such as
+#'   `metric_exact_match(field = "answer")`. Its `field` also names the column
+#'   that supplies the demonstrations' outputs.
+#' @param metric_threshold Accepted for consistency with the other optimizers
+#'   (see [Teleprompter()]). SIMBA prints it but does not use it.
+#' @param max_errors Integer; stop after this many consecutive failed
+#'   evaluations when [compile()] gets no `control` (default `5L`).
+#' @param bsize Integer mini-batch size (default `32L`, capped at the number
+#'   of training rows).
+#' @param num_candidates Integer number of runs per mini-batch (default `6L`).
+#' @param max_steps Integer maximum number of steps (default `8L`).
+#' @param max_demos Integer maximum number of demonstrations kept, and of hard
+#'   rows taken per step (default `4L`).
+#' @param prompt_model Optional ellmer Chat that writes the rules. SIMBA calls
+#'   its `$chat()` method directly, so its conversation history grows during
+#'   the run. `NULL` (the default) uses the fixed rule described in Details.
+#' @param seed Seed for the mini-batch samples (default `0L`), or `NULL`.
+#' @param log_dir Directory for a [TrialLog] with one trial per kept step, or
+#'   `NULL` (the default).
 #'
+#' @return A `SIMBA` object to pass to [compile()].
+#' @family teleprompters
 #' @export
 #'
 #' @examples
-#' \dontrun{
 #' tp <- SIMBA(
 #'   metric = metric_exact_match(field = "answer"),
-#'   bsize = 32L,
-#'   num_candidates = 6L,
-#'   max_steps = 8L,
-#'   max_demos = 4L,
-#'   prompt_model = ellmer::chat_openai(),
-#'   seed = 0L
+#'   bsize = 8L,
+#'   num_candidates = 4L,
+#'   max_steps = 4L,
+#'   max_demos = 2L
 #' )
+#' tp
 #'
-#' compiled <- compile(tp, qa_module, trainset, .llm = llm)
+#' \dontrun{
+#' qa <- module(signature("question -> answer"))
+#' trainset <- data.frame(
+#'   question = c("Capital of France?", "Capital of Peru?", "Capital of Chad?"),
+#'   answer = c("Paris", "Lima", "N'Djamena")
+#' )
+#' tp <- SIMBA(
+#'   metric = metric_exact_match(field = "answer"),
+#'   bsize = 8L,
+#'   prompt_model = ellmer::chat_openai(model = "gpt-6-luna")
+#' )
+#' compiled <- compile(
+#'   qa,
+#'   tp,
+#'   trainset,
+#'   .llm = ellmer::chat_openai(model = "gpt-6-luna")
+#' )
+#' optimization_result(compiled)$extensions$simba$rules
 #' }
 SIMBA <- S7::new_class(
   "SIMBA",
@@ -110,16 +143,10 @@ SIMBA <- S7::new_class(
         if (is.null(value)) {
           return(NULL)
         }
-        if (is.function(value)) {
+        if (is_ellmer_chat(value)) {
           return(NULL)
         }
-        if (inherits(value, "Chat")) {
-          return(NULL)
-        }
-        if (is.list(value) && "chat_structured" %in% names(value)) {
-          return(NULL)
-        }
-        "prompt_model must be NULL, a function, a Chat object, or a list with chat_structured method"
+        "prompt_model must be NULL or an ellmer Chat R6 object"
       }
     ),
     seed = S7::new_property(
@@ -242,6 +269,14 @@ compile_simba <- function(
   )
   best_score <- best_eval@mean_score
   best_complete <- optimizer_budget_unit_completed(budget, "simba:baseline")
+  trial_records <- list(tibble::tibble(
+    trial_id = 1L,
+    step = 0L,
+    score = best_score,
+    complete = best_complete,
+    rule = NA_character_,
+    demos_added = 0L
+  ))
 
   rules <- character()
   added_demos <- list()
@@ -347,6 +382,14 @@ compile_simba <- function(
       budget,
       candidate_unit_id
     )
+    trial_records[[length(trial_records) + 1L]] <- tibble::tibble(
+      trial_id = length(trial_records) + 1L,
+      step = step,
+      score = score,
+      complete = candidate_complete,
+      rule = rule_text %||% NA_character_,
+      demos_added = length(new_demos)
+    )
 
     improved <- candidate_complete &&
       !is.na(score) &&
@@ -384,20 +427,33 @@ compile_simba <- function(
     }
   }
 
-  best_program$state$compiled <- TRUE
-  best_program$config$compiled <- TRUE
-  best_program$config$teleprompter <- "SIMBA"
   budget_summary <- optimizer_budget_summary(budget)
-  best_program$config$optimizer <- list(
-    steps = teleprompter@max_steps,
+  trials <- do.call(rbind, trial_records)
+  best_trial <- if (nrow(trials) > 0L) {
+    which.max(replace(trials$score, is.na(trials$score), -Inf))
+  } else {
+    NULL
+  }
+  record_optimization_result(
+    best_program,
+    optimizer = "SIMBA",
+    status = if (optimizer_budget_stopped(budget)) "partial" else "completed",
+    baseline_score = best_eval@mean_score,
     best_score = best_score,
-    best_complete = best_complete,
-    rules = rules,
-    demos_added = added_demos,
-    error_count = budget_summary$total_errors,
-    budget_summary = budget_summary,
-    stop_reason = budget_summary$stop_reason,
-    partial = optimizer_budget_stopped(budget)
+    best_trial = best_trial,
+    best_params = list(
+      rules_added = length(rules),
+      demos_added = length(added_demos)
+    ),
+    trials = trials,
+    budget = budget_summary,
+    stop_reason = optimization_stop_reason(budget_summary),
+    extensions = list(
+      steps = teleprompter@max_steps,
+      best_complete = best_complete,
+      rules = rules,
+      demos = added_demos
+    )
   )
 
   best_program
@@ -601,8 +657,7 @@ generate_simba_rule <- function(
     return(request$value)
   }
 
-  if (inherits(prompt_model, "Chat")) {
-    # Handle ellmer Chat objects (e.g., from chat_openai())
+  if (!is.null(prompt_model)) {
     rule <- tryCatch(
       prompt_model$chat(prompt),
       error = function(e) {
@@ -617,47 +672,6 @@ generate_simba_rule <- function(
         NULL
       }
     )
-  } else if (is.function(prompt_model)) {
-    rule <- tryCatch(
-      prompt_model(prompt),
-      error = function(e) {
-        cli::cli_warn(
-          c(
-            "SIMBA prompt_model function failed to generate rule",
-            "x" = conditionMessage(e),
-            "i" = "Falling back to example-based rule"
-          ),
-          class = "dsprrr_simba_rule_warning"
-        )
-        NULL
-      }
-    )
-  } else if (is.list(prompt_model) && !is.null(prompt_model$chat_structured)) {
-    response <- tryCatch(
-      prompt_model$chat_structured(prompt, ellmer::type_string()),
-      error = function(e) {
-        cli::cli_warn(
-          c(
-            "SIMBA prompt_model chat_structured call failed",
-            "x" = conditionMessage(e),
-            "i" = "Falling back to example-based rule"
-          ),
-          class = "dsprrr_simba_rule_warning"
-        )
-        NULL
-      }
-    )
-    if (!is.null(response)) {
-      if (is.character(response)) {
-        rule <- response
-      } else if (is.list(response)) {
-        if ("rule" %in% names(response)) {
-          rule <- response$rule
-        } else {
-          rule <- response[[1]]
-        }
-      }
-    }
   }
 
   if (is.null(rule) || !nzchar(rule)) {
@@ -756,11 +770,8 @@ simba_safe_metric <- function(metric, prediction, row) {
   )
 }
 
-#' Print method for SIMBA
-#' @param x A SIMBA object
-#' @param ... Additional arguments (unused)
-#' @export
-print.SIMBA <- function(x, ...) {
+# Print a SIMBA object through its S7 method.
+print_simba <- function(x, ...) {
   cli::cli_h3("SIMBA Teleprompter")
 
   cli::cli_text("{.field bsize}: {x@bsize}")
@@ -778,5 +789,3 @@ print.SIMBA <- function(x, ...) {
 
   invisible(x)
 }
-
-S7::method(print, SIMBA) <- print.SIMBA

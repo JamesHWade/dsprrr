@@ -2,42 +2,52 @@
 % Please edit documentation in R/optimizer-accessors.R
 \name{top_trials}
 \alias{top_trials}
-\title{Get Top Performing Trials}
+\title{Highest-scoring optimization trials}
 \usage{
 top_trials(x, k = 5L, objective = c("maximize", "minimize"))
 }
 \arguments{
-\item{x}{A DSPrrr module with optimization trials, or a TrialLog object.}
+\item{x}{A module returned by \code{\link[=compile]{compile()}} or modified by \code{\link[=optimize_grid]{optimize_grid()}},
+or a \link{TrialLog}.}
 
-\item{k}{Integer; number of top trials to return. Default is 5.}
+\item{k}{Integer number of trials to return (default \code{5L}).}
 
-\item{objective}{Optimization direction: "maximize" (default) or "minimize".}
+\item{objective}{\code{"maximize"} (the default) sorts the highest scores first;
+\code{"minimize"} sorts the lowest first.}
 }
 \value{
-A tibble with the top k trials, including trial_id, score,
-parameters, and other trial metadata.
+A tibble with the top \code{k} trials. Modules are sorted by \code{score}
+(or \code{mean_score}), trial logs by \code{mean_score}. When there are no trials,
+a warning and an empty tibble.
 }
 \description{
-Extract the top k trials from a module's optimization history or
-a TrialLog, ranked by score.
+\code{top_trials()} returns the \code{k} best trials of an optimized module, taken
+from \code{optimization_result(x)$trials}, or of a \link{TrialLog}.
 }
 \examples{
-if (FALSE) {
-# Get top 3 trials from module
-top_trials(mod, k = 3)
+\dontrun{
+classifier <- module(signature("text -> sentiment"))
+optimize_grid(
+  classifier,
+  data = devset,
+  metric = metric_exact_match(field = "sentiment"),
+  grid = data.frame(reasoning_effort = c("none", "low", "medium")),
+  .llm = ellmer::chat_openai(model = "gpt-6-luna")
+)
+top_trials(classifier, k = 2L)
 
-# Get top trials from a TrialLog
-log <- load_trial_log("path/to/logs")
-top_trials(log, k = 10, objective = "minimize")
+# Trials saved by an optimizer's `log_dir`
+top_trials(load_trial_log("logs/my-run"), k = 10L)
 }
 }
 \seealso{
-Other optimizer accessors:
+Other optimization results:
 \code{\link[=apply_best_config]{apply_best_config()}},
 \code{\link[=best_demos]{best_demos()}},
 \code{\link[=best_params]{best_params()}},
 \code{\link[=config_diff]{config_diff()}},
 \code{\link[=export_module_code]{export_module_code()}},
+\code{\link[=optimization_result]{optimization_result()}},
 \code{\link[=optimization_summary]{optimization_summary()}}
 }
-\concept{optimizer accessors}
+\concept{optimization results}

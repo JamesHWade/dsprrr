@@ -2,52 +2,65 @@
 #
 # Best-of exploration followed by a fresh continuation optimizer.
 
-#' Omni Teleprompter
+#' Omni: explore with several optimizers, then continue from the best
 #'
 #' @include teleprompter.R optimizer-core.R teleprompter-better-together.R
 #'
 #' @description
-#' A meta-teleprompter that explores several optimization strategies from the
-#' same seed program, compares their outputs with one shared validation metric,
-#' and seeds a fresh continuation optimizer from the winner.
+#' `Omni()` runs several optimizers (the explorers) independently from the same
+#' program, scores each result on one validation set, and then runs a
+#' `continuation` optimizer from the winner. The original program stays a
+#' candidate throughout, so an explorer or continuation that makes things
+#' worse cannot replace a better program.
 #'
-#' Inspired by the Omni meta-optimizer from the
-#' [GEPA project](https://github.com/gepa-ai/gepa), this adapts the explore,
-#' pick-best, and continue pattern described in the
-#' [GEPA Omni
-#' announcement](https://gepa-ai.github.io/gepa/blog/2026/07/22/optimize-anything-omni/)
-#' to dsprrr modules. The original program remains a candidate throughout, so a
-#' regressing explorer or continuation step cannot replace a better program.
+#' @details
+#' Omni adapts the explore, pick-best and continue pattern of the Omni
+#' meta-optimizer in the [GEPA project](https://github.com/gepa-ai/gepa),
+#' described in the
+#' [GEPA Omni announcement](https://gepa-ai.github.io/gepa/blog/2026/07/22/optimize-anything-omni/).
 #'
-#' `Omni()` does not impose a common budget because dsprrr teleprompters expose
-#' different native budget controls. Configure comparable budgets on the
-#' explorer objects before constructing `Omni()`. Common validation re-scoring
-#' of the seed, each explorer result, and the continuation result is additional
-#' evaluation work outside those native optimizer budgets.
+#' Omni needs validation data: pass `valset` to [compile()], or it holds out
+#' `floor(valset_ratio * nrow(trainset))` rows and stops with an error when
+#' that is zero. The seed program, every explorer result and the continuation
+#' result are all scored on it, and the highest score wins.
 #'
-#' @param metric Metric function used to compare every candidate on the same
-#'   validation set.
-#' @param explorers Named list of at least two [Teleprompter] objects. Every
-#'   explorer starts from an independent copy of the input program.
-#' @param continuation A [Teleprompter] object run from the best exploration
+#' Omni sets no shared budget, because each optimizer has its own budget
+#' controls. Give the explorers comparable budgets before building `Omni()`.
+#' The validation scoring is extra work on top of those budgets.
+#'
+#' [compile()] accepts extra arguments for this optimizer:
+#' `explorer_compile_args` (a list, named by explorer, of further arguments for
+#' that explorer's [compile()] call), `continuation_compile_args`, and
+#' `valset_ratio`, `parallel`, `num_workers` and `seed`, which override the
+#' values stored here. The candidates are stored in
+#' `optimization_result(compiled)$extensions$omni$candidate_programs`.
+#'
+#' @param metric A metric function (required) used to score every candidate on
+#'   the same validation set, such as `metric_exact_match(field = "answer")`.
+#' @param explorers Named list of at least two optimizer objects. Each starts
+#'   from its own copy of the input program.
+#' @param continuation An optimizer object run from the best exploration
 #'   candidate.
-#' @param metric_threshold Minimum score required to be considered successful.
-#' @param max_errors Maximum number of errors allowed during evaluation.
-#' @param valset_ratio Fraction of `trainset` to hold out for candidate
-#'   comparison when `valset` is not supplied.
-#' @param parallel Whether to compile exploration branches concurrently with
-#'   mirai. Parallel exploration requires `.llm = NULL`. Each worker creates
-#'   its own default chat from `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or
-#'   `GOOGLE_API_KEY`.
+#' @param metric_threshold Accepted for consistency with the other optimizers
+#'   (see [Teleprompter()]); `Omni()` does not use it.
+#' @param max_errors Does not stop the run; set `max_errors` on each explorer
+#'   and on the continuation instead.
+#' @param valset_ratio Share of `trainset` held out for validation when no
+#'   `valset` is given (default `0.1`, must be above 0).
+#' @param parallel Whether to compile the explorers at the same time with
+#'   mirai (default `FALSE`). Parallel exploration requires `.llm = NULL`:
+#'   each worker creates its own default chat from `OPENAI_API_KEY`,
+#'   `ANTHROPIC_API_KEY` or `GOOGLE_API_KEY`.
 #' @param num_workers Number of mirai workers for parallel exploration. `NULL`
-#'   uses one worker per explorer.
-#' @param seed Optional whole-number random seed within R's integer range for
-#'   reproducible splitting, sequential exploration, and mirai worker streams.
-#' @param verbose Whether to print progress messages.
+#'   (the default) uses one worker per explorer.
+#' @param seed Optional whole-number seed for the validation split, sequential
+#'   exploration and the mirai worker streams.
+#' @param verbose Whether to print progress messages (default `TRUE`).
 #'
+#' @return An `Omni` object to pass to [compile()].
+#' @family teleprompters
 #' @export
 #' @examples
-#' \dontrun{
 #' metric <- metric_exact_match(field = "answer")
 #'
 #' tp <- Omni(
@@ -62,9 +75,26 @@
 #'     generations = 2L
 #'   )
 #' )
+#' tp
 #'
-#' compiled <- compile(tp, qa_module, trainset, valset = valset, .llm = llm)
-#' compiled$config$optimizer$candidate_programs
+#' \dontrun{
+#' qa <- module(signature("question -> answer"))
+#' trainset <- data.frame(
+#'   question = c("Capital of France?", "Capital of Peru?", "Capital of Chad?"),
+#'   answer = c("Paris", "Lima", "N'Djamena")
+#' )
+#' valset <- data.frame(
+#'   question = c("Capital of Japan?", "Capital of Kenya?"),
+#'   answer = c("Tokyo", "Nairobi")
+#' )
+#' compiled <- compile(
+#'   qa,
+#'   tp,
+#'   trainset,
+#'   valset = valset,
+#'   .llm = ellmer::chat_openai(model = "gpt-6-luna")
+#' )
+#' optimization_result(compiled)$extensions$omni$candidate_programs
 #' }
 Omni <- S7::new_class(
   "Omni",
@@ -437,28 +467,40 @@ compile_omni <- function(
     candidates,
     selected_id = best_candidate$id
   )
+  candidate_trials <- candidate_programs
+  candidate_trials$program_config <- lapply(
+    candidate_programs$program,
+    function(candidate) candidate$config
+  )
+  candidate_trials$program <- NULL
+  best_trial <- which(candidate_trials$selected)[[1]]
   compilation_error <- !all(is.na(candidate_programs$error))
 
   best_program <- copy_module(best_candidate$program)
-  best_program$state$compiled <- TRUE
-  best_program$state$best_score <- best_candidate$score
-  best_program$state$best_params <- list(
-    phase = best_candidate$phase,
-    optimizer = best_candidate$optimizer
-  )
-  best_program$config$compiled <- TRUE
-  best_program$config$teleprompter <- "Omni"
   best_program$config$best_score <- best_candidate$score
-  best_program$config$optimizer <- list(
-    name = "Omni",
-    explorers = explorer_names,
-    continuation = continuation_name,
-    exploration_winner = exploration_winner$optimizer,
-    best_phase = best_candidate$phase,
-    best_optimizer = best_candidate$optimizer,
-    candidate_programs = candidate_programs,
-    parallel = isTRUE(parallel),
-    flag_compilation_error_occurred = compilation_error
+  record_optimization_result(
+    best_program,
+    optimizer = "Omni",
+    baseline_score = baseline_score,
+    best_score = best_candidate$score,
+    best_trial = best_trial,
+    best_params = list(
+      phase = best_candidate$phase,
+      optimizer = best_candidate$optimizer
+    ),
+    trials = candidate_trials,
+    lineage = list(selected_id = best_candidate$id),
+    stop_reason = "completed",
+    extensions = list(
+      explorers = explorer_names,
+      continuation = continuation_name,
+      exploration_winner = exploration_winner$optimizer,
+      best_phase = best_candidate$phase,
+      best_optimizer = best_candidate$optimizer,
+      candidate_programs = candidate_trials,
+      parallel = isTRUE(parallel),
+      flag_compilation_error_occurred = compilation_error
+    )
   )
 
   best_program
@@ -687,7 +729,8 @@ omni_compile_explorers_parallel <- function(
         program = copy_module(program),
         trainset = trainset,
         valset = valset,
-        step_args = explorer_compile_args[[name]] %||% list()
+        step_args = explorer_compile_args[[name]] %||% list(),
+        trace_context = current_trace_context()
       )
     }
   )
@@ -703,7 +746,8 @@ omni_compile_explorers_parallel <- function(
             program = job$program,
             trainset = job$trainset,
             valset = job$valset,
-            .llm = worker_llm
+            .llm = worker_llm,
+            .trace_context = job$trace_context
           )
           for (name in names(job$step_args)) {
             call_args[[name]] <- job$step_args[[name]]
@@ -793,12 +837,8 @@ omni_candidates_tbl <- function(candidates, selected_id) {
   )
 }
 
-#' Print method for Omni
-#' @param x An Omni object.
-#' @param ... Additional arguments.
-#' @rdname Omni
-#' @export
-print.Omni <- function(x, ...) {
+# Print an Omni object through its S7 method.
+print_omni <- function(x, ...) {
   cli::cli_h3("Omni Teleprompter")
   cli::cli_text("{.field Explorers}: {.field {names(x@explorers)}}")
   cli::cli_text(
@@ -808,5 +848,3 @@ print.Omni <- function(x, ...) {
   cli::cli_text("{.field Parallel exploration}: {x@parallel}")
   invisible(x)
 }
-
-S7::method(print, Omni) <- print.Omni

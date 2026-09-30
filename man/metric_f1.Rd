@@ -2,31 +2,47 @@
 % Please edit documentation in R/metrics.R
 \name{metric_f1}
 \alias{metric_f1}
-\title{Create an F1 Score Metric}
+\title{Token-overlap F1 metric}
 \usage{
 metric_f1(field = NULL, normalize = TRUE)
 }
 \arguments{
-\item{field}{Optional field name to extract from structured outputs}
+\item{field}{Name of the output field to compare. \code{evaluate()},
+\code{optimize_grid()} and \code{compile()} pass the whole data row as \code{expected};
+when \code{field} is \code{NULL}, the metric compares the one prediction field that
+is also a column of that row, and errors if there is not exactly one.}
 
-\item{normalize}{Logical, whether to normalize text before tokenization}
+\item{normalize}{If \code{TRUE} (the default), lower-case both texts and replace
+punctuation with spaces before splitting them into words.}
 }
 \value{
-A function with signature function(prediction, expected) -> numeric
+A function \verb{function(prediction, expected)} returning a number
+between 0 and 1. Two empty texts score 1. \code{field} is stored in its
+\code{"field"} attribute.
 }
 \description{
-Creates a metric function that calculates the F1 score between predicted
-and expected text based on token overlap.
+\code{metric_f1()} makes a metric that scores how many words the prediction and
+the expected text share, as the F1 score (harmonic mean of precision and
+recall) of their word counts. It gives partial credit, which suits
+free-text answers.
 }
 \examples{
-# Token-based F1 score
-metric <- metric_f1()
-metric("the quick brown fox", "the fast brown fox")  # 0.75
-
-# Field extraction
-metric <- metric_f1(field = "answer")
-metric(
-  list(answer = "the quick brown fox"),
-  list(answer = "the fast brown fox")
-)
+f1 <- metric_f1(field = "answer")
+row <- data.frame(question = "Where is the Louvre?", answer = "in Paris, France")
+f1(list(answer = "Paris"), row)
+f1(list(answer = "It is in Paris, France"), row)
 }
+\seealso{
+Other metrics:
+\code{\link[=as_dsprrr_metric]{as_dsprrr_metric()}},
+\code{\link[=evaluate]{evaluate()}},
+\code{\link[=metric_contains]{metric_contains()}},
+\code{\link[=metric_custom]{metric_custom()}},
+\code{\link[=metric_exact_match]{metric_exact_match()}},
+\code{\link[=metric_field_match]{metric_field_match()}},
+\code{\link[=metric_threshold]{metric_threshold()}},
+\code{\link[=metric_with_feedback]{metric_with_feedback()}},
+\code{\link[=metric_with_trace]{metric_with_trace()}},
+\code{\link{vitals_metrics}}
+}
+\concept{metrics}

@@ -128,76 +128,85 @@ harness_common_properties <- function() {
   )
 }
 
-#' AutoResearch Teleprompter
+#' AutoResearch: let an agent run optimization experiments
 #'
 #' @description
-#' Runs a persistent research agent that owns an explicit
-#' hypothesize-sandbox-evaluate-keep-or-revert loop. The agent can branch from
-#' any prior candidate, inspect structured per-example feedback, request
-#' sandboxed R experiments, and decide when to finish. dsprrr retains control of
-#' budgets, evaluation, checkpointing, and final best-candidate selection.
+#' `AutoResearch()` hands the search to a research agent. In a loop, the agent
+#' forms a hypothesis, may test ideas in sandboxed R code, proposes an edit to
+#' the program, and sees how the edit scores; it keeps or reverts edits and
+#' decides when to stop. dsprrr keeps control of budgets, evaluation,
+#' checkpoints and the choice of the final program.
 #'
 #' @details
 #' `AutoResearch()` is inspired by Andrej Karpathy's
 #' [`autoresearch`](https://github.com/karpathy/autoresearch) and the
 #' AutoResearch engine in the
-#' [GEPA optimize-anything project](https://github.com/gepa-ai/gepa).
-#' This is an R-native implementation for dsprrr `Module` graphs, not a port of
-#' either command-line harness.
+#' [GEPA optimize-anything project](https://github.com/gepa-ai/gepa). It is an
+#' R implementation for dsprrr programs, not a port of either command-line
+#' tool.
 #'
-#' Candidates are complete, validated snapshots of every optimizable leaf
-#' module. A single experiment can therefore change instructions and templates
-#' across multiple pipeline components jointly. Candidate evaluation always
-#' runs in the host process through dsprrr's optimizer ledger. Only exploratory
-#' R code is sent to `runner`; with the default `sandbox = TRUE`, `runner` must
-#' advertise an operating-system sandbox such as [mcp_repl_runner()].
+#' A candidate is a validated snapshot of every optimizable module in the
+#' program, so one experiment can change instructions and templates across
+#' several pipeline steps at once. The agent can branch from any earlier
+#' candidate and sees per-example feedback. Candidates are always evaluated in
+#' the host R process. Only the agent's exploratory R code goes to `runner`,
+#' which must advertise an operating-system sandbox, such as
+#' [mcp_repl_runner()], unless `sandbox = FALSE`.
 #'
 #' @section Compilation arguments:
-#' In addition to the standard [compile()] arguments, this teleprompter accepts
-#' `.agent_llm` for the research agent, `runner` for sandboxed analysis,
-#' `control` for optimizer budgets and checkpointing, and `objective` for
-#' multi-objective selection. Named arguments in `...`, such as `.cache`, are
-#' forwarded to candidate evaluation.
+#' Besides the standard [compile()] arguments, this optimizer accepts
+#' `.agent_llm` (the agent's Chat; defaults to `.llm`), `runner` (for sandboxed
+#' analysis), `control` (an [optimizer_control()] object for budgets and
+#' checkpoints) and `objective` (a text description of what to optimize for).
+#' Other named arguments, such as `.cache`, are passed to candidate
+#' evaluation.
 #'
-#' @param metric Metric used to evaluate candidates.
-#' @param metric_threshold Optional success threshold inherited from
-#'   [Teleprompter].
-#' @param max_errors Consecutive optimizer error budget.
-#' @param max_iterations Maximum evaluated experiments after the baseline.
-#' @param patience Stop after this many evaluated experiments without
-#'   improvement.
-#' @param target_score Optional score at which optimization stops.
-#' @param max_context_examples Maximum training examples exposed to the
-#'   research agent.
-#' @param max_feedback_examples Maximum failed examples returned after each
-#'   evaluation.
-#' @param max_agent_steps Maximum consecutive sandbox or invalid actions before
-#'   the harness requires evaluation progress.
-#' @param sandbox Whether an OS-sandboxed runner is required. Defaults to TRUE.
-#' @param seed Optional random seed.
-#' @param log_dir Optional directory for a durable [TrialLog].
-#' @param verbose Whether to report progress.
+#' @param metric A metric function (required) used to evaluate candidates.
+#' @param metric_threshold Accepted for consistency with the other optimizers
+#'   (see [Teleprompter()]); not used.
+#' @param max_errors Integer; stop after this many consecutive failed
+#'   evaluations when [compile()] gets no `control` (default `5L`).
+#' @param max_iterations Integer maximum number of evaluated experiments after
+#'   the baseline (default `20L`).
+#' @param patience Integer; stop after this many evaluated experiments without
+#'   improvement (default `6L`).
+#' @param target_score Optional score at which the search stops.
+#' @param max_context_examples Integer maximum number of training rows shown to
+#'   the agent (default `20L`).
+#' @param max_feedback_examples Integer maximum number of failed rows returned
+#'   after each evaluation (default `8L`).
+#' @param max_agent_steps Integer maximum number of consecutive sandbox or
+#'   invalid actions before the agent must submit a candidate (default `4L`).
+#' @param sandbox If `TRUE` (the default), [compile()] requires a `runner`
+#'   that advertises an OS sandbox. If `FALSE`, the agent cannot run code and
+#'   `runner` is ignored.
+#' @param seed Optional whole-number random seed.
+#' @param log_dir Directory for a durable [TrialLog], or `NULL` (the default).
+#' @param verbose Whether to report progress (default `TRUE`).
 #'
-#' @return An `AutoResearch` teleprompter.
+#' @return An `AutoResearch` object to pass to [compile()].
+#' @family teleprompters
 #' @export
 #' @examples
-#' \dontrun{
 #' research <- AutoResearch(
 #'   metric = metric_exact_match(field = "answer"),
 #'   max_iterations = 12L
 #' )
+#' research
+#'
+#' \dontrun{
 #' compiled <- compile(
-#'   research,
 #'   program,
+#'   research,
 #'   trainset,
 #'   valset = valset,
-#'   .llm = task_chat,
-#'   .agent_llm = research_chat,
+#'   .llm = ellmer::chat_openai(model = "gpt-6-luna"),
+#'   .agent_llm = ellmer::chat_anthropic(model = "claude-sonnet-4-5"),
 #'   runner = mcp_repl_runner(),
 #'   control = optimizer_control(
 #'     max_trials = 13L,
 #'     max_cost = 5,
-#'     checkpoint_path = "autoresearch.rds"
+#'     checkpoint_path = file.path(tempdir(), "autoresearch.rds")
 #'   )
 #' )
 #' }
@@ -207,60 +216,62 @@ AutoResearch <- S7::new_class(
   properties = harness_common_properties()
 )
 
-#' Meta-Harness Teleprompter
+#' Meta-Harness: fresh proposer sessions over a candidate frontier
 #'
 #' @description
-#' Runs an outer-loop optimization harness that starts a fresh proposer session
-#' on every iteration. Each proposer sees the current frontier, candidate
-#' lineage, evaluation traces, and training context, then proposes a batch of
-#' joint program edits. The R outer loop validates and evaluates every unique
-#' candidate and alone decides what enters the frontier.
+#' `MetaHarness()` runs an outer optimization loop that starts a fresh
+#' proposer session on every iteration. Each proposer sees the current best
+#' candidates (the frontier), their lineage, evaluation traces and training
+#' context, then proposes a batch of program edits. The R loop validates and
+#' evaluates every unique candidate and alone decides what enters the
+#' frontier.
 #'
 #' @details
 #' `MetaHarness()` is inspired by the Meta-Harness engine in the
 #' [GEPA optimize-anything project](https://github.com/gepa-ai/gepa) and the
-#' associated [Meta-Harness paper](https://arxiv.org/abs/2603.28052).
-#' It preserves the important separation between an untrusted coding proposer
-#' and a trusted evaluator while adapting the candidate representation to
-#' dsprrr module graphs.
+#' [Meta-Harness paper](https://arxiv.org/abs/2603.28052). It keeps the
+#' separation between an untrusted proposer and a trusted evaluator, adapted to
+#' dsprrr programs.
 #'
-#' A proposer may request one or more R analyses before submitting its batch.
-#' Those analyses execute only through `runner`; with the default
-#' `sandbox = TRUE`, the runner must advertise an OS sandbox such as
-#' [mcp_repl_runner()]. Proposer sessions are fresh by design, so each
-#' iteration must reason from the persisted frontier rather than hidden chat
-#' history. An ellmer `Chat` is cloned and reset automatically. A custom
-#' proposer must either provide `chat_structured()` and `clone()`, or be supplied
-#' as a zero-argument `.agent_llm` factory that returns a fresh compatible
-#' proposer on every call. Non-cloneable proposer objects are rejected.
+#' A proposer may request R analyses before submitting its batch. Those run
+#' only through `runner`, which must advertise an operating-system sandbox,
+#' such as [mcp_repl_runner()], unless `sandbox = FALSE`. The proposer must be
+#' an ellmer `Chat`; it is cloned and reset before each iteration, so each
+#' iteration reasons from the saved frontier rather than from chat history.
 #'
 #' @section Compilation arguments:
-#' In addition to the standard [compile()] arguments, this teleprompter accepts
-#' `.agent_llm` for the proposer, `runner` for sandboxed analysis, `control` for
-#' optimizer budgets and checkpointing, and `objective` for multi-objective
-#' selection. Named arguments in `...`, such as `.cache`, are forwarded to
-#' candidate evaluation.
+#' Besides the standard [compile()] arguments, this optimizer accepts
+#' `.agent_llm` (the proposer Chat; defaults to `.llm`), `runner` (for
+#' sandboxed analysis), `control` (an [optimizer_control()] object for budgets
+#' and checkpoints) and `objective` (a text description of what to optimize
+#' for). Other named arguments, such as `.cache`, are passed to candidate
+#' evaluation.
 #'
 #' @inheritParams AutoResearch
-#' @param max_candidates_per_iteration Maximum candidates evaluated from one
-#'   proposer batch.
-#' @param frontier_size Maximum scored candidates summarized to each proposer.
+#' @param max_candidates_per_iteration Integer maximum number of candidates
+#'   evaluated from one proposer batch (default `4L`).
+#' @param frontier_size Integer maximum number of scored candidates summarized
+#'   for each proposer (default `8L`).
 #'
-#' @return A `MetaHarness` teleprompter.
+#' @return A `MetaHarness` object to pass to [compile()].
+#' @family teleprompters
 #' @export
 #' @examples
-#' \dontrun{
 #' harness <- MetaHarness(
 #'   metric = metric_exact_match(field = "answer"),
 #'   max_iterations = 8L,
 #'   max_candidates_per_iteration = 4L
 #' )
+#' harness
+#'
+#' \dontrun{
 #' compiled <- compile(
-#'   harness,
 #'   program,
+#'   harness,
 #'   trainset,
 #'   valset = valset,
-#'   .agent_llm = proposer_chat,
+#'   .llm = ellmer::chat_openai(model = "gpt-6-luna"),
+#'   .agent_llm = ellmer::chat_anthropic(model = "claude-sonnet-4-5"),
 #'   runner = mcp_repl_runner()
 #' )
 #' }
@@ -933,111 +944,52 @@ harness_validate_eval_args <- function(eval_args) {
 
 harness_resolve_agent <- function(.agent_llm, .llm) {
   agent <- .agent_llm %||% .llm
-  if (is.function(agent)) {
-    return(list(factory = agent, prototype = NULL))
-  }
   if (is.null(agent)) {
     agent <- get_default_chat(create = TRUE)
   }
   harness_validate_agent(agent)
-  list(factory = NULL, prototype = agent)
 }
 
 harness_validate_agent <- function(agent) {
-  chat_structured <- tryCatch(
-    agent[["chat_structured"]],
-    error = function(e) NULL
-  )
-  if (!is.function(chat_structured)) {
+  if (!is_ellmer_chat(agent)) {
     cli::cli_abort(c(
-      "Agentic harnesses require a structured-output proposer",
-      "i" = "Supply an ellmer Chat or compatible {.arg .agent_llm} with {.code chat_structured()}."
+      "Agentic harnesses require an ellmer Chat proposer",
+      "x" = "Got {.cls {class(agent)[1]}}.",
+      "i" = "Supply an ellmer Chat through {.arg .agent_llm} or {.arg .llm}."
     ))
   }
   agent
 }
 
 harness_agent_instance <- function(spec, require_fresh = FALSE) {
-  if (!is.null(spec$factory)) {
-    agent <- tryCatch(
-      spec$factory(),
-      error = function(e) {
-        cli::cli_abort(c(
-          "Could not create an agentic harness proposer",
-          "x" = conditionMessage(e),
-          "i" = "{.arg .agent_llm} factories must return a compatible proposer."
-        ))
-      }
-    )
-    return(harness_validate_agent(agent))
+  if (isTRUE(require_fresh)) {
+    return(harness_fresh_agent(spec))
   }
-
-  agent <- spec$prototype
-  if (inherits(agent, "Chat") || isTRUE(require_fresh)) {
-    return(harness_fresh_agent(agent))
-  }
-  harness_validate_agent(agent)
+  harness_validate_agent(spec)
 }
 
 harness_require_fresh_agent <- function(spec) {
-  if (!is.null(spec$factory)) {
-    return(invisible(spec))
-  }
+  harness_validate_agent(spec)
   clone <- tryCatch(
-    spec$prototype[["clone"]],
+    spec[["clone"]],
     error = function(e) NULL
   )
   if (!is.function(clone)) {
     cli::cli_abort(c(
       "MetaHarness requires a fresh proposer session for every iteration",
-      "x" = "The supplied proposer does not provide {.code clone()}.",
-      "i" = "Supply an ellmer Chat, a cloneable custom adapter, or a zero-argument {.arg .agent_llm} factory."
+      "x" = "The supplied ellmer Chat does not provide {.code clone()}.",
+      "i" = "Supply a cloneable ellmer Chat through {.arg .agent_llm}."
     ))
   }
   invisible(spec)
 }
 
 harness_fresh_agent <- function(agent) {
-  clone <- tryCatch(
-    agent[["clone"]],
-    error = function(e) NULL
+  clone_ellmer_chat(
+    agent,
+    arg = ".agent_llm",
+    reset_turns = TRUE
   )
-  if (!is.function(clone)) {
-    cli::cli_abort(c(
-      "Could not create a fresh agent session",
-      "x" = "The supplied proposer does not provide {.code clone()}.",
-      "i" = "Supply an ellmer Chat, a cloneable custom adapter, or a zero-argument {.arg .agent_llm} factory."
-    ))
-  }
-
-  clone_args <- names(formals(clone))
-  fresh <- tryCatch(
-    if (any(c("deep", "...") %in% clone_args)) {
-      clone(deep = TRUE)
-    } else {
-      clone()
-    },
-    error = function(e) {
-      cli::cli_abort(c(
-        "Could not create a fresh agent session",
-        "x" = conditionMessage(e),
-        "i" = "Supply an ellmer Chat, a cloneable custom adapter, or a zero-argument {.arg .agent_llm} factory."
-      ))
-    }
-  )
-  if (inherits(fresh, "Chat")) {
-    tryCatch(
-      fresh$set_turns(list()),
-      error = function(e) {
-        cli::cli_abort(c(
-          "Could not reset the fresh agent session",
-          "x" = conditionMessage(e),
-          "i" = "Supply an ellmer Chat with {.code set_turns()} or a zero-argument {.arg .agent_llm} factory."
-        ))
-      }
-    )
-  }
-  harness_validate_agent(fresh)
 }
 
 harness_action_type <- function() {
@@ -1925,35 +1877,42 @@ harness_finalize <- function(setup, state, best_program, name) {
   }
 
   optimized <- copy_module(best_program)
-  optimized$state$compiled <- TRUE
-  optimized$state$best_score <- state$best_score
-  optimized$state$best_params <- list(candidate_id = state$best_id)
-  optimized$config$compiled <- TRUE
-  optimized$config$teleprompter <- name
   optimized$config$best_score <- state$best_score
-  optimized$config$optimizer <- list(
-    name = name,
+  best_trial <- which(candidates$selected)
+  best_trial <- if (length(best_trial) > 0L) best_trial[[1]] else NULL
+  details <- list(
     implementation = "dsprrr-agentic-harness-v1",
     inspiration = list(
       gepa_omni = "https://github.com/gepa-ai/gepa",
       autoresearch = "https://github.com/karpathy/autoresearch",
       meta_harness = "https://arxiv.org/abs/2603.28052"
     ),
-    baseline_score = state$baseline_score,
-    best_score = state$best_score,
-    best_candidate_id = state$best_id,
     frontier_ids = state$frontier_ids,
-    candidates = candidates,
     events = state$events,
     iterations = state$iteration,
     agent_steps = state$agent_steps,
     termination = termination,
-    budget_summary = budget_summary,
-    stop_reason = budget_summary$stop_reason,
-    partial = optimizer_budget_stopped(setup$budget),
     sandbox = runner_policy,
     checkpoint_path = setup$control@checkpoint_path,
     resumed = setup$checkpoint$resumed
+  )
+  record_optimization_result(
+    optimized,
+    optimizer = name,
+    status = if (optimizer_budget_stopped(setup$budget)) {
+      "partial"
+    } else {
+      "completed"
+    },
+    baseline_score = state$baseline_score,
+    best_score = state$best_score,
+    best_trial = best_trial,
+    best_params = list(candidate_id = state$best_id),
+    trials = candidates,
+    lineage = list(best_candidate_id = state$best_id),
+    budget = budget_summary,
+    stop_reason = termination,
+    extensions = details
   )
 
   harness_checkpoint(
@@ -1969,11 +1928,8 @@ harness_format_score <- function(score) {
   if (is.na(score)) "NA" else format(round(score, 4L), nsmall = 0L)
 }
 
-#' @param x An AutoResearch object.
-#' @param ... Additional arguments.
-#' @rdname AutoResearch
-#' @export
-print.AutoResearch <- function(x, ...) {
+# Print an AutoResearch object through its S7 method.
+print_auto_research <- function(x, ...) {
   cli::cli_h3("AutoResearch Teleprompter")
   cli::cli_text("{.field Max experiments}: {x@max_iterations}")
   cli::cli_text("{.field Patience}: {x@patience}")
@@ -1981,11 +1937,8 @@ print.AutoResearch <- function(x, ...) {
   invisible(x)
 }
 
-#' @param x A MetaHarness object.
-#' @param ... Additional arguments.
-#' @rdname MetaHarness
-#' @export
-print.MetaHarness <- function(x, ...) {
+# Print a MetaHarness object through its S7 method.
+print_meta_harness <- function(x, ...) {
   cli::cli_h3("Meta-Harness Teleprompter")
   cli::cli_text("{.field Max iterations}: {x@max_iterations}")
   cli::cli_text(
@@ -1995,6 +1948,3 @@ print.MetaHarness <- function(x, ...) {
   cli::cli_text("{.field OS sandbox required}: {x@sandbox}")
   invisible(x)
 }
-
-S7::method(print, AutoResearch) <- print.AutoResearch
-S7::method(print, MetaHarness) <- print.MetaHarness

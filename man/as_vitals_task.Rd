@@ -2,7 +2,7 @@
 % Please edit documentation in R/vitals.R
 \name{as_vitals_task}
 \alias{as_vitals_task}
-\title{Create a vitals Task from a dsprrr module}
+\title{Build a vitals Task from a module and a data set}
 \usage{
 as_vitals_task(
   module,
@@ -13,71 +13,90 @@ as_vitals_task(
   epochs = 1L,
   metrics = NULL,
   dir = NULL,
-  .parallel = FALSE,
+  .concurrency = NULL,
   ...
 )
 }
 \arguments{
-\item{module}{A DSPrrr module (e.g., created via \code{\link[=module]{module()}}).}
+\item{module}{A module, such as one created with \code{\link[=module]{module()}}.}
 
-\item{dataset}{A tibble/data frame with columns matching the module's
-signature inputs plus a \code{target} column. The function will nest
-signature inputs into the \code{input} column format vitals requires.}
+\item{dataset}{A data frame with the signature's input columns and a
+\code{target} column.}
 
-\item{scorer}{A vitals scorer function (e.g., \code{vitals::model_graded_qa()},
-\code{vitals::detect_match()}). Defaults to \code{vitals::model_graded_qa()}.}
+\item{scorer}{A vitals scorer, such as \code{vitals::detect_includes()}. The
+default, \code{vitals::model_graded_qa()}, asks the solver's chat to grade.}
 
-\item{.llm}{Optional ellmer chat object for the solver. When \code{NULL},
-each invocation will create a fresh default client.}
+\item{.llm}{An ellmer Chat for the solver. \code{NULL} (the default) uses the
+module's own chat or the default chat, resolved when the task is created.}
 
-\item{name}{Optional name for the task. Defaults to the dataset name.}
+\item{name}{Task name. Defaults to the expression passed as \code{dataset}.}
 
-\item{epochs}{Number of times to repeat each sample for statistical
-significance. Defaults to 1L.}
+\item{epochs}{Integer number of times each sample is run (default \code{1L}).}
 
-\item{metrics}{Optional named list of metric functions. Each function
-takes a vector of scores and returns a single numeric value.}
+\item{metrics}{Optional named list of functions that summarize a vector of
+scores into one number.}
 
-\item{dir}{Directory for evaluation logs. Defaults to \code{vitals::vitals_log_dir()}.}
+\item{dir}{Directory for the evaluation logs. Defaults to
+\code{vitals::vitals_log_dir()}.}
 
-\item{.parallel}{Logical; whether to run solver in parallel. Defaults to FALSE.}
+\item{.concurrency}{Optional policy from \code{\link[=concurrency_control]{concurrency_control()}}.}
 
-\item{...}{Additional arguments passed to \code{\link[=as_vitals_solver]{as_vitals_solver()}}.}
+\item{...}{Further arguments passed to \code{\link[=as_vitals_solver]{as_vitals_solver()}}.}
 }
 \value{
-A vitals \link[vitals:Task]{vitals::Task} object ready for evaluation.
+A vitals \code{Task} object.
 }
 \description{
-Convenience function that builds a vitals \link[vitals:Task]{vitals::Task} from a dsprrr
-module and dataset. This makes it trivial to evaluate dsprrr modules
-using vitals infrastructure without manual solver wrapping.
-
-For multi-input modules, the function automatically nests all signature
-input columns into a single \code{input} list column that vitals expects.
-The solver then extracts these fields when processing each sample.
+\code{as_vitals_task()} creates a vitals \code{Task} that uses the module as its
+solver (see \code{\link[=as_vitals_solver]{as_vitals_solver()}}), so you can evaluate the module with
+vitals' scoring, logging and viewer. Call the task's \verb{$eval()} method to
+run it and \verb{$view()} to browse the results.
 }
 \details{
-The returned Task object can be evaluated by calling its \verb{$eval()} method,
-which runs the solver, scores results, computes metrics, and logs output.
-Use \verb{$view()} to see results interactively.
+\code{dataset} needs one column per signature input and a \code{target} column. The
+input columns are nested into the \code{input} list-column that vitals expects;
+other columns are kept.
 }
 \examples{
-\dontrun{
-# Single-input module
-mod <- module(signature("question -> answer"))
-test_data <- tibble::tibble(
+\dontshow{if (rlang::is_installed("vitals")) withAutoprint(\{ # examplesIf}
+qa <- module(signature("question -> answer"))
+test_data <- data.frame(
   question = c("What is 2+2?", "Capital of France?"),
   target = c("4", "Paris")
 )
-task <- as_vitals_task(mod, test_data, scorer = vitals::detect_includes())
-
-# Multi-input module
-mod <- module(signature("shapes, pick -> answer"))
-test_data <- tibble::tibble(
-  shapes = c("square, circle", "triangle, star"),
-  pick = c("square", "star"),
-  target = c("square", "star")
+tsk <- as_vitals_task(
+  qa,
+  test_data,
+  scorer = vitals::detect_includes(),
+  .llm = ellmer::chat_openai(model = "gpt-6-luna"),
+  dir = tempdir()
 )
-task <- as_vitals_task(mod, test_data, scorer = vitals::detect_includes())
+tsk
+
+\dontrun{
+tsk$eval()
+tsk$get_cost()
 }
+\dontshow{\}) # examplesIf}
 }
+\seealso{
+Other integrations:
+\code{\link[=as_dsprrr_metric]{as_dsprrr_metric()}},
+\code{\link[=as_dsprrr_traces]{as_dsprrr_traces()}},
+\code{\link[=as_ellmer_tool]{as_ellmer_tool()}},
+\code{\link[=as_vitals_cost]{as_vitals_cost()}},
+\code{\link[=as_vitals_samples]{as_vitals_samples()}},
+\code{\link[=as_vitals_solver]{as_vitals_solver()}},
+\code{\link[=create_search_tool]{create_search_tool()}},
+\code{\link[=llm_predict]{llm_predict()}},
+\code{\link[=ragnar_tool]{ragnar_tool()}},
+\code{\link[=reasoning_effort]{reasoning_effort()}},
+\code{\link[=register_dsprrr_engine]{register_dsprrr_engine()}},
+\code{\link[=summarize_traces_df]{summarize_traces_df()}},
+\code{\link[=temperature]{temperature()}},
+\code{\link[=top_p]{top_p()}},
+\code{\link[=use_dsprrr_template]{use_dsprrr_template()}},
+\code{\link[=validate_workflow]{validate_workflow()}},
+\code{\link{vitals_metrics}}
+}
+\concept{integrations}

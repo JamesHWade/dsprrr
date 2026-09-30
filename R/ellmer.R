@@ -4,73 +4,90 @@ copy_ellmer_type <- function(type) {
   unserialize(serialize(type, NULL))
 }
 
-#' Convert a DSPrrr Module to an ellmer Tool
+#' Turn a module into an ellmer tool
 #'
 #' @description
-#' Creates an ellmer-compatible tool from a dsprrr module. This allows modules
-#' to be used as tools in ellmer Chat objects, enabling agentic workflows where
-#' the LLM can call dsprrr modules as part of its reasoning.
+#' `as_ellmer_tool()` wraps a module as an ellmer tool, so a Chat, or a
+#' [react()] agent, can call it during a conversation. The tool's arguments
+#' are the module's input fields, with their types and descriptions.
 #'
-#' @param module A DSPrrr module (created with [module()]).
-#' @param name Optional tool name. Defaults to a name derived from the signature.
-#' @param description Optional tool description. Defaults to the signature's
-#'   instructions or a generated description.
-#' @param .llm Optional ellmer Chat object for the module to use when called.
-#'   If not provided, the module's stored chat or default chat is used.
-#' @param annotations Optional ellmer tool annotations list, passed through to
-#'   [ellmer::tool()]. This lets downstream runtimes reason about properties
-#'   such as read-only or destructive behavior without dsprrr depending on them.
-#' @param output Tool result serialization mode:
-#'   - `"auto"` returns the native module result with fields ordered to match
-#'     the signature.
-#'   - `"json"` returns compact JSON with signature-ordered top-level fields.
-#'   - `"text"` returns the primary output field as text when possible, or JSON
-#'     text otherwise.
-#'   - `"raw"` returns the native module result unchanged, without field
-#'     reordering.
-#' @param copy Whether tool calls should use the supplied module directly
-#'   (`"none"`) or a fresh deep copy (`"deep"`).
-#' @param error Tool error handling:
-#'   - `"reject"` (default) returns a structured recoverable error observation
-#'     suitable for surfacing back to an LLM. The condition class is preserved
-#'     in `$type`.
-#'   - `"abort"` propagates the original error to the caller.
-#'   - `"return"` signals the error as a classed `dsprrr_tool_error` condition
-#'     carrying the structured observation in `$payload`. Callers can install
-#'     a `withCallingHandlers()` to inspect the failure without aborting.
+#' @param module A module, such as one created with [module()] or
+#'   [module_fn()].
+#' @param name Tool name. Defaults to `dsprrr_` followed by the input field
+#'   names.
+#' @param description Tool description for the model. Defaults to the
+#'   signature's instructions.
+#' @param .llm The chat the module uses when the tool is called. With `NULL`,
+#'   the module's own chat or the default chat (see [get_default_chat()]).
+#' @param annotations Tool annotations from [ellmer::tool_annotations()],
+#'   which tell a chat or an agent runtime what the tool may do. With `NULL`
+#'   (the default), they are inferred from the module. A prediction module,
+#'   such as one from [module()] or [chain_of_thought()], only sends its
+#'   inputs to the model provider of its chat and changes nothing, so its
+#'   tool is marked read-only and closed-world (`read_only_hint = TRUE`,
+#'   `open_world_hint = FALSE`). A module compiled with [KNNFewShot()] is
+#'   marked the same way when the module it wraps is; its `vectorizer` is
+#'   assumed only to compute embeddings. Other modules get no annotations,
+#'   because they can run your functions, tools or code: for example
+#'   [module_fn()], [react()], [code_act()], [rlm_module()], [flex()],
+#'   pipelines and wrappers such as [refine()]. Use `list()` for no
+#'   annotations, or pass your own. Agent runtimes may restrict tools without
+#'   annotations, for example by treating them as destructive or as needing
+#'   network access.
+#' @param output How the tool returns its result:
+#'   - `"auto"` (the default): the module's output with fields in signature
+#'     order.
+#'   - `"json"`: compact JSON with fields in signature order.
+#'   - `"text"`: the main output field as text if possible, otherwise JSON.
+#'   - `"raw"`: the module's output unchanged.
+#' @param copy `"none"` (the default) calls `module` itself, so its traces
+#'   accumulate; `"deep"` calls a fresh deep copy each time.
+#' @param error What happens when the module fails:
+#'   - `"reject"` (the default): the tool returns an error description the
+#'     model can read and react to. Its `$type` holds the condition class.
+#'   - `"abort"`: the error propagates to the caller.
+#'   - `"return"`: a `dsprrr_tool_error` condition carrying the error
+#'     description in `$payload` is signalled, which a
+#'     [withCallingHandlers()] handler can inspect.
+#' @param trace_context A named, JSON-compatible list recorded in the
+#'   metadata and traces of every call made through the tool, as in [run()].
 #'
-#' @return A `ToolDef` object from ellmer, suitable for use with
-#'   `ellmer::Chat$register_tool()`.
+#' @return An ellmer tool definition (`ToolDef`) for `Chat$register_tool()` or
+#'   the `tools` argument of [react()]. It can also be called directly with
+#'   the input fields as arguments.
 #'
 #' @export
+#' @family integrations
 #' @examples
+#' shout <- module_fn("text -> reply", function(text) toupper(text))
+#' shout_tool <- as_ellmer_tool(shout, name = "shout", description = "Upper-case text.")
+#' shout_tool(text = "quiet please")
+#'
 #' \dontrun{
-#' # Create a sentiment analysis module
-#' sentiment_mod <- module(
-#'   signature("text -> sentiment: enum('positive', 'negative', 'neutral')"),
-#'   type = "predict"
+#' sentiment <- module(
+#'   signature("text -> sentiment: enum('positive', 'negative', 'neutral')")
 #' )
+#' sentiment_tool <- as_ellmer_tool(sentiment, name = "analyze_sentiment")
 #'
-#' # Convert to ellmer tool
-#' sentiment_tool <- as_ellmer_tool(sentiment_mod, name = "analyze_sentiment")
-#'
-#' # Register with a Chat for agentic use
-#' chat <- ellmer::chat_openai()
+#' chat <- ellmer::chat_openai(model = "gpt-6-luna")
 #' chat$register_tool(sentiment_tool)
-#'
-#' # Now the LLM can use the sentiment tool
-#' chat$chat("Analyze the sentiment of: 'I love this product!'")
+#' chat$chat("What is the sentiment of: 'I love this product!'")
 #' }
 as_ellmer_tool <- function(
   module,
   name = NULL,
   description = NULL,
   .llm = NULL,
-  annotations = list(),
+  annotations = NULL,
   output = c("auto", "json", "text", "raw"),
   copy = c("none", "deep"),
-  error = c("reject", "abort", "return")
+  error = c("reject", "abort", "return"),
+  trace_context = list()
 ) {
+  trace_context <- trace_context_validate(
+    trace_context,
+    arg = "trace_context"
+  )
   output <- match.arg(output)
   copy <- match.arg(copy)
   error <- match.arg(error)
@@ -79,9 +96,10 @@ as_ellmer_tool <- function(
     cli::cli_abort(c(
       "{.arg module} must be a DSPrrr Module object",
       "x" = "Got {.cls {class(module)[1]}}",
-      "i" = "Create a module with {.code module()} or {.code as_module()}"
+      "i" = "Create a module with {.fn module}"
     ))
   }
+  annotations <- annotations %||% module_tool_annotations(module)
 
   # Generate name from signature if not provided
   if (is.null(name)) {
@@ -118,7 +136,7 @@ as_ellmer_tool <- function(
 
   # Build argument specification for ellmer::tool() from signature inputs
   arg_specs <- list()
-  sig_inputs <- module$signature@inputs
+  sig_inputs <- caller_input_specs(module)
   for (input_spec in sig_inputs) {
     input_name <- input_spec$name
     input_desc <- input_spec$description %||% paste("The", input_name, "value")
@@ -142,11 +160,12 @@ as_ellmer_tool <- function(
   captured_output <- output
   captured_copy <- copy
   captured_error <- error
+  captured_trace_context <- trace_context
 
   # Create a function with named parameters matching the signature inputs
   # ellmer::tool() requires argument names to match function formals
   input_names <- vapply(
-    module$signature@inputs,
+    caller_input_specs(module),
     function(x) x$name,
     character(1)
   )
@@ -174,7 +193,8 @@ as_ellmer_tool <- function(
       tool_name = .(captured_name),
       output = .(captured_output),
       copy = .(captured_copy),
-      error = .(captured_error)
+      error = .(captured_error),
+      trace_context = .(captured_trace_context)
     )
   })
 
@@ -196,6 +216,32 @@ as_ellmer_tool <- function(
   )
 }
 
+#' Tool annotations inferred from a module
+#'
+#' A Predict module formats a prompt and makes structured requests to its
+#' chat, whose provider the host chose; ellmer does not run tools for
+#' structured requests. Subclasses such as ReAct and Flex can run tools or
+#' code, so only the exact class qualifies, and a KNN wrapper qualifies
+#' through the module it wraps. Everything else claims nothing.
+#' @noRd
+module_tool_annotations <- function(module) {
+  if (module_only_predicts(module)) {
+    ellmer::tool_annotations(read_only_hint = TRUE, open_world_hint = FALSE)
+  } else {
+    list()
+  }
+}
+
+#' @noRd
+module_only_predicts <- function(module) {
+  switch(
+    class(module)[[1L]],
+    PredictModule = TRUE,
+    KNNFewShotModule = module_only_predicts(module$module),
+    FALSE
+  )
+}
+
 #' Invoke a module-backed ellmer tool
 #' @noRd
 invoke_ellmer_tool_module <- function(
@@ -205,7 +251,8 @@ invoke_ellmer_tool_module <- function(
   tool_name,
   output,
   copy,
-  error
+  error,
+  trace_context
 ) {
   working_module <- if (copy == "deep") {
     module$copy(deep = TRUE)
@@ -219,7 +266,11 @@ invoke_ellmer_tool_module <- function(
       c(
         list(working_module),
         inputs,
-        list(.llm = .llm, .return_format = "simple")
+        list(
+          .llm = .llm,
+          .return_format = "simple",
+          .trace_context = trace_context
+        )
       )
     ),
     error = function(err) handle_ellmer_tool_error(err, tool_name, error)
@@ -353,74 +404,26 @@ structure_ellmer_tool_error <- function(err, tool_name) {
   )
 }
 
-#' Register a DSPrrr Module as a Tool in a Chat
+#' Provider properties that ellmer 0.5.0 moved to the Model object
 #'
-#' @description
-#' Convenience function that creates an ellmer tool from a module and registers
-#' it with a Chat object in one step.
-#'
-#' @param chat An ellmer Chat object.
-#' @param module A DSPrrr module.
-#' @param name Optional tool name.
-#' @param description Optional tool description.
-#' @param .llm Optional ellmer Chat object for the module to use when called.
-#'   If not provided, the module's stored chat or default chat is used.
-#' @param annotations Optional ellmer tool annotations list, passed through to
-#'   [ellmer::tool()].
-#' @param output Tool result serialization mode. See [as_ellmer_tool()].
-#' @param copy Whether tool calls should use the supplied module directly or a
-#'   fresh deep copy. See [as_ellmer_tool()].
-#' @param error Tool error handling mode. See [as_ellmer_tool()].
-#'
-#' @return The Chat object (invisibly), with the tool registered.
-#'
-#' @export
-#' @examples
-#' \dontrun{
-#' chat <- ellmer::chat_openai()
-#' mod <- module(signature("query -> answer"), type = "predict")
-#'
-#' # Register in one step
-#' register_dsprrr_tool(chat, mod, name = "knowledge_lookup")
-#'
-#' # Use the tool
-#' chat$chat("Use the knowledge_lookup tool to answer: What is R?")
-#' }
-register_dsprrr_tool <- function(
-  chat,
-  module,
-  name = NULL,
-  description = NULL,
-  .llm = NULL,
-  annotations = list(),
-  output = c("auto", "json", "text", "raw"),
-  copy = c("none", "deep"),
-  error = c("reject", "abort", "return")
-) {
-  if (!inherits(chat, "Chat")) {
-    cli::cli_abort(c(
-      "{.arg chat} must be an ellmer Chat object",
-      "x" = "Got {.cls {class(chat)[1]}}"
-    ))
-  }
+#' Reading them through the Provider is deprecated and returns a stale copy,
+#' so provider inspection skips them and reads the Chat's Model instead.
+#' @noRd
+ellmer_deprecated_provider_props <- c("model", "params", "extra_args")
 
-  output <- match.arg(output)
-  copy <- match.arg(copy)
-  error <- match.arg(error)
-
-  tool_def <- as_ellmer_tool(
-    module,
-    name = name,
-    description = description,
-    .llm = .llm,
-    annotations = annotations,
-    output = output,
-    copy = copy,
-    error = error
+#' Inspect a Provider without touching deprecated forwarding properties
+#' @noRd
+ellmer_provider_props <- function(provider) {
+  names <- setdiff(S7::prop_names(provider), ellmer_deprecated_provider_props)
+  stats::setNames(
+    lapply(names, function(name) S7::prop(provider, name)),
+    names
   )
+}
 
-  # Register the ToolDef with the Chat
-  chat$register_tool(tool_def)
-
-  invisible(chat)
+#' The Model object carrying a Chat's name, params, and extra args
+#' @noRd
+ellmer_chat_model <- function(chat) {
+  model <- tryCatch(chat$get_model_object(), error = function(e) NULL)
+  if (inherits(model, "ellmer::Model")) model else NULL
 }

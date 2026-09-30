@@ -7,7 +7,7 @@ library(tibble)
 
 # Create a simple QA module
 sig <- signature("question -> answer")
-mod <- module(sig, type = "predict")
+mod <- module(sig)
 
 # Test dataset
 dataset <- tibble(

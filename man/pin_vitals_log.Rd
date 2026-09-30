@@ -2,7 +2,7 @@
 % Please edit documentation in R/orchestration.R
 \name{pin_vitals_log}
 \alias{pin_vitals_log}
-\title{Pin Vitals Evaluation Log}
+\title{Pin evaluation results to a pins board}
 \usage{
 pin_vitals_log(
   board,
@@ -14,45 +14,59 @@ pin_vitals_log(
 )
 }
 \arguments{
-\item{board}{A pins board object}
+\item{board}{A pins board.}
 
-\item{name}{Character name for the pin}
+\item{name}{Name of the pin.}
 
-\item{eval_result}{Evaluation result from \code{evaluate()} or a vitals Task}
+\item{eval_result}{An \code{\link[=evaluate]{evaluate()}} result, or a list or data frame of
+results.}
 
-\item{module}{Optional module that was evaluated (for additional metadata)}
+\item{module}{Optional module that was evaluated, for metadata.}
 
-\item{description}{Optional description for the pin}
+\item{description}{Optional pin description.}
 
-\item{...}{Additional arguments passed to \code{pins::pin_write()}}
+\item{...}{Further arguments passed to \code{pins::pin_write()}.}
 }
 \value{
-The pin name (invisibly)
+\code{name}, invisibly.
 }
 \description{
-Save evaluation results from a vitals Task run to a pins board.
-This enables tracking model performance over time and across experiments.
+\code{pin_vitals_log()} saves evaluation results to a pins board so you can
+track a module's performance across runs and experiments.
+}
+\details{
+For an \code{\link[=evaluate]{evaluate()}} result, the pin keeps the mean score, per-example
+scores, counts, predictions and metadata. Any other list or data frame,
+such as the samples from a vitals \code{Task}'s \verb{$get_samples()}, is stored as it
+is under \code{data}. A vitals \code{Task} object itself is not a list and is
+rejected. The pin also records the dsprrr version, the time and, when
+\code{module} is given, the module's class, compiled status and inputs.
 }
 \examples{
 \dontrun{
 board <- pins::board_folder("pins")
 
-# Evaluate module on test set
-eval_result <- evaluate(mod, test_data, metric = exact_match)
-
-# Pin the evaluation results
-pin_vitals_log(board, "sentiment-eval-v1", eval_result,
-               module = mod,
-               description = "Test set evaluation")
+eval_result <- evaluate(
+  classifier,
+  testset,
+  metric = metric_exact_match(field = "sentiment"),
+  .llm = ellmer::chat_openai(model = "gpt-6-luna")
+)
+pin_vitals_log(
+  board,
+  "sentiment-eval",
+  eval_result,
+  module = classifier,
+  description = "Test set evaluation"
+)
 }
 }
 \seealso{
-Other orchestration:
-\code{\link{orchestration}},
+Other persistence:
+\code{\link[=export_module_code]{export_module_code()}},
 \code{\link[=pin_module_config]{pin_module_config()}},
 \code{\link[=pin_trace]{pin_trace()}},
-\code{\link[=restore_module_config]{restore_module_config()}},
-\code{\link[=use_dsprrr_template]{use_dsprrr_template()}},
-\code{\link[=validate_workflow]{validate_workflow()}}
+\code{\link{program-artifact}},
+\code{\link[=restore_module_config]{restore_module_config()}}
 }
-\concept{orchestration}
+\concept{persistence}

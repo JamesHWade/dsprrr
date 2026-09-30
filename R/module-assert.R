@@ -26,7 +26,7 @@ AssertModule <- R6::R6Class(
     #' @field module The wrapped module
     module = NULL,
 
-    #' @field assertion_set AssertionSet with validation rules
+    #' @field assertion_set Validation rules created by `assertion_set()`
     assertion_set = NULL,
 
     #' @field max_retries Maximum retry attempts
@@ -42,7 +42,8 @@ AssertModule <- R6::R6Class(
     #' Initialize an Assert wrapper module
     #'
     #' @param module The module to wrap (must inherit from Module)
-    #' @param assertions List of Assertion objects or an AssertionSet
+    #' @param assertions A list of assertion rules or the result of
+    #'   `assertion_set()`
     #' @param max_retries Maximum number of retry attempts (default 3)
     #' @param on_failure What to do when max retries exceeded: "error" (default)
     #'   or "warn" (return best attempt with warning)
@@ -74,7 +75,7 @@ AssertModule <- R6::R6Class(
         assertion_set <- assertion_set(assertions)
       } else {
         cli::cli_abort(c(
-          "assertions must be a list of Assertion objects or an AssertionSet",
+          "assertions must be a list of assertion rules or the result of {.fn assertion_set}",
           "x" = "You provided: {.cls {class(assertions)[1]}}"
         ))
       }
@@ -113,6 +114,13 @@ AssertModule <- R6::R6Class(
     },
 
     #' @description
+    #' Inputs the wrapped module fills in itself.
+    #' @return A character vector.
+    supplied_inputs = function() {
+      self$module$supplied_inputs()
+    },
+
+    #' @description
     #' Execute the module with assertion validation and backtracking
     #'
     #' @param batch Named list or data frame of inputs
@@ -144,8 +152,6 @@ AssertModule <- R6::R6Class(
       best_metadata <- NULL
       best_chat <- NULL
       best_assertion_result <- NULL
-      total_tokens <- 0L
-      total_cost <- 0
       current_batch <- batch
       previous_feedback <- NULL
 
@@ -195,14 +201,6 @@ AssertModule <- R6::R6Class(
         prediction <- result$output[[1]]
         metadata <- result$metadata[[1]]
         chat_obj <- result$chat[[1]]
-
-        # Accumulate token counts and costs
-        if (!is.null(metadata$total_tokens)) {
-          total_tokens <- total_tokens + metadata$total_tokens
-        }
-        if (!is.null(metadata$cost) && !is.na(metadata$cost)) {
-          total_cost <- total_cost + metadata$cost
-        }
 
         # Evaluate assertions
         assertion_result <- evaluate_assertion_set(
@@ -294,6 +292,11 @@ AssertModule <- R6::R6Class(
         }
       }
 
+      usage <- aggregate_module_usage_metadata(
+        lapply(attempts, function(attempt) attempt$metadata),
+        unknown_attempt = length(module_errors) > 0L
+      )
+
       # Create aggregated metadata
       final_metadata <- list(
         timestamp = end_time,
@@ -302,8 +305,9 @@ AssertModule <- R6::R6Class(
         assertions_passed = best_assertion_result$all_passed,
         n_hard_failed = best_assertion_result$n_hard_failed,
         n_soft_failed = best_assertion_result$n_soft_failed,
-        total_tokens = total_tokens,
-        total_cost = total_cost,
+        total_tokens = usage$total_tokens,
+        cost = usage$cost,
+        provider_calls = usage$provider_calls,
         latency_ms = latency_ms,
         module_errors = if (length(module_errors) > 0) module_errors else NULL
       )
@@ -441,14 +445,17 @@ AssertModule <- R6::R6Class(
     #' @description
     #' Create a reset copy of the module
     reset_copy = function() {
-      AssertModule$new(
-        module = self$module$reset_copy(),
-        assertions = self$assertion_set,
-        max_retries = self$max_retries,
-        on_failure = self$on_failure,
-        feedback_template = self$feedback_template,
-        config = list(),
-        chat = self$chat
+      artifact_copy_runtime(
+        self,
+        AssertModule$new(
+          module = self$module$reset_copy(),
+          assertions = self$assertion_set,
+          max_retries = self$max_retries,
+          on_failure = self$on_failure,
+          feedback_template = self$feedback_template,
+          config = list(),
+          chat = self$chat
+        )
       )
     },
 
@@ -496,74 +503,66 @@ AssertModule <- R6::R6Class(
   )
 )
 
-#' Wrap a Module with Assertions
+#' Validate a module's outputs and retry on failure
 #'
 #' @description
-#' Factory function to create an assertion wrapper around any module.
-#' Validates outputs against assertions and retries with backtracking
-#' when hard assertions fail.
+#' `with_assertions()` wraps a module so that every output is checked against
+#' assertions. When a hard assertion fails, the module runs again with
+#' feedback that lists the failed checks, up to `max_retries` more times.
+#' Soft assertions (suggestions) only give a warning.
 #'
-#' @param module A Module object to wrap
-#' @param assertions List of Assertion objects (from `assert_output()` or
-#'   `suggest_output()`) or an AssertionSet
-#' @param max_retries Maximum number of retry attempts (default 3)
-#' @param on_failure What to do when max retries exceeded: "error" (default)
-#'   or "warn" (return best attempt with warning)
-#' @param feedback_template Template for feedback injection on retry.
-#'   Uses glue syntax. Available variables:
-#'   \itemize{
-#'     \item `{failures}`: Bulleted list of hard assertion failure messages
-#'   }
-#' @param ... Additional arguments passed to the module constructor
-#'
-#' @return An AssertModule object
+#' @param module The module to wrap.
+#' @param assertions A list of assertions made with [assert_output()],
+#'   [suggest_output()] or the `assert_*()` helpers, or an [assertion_set()].
+#' @param max_retries Number of retries after the first attempt.
+#' @param on_failure What happens when hard assertions still fail after the
+#'   last retry: `"error"` (the default) raises an error; `"warn"` gives a
+#'   warning and returns the attempt with the fewest failed hard assertions.
+#' @param feedback_template A glue template for the retry feedback, where
+#'   `{failures}` is the list of failed assertion messages, one per line. The
+#'   default says the previous response did not satisfy the requirements,
+#'   lists them, and asks for a new response that satisfies all of them.
+#' @param ... Passed to the wrapper: `chat` (an ellmer Chat, which defaults to
+#'   the wrapped module's chat) or `config`.
 #'
 #' @details
-#' ## Assertion Types
+#' On a retry, the feedback is passed to the wrapped module as an extra input
+#' named `assertion_feedback`. A prediction module without a custom template
+#' adds it to the prompt as an `assertion_feedback:` line. A [module_fn()]
+#' function must accept `assertion_feedback` (or `...`) to be retried. Each
+#' attempt uses its own partition of the response cache, so retries get
+#' fresh responses, and each retry is another model call.
 #'
-#' - **`assert_output()`**: Hard assertion. Must pass or execution retries.
-#'   Use for critical constraints like length limits, required patterns, etc.
+#' The returned module's `get_attempts()` method lists the attempts of the
+#' last run with their numbers of failed hard and soft assertions (or those of
+#' all runs, with `all = TRUE`).
 #'
-#' - **`suggest_output()`**: Soft suggestion. Logs warning but doesn't retry.
-#'   Use for style preferences, optional improvements, etc.
-#'
-#' ## Backtracking Behavior
-#'
-#' When hard assertions fail:
-#' 1. Feedback is generated from the failure messages
-#' 2. The module is re-run with feedback injected as `assertion_feedback`
-#' 3. This continues until assertions pass or max_retries is exceeded
-#' 4. If max_retries exceeded, behavior depends on `on_failure` parameter
-#'
-#' ## Performance Considerations
-#'
-#' Each retry makes a new LLM call. Use assertions judiciously and consider:
-#' - Starting with max_retries = 2-3 for most use cases
-#' - Using "warn" for non-critical assertions to avoid blocking
-#' - Combining with caching to reduce costs during development
+#' @return A module (an R6 object of class `AssertModule`) with the same
+#'   signature as `module`.
 #'
 #' @export
+#' @family assertions
+#' @family composition
 #' @examples
-#' \dontrun{
-#' # Create a QA module
 #' qa <- module(signature("question -> answer"))
-#'
-#' # Wrap with assertions
-#' validated <- with_assertions(
+#' checked <- with_assertions(
 #'   qa,
 #'   assertions = list(
-#'     assert_output(~ nchar(.x$answer) <= 100, "Answer must be 100 chars or less"),
-#'     assert_output(~ nchar(.x$answer) >= 10, "Answer must be at least 10 chars"),
-#'     suggest_output(~ grepl("^[A-Z]", .x$answer), "Should start with capital")
+#'     assert_length("answer", max = 100),
+#'     assert_matches("answer", "^[A-Z]", "Start with a capital letter"),
+#'     suggest_output(~ !grepl("!", .x$answer), "Avoid exclamation marks")
 #'   ),
-#'   max_retries = 3
+#'   max_retries = 2L
 #' )
+#' checked
 #'
-#' # Run - will retry if assertions fail
-#' result <- run(validated, question = "What is the capital of France?", .llm = llm)
-#'
-#' # Check attempt history
-#' validated$get_attempts()
+#' \dontrun{
+#' run(
+#'   checked,
+#'   question = "What is the capital of France?",
+#'   .llm = ellmer::chat_openai(model = "gpt-6-luna")
+#' )
+#' checked$get_attempts()
 #' }
 with_assertions <- function(
   module,

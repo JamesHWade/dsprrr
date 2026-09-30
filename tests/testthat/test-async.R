@@ -10,7 +10,7 @@ test_that("stream_async function exists", {
 
 test_that("run_async method exists on Module", {
   sig <- signature("text -> result")
-  mod <- module(sig, type = "predict")
+  mod <- module(sig)
 
   expect_true("run_async" %in% names(mod))
   expect_true(is.function(mod$run_async))
@@ -18,7 +18,7 @@ test_that("run_async method exists on Module", {
 
 test_that("stream_async method exists on Module", {
   sig <- signature("text -> result")
-  mod <- module(sig, type = "predict")
+  mod <- module(sig)
 
   expect_true("stream_async" %in% names(mod))
   expect_true(is.function(mod$stream_async))
@@ -66,18 +66,15 @@ test_that("run_stream preflights unsafe token steps before provider work", {
   specialized <- suppressWarnings(flex("draft -> answer"))
   nested <- pipeline(ordinary, specialized)
   provider_calls <- 0L
-  chat <- structure(
-    list(
-      chat_structured = function(...) {
-        provider_calls <<- provider_calls + 1L
-        list(draft = "draft")
-      },
-      stream = function(...) {
-        provider_calls <<- provider_calls + 1L
-        stop("provider must not be reached")
-      }
-    ),
-    class = "Chat"
+  chat <- new_test_chat(
+    chat_structured = function(...) {
+      provider_calls <<- provider_calls + 1L
+      list(draft = "draft")
+    },
+    stream = function(...) {
+      provider_calls <<- provider_calls + 1L
+      stop("provider must not be reached")
+    }
   )
 
   condition <- expect_error(
@@ -106,22 +103,19 @@ test_that("async rejection traverses module wrappers", {
 })
 
 test_that("direct async paths reject React before provider work", {
-  agent <- module(signature("question -> answer"), type = "react")
+  agent <- react(signature("question -> answer"))
   provider_calls <- 0L
-  chat <- structure(
-    list(
-      chat_structured_async = function(...) {
-        provider_calls <<- provider_calls + 1L
-      },
-      stream_async = function(...) {
-        provider_calls <<- provider_calls + 1L
-      },
-      stream = function(...) {
-        provider_calls <<- provider_calls + 1L
-      }
-    ),
-    class = "Chat"
+  chat <- new_test_chat(
+    stream = function(...) {
+      provider_calls <<- provider_calls + 1L
+    }
   )
+  chat$chat_structured_async <- function(...) {
+    provider_calls <<- provider_calls + 1L
+  }
+  chat$stream_async <- function(...) {
+    provider_calls <<- provider_calls + 1L
+  }
 
   operations <- list(
     run_async = function() run_async(agent, question = "Why?", .llm = chat),
@@ -191,7 +185,7 @@ test_that("run_async returns a promise", {
   )
 
   sig <- signature("text -> result")
-  mod <- module(sig, type = "predict", chat = chat)
+  mod <- module(sig, chat = chat)
 
   # run_async should return a promise
   result <- mod$run_async(text = "Hello")
@@ -201,29 +195,23 @@ test_that("run_async returns a promise", {
 test_that("run, run_async, and stream_async share prompt assembly", {
   captured <- new.env(parent = emptyenv())
 
-  mock_chat <- structure(
-    list(
-      get_turns = function() list(),
-      last_turn = function(...) NULL,
-      chat_structured = function(prompt, type, ...) {
-        captured$run <- prompt
-        "ok"
-      },
-      chat_structured_async = function(prompt, type, ...) {
-        captured$async <- prompt
-        "async"
-      },
-      stream_async = function(prompt, ...) {
-        captured$stream <- prompt
-        "stream"
-      }
-    ),
-    class = "Chat"
+  mock_chat <- new_test_chat(
+    chat_structured = function(prompt, type, ...) {
+      captured$run <- prompt
+      "ok"
+    }
   )
+  mock_chat$chat_structured_async <- function(prompt, type, ...) {
+    captured$async <- prompt
+    "async"
+  }
+  mock_chat$stream_async <- function(prompt, ...) {
+    captured$stream <- prompt
+    "stream"
+  }
 
   mod <- module(
     signature("text -> result", instructions = "Be concise"),
-    type = "predict",
     template = "Text: {text}",
     chat = mock_chat
   )

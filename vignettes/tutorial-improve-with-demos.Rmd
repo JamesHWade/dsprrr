@@ -1,8 +1,8 @@
 ---
-title: "Tutorial 4: Improving with Examples"
+title: "Tutorial 4: Improve with examples"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Tutorial 4: Improving with Examples}
+  %\VignetteIndexEntry{Tutorial 4: Improve with examples}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -36,43 +36,35 @@ if (should_eval) {
 }
 ```
 
-In [Tutorial 3](tutorial-structured-outputs.html), you built extractors that return structured data. But how do you make them more accurate? The answer: **show the LLM examples of correct behavior**.
-
-This technique—called few-shot learning—is one of the most powerful ways to improve LLM performance. Our running example here is support ticket triage: a classification task ambiguous enough that a handful of labeled examples makes a measurable difference. The same recipe—baseline, examples, re-measure—works for the sentiment classifier from Tutorial 2 and the extractors from Tutorial 3.
-
-**Time**: 25-30 minutes
-
-## What You'll Build
-
-A classifier that learns from examples, with measurable accuracy improvement.
-
-## Prerequisites
-
-- Completed [Tutorial 3](tutorial-structured-outputs.html)
-- `OPENAI_API_KEY` set in your environment
+A module can return the right shape and still pick the wrong answer. By the end
+of this tutorial you can measure how often a support-ticket classifier is
+right, add worked examples (demos) to its prompt by hand or with
+`LabeledFewShot`, and check with `evaluate()` whether they helped.
 
 ```{r setup}
+#| eval: true
 library(dsprrr)
 library(ellmer)
-library(tibble)
 
-chat <- chat_openai(model = "gpt-5-mini")
+chat <- chat_openai(model = "gpt-6-luna")
 ```
 
-## Step 1: The Problem
+The answers on this page were recorded with `gpt-5-mini` and are replayed when the
+site is built, so `gpt-6-luna` may word them differently.
 
-Let's build a customer support ticket classifier:
+## A ticket classifier
+
+The classifier sorts support tickets into four categories:
 
 ```{r baseline-classifier}
+#| eval: true
 sig <- signature(
- "ticket -> category: enum('billing', 'technical', 'shipping', 'general')",
+  "ticket -> category: enum('billing', 'technical', 'shipping', 'general')",
   instructions = "Classify the customer support ticket."
 )
 
-classifier <- module(sig, type = "predict")
+classifier <- module(sig)
 ```
-
-Test it:
 
 ```{r baseline-test}
 #| cassette: true
@@ -83,74 +75,66 @@ run(classifier, ticket = "I was charged twice for my order", .llm = chat)
 run(classifier, ticket = "The app keeps crashing when I try to login", .llm = chat)
 ```
 
-This works, but how do we know it's accurate? And how do we improve it?
+Three right answers on tickets you picked yourself say little about accuracy.
+For that you need tickets with known answers.
 
-## Step 2: Create Training Data
+## Measure a baseline
 
-First, let's create labeled examples using `dsp_trainset()`:
+Label some tickets with the category you expect. Treat them as a test set:
+they are for scoring the classifier, not for showing to it.
 
-```{r training-data}
-trainset <- dsp_trainset(
-  ticket = c(
-    "I was charged twice for the same item",
-    "How do I update my payment method?",
-    "The website won't load on my phone",
-    "My password reset email never arrived",
-    "When will my order ship?",
-    "Can I change my delivery address?",
-    "The product arrived damaged",
-    "I need a refund for my subscription",
-    "How do I contact customer service?",
-    "What are your business hours?"
-  ),
-  category = c(
-    "billing",
-    "billing",
-    "technical",
-    "technical",
-    "shipping",
-    "shipping",
-    "shipping",
-    "billing",
-    "general",
-    "general"
-  )
+```{r tickets}
+#| eval: true
+tickets <- tibble::tribble(
+  ~ticket,                                  ~category,
+  "I was charged twice for the same item",  "billing",
+  "How do I update my payment method?",     "billing",
+  "The website won't load on my phone",     "technical",
+  "My password reset email never arrived",  "technical",
+  "When will my order ship?",               "shipping",
+  "Can I change my delivery address?",      "shipping",
+  "The product arrived damaged",            "shipping",
+  "I need a refund for my subscription",    "billing",
+  "How do I contact customer service?",     "general",
+  "What are your business hours?",          "general"
 )
-
-trainset
 ```
 
-The `dsp_trainset()` function creates a properly formatted tibble where input columns are matched with expected output columns.
-
-## Step 3: Measure Baseline Accuracy
-
-Before improving, let's measure current performance:
+Run the classifier on every ticket and compare its answers with the labels.
+`run_dataset()` returns your columns plus a `result` column holding the
+module's answer for each row. Take the predictions from `result`: the
+`category` column in the output is your label, copied from the input.
 
 ```{r baseline-accuracy}
 #| cassette: true
-baseline_results <- run_dataset(classifier, trainset, .llm = chat)
-baseline_results
+baseline_results <- run_dataset(classifier, tickets, .llm = chat)
+
+predicted <- vapply(baseline_results$result, \(r) r$category, character(1))
+mean(predicted == tickets$category)
+
+# The tickets it got wrong
+tickets[predicted != tickets$category, ]
 ```
 
-Calculate accuracy:
+In the recorded run, gpt-5-mini labels all ten tickets correctly, so the list
+of misses is empty.
+That is the check to make before adding demos. Demos lengthen every prompt, and
+they can only help on tickets the model gets wrong, so with this baseline there
+is nothing for them to fix. When your baseline does miss tickets, read the
+misses: they tell you which kinds of ticket need an example.
 
-```{r calculate-accuracy}
-correct <- sum(baseline_results$category == trainset$category)
-total <- nrow(trainset)
-baseline_accuracy <- correct / total
+The rest of this tutorial adds demos anyway, to show how, and measures them on
+the same ten tickets.
 
-cat("Baseline accuracy:", scales::percent(baseline_accuracy), "\n")
-cat("Correct:", correct, "out of", total, "\n")
-```
+## Add demos by hand
 
-## Step 4: Add Manual Demonstrations
-
-The simplest way to improve: show the LLM examples. Add them via the `demos` parameter:
+A demo is a worked example: an input and the output you want for it. Pass a
+list of them to `module()`:
 
 ```{r manual-demos}
+#| eval: true
 classifier_with_demos <- module(
   sig,
-  type = "predict",
   demos = list(
     list(
       inputs = list(ticket = "I was charged twice for the same item"),
@@ -168,10 +152,6 @@ classifier_with_demos <- module(
 )
 ```
 
-Each demo has `inputs` (a list of input values) and `output` (a list of expected outputs).
-
-Test the improved classifier:
-
 ```{r test-with-demos}
 #| cassette: true
 run(classifier_with_demos, ticket = "I need a receipt for my purchase", .llm = chat)
@@ -179,152 +159,68 @@ run(classifier_with_demos, ticket = "I need a receipt for my purchase", .llm = c
 run(classifier_with_demos, ticket = "The button doesn't respond when clicked", .llm = chat)
 ```
 
-## Step 5: Measure Improvement
+dsprrr puts the demos in the prompt, ahead of the new ticket. This is the
+prompt for the second call:
 
-Run on the same test set:
-
-```{r improved-accuracy}
-#| cassette: true
-improved_results <- run_dataset(classifier_with_demos, trainset, .llm = chat)
-
-correct_improved <- sum(improved_results$category == trainset$category)
-improved_accuracy <- correct_improved / total
-
-cat("Baseline accuracy:", scales::percent(baseline_accuracy), "\n")
-cat("Improved accuracy:", scales::percent(improved_accuracy), "\n")
-cat("Improvement:", scales::percent(improved_accuracy - baseline_accuracy), "\n")
+```{r demo-prompt}
+cat(get_last_prompt()$prompt)
 ```
 
-## Step 6: Automatic Demo Selection with LabeledFewShot
+## Sample demos with `LabeledFewShot`
 
-Manually picking demos is tedious. The `LabeledFewShot` teleprompter automatically selects good examples from your training data:
+`LabeledFewShot` builds demos from the rows of a labeled data frame instead.
+dsprrr calls objects like this teleprompters: `compile()` applies one to a
+module and returns a new module, leaving the original unchanged. Here the rows
+come from `tickets`, which is a shortcut with a cost, explained below.
 
 ```{r labeled-fewshot}
-# Create a teleprompter that selects 3 examples
-teleprompter <- LabeledFewShot(k = 3L)
+#| eval: true
+compiled <- classifier |> compile(LabeledFewShot(k = 3L), tickets)
 
-# Compile the module with the teleprompter
-compiled <- compile_module(
-  program = classifier,
-  teleprompter = teleprompter,
-  trainset = trainset
-)
+best_demos(compiled, as_tibble = TRUE)
 ```
 
-The `compile_module()` function takes your module, a teleprompter strategy, and training data. It returns an improved module with automatically selected demonstrations.
+`LabeledFewShot` does not look for good examples. It samples `k` rows at
+random, with a fixed seed (`seed = 123L` by default) so that you get the same
+rows each time. This sample has a technical, a general and a billing ticket,
+and no shipping ticket, so check what it picked before you rely on it.
 
-## Step 7: Check What Was Selected
+## Compare the versions
 
-See which examples the teleprompter chose:
-
-```{r check-demos}
-# The compiled module now has demos
-compiled$config$demos
-```
-
-## Step 8: Compare All Three Versions
-
-Let's see how each version performs:
+`evaluate()` runs a module on every row of a data frame and scores each answer
+with a metric. `metric_exact_match(field = "category")` scores 1 when the
+returned `category` equals the row's `category` column and 0 otherwise, so the
+mean score is accuracy:
 
 ```{r final-comparison}
 #| cassette: true
-# Run all three on the test set
-results_baseline <- run_dataset(classifier, trainset, .llm = chat)
-results_manual <- run_dataset(classifier_with_demos, trainset, .llm = chat)
-results_compiled <- run_dataset(compiled, trainset, .llm = chat)
-
-# Calculate accuracies
-acc_baseline <- mean(results_baseline$category == trainset$category)
-acc_manual <- mean(results_manual$category == trainset$category)
-acc_compiled <- mean(results_compiled$category == trainset$category)
-
-comparison <- tibble(
-  Version = c("Baseline (no demos)", "Manual demos (3)", "LabeledFewShot (3)"),
-  Accuracy = scales::percent(c(acc_baseline, acc_manual, acc_compiled))
-)
-
-comparison
-```
-
-## Step 9: Using Built-in Metrics
-
-dsprrr provides metrics for common evaluation tasks. Use `metric_exact_match()` for classification:
-
-```{r builtin-metrics}
-#| cassette: true
 metric <- metric_exact_match(field = "category")
 
-# Evaluate the compiled module
-eval_result <- evaluate(compiled, trainset, metric = metric, .llm = chat)
+versions <- list(
+  "no demos" = classifier,
+  "hand-written demos" = classifier_with_demos,
+  "LabeledFewShot demos" = compiled
+)
 
-eval_result
+vapply(
+  versions,
+  \(m) evaluate(m, tickets, metric = metric, .llm = chat)$mean_score,
+  numeric(1)
+)
 ```
 
-The `evaluate()` function returns detailed results including:
-- `mean_score`: Overall accuracy
-- `scores`: Per-example scores
-- `predictions`: What the model predicted
+All three versions score 1. On this task, the recorded model does as well without demos
+as with them.
 
-## Step 10: Varying the Number of Examples
+The comparison also favors the demo versions, because some of the scored
+tickets sit in their prompts with the answers attached: the first hand-written
+demo is ticket 1 word for word, and `LabeledFewShot` drew tickets 2, 3 and 10.
+On your own data, draw demos from a training set and score every version on
+tickets outside it. Make that test set large enough to trust, too: with ten
+tickets, one answer moves accuracy by 10 points.
 
-More examples aren't always better. Let's compare:
+Every demo adds tokens to every call. If you try several values of `k`, keep
+the smallest one that scores as well as the larger ones.
 
-```{r vary-k}
-#| cassette: true
-results <- list()
-
-for (k in c(1L, 2L, 3L, 4L, 5L)) {
-  tp <- LabeledFewShot(k = k)
-  compiled_k <- compile_module(classifier, tp, trainset)
-
-  eval_k <- evaluate(compiled_k, trainset, metric = metric, .llm = chat)
-
-  results[[as.character(k)]] <- tibble(
-    k = k,
-    accuracy = eval_k$mean_score
-  )
-}
-
-do.call(rbind, results)
-```
-
-You'll often find that 2-4 examples works best. Too many can confuse the LLM or exceed context limits.
-
-## What You Learned
-
-In this tutorial, you:
-
-1. Created labeled training data with `dsp_trainset()`
-2. Measured baseline accuracy before improving
-3. Added manual demonstrations with the `demos` parameter
-4. Used `LabeledFewShot` for automatic demo selection
-5. Compiled modules with `compile_module()`
-6. Evaluated with `metric_exact_match()`
-7. Experimented with different numbers of examples
-
-## Why Demos Work
-
-LLMs are excellent at pattern matching. When you show examples of correct behavior:
-- They understand the **format** you want
-- They learn **edge cases** specific to your domain
-- They pick up on **subtle distinctions** between categories
-
-This is called "in-context learning"—the LLM learns from the examples in the prompt without any weight updates.
-
-## The Few-Shot Trade-off
-
-| More Examples | Fewer Examples |
-|---------------|----------------|
-| Better pattern coverage | Lower token costs |
-| More edge cases shown | Faster inference |
-| Risk of context overflow | May miss edge cases |
-
-Start with 2-3 examples, measure, and adjust.
-
-## Next Steps
-
-You've improved your module with examples. But what about other parameters—temperature, instructions, templates? Continue to:
-
-- **[Tutorial 5: Finding Best Configuration](tutorial-optimize-your-module.html)** — Grid search over parameters
-- **[Quick Reference](cheatsheet.html)** — All metrics and teleprompters
-- **[How Optimization Works](concepts-optimization-theory.html)** — The theory behind teleprompters
+Next, [Tutorial 5](tutorial-optimize-your-module.html) splits the data into
+training and test sets and lets dsprrr search over instructions and demos.

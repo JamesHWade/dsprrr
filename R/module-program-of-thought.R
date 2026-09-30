@@ -1,100 +1,96 @@
-#' Program of Thought Module
+#' Program of Thought module
 #'
 #' @description
-#' A module that generates R code to solve problems, executes it through an
-#' explicitly configured runner,
-#' and uses the execution results to produce answers. This is particularly
-#' effective for tasks requiring exact computation (arithmetic, statistics,
-#' data manipulation) where LLMs alone are unreliable.
-#'
-#' @details
-#' The execution flow is:
-#' 1. LLM generates R code based on the inputs
-#' 2. Code is executed by the configured code runner
-#' 3. If execution fails, the error is fed back to the LLM for repair
-#' 4. Steps 2-3 repeat until success or max_iters is reached
-#' 5. Final answer is extracted from the execution result
-#'
-#' Security: Code execution requires explicit opt-in via `runner` or
-#' `interpreter_factory`.
-#' The built-in runner uses a separate process but is NOT a security sandbox.
-#' Inspect `runner$policy()` before execution. For untrusted inputs, provide a
-#' runner backed by OS-level sandboxing (such as a container or AppArmor).
-#'
-#' Runner lifecycle: supply exactly one runtime source. `runner` is
-#' caller-owned, reused across calls, and never closed by dsprrr. The backend determines
-#' whether execution state persists and whether `reset()` is available;
-#' serialize access to stateful backends. `interpreter_factory` is a
-#' zero-argument function that returns a fresh runner implementing `execute()`,
-#' `policy()`, optional `start()`, and terminal `shutdown()` or `close()`. The
-#' module owns that runner for one invocation and shuts it down exactly once on
-#' success, error, or interrupt.
-#'
-#' [run_async()] supports factory-backed ProgramOfThought in an isolated mirai
-#' process. It rejects caller-owned runners. [stream_async()] and a module's
-#' `$stream()` method remain unavailable because streaming would bypass code
-#' execution. [run_stream()] may use its one-shot `forward()` fallback, but
-#' rejects an actual token-stream request before provider or factory work.
-#'
-#' @examples
-#' \dontrun{
-#' # Create a runner (required for code execution)
-#' runner <- r_code_runner(timeout = 30)
-#'
-#' # Create a Program of Thought module
-#' pot <- program_of_thought(
-#'   signature = "question -> answer",
-#'   runner = runner
-#' )
-#'
-#' # Use it for computation tasks
-#' result <- run(pot, question = "What is the sum of primes under 100?", .llm = llm)
-#' }
+#' A module that answers by writing and running R code. Documented with
+#' [program_of_thought()].
 #'
 #' @name module-program-of-thought
+#' @noRd
 NULL
 
-
-#' Create a Program of Thought Module
+#' Create a Program of Thought module that answers by running R code
 #'
 #' @description
-#' Factory function to create a ProgramOfThoughtModule that generates and
-#' executes R code to solve problems.
-#' Use [run()] to execute it. [run_async()] supports factory-backed modules;
-#' async streaming and module `$stream()` entry points reject ProgramOfThought.
-#' [run_stream()] preserves the synchronous `forward()` fallback unless a
-#' matching token-stream request is active; that request is rejected first.
+#' `program_of_thought()` creates a module that answers by writing R code,
+#' running it with `runner`, and reading the answer from the result. It suits
+#' tasks that need exact computation, such as arithmetic, statistics or data
+#' manipulation, where a model's direct answer is unreliable. Run it with
+#' [run()].
 #'
-#' @param signature A Signature object or string notation defining inputs/outputs
-#' @param runner Optional caller-owned code runner implementing `execute()` and
-#'   `policy()`. It is retained, never automatically closed, and must not be
-#'   shared concurrently when persistent.
-#' @param max_iters Maximum code generation/repair iterations (default 3)
-#' @param extract_answer Logical. If TRUE (default), use LLM to extract final
-#'   answer from execution result. If FALSE, return execution result directly.
-#' @param interpreter_factory Optional zero-argument function returning a fresh
-#'   runner with `execute()`, `policy()`, optional `start()`, and idempotent
-#'   terminal `shutdown()` or `close()`.
-#'   Supply exactly one of `runner` and `interpreter_factory`.
-#' @param ... Additional arguments passed to the module
+#' @details
+#' Each call works as follows:
 #'
-#' @return A ProgramOfThoughtModule object
+#' 1. The model writes R code for the inputs.
+#' 2. The runner executes it.
+#' 3. If it fails, the error goes back to the model, which repairs the code.
+#'    Steps 2 and 3 repeat up to `max_iters` times; if no attempt succeeds,
+#'    the call fails.
+#' 4. With `extract_answer = TRUE`, a second model call turns the execution
+#'    result into the output fields; otherwise the result itself is returned.
+#'
+#' Code runs only through the runtime you supply, as either `runner` or
+#' `interpreter_factory`; see [r_code_runner()] for how each is owned and shut
+#' down. [r_code_runner()] runs code in a separate process with your
+#' permissions and is not a sandbox. For untrusted input, use a sandboxed
+#' runner such as [mcp_repl_runner()]; `runner$policy()` shows what a runner
+#' enforces. A stateful `runner` must not be used by two calls at the same
+#' time.
+#'
+#' [run_async()] supports Program of Thought with an `interpreter_factory`, in
+#' a separate mirai process, but rejects a caller-owned `runner`. Token
+#' streaming with [stream_async()] or the module's `$stream()` method is
+#' unavailable, because it would bypass code execution. [run_stream()] runs
+#' the module as one non-streaming call and rejects requests for token
+#' streaming.
+#'
+#' @param signature A [signature()] object or a signature string such as
+#'   `"question -> answer"`.
+#' @param runner A code runner you own, such as [r_code_runner()]. It is
+#'   reused across calls and never shut down by dsprrr.
+#' @param max_iters Integer maximum number of attempts to write working code
+#'   (default `3L`).
+#' @param extract_answer If `TRUE` (the default), a model call turns the
+#'   execution result into the output fields. If `FALSE`, the formatted result
+#'   is returned directly.
+#' @param interpreter_factory A function with no arguments that returns a fresh
+#'   runner for each call. Supply exactly one of `runner` and
+#'   `interpreter_factory`.
+#' @param config Optional module configuration, such as runtime settings.
+#' @param chat Optional ellmer Chat stored on the module.
+#' @param ... Must be empty.
+#'
+#' @return A Program of Thought module.
 #'
 #' @export
-#' @examples
+#' @family program constructors
+#' @family code execution
+#' @examplesIf rlang::is_installed("callr")
+#' pot <- program_of_thought(
+#'   "question -> answer",
+#'   runner = r_code_runner(timeout = 30)
+#' )
+#' pot
+#'
 #' \dontrun{
-#' runner <- r_code_runner(timeout = 30)
-#' pot <- program_of_thought("question -> answer", runner = runner)
-#' result <- run(pot, question = "Calculate 847 * 293", .llm = llm)
+#' run(
+#'   pot,
+#'   question = "What is the sum of the primes below 100?",
+#'   .llm = ellmer::chat_openai(model = "gpt-6-luna")
+#' )
 #' }
 program_of_thought <- function(
   signature,
   runner = NULL,
+  interpreter_factory = NULL,
   max_iters = 3L,
   extract_answer = TRUE,
-  ...,
-  interpreter_factory = NULL
+  config = list(),
+  chat = NULL,
+  ...
 ) {
+  reject_partial_argument_matches(sys.call(), sys.function())
+  reject_constructor_arguments("program_of_thought", ...)
+
   binding <- normalize_code_runner_binding(
     runner = runner,
     interpreter_factory = interpreter_factory,
@@ -114,14 +110,16 @@ program_of_thought <- function(
   }
   max_iters <- normalize_pot_max_iters(max_iters)
 
-  ProgramOfThoughtModule$new(
+  mod <- ProgramOfThoughtModule$new(
     signature = signature,
     runner = binding$runner,
     interpreter_factory = binding$interpreter_factory,
     max_iters = max_iters,
     extract_answer = extract_answer,
-    ...
+    config = config,
+    chat = chat
   )
+  stamp_module_kind(mod, "program_of_thought")
 }
 
 normalize_pot_max_iters <- function(value) {
@@ -224,13 +222,10 @@ ProgramOfThoughtModule <- R6::R6Class(
       }
 
       # Get LLM - need to clone for fresh conversation
-      base_llm <- .llm %||% self$chat %||% get_default_chat()
-      if (is.null(base_llm)) {
-        cli::cli_abort("No LLM provided. Pass .llm or set a default chat.")
-      }
+      base_llm <- resolve_module_llm(self, .llm = .llm)
 
       # Clone the chat for a fresh conversation
-      llm <- base_llm$clone()
+      llm <- clone_ellmer_chat(base_llm, arg = ".llm", reset_turns = TRUE)
 
       with_code_runner_lease(
         self$runner,
@@ -369,14 +364,17 @@ ProgramOfThoughtModule <- R6::R6Class(
     #' Create a fresh copy of this module
     #' @return New ProgramOfThoughtModule with same settings
     reset_copy = function() {
-      ProgramOfThoughtModule$new(
-        signature = self$signature,
-        runner = self$runner,
-        interpreter_factory = self$interpreter_factory,
-        max_iters = self$max_iters,
-        extract_answer = self$extract_answer,
-        config = self$config,
-        chat = self$chat
+      artifact_copy_runtime(
+        self,
+        ProgramOfThoughtModule$new(
+          signature = self$signature,
+          runner = self$runner,
+          interpreter_factory = self$interpreter_factory,
+          max_iters = self$max_iters,
+          extract_answer = self$extract_answer,
+          config = self$config,
+          chat = self$chat
+        )
       )
     },
 
@@ -394,7 +392,7 @@ ProgramOfThoughtModule <- R6::R6Class(
         interpreter_factory = self$interpreter_factory
       )
       copied$state <- lapply(self$state, identity)
-      copied
+      artifact_copy_runtime(self, copied)
     },
 
     #' @description

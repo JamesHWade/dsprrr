@@ -2,20 +2,63 @@
 % Please edit documentation in R/optimizer-logging.R
 \name{TrialLog}
 \alias{TrialLog}
-\title{Trial Log}
+\title{Record optimization trials in memory or on disk}
 \description{
-R6 class for managing a collection of trials with optional persistence.
-Existing JSONL records are loaded when \code{log_dir} already contains a log.
-New trials are appended one record at a time; matching trial IDs are
-idempotent, while conflicting records with the same ID are rejected. The
-\code{trials.jsonl} journal is authoritative. \code{metadata.json}, \code{README.md}, and
-\code{best_program.rds} are independently refreshed, best-effort derived views;
-they may lag after an interruption and are rebuilt by a later successful
-save. Persistent Unix logs require an effective-user-owned directory with a
-safe parent chain and reject symbolic-link targets; Windows uses the
-account's filesystem ACLs, which base R cannot verify as owner-only, and
-fails closed if stable device and file identifiers are unavailable.
+A \code{TrialLog} collects the trial records of an optimizer run (see
+\code{\link[=create_trial]{create_trial()}}). Without \code{log_dir} it lives in memory. With \code{log_dir} it
+writes every trial to a JSON Lines journal, \code{trials.jsonl}, as it is added,
+so a long run can be inspected or resumed later with \code{\link[=load_trial_log]{load_trial_log()}}.
+Optimizers create one when you give them a \code{log_dir}.
 }
+\details{
+A log directory holds \code{trials.jsonl}, the authoritative journal, and three
+derived files that are refreshed after each change: \code{metadata.json},
+\code{README.md} (a readable summary) and \code{best_program.rds} (the best trial's
+program, when recorded). The derived files can lag behind after an
+interruption; the next successful save rebuilds them. Existing records in
+\code{log_dir} are loaded when the log is created. Adding a trial whose ID is
+already present is a no-op when the records match and an error when they
+differ.
+\subsection{File permissions}{
+
+Logs are private to the current user. On Unix, an existing log directory
+must be owned by the effective user with mode \code{0700}, existing log files
+must have mode \code{0600} without special bits, and every existing parent
+directory must be owned by root or the effective user. Paths that break
+these rules, and symbolic links, are rejected without being read or
+repaired. New directories and files are created owner-only. On Windows,
+where base R cannot verify owner-only access, the account's filesystem ACLs
+apply, and logging fails if stable file identifiers are unavailable.
+}
+}
+\examples{
+log <- TrialLog$new("my-search")
+log$add_trial(create_trial("my-search", params = list(k = 2L)))
+log$add_trial(create_trial("my-search", params = list(k = 4L)))
+log$n_trials()
+log$as_tibble()[, c("trial_id", "status", "mean_score")]
+
+# Persist to a directory and load it again
+dir <- file.path(tempdir(), "trial-log-example")
+saved <- TrialLog$new("my-search", log_dir = dir)
+saved$add_trial(create_trial("my-search", params = list(k = 2L)))
+list.files(dir)
+load_trial_log(dir)
+
+}
+\seealso{
+Other optimizer building blocks:
+\code{\link[=complete_trial]{complete_trial()}},
+\code{\link[=create_trial]{create_trial()}},
+\code{\link[=eval_program]{eval_program()}},
+\code{\link[=load_trial_log]{load_trial_log()}},
+\code{\link[=optimizer_control]{optimizer_control()}},
+\code{\link[=read_trials_jsonl]{read_trials_jsonl()}},
+\code{\link[=sample_dataset]{sample_dataset()}},
+\code{\link[=split_dataset]{split_dataset()}},
+\code{\link[=write_trials_jsonl]{write_trials_jsonl()}}
+}
+\concept{optimizer building blocks}
 \section{Public fields}{
   \if{html}{\out{<div class="r6-fields">}}
   \describe{
@@ -23,7 +66,7 @@ fails closed if stable device and file identifiers are unavailable.
 
     \item{\code{log_dir}}{Directory for persistence (NULL for in-memory only).}
 
-    \item{\code{trials}}{List of Trial objects.}
+    \item{\code{trials}}{List of optimization trial records.}
 
     \item{\code{metadata}}{Additional metadata about the optimization run.}
   }
@@ -80,7 +123,7 @@ program are then refreshed independently on a best-effort basis.
   \subsection{Arguments}{
     \if{html}{\out{<div class="arguments">}}
     \describe{
-      \item{\code{trial}}{A Trial object.}
+      \item{\code{trial}}{A trial record created by \code{\link[=create_trial]{create_trial()}}.}
       \item{\code{persist}}{Whether to immediately persist to disk if log_dir is set.}
     }
     \if{html}{\out{</div>}}
@@ -135,7 +178,8 @@ program are then refreshed independently on a best-effort basis.
     \if{html}{\out{</div>}}
   }
   \subsection{Returns}{
-    The best Trial object, or NULL if no completed trials.
+    The best optimization trial record, or \code{NULL} if no trials have
+completed.
   }
 }
 

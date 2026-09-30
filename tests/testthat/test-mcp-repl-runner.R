@@ -83,7 +83,7 @@ test_that("mcp_repl_runner overwrites persistent context even when empty", {
   expect_length(inputs, 2L)
   expect_match(inputs[[1L]], "sensitive", fixed = TRUE)
   expect_match(inputs[[2L]], "\\.context <-")
-  expect_match(inputs[[2L]], 'fromJSON("[]",', fixed = TRUE)
+  expect_match(inputs[[2L]], "unserializeJSON", fixed = TRUE)
   expect_false(grepl("sensitive", inputs[[2L]], fixed = TRUE))
 })
 
@@ -113,6 +113,41 @@ test_that("mcp_repl_input compresses large requests without changing them", {
   expect_false(exists(".context", envir = .GlobalEnv, inherits = FALSE))
 })
 
+test_that("mcp_repl_input preserves compact structured context", {
+  context <- list(
+    sessions = data.frame(
+      release = c("2.3.9", "2.4.0"),
+      converted = c(TRUE, FALSE),
+      stringsAsFactors = FALSE
+    ),
+    values = c(2L, 4L),
+    replay = list(list(
+      request = list(index = 1L, arguments = list(value = 20L)),
+      success = TRUE,
+      value = 21L,
+      error = NULL
+    ))
+  )
+  code <- paste(
+    "local({",
+    "  value <- .context",
+    "  base::rm(.context, envir = base::globalenv())",
+    "  value",
+    "})",
+    sep = "\n"
+  )
+
+  input <- dsprrr:::mcp_repl_input(code, context)
+  value <- eval(parse(text = input), envir = .GlobalEnv)
+
+  expect_identical(value, context)
+  expect_s3_class(value$sessions, "data.frame")
+  expect_type(value$values, "integer")
+  expect_type(value$replay, "list")
+  expect_type(value$replay[[1L]]$request, "list")
+  expect_false(exists(".context", envir = .GlobalEnv, inherits = FALSE))
+})
+
 test_that("mcp_repl_input preserves fitting high-entropy requests", {
   withr::local_seed(125L)
   alphabet <- strsplit(
@@ -125,8 +160,14 @@ test_that("mcp_repl_input preserves fitting high-entropy requests", {
   )[[1L]]
   payload <- paste(sample(alphabet, 6040L, replace = TRUE), collapse = "")
   code <- paste0("#", payload, "\n1 + 1")
+  context_literal <- encodeString(
+    as.character(jsonlite::serializeJSON(list(), digits = NA)),
+    quote = "\""
+  )
   expected <- paste0(
-    '.context <- jsonlite::fromJSON("[]", simplifyVector = FALSE)\n',
+    ".context <- jsonlite::unserializeJSON(",
+    context_literal,
+    ")\n",
     code,
     "\n"
   )
@@ -456,7 +497,10 @@ test_that("managed runner closures are process-specific and idempotent", {
     sandbox = "workspace-write",
     sandbox_verified = TRUE,
     oversized_output = "files",
-    close_connection = function() first_closes <<- first_closes + 1L,
+    close_connection = function() {
+      first_closes <<- first_closes + 1L
+      invisible(NULL)
+    },
     connection_owned = TRUE
   )
   second <- dsprrr:::McpReplRunner$new(
@@ -466,16 +510,19 @@ test_that("managed runner closures are process-specific and idempotent", {
     sandbox = "workspace-write",
     sandbox_verified = TRUE,
     oversized_output = "files",
-    close_connection = function() second_closes <<- second_closes + 1L,
+    close_connection = function() {
+      second_closes <<- second_closes + 1L
+      invisible(NULL)
+    },
     connection_owned = TRUE
   )
 
-  first$close()
-  first$close()
+  first$shutdown()
+  first$shutdown()
   expect_identical(first_closes, 1L)
   expect_identical(second_closes, 0L)
   expect_identical(second$execute("1 + 1")$result, "second")
-  second$close()
+  second$shutdown()
   expect_identical(second_closes, 1L)
 })
 
@@ -495,9 +542,9 @@ test_that("a failed managed close still makes the runner terminal", {
     connection_owned = TRUE
   )
 
-  expect_error(runner$close(), "transport close failed")
+  expect_error(runner$shutdown(), "transport close failed")
   expect_true(runner$closed)
-  expect_invisible(runner$close())
+  expect_invisible(runner$shutdown())
   expect_identical(close_calls, 1L)
   expect_error(
     runner$execute("1 + 1"),
@@ -636,6 +683,340 @@ test_that("mcp_repl_runner rounds timeout milliseconds up safely", {
   expect_identical(timeout_values, c(1L, 1L))
 })
 
+test_that("mcp_repl_runner caps each mcp-repl request at 3 seconds", {
+  timeout_values <- integer()
+  repl <- function(input, timeout_ms) {
+    timeout_values <<- c(timeout_values, timeout_ms)
+    list(result = list(content = list(list(type = "text", text = "ok"))))
+  }
+
+  for (timeout in c(30, 3600)) {
+    runner <- mcp_repl_runner(repl = repl, timeout = timeout)
+    runner$execute("1 + 1")
+    runner$reset()
+  }
+
+  expect_identical(timeout_values, rep(3000L, 4L))
+})
+
+test_that("mcp_repl_runner collects the output of busy cells", {
+  replies <- c(
+    "starting\n<<repl status: busy>>",
+    "<<repl status: busy, elapsed_ms=5950>>",
+    "halfway\n\n<<repl status: busy>>",
+    "[1] 42"
+  )
+  calls <- list()
+  repl <- function(input, timeout_ms) {
+    calls[[length(calls) + 1L]] <<- list(input = input, timeout_ms = timeout_ms)
+    text <- replies[[length(calls)]]
+    list(result = list(content = list(list(type = "text", text = text))))
+  }
+  runner <- mcp_repl_runner(repl = repl, timeout = 30)
+
+  result <- runner$execute("Sys.sleep(10); 42")
+
+  inputs <- vapply(calls, `[[`, character(1), "input")
+  expect_match(inputs[[1L]], "Sys.sleep(10); 42", fixed = TRUE)
+  expect_identical(inputs[-1L], c("", "", ""))
+  expect_identical(
+    vapply(calls, `[[`, integer(1), "timeout_ms"),
+    rep(3000L, 4L)
+  )
+  expect_true(result$success)
+  expect_identical(result$result, "starting\nhalfway\n[1] 42")
+  expect_identical(result$stdout, "starting\nhalfway\n[1] 42")
+  expect_false(runner$terminal)
+})
+
+test_that("an execution error in a busy reply fails the whole cell", {
+  replies <- list(
+    list(
+      result = list(
+        isError = TRUE,
+        content = list(list(
+          type = "text",
+          text = "Error: boom\n<<repl status: busy>>"
+        ))
+      )
+    ),
+    list(result = list(content = list(list(type = "text", text = "done"))))
+  )
+  calls <- 0L
+  runner <- mcp_repl_runner(repl = function(input, timeout_ms) {
+    calls <<- calls + 1L
+    replies[[calls]]
+  })
+
+  result <- runner$execute("stop('boom'); Sys.sleep(5); cat('done')")
+
+  expect_identical(calls, 2L)
+  expect_false(result$success)
+  expect_identical(result$error_type, "execution")
+  expect_identical(
+    result$error,
+    "mcp-repl reported an execution error: Error: boom\ndone"
+  )
+  expect_identical(result$stdout, "Error: boom\ndone")
+  expect_false(runner$terminal)
+})
+
+test_that("mcp_repl_runner interrupts cells that outlast the timeout", {
+  now <- 0
+  interrupted <- FALSE
+  calls <- list()
+  repl <- function(input, timeout_ms) {
+    calls[[length(calls) + 1L]] <<- list(input = input, timeout_ms = timeout_ms)
+    now <<- now + timeout_ms / 1000
+    text <- if (identical(input, "\u0003")) {
+      interrupted <<- TRUE
+      "Interrupted"
+    } else if (interrupted) {
+      "[1] 2"
+    } else {
+      "tick\n<<repl status: busy>>"
+    }
+    list(result = list(content = list(list(type = "text", text = text))))
+  }
+  testthat::local_mocked_bindings(
+    mcp_repl_clock = function() now,
+    .package = "dsprrr"
+  )
+  runner <- mcp_repl_runner(repl = repl, timeout = 10)
+
+  result <- runner$execute("repeat Sys.sleep(1)")
+
+  inputs <- vapply(calls, `[[`, character(1), "input")
+  expect_identical(inputs[-1L], c("", "", "", "\u0003"))
+  expect_identical(
+    vapply(calls, `[[`, integer(1), "timeout_ms"),
+    c(3000L, 3000L, 3000L, 1000L, 3000L)
+  )
+  expect_false(result$success)
+  expect_identical(result$error_type, "execution")
+  expect_true(result$retryable)
+  expect_match(result$error, "timed out after 10 seconds", fixed = TRUE)
+  expect_identical(result$stdout, "tick\ntick\ntick\ntick\nInterrupted")
+  expect_false(runner$terminal)
+
+  expect_identical(runner$execute("1 + 1")$result, "[1] 2")
+  expect_identical(
+    sum(vapply(calls, `[[`, character(1), "input") == "\u0003"),
+    1L
+  )
+})
+
+test_that("a cell that survives its interrupt makes the runner terminal", {
+  busy <- list(
+    result = list(
+      content = list(list(type = "text", text = "<<repl status: busy>>"))
+    )
+  )
+  interrupt_replies <- list(
+    busy = function() busy,
+    error = function() stop("transport disconnected"),
+    lost = function() NULL
+  )
+  now <- 0
+  testthat::local_mocked_bindings(
+    mcp_repl_clock = function() now,
+    .package = "dsprrr"
+  )
+
+  for (case in names(interrupt_replies)) {
+    inputs <- character()
+    repl <- function(input, timeout_ms) {
+      inputs <<- c(inputs, input)
+      now <<- now + timeout_ms / 1000
+      if (identical(input, "\u0003")) {
+        return(interrupt_replies[[case]]())
+      }
+      busy
+    }
+    runner <- mcp_repl_runner(repl = repl, timeout = 5)
+
+    result <- runner$execute("repeat NULL")
+
+    expect_false(result$success, info = case)
+    expect_identical(result$error_type, "interpreter", info = case)
+    expect_false(result$retryable, info = case)
+    expect_match(
+      result$error,
+      "could not be interrupted",
+      fixed = TRUE,
+      info = case
+    )
+    expect_true(runner$terminal, info = case)
+    expect_identical(sum(inputs == "\u0003"), 1L, info = case)
+    expect_error(
+      runner$execute("1 + 1"),
+      class = "dsprrr_interpreter_terminal_error"
+    )
+    expect_identical(sum(inputs == "\u0003"), 1L, info = case)
+  }
+})
+
+test_that("a missing mcp-repl reply makes the runner terminal", {
+  calls <- 0L
+  runner <- mcp_repl_runner(repl = function(input, timeout_ms) {
+    calls <<- calls + 1L
+    NULL
+  })
+
+  result <- runner$execute("Sys.sleep(5)")
+
+  expect_false(result$success)
+  expect_identical(result$error_type, "interpreter")
+  expect_match(result$error, "did not reply", fixed = TRUE)
+  expect_true(runner$terminal)
+  expect_error(
+    runner$execute("1 + 1"),
+    class = "dsprrr_interpreter_terminal_error"
+  )
+  expect_identical(calls, 1L)
+})
+
+test_that("an interrupted mcp-repl request makes the runner terminal", {
+  runner <- mcp_repl_runner(repl = function(input, timeout_ms) {
+    stop(structure(
+      class = c("interrupt", "condition"),
+      list(message = "", call = NULL)
+    ))
+  })
+
+  condition <- tryCatch(
+    runner$execute("Sys.sleep(60)"),
+    interrupt = identity
+  )
+
+  expect_s3_class(condition, "interrupt")
+  expect_true(runner$terminal)
+  expect_error(
+    runner$execute("1 + 1"),
+    class = "dsprrr_interpreter_terminal_error"
+  )
+})
+
+test_that("reset waits for a busy restart and fails if it stays busy", {
+  inputs <- character()
+  repl <- function(input, timeout_ms) {
+    inputs <<- c(inputs, input)
+    text <- if (identical(input, "\u0004")) {
+      "<<repl status: busy>>"
+    } else {
+      "new session started"
+    }
+    list(result = list(content = list(list(type = "text", text = text))))
+  }
+  runner <- mcp_repl_runner(repl = repl)
+
+  expect_invisible(runner$reset())
+  expect_identical(inputs, c("\u0004", ""))
+  expect_false(runner$terminal)
+
+  now <- 0
+  inputs <- character()
+  stuck <- function(input, timeout_ms) {
+    inputs <<- c(inputs, input)
+    now <<- now + timeout_ms / 1000
+    list(
+      result = list(
+        content = list(list(type = "text", text = "<<repl status: busy>>"))
+      )
+    )
+  }
+  testthat::local_mocked_bindings(
+    mcp_repl_clock = function() now,
+    .package = "dsprrr"
+  )
+  runner <- mcp_repl_runner(repl = stuck, timeout = 4)
+
+  expect_error(
+    runner$reset(),
+    "still busy after 4 seconds",
+    class = "dsprrr_mcp_repl_reset_error"
+  )
+  expect_true(runner$terminal)
+  expect_identical(inputs, c("\u0004", ""))
+})
+
+test_that("control frames that arrive after a busy reply are decoded", {
+  encode <- function(prefix, envelope) {
+    json <- jsonlite::toJSON(
+      envelope,
+      auto_unbox = TRUE,
+      null = "null",
+      na = "null",
+      dataframe = "rows",
+      digits = NA
+    )
+    paste0(
+      prefix,
+      gsub(
+        "[[:space:]]",
+        "",
+        jsonlite::base64_enc(charToRaw(as.character(json)))
+      )
+    )
+  }
+  nonce <- "busy-step"
+  rlm_frame <- encode(
+    dsprrr:::rlm_control_prefix(),
+    list(
+      version = 1L,
+      nonce = nonce,
+      kind = "final",
+      payload = list(index = 1L, output = list(answer = "ok"))
+    )
+  )
+  flex_frame <- encode(
+    dsprrr:::.flex_code_control_prefix,
+    list(
+      .dsprrr_flex_control = TRUE,
+      version = 1L,
+      nonce = nonce,
+      kind = "final",
+      payload = list(output = list(answer = "ok"))
+    )
+  )
+  replies <- character()
+  repl <- function(input, timeout_ms) {
+    text <- replies[[1L]]
+    replies <<- replies[-1L]
+    list(result = list(content = list(list(type = "text", text = text))))
+  }
+  runner <- mcp_repl_runner(repl = repl)
+
+  replies <- c("computing\n<<repl status: busy>>", rlm_frame)
+  rlm_result <- runner$execute(
+    "SUBMIT('ok')",
+    .control_nonce = nonce,
+    .control_protocol = "rlm"
+  )
+
+  expect_true(rlm_result$success)
+  expect_s3_class(rlm_result$result, "rlm_final")
+  expect_identical(
+    dsprrr:::extract_rlm_final(
+      dsprrr:::decode_rlm_control(rlm_result$result, nonce)
+    )$answer,
+    "ok"
+  )
+  expect_identical(rlm_result$stdout, paste("computing", rlm_frame, sep = "\n"))
+
+  replies <- c("<<repl status: busy>>", flex_frame)
+  flex_result <- runner$execute(
+    "invisible(NULL)",
+    .control_nonce = nonce,
+    .control_protocol = "flex"
+  )
+
+  expect_true(flex_result$success)
+  expect_identical(flex_result$result$nonce, nonce)
+  expect_identical(flex_result$result$payload$output$answer, "ok")
+  expect_length(replies, 0L)
+})
+
 test_that("mcp_repl_runner requires integer-valued output limits", {
   invalid_limits <- c(Inf, 10.5, .Machine$integer.max + 1)
 
@@ -682,6 +1063,53 @@ test_that("mcp_repl_runner refuses an unverifiable inherited sandbox", {
       sandbox = "inherit-codex"
     )
   )
+})
+
+test_that("mcp-repl predecoded RLM controls carry process-local attestation", {
+  nonce <- "mcp-predecoded-control"
+  envelope <- list(
+    version = 1L,
+    nonce = nonce,
+    kind = "final",
+    payload = list(index = 1L, output = list(answer = "ok"))
+  )
+  json <- jsonlite::toJSON(
+    envelope,
+    auto_unbox = TRUE,
+    null = "null",
+    na = "null",
+    dataframe = "rows",
+    digits = NA
+  )
+  frame <- paste0(
+    dsprrr:::rlm_control_prefix(),
+    gsub(
+      "[[:space:]]",
+      "",
+      jsonlite::base64_enc(charToRaw(as.character(json)))
+    )
+  )
+  repl <- function(input, timeout_ms) {
+    list(result = list(content = list(list(type = "text", text = frame))))
+  }
+  runner <- mcp_repl_runner(repl = repl)
+
+  result <- runner$execute(
+    "invisible(NULL)",
+    .control_nonce = nonce,
+    .control_protocol = "rlm"
+  )
+  consumed <- dsprrr:::decode_rlm_control(result$result, nonce)
+
+  expect_true(result$success)
+  expect_s3_class(result$result, "rlm_final")
+  expect_s3_class(consumed, "rlm_final")
+  expect_identical(dsprrr:::extract_rlm_final(consumed)$answer, "ok")
+  expect_null(attr(
+    consumed,
+    dsprrr:::rlm_control_attestation_attribute(),
+    exact = TRUE
+  ))
 })
 
 test_that("authenticated RLM traffic fails closed on file previews", {
@@ -768,7 +1196,7 @@ test_that("Flex normal inline control is decoded before display truncation", {
   expect_identical(result$result$.dsprrr_flex_control, TRUE)
   expect_identical(result$result$nonce, nonce)
   expect_identical(result$result$payload$output$answer, "ok")
-  expect_match(result$stdout, "output truncated by dsprrr", fixed = TRUE)
+  expect_lte(nchar(result$stdout), 20L)
   expect_identical(
     dsprrr:::flex_code_decode_control(list(result$result), nonce),
     result$result
@@ -874,7 +1302,7 @@ test_that("Flex recovers one bounded current-step frame from file previews", {
   expect_identical(result$result$.dsprrr_flex_control, TRUE)
   expect_identical(result$result$nonce, nonce)
   expect_identical(result$result$payload$output$answer, "ok")
-  expect_match(result$stdout, "output truncated by dsprrr", fixed = TRUE)
+  expect_lte(nchar(result$stdout), 20L)
 
   rlm_result <- runner$execute(
     "invisible(NULL)",

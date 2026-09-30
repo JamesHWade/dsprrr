@@ -17,7 +17,7 @@
 #' @noRd
 KNNFewShotModule <- R6::R6Class(
   "KNNFewShotModule",
-  inherit = Module,
+  inherit = PredictModule,
   public = list(
     #' @field module The wrapped module
     module = NULL,
@@ -103,6 +103,13 @@ KNNFewShotModule <- R6::R6Class(
     },
 
     #' @description
+    #' Inputs the wrapped module fills in itself.
+    #' @return A character vector.
+    supplied_inputs = function() {
+      self$module$supplied_inputs()
+    },
+
+    #' @description
     #' Execute with dynamically selected demos
     #'
     #' @param batch Named list or data frame of inputs
@@ -174,7 +181,7 @@ KNNFewShotModule <- R6::R6Class(
       new_module$state <- as.list(self$state)
       new_module$original_demos <- self$original_demos
 
-      new_module
+      artifact_copy_runtime(self, new_module)
     },
 
     #' @description

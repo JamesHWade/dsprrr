@@ -2,38 +2,55 @@
 % Please edit documentation in R/assertion-helpers.R
 \name{assert_custom}
 \alias{assert_custom}
-\title{Assert Custom Condition}
+\title{Assert a custom condition}
 \usage{
 assert_custom(condition, message, field = NULL, type = c("assert", "suggest"))
 }
 \arguments{
-\item{condition}{A function or formula that takes the output and returns TRUE/FALSE.}
+\item{condition}{A function, or a formula using \code{.x}, that takes the output
+(or the \code{field}) and returns \code{TRUE} or \code{FALSE}.}
 
-\item{message}{Error message when assertion fails.}
+\item{message}{The message shown when the check fails, which
+\code{\link[=with_assertions]{with_assertions()}} also sends back to the model on a retry.}
 
-\item{field}{Optional. The specific output field to validate.}
+\item{field}{The output field passed to \code{condition}. With \code{NULL} (the
+default), the whole output (a named list) is passed.}
 
-\item{type}{"assert" for hard assertion (default), "suggest" for soft suggestion.}
+\item{type}{\code{"assert"} (the default) for a hard assertion, which makes
+\code{\link[=with_assertions]{with_assertions()}} retry when it fails, or \code{"suggest"} for a soft one,
+which only gives a warning.}
 }
 \value{
-An Assertion object
+An assertion for \code{\link[=assertion_set]{assertion_set()}} or \code{\link[=with_assertions]{with_assertions()}}.
 }
 \description{
-Create a custom assertion with a user-defined condition function.
-This is a convenience wrapper around \code{assert_output()} with clearer semantics.
+\code{assert_custom()} builds an assertion from your own condition. It is
+\code{\link[=assert_output]{assert_output()}} or \code{\link[=suggest_output]{suggest_output()}}, chosen by \code{type}.
 }
 \examples{
-\dontrun{
-# Custom validation: answer must have exactly 3 sentences
+# Exactly three sentences
 assert_custom(
-  ~ length(gregexpr("\\\\.", .x$answer)[[1]]) == 3,
-  "Answer must have exactly 3 sentences"
+  ~ lengths(regmatches(.x$answer, gregexpr("[.!?]", .x$answer))) == 3,
+  "Answer in exactly three sentences"
 )
 
-# Custom validation: summary must be shorter than original text
+# Compare two output fields
 assert_custom(
-  function(x) nchar(x$summary) < nchar(x$original),
-  "Summary must be shorter than original"
+  function(x) nchar(x$summary) < nchar(x$details),
+  "The summary must be shorter than the details"
 )
 }
+\seealso{
+Other assertions:
+\code{\link[=assert_contains]{assert_contains()}},
+\code{\link[=assert_length]{assert_length()}},
+\code{\link[=assert_matches]{assert_matches()}},
+\code{\link[=assert_not_contains]{assert_not_contains()}},
+\code{\link[=assert_not_empty]{assert_not_empty()}},
+\code{\link[=assert_not_matches]{assert_not_matches()}},
+\code{\link[=assert_one_of]{assert_one_of()}},
+\code{\link[=assert_range]{assert_range()}},
+\code{\link{assertions}},
+\code{\link[=with_assertions]{with_assertions()}}
 }
+\concept{assertions}

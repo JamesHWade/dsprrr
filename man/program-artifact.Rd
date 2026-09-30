@@ -3,78 +3,125 @@
 \name{program-artifact}
 \alias{program-artifact}
 \alias{program_artifact}
+\alias{program_artifact_id}
 \alias{save_program}
 \alias{load_program}
-\title{Persist Complete dsprrr Programs}
+\title{Save and load complete programs}
 \usage{
 program_artifact(program, registry = list(), trusted = FALSE)
+
+program_artifact_id(x, registry = list())
 
 save_program(program, path, registry = list(), trusted = FALSE)
 
 load_program(path, registry = list(), trusted = FALSE)
 }
 \arguments{
-\item{program}{A dsprrr \code{Module} program.}
+\item{program}{A dsprrr module or composed program.}
 
-\item{registry}{A named list of functions or runtime objects. Artifact records
-contain registry names, never the registered values themselves.}
+\item{registry}{A named list of functions or runtime objects. Artifacts
+store the names, never the objects.}
 
-\item{trusted}{Whether arbitrary runtime values may be embedded or restored.
-This is \code{FALSE} by default and should be enabled only for artifacts and code
-you trust.}
+\item{trusted}{Whether arbitrary runtime values may be embedded or restored
+(default \code{FALSE}). Enable it only for artifacts and code you trust.}
 
-\item{path}{An artifact path on a stable local filesystem, in a containing
-directory trusted against hostile concurrent mutation. \code{save_program()}
-stages and validates a private temporary file in the same directory, then
-publishes it with a same-filesystem atomic move. An ordinary move failure
-leaves an existing destination unchanged, or publishes no destination. If
-verification after a successful move fails, \code{save_program()} errors but the
-new destination may already be present.}
+\item{x}{A module or a \code{dsprrr_program_artifact} manifest.}
+
+\item{path}{Path of the \code{.rds} file, on a local file system, in a directory
+that other processes do not change at the same time. \code{save_program()}
+writes a private temporary file in the same directory, checks it, and
+moves it into place, so a failed move leaves any existing file unchanged.
+If the check after the move fails, \code{save_program()} errors, but the new
+file may already be in place.}
 }
 \value{
 \itemize{
 \item \code{program_artifact()} returns a \code{dsprrr_program_artifact} manifest.
-\item \code{save_program()} invisibly returns \code{path}.
-\item \code{load_program()} returns the reconstructed root module.
+\item \code{program_artifact_id()} returns the digest as a string starting with
+\code{"sha256:"}. Artifacts are checked for structure and integrity, without
+requiring the recorded dependency versions to be installed. A module
+rebuilt from an artifact keeps reporting that artifact's ID until it is
+changed, so execution traces point to the exact source; saving it again
+creates a new artifact whose ID can differ. Registry entries that a
+module's artifact uses stay attached to the module, so later calls and
+copies recover the same ID without the registry. A module rebuilt from
+trusted embedded values is different: execution metadata may omit its ID
+unless you create a new artifact with \code{program_artifact(module, trusted = TRUE)}.
+\item \code{save_program()} returns \code{path}, invisibly.
+\item \code{load_program()} returns the rebuilt program.
 }
 }
 \description{
-Program artifacts are versioned, transport-independent manifests for complete
-dsprrr module graphs. They preserve signatures, declarative configuration,
-demos, optimization provenance, compiled state, pipeline mappings, wrappers,
-ensembles, and shared module identity. Runtime chats, credentials, generated
-prompts, caches, and execution history are excluded.
+\code{save_program()} writes a program to an \code{.rds} file and \code{load_program()}
+rebuilds it, including nested modules, demonstrations, optimization
+results and compiled state. \code{program_artifact()} returns the same content as
+an R object, a versioned manifest, for example to pin with
+\code{\link[=pin_module_config]{pin_module_config()}} or to rebuild with \code{\link[=restore_module_config]{restore_module_config()}}.
+\code{program_artifact_id()} returns a digest that identifies an artifact's
+content.
 
-Callables and runtime objects are never captured implicitly. Supply a named
-\code{registry} to store stable IDs, or set \code{trusted = TRUE} to embed them. Embedded
-values are restored only when \code{trusted = TRUE} is also supplied while loading.
-Registry IDs are the recommended contract for tools, custom functions,
-retrievers, stores, code runners, and interpreter factories. Format version 4
-records exactly one runner or factory for each code-executing module without
-invoking a factory during write or restore. Valid version 3 runner-only
-manifests are checked against their original schema and integrity digest,
-then upgraded in memory; other historical versions are rejected.
+Chats, credentials, generated prompts, caches and execution history are
+never saved: give the restored program a chat when you run it.
+}
+\details{
+\subsection{Functions and other runtime objects}{
 
-Declarative ellmer text, JSON, inline/remote image, and PDF content is stored
-through a closed codec. Remote content URLs must be stable HTTPS URLs without
-user information, query strings, fragments, or recognizable signed-path
-credentials. Demo fields with credential-like names are rejected instead of
-being silently removed from the program. Thinking, tool-call, uploaded, and
-other runtime content still requires a registry or trusted embedding. The
-payload digest detects changes but is not an authenticity or trust signal.
+Tools, custom functions, retrievers, stores, code runners and interpreter
+factories are never captured implicitly. List them in a named \code{registry}:
+the artifact stores only their names, and loading with the same registry
+puts them back. An entry is identified by its name and interface digest,
+not by its function body, so keep registry names stable and versioned.
+Alternatively, \code{trusted = TRUE} embeds the objects themselves; they are
+restored only when \code{trusted = TRUE} is also passed when loading, so use it
+only for artifacts and code you trust. Factories are never called while
+saving or loading.
+}
 
-Artifacts currently reject cyclic module graphs with a typed error. Shared
-acyclic nodes are represented once and reconstructed with identical R6
-identity at every edge.
+\subsection{Content rules}{
+
+Declarative ellmer content (text, JSON, inline or remote images, and PDFs)
+is stored as data. Remote URLs must be stable HTTPS URLs without user
+information, query strings, fragments or signed-path credentials.
+Demonstration fields with credential-like names are rejected rather than
+silently dropped. Thinking, tool-call, uploaded and other runtime content
+needs a registry or trusted embedding.
+}
+
+\subsection{Format and identity}{
+
+Format version 6 is the only supported format; artifacts with another
+version are rejected before any module is built. It records exactly one
+runner or factory for each code-executing module, the complete Flex runtime
+contract, and the action and extraction predictors of RLM modules. Cyclic
+module graphs are rejected. A module shared by several parents is stored
+once and restored as one object everywhere it is used.
+
+The digest detects changes; it is not a sign of authenticity or trust.
+Registry entries count toward it through their names and interface digests,
+and records of excluded runtime values count too, although the values do
+not.
+}
 }
 \examples{
 mod <- module(signature("text -> answer"))
-artifact <- program_artifact(mod)
-restored <- restore_module_config(artifact)
 
 path <- tempfile(fileext = ".rds")
 save_program(mod, path)
 restored <- load_program(path)
+restored
+
+artifact <- program_artifact(mod)
+program_artifact_id(artifact)
+identical(program_artifact_id(restored), program_artifact_id(artifact))
 unlink(path)
 
 }
+\seealso{
+Other persistence:
+\code{\link[=export_module_code]{export_module_code()}},
+\code{\link[=pin_module_config]{pin_module_config()}},
+\code{\link[=pin_trace]{pin_trace()}},
+\code{\link[=pin_vitals_log]{pin_vitals_log()}},
+\code{\link[=restore_module_config]{restore_module_config()}}
+}
+\concept{persistence}

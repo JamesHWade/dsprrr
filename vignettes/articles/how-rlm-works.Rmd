@@ -1,14 +1,13 @@
 ---
-title: "How the Recursive Language Model (RLM) Works"
+title: "How RLM works"
 description: >
-  From the research origins to dsprrr's R implementation: what Recursive
-  Language Models are, why they matter, and how the internals work.
+  What happens during an RLM call: where the inputs live, what the model sees,
+  where its code runs, how answers are checked, and the limits that apply.
 author: "James H. Wade"
-date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 bibliography: references.bib
 vignette: >
-  %\VignetteIndexEntry{How the Recursive Language Model (RLM) Works}
+  %\VignetteIndexEntry{How RLM works}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -17,392 +16,244 @@ vignette: >
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
-  # Code blocks in this article are excerpts from the source, not runnable
-  # examples. The companion tutorial (tutorial-rlm-dsprrr) uses VCR cassettes
-  # for evaluated examples.
   eval = FALSE
 )
+options(conflicts.policy = list(warn = FALSE))
 ```
 
-## The Problem: Context Rot
+A recursive language model (RLM) [@zhang2025rlm] answers questions about
+inputs it never sees in full. dsprrr keeps the inputs in an R session. The
+model sees their names, sizes and short previews, writes R code to inspect
+them, reads the printed result, and repeats until it submits typed outputs.
+This page explains that loop, how to choose where the generated code runs, and
+the limits that apply. `rlm_module()` is experimental.
 
-Modern LLMs accept enormous context windows. GPT-5 handles a million tokens; Gemini stretches to two million. But bigger windows do not solve the fundamental problem.
+## When to use RLM
 
-As context grows, performance degrades: details get lost and answers go wrong. The MIT researchers who introduced Recursive Language Models call this *context rot*, the empirical observation that output quality deteriorates as prompts grow, even when the relevant information is technically within the window [see @zhang2025rlm]. The model misses what it needs with increasing frequency as input length grows.
+| Your task | Use |
+|---|---|
+| Short inputs and a direct answer | `module()` |
+| Reasoning over context you have already selected | `chain_of_thought()` |
+| A calculation the model writes as R code | `program_of_thought()` |
+| Calling tools or acting on outside systems | `react()` or `code_act()` |
+| Answering from a prepared retrieval index | `rag_module()` |
+| Exploring large or irregular R objects when you don't know where the answer is | `rlm_module()` |
+| Searching for the best program structure over labeled examples | `flex()` |
 
-And there is no adaptive retrieval. The model cannot decide to re-read section 14 after discovering something relevant in section 42. It processes the entire input in one pass and produces output from whatever signal survived.
+Every RLM step costs one model call and one code execution. If an R function,
+a query or an ordinary module already describes the path to the answer, use
+that instead.
 
-## The Insight: Context as Environment
+## Choose where the code runs
 
-The core idea behind RLMs is simple: *don't put the context in the prompt*. Instead, store it as a variable in a programming environment and let the model write code to explore it.
+RLM executes code that a model wrote, so pick the runner first. It decides
+what that code can touch and how large the inputs can be.
 
-A traditional call looks like this:
+| | `mcp_repl_runner()` | `r_code_runner(persistent = TRUE)` |
+|---|---|---|
+| Isolation | Operating-system sandbox from Posit's [mcp-repl](https://github.com/posit-dev/mcp-repl): network off, writes only to the workspace and temporary files | A separate R process with your user's file, network and environment access |
+| Use it for | Inputs you do not control, or code that must not reach your files and network | Inputs and code you trust |
+| Inputs | Serialized and sent with every step, so they must be small (see [limits](#limits)) | Any object callr can serialize, staged once per call |
+| Requires | The mcptools package and the `mcp-repl` executable | The callr package |
 
-```r
-llm$chat(paste("Summarize this document:", huge_document))
+Install the sandbox with:
+
+```sh
+Rscript -e 'install.packages("mcptools")'
+uv tool install posit-mcp-repl   # or: pipx install posit-mcp-repl
 ```
 
-An RLM inverts the relationship. The document lives outside the model as a variable in an R session, and the model generates code to interact with it. When you call `run()`, dsprrr provides a REPL: the model writes R code, dsprrr executes it in a subprocess, and the printed output feeds back into the next iteration. A typical exploration might look like this:
+Pass the runner as a zero-argument `interpreter_factory`. dsprrr then creates
+a fresh runner for each call and shuts it down afterwards, even when the call
+fails. Creating the module does not start a runner:
 
-```r
-# The model generates and executes code like this:
-intro <- peek(.context$document, 1, 2000)
-findings <- search(.context$document, "\\b(conclusion|finding|result)\\b")
-section_42 <- peek(.context$document, 85000, 90000)
-SUBMIT(answer = "The document concludes that...")
-```
-
-The shift is from treating context as *input* to treating it as *environment*. The model reads what it needs, skips what it doesn't, and revisits sections as its picture of the data develops.
-
-In dsprrr's API, the module receives input arguments (e.g., `question`), holds context variables (e.g., `document`) outside the prompt, and exposes `llm_query()` so the model can delegate sub-questions to a secondary model from generated code. In the paper's notation [@zhang2025rlm], these correspond to a query $q$, context $C$, and a recursive tool call $\text{RLM}_M(\hat{q}, \hat{C})$ that spawns an isolated sub-instance with a new query and a transformed slice of the context.
-
-## Origin and Ecosystem
-
-RLMs were introduced by Alex Zhang, Tim Kraska, and Omar Khattab at MIT [@zhang2025rlm]. On BrowseComp-Plus (a benchmark with 6--11 million token inputs), standard models scored 0% while an RLM powered by GPT-5 achieved 91.33%. That comparison is less "RLM beats prompting" than "RLM makes previously intractable tasks tractable"; inputs that large exceed every current model's context window. The fairer apples-to-apples result is that their post-trained RLM-Qwen3-8B outperformed the base Qwen3-8B by 28.3% on average across long-context tasks.
-
-The idea has since spread quickly. DSPy integrated RLMs as a first-class module ([`dspy.RLM`](https://dspy.ai/api/modules/RLM/)) in version 3.1.2+, using a Pyodide WASM sandbox for code execution. Google's Agent Development Kit [re-implemented the pattern](https://medium.com/google-cloud/recursive-language-models-in-adk-d9dc736f0478) with Gemini models. The [official `rlm` Python package](https://github.com/alexzhang13/rlm), a [community implementation](https://github.com/ysz/recursive-llm), and [Prime Intellect's research program](https://www.primeintellect.ai/blog/rlm) round out the ecosystem. The [comparison table below](#how-dsprrrs-rlm-compares) summarizes the key differences.
-
-dsprrr's `rlm_module()` brings the same approach to R, using R as the REPL
-language instead of Python and structured outputs via
-[ellmer](https://ellmer.tidyverse.org/). Execution is delegated to the selected
-runner backend: the built-in `r_code_runner()` uses
-[callr](https://callr.r-lib.org/), while the default managed
-`mcp_repl_runner()` uses an OS-sandboxed persistent session.
-
-## How dsprrr Implements RLM
-
-The rest of this article walks through dsprrr's implementation. For a practical example, see `vignette("tutorial-rlm-dsprrr", package = "dsprrr")`, which uses `rlm_module()` to trace a theming bug across the bslib, shiny, and brand.yml codebases.
-
-### The User-Facing API
-
-Creating an RLM module requires a signature plus exactly one execution binding.
-To reuse a caller-owned runner object, pass `runner`:
-
-```{r}
+```{r runners}
+#| eval: true
 library(dsprrr)
 
-runner <- r_code_runner(timeout = 30)
+# Sandboxed: a short policy text you did not write
+reviewer <- rlm_module(
+  "policy, question -> answer",
+  interpreter_factory = function() mcp_repl_runner(timeout = 30)
+)
 
-rlm <- rlm_module(
-  signature = "document, question -> answer",
-  runner = runner
+# Trusted: large data frames from your own pipeline
+analyst <- rlm_module(
+  "sessions, changes, question -> answer, evidence",
+  interpreter_factory = function() {
+    r_code_runner(timeout = 30, persistent = TRUE)
+  }
+)
+analyst
+```
+
+A runner passed as `runner =` instead belongs to you. dsprrr reuses it across
+calls, never shuts it down, and after each call removes only the variables and
+inputs it staged; files or options the generated code changed stay changed.
+Use such a runner for one call at a time, within one trust boundary.
+
+For a one-off question, `rlm()` builds the module and runs it in one call,
+with a fresh `mcp_repl_runner()` unless you pass `.runner` or
+`.interpreter_factory`.
+
+## One call, step by step
+
+1. dsprrr loads each input into the runner as `.context$<name>`. For `analyst`
+   these are `.context$sessions`, `.context$changes` and `.context$question`.
+2. The first prompt lists each input's class, size, declared type and a
+   preview of at most 1,000 characters (for a data frame, its `str()`), the
+   output fields, and the helper functions below.
+3. The model returns its reasoning and one block of R code, such as
+   `str(.context$sessions)`. The runner executes it, and variables persist to
+   the next step.
+4. The printed result, cut to `max_output_chars`, is added to the next prompt
+   together with every earlier step's code and output.
+5. The loop ends at the first valid `SUBMIT()`. If `max_iterations` (default
+   20) runs out first, dsprrr warns and a separate `extract` predictor produces
+   the outputs from the steps so far.
+
+| Helper | What it does |
+|---|---|
+| `peek(x, start, end)` | Characters `start` to `end` of a string, or elements of a vector |
+| `search(x, pattern)` | All matches of a regular expression in `x` |
+| `llm_query(query, context_slice)` | Asks the sub-model one question about a string and returns the answer |
+| `llm_query_batched(queries, slices)` | Asks several independent questions; answers come back in input order |
+| `SUBMIT(...)` | Ends the loop with the output fields |
+
+[Investigate a regression with RLM](tutorial-rlm-dsprrr.html) shows a complete
+trajectory for a module like `analyst`.
+
+## Recursive queries
+
+`llm_query()` reads like a function call, but the model call happens in your R
+session, not in the runner:
+
+```r
+notes <- .context$changes$note[.context$changes$release == "2.4.0"]
+suspects <- llm_query(
+  "Which of these change notes could lower mobile checkout conversion?",
+  paste(notes, collapse = "\n")
 )
 ```
 
-For tasks that benefit from recursive sub-queries, you can wire up a secondary model:
+The step stops at the call, dsprrr sends the question to the sub-model, then
+reruns the step from the top with the answer filled in. Assignments made in the
+step are kept once the rerun completes, and tools run once. Anything with
+outside effects before the query (writing a file, calling an API) runs again on
+every rerun, so keep that part read-only. dsprrr does not pass model
+credentials to the runner, but that alone does not hide them: an
+`r_code_runner()` process inherits your environment variables.
 
-```{r}
-rlm <- rlm_module(
-  signature = "document, question -> answer",
-  runner = runner,
-  sub_lm = ellmer::chat_openai(model = "gpt-5-mini"),
-  max_llm_calls = 10
+`sub_lm` sets the chat for these queries, for example
+`sub_lm = ellmer::chat_openai(model = "gpt-6-luna")` in `rlm_module()`. The
+default, `NULL`, reuses the chat that runs the main loop. Every question counts
+against `max_llm_calls` (default 50), including each one in a batch, and
+`max_llm_calls = 0` removes both query helpers. In `llm_query_batched()`, a
+provider error for one question comes back as an `"[ERROR] ..."` string in its
+position; any other failure ends the call.
+
+## Typed submission
+
+The signature decides what `SUBMIT()` accepts. For
+`"logs -> error_count: int, severity: enum('low', 'high'), evidence: list[str]"`,
+generated code submits named values:
+
+```r
+SUBMIT(
+  error_count = 7L,
+  severity = "high",
+  evidence = c("AUTH-401 rate tripled at 14:02", "Token refresh retries fell to 0")
 )
 ```
 
-You can also inject custom R functions as tools available in the REPL. The factory validates these against reserved names (`SUBMIT`, `peek`, `search`, `llm_query`, etc.) to prevent collisions.
+A missing required field, an unknown field, or a value of the wrong type does
+not end the loop. The error is added to the trajectory and the model can fix
+its submission on the next step. Optional fields may be left out. Outputs must
+use ellmer's string, number, integer, boolean, enum, array and object types;
+a `type_from_schema()` output is rejected when the module is created because
+RLM cannot check it.
 
-### The REPL Loop
+## Read the result
 
-When you call `run(rlm, ...)`, dsprrr dispatches to the module's internal `forward()` method. This is where the REPL loop lives. A `PredictModule`'s `forward()` makes a single call; the RLM module loops, up to `max_iterations` times (default 20):
+Ask for the structured result to keep the trajectory with the answer:
 
-```{r}
-# From R/module-rlm.R (error handling, sub-query interception, and
-# fallback extraction omitted -- see those sections below)
-for (iter in seq_len(self$max_iterations)) {
-  # Build prompt including all previous iterations
-  prompt <- private$build_iteration_prompt(system_prompt, history, iter)
-
-  # Ask the model to generate R code
-  response <- private$get_code_response(llm, prompt)
-
-  # Execute code in isolated subprocess with RLM tools injected
-  exec_result <- private$execute_with_rlm_tools(
-    response$code,
-    inputs,
-    call_counter
-  )
-
-  # Record in history -- the model sees this on the next iteration
-  history[[iter]] <- list(
-    iteration = iter,
-    reasoning = response$reasoning,
-    code = response$code,
-    output = exec_result$formatted_output,
-    success = exec_result$success,
-    is_final = exec_result$is_final
-  )
-
-  # SUBMIT() terminates the loop
-  if (exec_result$is_final) {
-    final_answer <- exec_result$final_value
-    break
-  }
-}
-```
-
-Each iteration produces a structured response with two fields: `reasoning` (the model's explanation of its plan for that step) and `code` (R code to execute). This uses ellmer's structured output support:
-
-```{r}
-# From R/module-rlm.R -- structured code generation
-output_type <- ellmer::type_object(
-  reasoning = ellmer::type_string("Your thought process for this step"),
-  code = ellmer::type_string("R code to execute")
+```{r run}
+result <- run(
+  analyst,
+  sessions = sessions,
+  changes = changes,
+  question = "Which cohort's conversion fell after release 2.4.0, and why?",
+  .llm = ellmer::chat_openai(model = "gpt-6-luna"),
+  .return_format = "structured"
 )
 
-result <- llm$chat_structured(prompt, type = output_type)
+result$output$answer
+result$metadata$output_source # "submit", or "fallback" if no step submitted
+result$metadata$repl_history # one entry per step
 ```
 
-The accumulated history gives the model a growing record of what it has tried. Failed executions are included. The model sees its own errors and can correct course.
+Each `repl_history` entry holds the step's reasoning, its code, the output the
+model saw, and whether it succeeded or submitted. The metadata also counts
+steps (`iterations`), recursive queries (`llm_calls`), provider calls, tokens
+and cost; totals are `NA` when a provider cannot report every call. Treat
+`output_source == "fallback"` as a warning that the step budget ran out or the
+instructions need work.
 
-### REPL Tools
+`run()` stages each input as one object, whatever its length. For many
+investigations, use `run_dataset()` with one row per investigation and
+list-columns for data frames; with a factory, each row gets its own runner.
 
-Before each execution, dsprrr injects a "prelude" that defines the tools available in the subprocess. These are defined in `R/rlm-tools.R`:
+Errors in generated code, such as a missing column, are shown to the model so
+it can try again. Failures of the runner itself (it cannot start, its
+connection breaks) end the call with an error.
 
-`peek(var, start, end)` views a slice of a variable. It dispatches on the input type: for a character vector, `start` and `end` are element indices; for a single string, they are character positions:
+## Limits {#limits}
 
-```{r}
-# From R/rlm-tools.R
-peek <- function(var, start = 1L, end = 1000L) {
-  if (!is.character(var)) {
-    var <- as.character(var)
-  }
-  if (length(var) > 1) {
-    return(var[max(1L, start):min(length(var), end)])
-  }
-  substr(var, max(1L, start), min(nchar(var), end))
-}
-```
+| Limit | Size | Applies to | When exceeded |
+|---|---|---|---|
+| Output the model sees per step | `max_output_chars`, default 10,000 characters | RLM, any runner | The middle is cut; the model sees the head, the tail and how much was omitted |
+| Preview of each input in the first prompt | 1,000 characters | RLM, any runner | Cut the same way |
+| One request to mcp-repl: the step's code plus its serialized `.context` | 7,000 bytes, gzip-compressed when larger | RLM steps, executable Flex steps and harness sandbox actions in `mcp_repl_runner()` | Rejected before it runs; in RLM the model sees the error |
+| One message back from the runner: an RLM `SUBMIT()`, `llm_query()` or tool request, or a Flex predictor or tool call | 3,000 bytes, encoded | RLM and executable Flex in `mcp_repl_runner()` | The step fails; in RLM the model sees the error and can retry with smaller values |
+| Tool calls in one step | 1,000 | RLM, any runner | The call ends with an error |
+| Sandbox code from an agent | 12,000 characters | `AutoResearch()` and `MetaHarness()` | The action is rejected without running |
+| Sandbox result shown to the agent | 4,000 characters | `AutoResearch()` and `MetaHarness()` | Truncated and marked `[truncated]` |
 
-`search(var, pattern)` runs a Perl-compatible regex against a variable and returns all matches:
+The request limit is the one you will meet. In RLM, `.context` holds every
+input, and RLM's own helper code already takes about 4,700 of the 7,000 bytes
+after compression (about 5,200 when `llm_query()` is enabled). That leaves
+roughly 2,000 bytes for the compressed inputs: a few thousand characters of
+ordinary text or a couple of hundred rows of a small data frame, and much less
+for text that barely compresses, such as IDs or hashes. Inputs are sent again
+with every step, so an input that is too large fails every step and the call
+ends in fallback extraction. `r_code_runner(persistent = TRUE)` has neither the
+request nor the frame limit; use it for larger inputs you trust.
 
-```{r}
-# From R/rlm-tools.R
-search <- function(var, pattern, ignore_case = FALSE) {
-  if (!is.character(var)) {
-    var <- as.character(var)
-  }
-  if (length(var) > 1) {
-    var <- paste(var, collapse = "\n")
-  }
-  matches <- regmatches(
-    var,
-    gregexpr(pattern, var, ignore.case = ignore_case, perl = TRUE)
-  )
-  unlist(matches)
-}
-```
+mcp-repl also moves very large printed output into a file preview. RLM treats
+that as a failed step rather than reading a partial result, so generated code
+should print summaries, not whole objects.
 
-`SUBMIT(...)` terminates the loop and returns the final answer. It validates that the provided values match the signature's output fields, supporting both positional (`SUBMIT("my answer")`) and named (`SUBMIT(answer = "my answer")`) arguments:
+## Privacy and caching
 
-```{r}
-# From R/rlm-tools.R -- simplified; see source for full validation logic
-SUBMIT <- function(...) {
-  args <- list(...)
-  arg_names <- names(args)
-  has_any_names <- any(nzchar(arg_names %||% ""))
+The runner boundary does not keep data away from the model provider. The
+first prompt carries each input's preview: a string of up to 1,000 characters
+in full, and the start and end of a longer one. Anything printed, passed to
+`llm_query()`, or submitted also reaches the provider. Tools given through
+`tools =` run in your R session with your permissions, outside any sandbox.
 
-  if (!has_any_names) {
-    # Positional: match by order against signature output fields
-    names(args) <- .rlm_output_fields
-  } else {
-    # Named: validate that all required fields are present
-    missing <- setdiff(.rlm_output_fields, arg_names)
-    if (length(missing) > 0) {
-      stop("SUBMIT() missing outputs: ", paste(missing, collapse = ", "))
-    }
-  }
+The main-loop and fallback calls use dsprrr's response cache, which can
+include a disk cache. Pass `.cache = FALSE` to `run()` for sensitive work.
+Recursive queries and code execution are never cached.
 
-  class(args) <- c("rlm_final", class(args))
-  args
-}
-```
+## Relationship to DSPy
 
-The `.rlm_output_fields` variable is not magic. It is injected into the subprocess by the same prelude that defines `peek()`, `search()`, and `SUBMIT()` itself. The prelude reads the signature's output field names and writes them as a character vector at the top of the execution script.
+dsprrr follows the contract of DSPy's `dspy.RLM`, with R instead of Python in
+the interpreter and ellmer chats for the models. The two predictors inside an
+RLM, `generate_action` (writes each step) and `extract` (the fallback), are
+ordinary modules that `GEPA()` can tune. [dsprrr for DSPy
+users](dspy-comparison.html) lists the differences.
 
-The `rlm_final` class is a sentinel: when the parent process sees it in the subprocess result, it exits the loop and extracts the answer.
-
-### Runner-Selected Isolation
-
-The example in this article uses `RCodeRunner`, so each generated code fragment
-runs in an isolated R subprocess via `callr::r()`. The `RCodeRunner` class in
-`R/r-code-runner.R` handles that backend:
-
-```{r}
-# From R/r-code-runner.R -- subprocess execution (simplified)
-exec_result <- callr::r(
-  func = private$execution_wrapper,
-  args = list(code = code, context = context, ...),
-  timeout = self$timeout,
-  stdout = stdout_file,
-  stderr = stderr_file,
-  user_profile = FALSE
-)
-```
-
-Inside the subprocess, a fresh environment is created with the context available as `.context`. The wrapper overrides `library()` and `require()` to enforce a package allowlist, and a pattern scanner rejects calls to `system()`, `unlink()`, `quit()`, and `download.file()`. Each iteration spawns a new subprocess, so each pays a cold-start cost (typically 200--400ms depending on platform).
-
-### Recursive Sub-Queries
-
-This is where the "recursive" in RLM comes from. When `sub_lm` is provided, the model can write `llm_query("What does section 3 say?", context_slice)` in its generated code. The function does not execute the sub-call inside the subprocess, which would be a security problem. Instead, it returns a marker object:
-
-```{r}
-# From R/rlm-tools.R -- returns a marker, not a result
-llm_query <- function(query, context_slice = NULL) {
-  structure(
-    list(query = query, context = context_slice, batch = FALSE),
-    class = "rlm_query_request"
-  )
-}
-```
-
-The parent process intercepts this marker after execution, performs the actual call, and feeds the result back on the next iteration. A batched variant, `llm_query_batched()`, allows multiple sub-questions at once, running concurrently via `ellmer::parallel_chat()` when available.
-
-A shared call counter tracks total calls across all iterations and enforces the `max_llm_calls` budget, preventing runaway recursion.
-
-### Fallback and Output Normalization
-
-If the model exhausts all iterations without calling `SUBMIT()`, the module performs fallback extraction: it feeds the entire exploration trajectory back and asks for a synthesized answer from what was discovered. This uses a two-phase approach, trying structured output via `chat_structured()` first, then unstructured `chat()` if that fails.
-
-The final answer passes through output normalization, which coerces whatever was produced into the signature's declared output fields. This handles named lists, positional lists, scalar values, and case-insensitive enum matching (e.g., `"Positive"` is mapped to `"positive"` if the signature declares `type_enum("positive", "negative")`).
-
-### Observability
-
-Every RLM execution records its full REPL history: reasoning, code, output, success or failure, and timing for each iteration:
-
-```{r}
-history <- rlm$get_repl_history()
-last_run <- history[[length(history)]]
-
-last_run$iterations_used
-#> [1] 5
-last_run$llm_calls_used
-#> [1] 3
-```
-
-You can see what the model tried, where it went wrong, and how it recovered.
-
-## How dsprrr's RLM Compares
-
-The table below summarizes the key implementations:
-
-| | dsprrr | DSPy | Official `rlm` | Google ADK |
-|---|---|---|---|---|
-| **Language** | R | Python | Python | Python |
-| **REPL** | R via callr | Python via Pyodide/WASM | Python (isolated or not) | Python via ADK |
-| **Sandbox** | Subprocess (callr) | Deno/WASM | Configurable | ADK orchestration |
-| **Structured output** | ellmer types | DSPy signatures | Freeform | ADK tools |
-| **Recursive calls** | `llm_query()` | Built-in | Built-in | Child agents |
-| **Optimization** | Teleprompters, grid search | DSPy optimizers | Manual | Manual |
-| **Batched sub-calls** | `llm_query_batched()` | `llm_query_batched()` | -- | -- |
-
-The "batched sub-calls" row refers specifically to issuing multiple recursive
-sub-queries from one REPL iteration and running them concurrently. Both dsprrr
-and DSPy 3.3 expose that operation. dsprrr dispatches its batch through
-`ellmer::parallel_chat()` while preserving the R runner's lifecycle and call
-budget.
-
-dsprrr is the only implementation that uses R as the REPL language, which matters when your context *is* R data: data frames, model objects, or package source code. It also inherits dsprrr's full optimization infrastructure (teleprompters, grid search, evaluation metrics), so you can systematically improve RLM performance, not just run it.
-
-## When to Use RLMs (and When Not To)
-
-The hard part of any task here is either *finding* the right context or *reasoning* about it once found. RLMs help with the first problem. If the context is already short and well-scoped, simpler approaches are faster and cheaper.
-
-| Approach | Best for | Latency | Context limit |
-|----------|----------|---------|---------------|
-| `PredictModule` | Short, self-contained tasks | Low | Context window |
-| `chain_of_thought()` | Complex reasoning, known context | Medium | Context window |
-| `rag_module()` | Lookup in large corpora | Medium | Chunk size |
-| `rlm_module()` | Exploration of large, interconnected data | High | Unlimited\* |
-
-\*Bounded by `max_iterations` and `max_llm_calls`, not by context window size.
-
-**Skip RLMs when the context is short.** If the document fits comfortably in the context window, a `PredictModule` or `chain_of_thought()` will be faster and cheaper. The overhead of multiple REPL round-trips is not justified when one call suffices.
-
-**Skip RLMs when the task is well-defined.** If you know what you are looking for (extracting a specific field from a known document format, say), a prompt-optimized module will outperform an RLM. RLMs spend iterations discovering a good exploration path. If you already know the path, skip the discovery.
-
-**Skip RLMs when cost-per-query matters.** An RLM with 15 iterations makes at least 15 calls, plus any recursive sub-queries. For a production pipeline processing thousands of inputs, that multiplier adds up. If a single-call module with good prompting gets you 80% of the accuracy at 5% of the cost, the economics favor the simpler approach.
-
-**Skip RLMs when the context contains bad information.** RLMs gather more evidence than simpler approaches, which is usually beneficial. But more evidence also means more surface area for misleading content. If the context contains contradictions, outdated facts, or adversarial content, a `chain_of_thought()` module with curated context gives explicit control over what the model sees.
-
-## Improvement Opportunities
-
-dsprrr's RLM implementation is functional but young. The items below are split into design constraints that affect deployment and API improvements that would make the module more ergonomic.
-
-### Design Constraints
-
-**Choose the runner as a security boundary.** `r_code_runner()` provides a fresh
-callr subprocess and package allowlist, but it retains the host user's
-permissions and is only for trusted code. For model-generated or otherwise
-untrusted code, `mcp_repl_runner()` launches Posit's mcp-repl with an
-OS-enforced workspace-write sandbox and network access disabled. A user-supplied
-`repl` function is reported as unverified and is not accepted where dsprrr
-requires sandboxed execution.
-
-**Runner ownership is explicit.** A directly supplied `runner` is caller-owned
-and reused across separate `forward()` calls; dsprrr never closes it. The
-backend determines whether execution state persists and whether `reset()` is
-available. mcp-repl retains variables and loaded packages until you call
-`runner$reset()`. Reset that persistent backend between logically isolated
-jobs and never share it across concurrent invocations.
-
-For isolated invocations, pass `interpreter_factory` instead. It must be a
-zero-argument function returning a valid runner. dsprrr calls it once per
-invocation, owns that fresh runner, and closes it exactly once when the
-invocation ends, including after a failure:
-
-```{r rlm-interpreter-factory, eval=FALSE}
-rlm <- rlm_module(
-  "document, question -> answer",
-  interpreter_factory = function() r_code_runner(timeout = 30)
-)
-```
-
-`runner` and `interpreter_factory` are mutually exclusive, and one is required.
-
-Factory-backed RLM invocations can also use `run_async()` and isolated mirai
-dataset batches. A caller-owned runner remains sequential-only because dsprrr
-cannot prove that shared interpreter state is safe under overlap. Async
-streaming and finite batch timeout/error-budget controls are not adapted yet
-and fail before runner work.
-
-**Execution and interpreter failures are different.** A submitted R expression
-can fail in a repairable way, allowing the RLM to inspect the error and try a
-new expression. Process, transport, protocol, startup, and shutdown failures
-are terminal: the runner is invalidated and is never retried or reused. If
-execution and teardown both fail, dsprrr preserves the primary execution
-condition and attaches teardown evidence instead of replacing it.
-
-**Custom tools execute on the host.** Guest code emits an authenticated tool
-request, dsprrr invokes the original function and its live closure in the host
-process, and the guest program is replayed with that immutable response. The
-function itself is never deparsed or serialized into generated code. This
-runner-neutral bridge works with both `r_code_runner()` and mcp-repl; arguments
-and results still need to cross the runner's value boundary. A host tool is
-called once even though deterministic guest code before it may be replayed.
-
-**mcp-repl control results are intentionally bounded.** RLM submit and recursive
-query frames are capped at 3,000 encoded bytes to stay inline. If incidental
-output triggers an mcp-repl file preview or pager, the iteration fails closed
-rather than trusting a partial control frame. Keep `SUBMIT()` values compact;
-use a transport with structured out-of-band results when larger payloads are a
-requirement.
-
-**Fresh subprocesses have cold-start overhead.** `r_code_runner()` pays process
-startup cost on each iteration in exchange for clean process state. A
-persistent mcp-repl runner avoids that repeated startup, but requires the reset
-and concurrency discipline above.
-
-### API Improvements
-
-**`peek()` dual-dispatch API.** `peek()` silently changes meaning depending on whether the input is a single string (character positions) or a character vector (element indices). The model has to infer which form `.context$document` is in, and if it guesses wrong, the slice is nonsensical. Splitting into `peek_chars()` and `peek_lines()` (or adding a `unit` argument) would make the contract explicit.
-
-**`search()` returns raw matches, not locations.** The model gets the matched text but not the byte offset or surrounding context, so it often has to follow up with a `peek()` call to figure out *where* the match occurred. Returning match positions or a concordance-style snippet would save an iteration.
-
-## What's Next
-
-RLMs trade latency for reach. They can explore contexts that no model handles well in a single pass, with subprocess isolation, recursive sub-queries, and full optimization support through dsprrr's teleprompters and grid search.
-
-For a hands-on walkthrough, see `vignette("tutorial-rlm-dsprrr", package = "dsprrr")`, which uses `rlm_module()` to trace a real theming bug across bslib, shiny, and brand.yml: nearly 4 million characters of source, explored in under 15 iterations.
+For a worked example on a fixed dataset, with an independent check of the
+answer, see [Investigate a regression with RLM](tutorial-rlm-dsprrr.html).
 
 ## References

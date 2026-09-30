@@ -1,27 +1,69 @@
-#' Accessor Functions for DSPrrr Results
+#' Extract outputs, metadata and costs from results
 #'
 #' @description
-#' Helper functions to extract data from structured results returned by
-#' `run()`, `evaluate()`, and other DSPrrr functions.
+#' These functions read the parts of a result so you do not need to know its
+#' structure. They work on results of [run()] with
+#' `.return_format = "structured"`, for single inputs and batches, and on
+#' [evaluate()] results.
 #'
+#' - `get_output()` returns the outputs: the named list of output fields for
+#'   a single result, a list of them for a batch, and the predictions of an
+#'   evaluation.
+#' - `get_metadata()` returns the call metadata: a list for a single result
+#'   and one list per row for a batch or an evaluation.
+#' - `get_tokens()` returns `input_tokens`, `output_tokens` and
+#'   `total_tokens`.
+#' - `get_cost()` returns the estimated cost in US dollars.
+#'
+#' For [run_dataset()] results, use the `result` and `.metadata` columns
+#' instead.
+#'
+#' @param x A result: a `dsprrr_result` or `dsprrr_batch_result` from [run()]
+#'   with `.return_format = "structured"`, or a `dsprrr_evaluation` from
+#'   [evaluate()]. For other objects, `get_output()` returns `x` itself and
+#'   the other functions return empty or missing values.
+#' @param ... Not used.
+#'
+#' @return
+#' - `get_output()`: the outputs, as described above.
+#' - `get_metadata()`: a list, or a list of lists; an empty list when `x` has
+#'   no metadata.
+#' - `get_tokens()`: a list of the three counts for a single result, or a
+#'   tibble with columns `index`, `input_tokens`, `output_tokens` and
+#'   `total_tokens` for a batch or an evaluation. Unknown counts are `NA`.
+#' - `get_cost()`: a number (`NA` when unknown) for a single result. For a
+#'   batch or an evaluation, a list of class `dsprrr_cost_summary` with
+#'   `costs` (a tibble of `index` and `cost`), `total` and `n_missing`;
+#'   missing costs give a warning and make `total` `NA` instead of counting
+#'   as free.
+#'
+#' @family inspection
+#' @examples
+#' shout <- module_fn("text -> reply", function(text) toupper(text))
+#' result <- run(shout, text = "hello", .return_format = "structured")
+#'
+#' get_output(result)
+#' get_metadata(result)$latency_ms
+#' # Function-backed modules make no model calls, so these are NA
+#' get_tokens(result)
+#' get_cost(result)
+#'
+#' \dontrun{
+#' qa <- module(signature("question -> answer"))
+#' batch <- run(
+#'   qa,
+#'   question = c("What is 2 + 2?", "What is 3 + 3?"),
+#'   .llm = ellmer::chat_openai(model = "gpt-6-luna"),
+#'   .return_format = "structured"
+#' )
+#' get_tokens(batch)
+#' get_cost(batch)$total
+#' }
 #' @name accessors
 NULL
 
-#' Get output from a result
-#'
-#' @description
-#' Extract the output from a DSPrrr result object.
-#'
-#' @param x A DSPrrr result object (e.g., from `run()` with `.return_format = "structured"`)
-#' @param ... Additional arguments (unused)
-#'
-#' @return The output value(s) from the result
+#' @rdname accessors
 #' @export
-#' @examples
-#' \dontrun{
-#' result <- run(mod, text = "hello", .return_format = "structured")
-#' get_output(result)
-#' }
 get_output <- function(x, ...) {
   UseMethod("get_output")
 }
@@ -30,8 +72,6 @@ get_output <- function(x, ...) {
 get_output.default <- function(x, ...) {
   if (is.list(x) && "output" %in% names(x)) {
     x$output
-  } else if (is.list(x) && "predictions" %in% names(x)) {
-    x$predictions
   } else {
     x
   }
@@ -47,21 +87,8 @@ get_output.dsprrr_evaluation <- function(x, ...) {
   x$predictions
 }
 
-#' Get metadata from a result
-#'
-#' @description
-#' Extract metadata from a DSPrrr result object.
-#'
-#' @param x A DSPrrr result object
-#' @param ... Additional arguments (unused)
-#'
-#' @return A list or tibble of metadata
+#' @rdname accessors
 #' @export
-#' @examples
-#' \dontrun{
-#' result <- run(mod, text = "hello", .return_format = "structured")
-#' get_metadata(result)
-#' }
 get_metadata <- function(x, ...) {
   UseMethod("get_metadata")
 }
@@ -85,21 +112,8 @@ get_metadata.dsprrr_evaluation <- function(x, ...) {
   x$metadata
 }
 
-#' Get token counts from a result
-#'
-#' @description
-#' Extract token usage information from a DSPrrr result object.
-#'
-#' @param x A DSPrrr result object
-#' @param ... Additional arguments (unused)
-#'
-#' @return A list or tibble with token counts (input_tokens, output_tokens, total_tokens)
+#' @rdname accessors
 #' @export
-#' @examples
-#' \dontrun{
-#' result <- run(mod, text = "hello", .return_format = "structured")
-#' get_tokens(result)
-#' }
 get_tokens <- function(x, ...) {
   UseMethod("get_tokens")
 }
@@ -173,28 +187,8 @@ get_tokens.dsprrr_evaluation <- function(x, ...) {
   )
 }
 
-#' Get cost from a result
-#'
-#' @description
-#' Extract cost information from a DSPrrr result object.
-#'
-#' @param x A DSPrrr result object
-#' @param ... Additional arguments (unused)
-#'
-#' @return A numeric value (for single results) or a `dsprrr_cost_summary` object
-#'   (for batch results and evaluations) containing:
-#'   - `costs`: A tibble with per-item costs
-#'   - `total`: Total cost across all items
-#'
-#'   - `n_missing`: Count of items with missing cost data
-#'
-#' @seealso [session_cost()] for session-level cost tracking
+#' @rdname accessors
 #' @export
-#' @examples
-#' \dontrun{
-#' result <- run(mod, text = "hello", .return_format = "structured")
-#' get_cost(result)
-#' }
 get_cost <- function(x, ...) {
   UseMethod("get_cost")
 }
@@ -294,6 +288,7 @@ get_cost.dsprrr_evaluation <- function(x, ...) {
 #' Print method for dsprrr_cost_summary
 #' @param x A dsprrr_cost_summary object
 #' @param ... Additional arguments (unused)
+#' @noRd
 #' @export
 print.dsprrr_cost_summary <- function(x, ...) {
   cli::cli_h3("DSPrrr Cost Summary")

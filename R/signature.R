@@ -21,6 +21,16 @@ signature_output_field_names <- function(output_type) {
   "answer"
 }
 
+#' Return output field names for object-shaped output types
+#' @noRd
+output_field_names <- function(output_type) {
+  if (inherits(output_type, "ellmer::TypeObject")) {
+    names(output_type@properties)
+  } else {
+    character()
+  }
+}
+
 validate_signature_instructions <- function(instructions) {
   if (
     !is.character(instructions) ||
@@ -35,8 +45,8 @@ validate_signature_instructions <- function(instructions) {
   instructions
 }
 
-#' @rdname signature
-#' @export
+#' Internal signature record class
+#' @noRd
 Signature <- S7::new_class(
   "Signature",
   properties = list(
@@ -232,37 +242,78 @@ format_ellmer_type <- function(type, verbose = FALSE) {
   class(type)[1]
 }
 
-#' Create a Signature for LLM Operations
+#' Define a module's inputs and outputs
 #'
 #' @description
-#' The primary function for creating signatures. Accepts either DSPy-style
-#' string notation or explicit arguments. Input and output names must be valid,
-#' unique R field names, and the two namespaces must not overlap.
+#' A signature declares what a module takes in, what it returns and what it
+#' should do. Write it as a DSPy-style string such as
+#' `"question -> answer"`, or build it from [input()] specifications and an
+#' ellmer type.
 #'
-#' @param x Either a string in DSPy format ("inputs -> output") or NULL
-#' @param inputs List of input specifications (when using explicit notation)
-#' @param output_type An ellmer type object (when using explicit notation)
-#' @param instructions Optional instructions for the operation
-#' @param ... Additional arguments
+#' Field names must be valid, unique R names, and no name can be both an input
+#' and an output.
 #'
-#' @return A Signature object
+#' @param x A signature string, `"inputs -> outputs"` (see below).
+#' @param inputs For the explicit form: a list of [input()] specifications.
+#' @param output_type For the explicit form: an ellmer type. Use
+#'   [ellmer::type_object()] for named output fields; a bare type such as
+#'   `ellmer::type_enum()` makes [run()] return a bare value.
+#' @param instructions What the module should do. The instructions are placed
+#'   at the top of every prompt. For a string signature, the default is
+#'   generated from the field names, for example "Given the fields
+#'   `question`, produce the fields `answer`."
+#' @param ... Ignored. Misspelled arguments are dropped without a warning, so
+#'   check the spelling of `instructions`.
+#'
+#' @details
+#' ## String notation
+#'
+#' A signature string has comma-separated field names on each side of one
+#' `->`. Any field can take a type after a colon, as in
+#' `"question: str, k: int -> answer: str, confidence: float"`. Fields without
+#' a type are strings. The outputs always form a named list, so a module built
+#' from `"text -> sentiment"` returns `list(sentiment = ...)`.
+#'
+#' | Type in the string | Field type |
+#' |---|---|
+#' | `str`, `string` | string |
+#' | `int`, `integer` | integer |
+#' | `float`, `number`, `numeric` | number |
+#' | `bool`, `boolean`, `logical` | logical |
+#' | `enum('a', 'b')`, `Literal['a', 'b']` | one of the listed values |
+#' | `list[T]`, `array(T)`, `T[]` | array of `T` |
+#' | `dict[K, V]` | object with free-form keys (`K` and `V` are not enforced) |
+#' | `Optional[T]` | `T`, marked as not required |
+#'
+#' Bounds such as `number[0, 100]` or `string[5, 10]` are accepted but
+#' dropped, leaving a plain number or string. `Union[A, B]` uses `A` and
+#' warns. An unknown type name is an error that suggests the closest known
+#' type. The string form has no syntax for field descriptions: use the
+#' explicit form with [input()] descriptions and described ellmer types, such
+#' as `ellmer::type_string("One sentence")`.
+#'
+#' @return A `Signature` object (S7) with properties `@inputs` (a list of
+#'   [input()] specifications), `@output_type` (an ellmer type) and
+#'   `@instructions` (a string). Pass it to [module()] or another
+#'   constructor.
 #' @export
+#' @family signatures
 #' @examples
-#' # String notation (recommended for simple cases)
-#' sig1 <- signature("text -> sentiment")
-#' sig2 <- signature("context, question -> answer: string")
-#' sig3 <- signature("text -> label: enum('positive', 'negative', 'neutral')")
+#' signature("text -> sentiment")
+#' signature(
+#'   "text -> label: enum('positive', 'negative', 'neutral')",
+#'   instructions = "Classify the sentiment of a product review."
+#' )
+#' signature("question: str, k: int -> answers: list[str], confidence: float")
 #'
-#' # Explicit notation (for complex cases)
-#' sig4 <- signature(
-#'   inputs = list(
-#'     input("text", description = "Text to analyze")
-#'   ),
+#' # Explicit form, with descriptions
+#' signature(
+#'   inputs = list(input("review", description = "A customer review")),
 #'   output_type = ellmer::type_object(
-#'     sentiment = ellmer::type_string(),
-#'     confidence = ellmer::type_number()
+#'     sentiment = ellmer::type_enum(c("positive", "negative")),
+#'     confidence = ellmer::type_number("Between 0 and 1")
 #'   ),
-#'   instructions = "Analyze the text"
+#'   instructions = "Classify the review."
 #' )
 signature <- function(
   x = NULL,

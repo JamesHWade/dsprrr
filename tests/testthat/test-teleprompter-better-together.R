@@ -6,9 +6,9 @@ BTMarkingTeleprompter <- S7::new_class(
   )
 )
 
-S7::method(compile, list(BTMarkingTeleprompter, S7::class_any)) <- function(
-  teleprompter,
+S7::method(compile, list(S7::class_any, BTMarkingTeleprompter)) <- function(
   program,
+  teleprompter,
   trainset,
   ...
 ) {
@@ -68,8 +68,8 @@ test_that("BetterTogether accepts named optimizers and validates strategy", {
 
   expect_error(
     compile(
-      tp,
       make_bt_mock_module(),
+      tp,
       data.frame(x = "a", target = "p"),
       strategy = "p -> missing",
       valset_ratio = 0
@@ -118,8 +118,8 @@ test_that("BetterTogether rejects invalid seeds before compilation", {
 
   expect_error(
     compile(
-      tp,
       make_bt_mock_module(),
+      tp,
       data.frame(x = c("a", "b"), target = c("p", "p")),
       valset_ratio = 0,
       seed = NA_real_
@@ -141,8 +141,8 @@ test_that("BetterTogether returns best validation candidate when valset exists",
   valset <- data.frame(x = "c", target = "p")
 
   compiled <- compile(
-    tp,
     mod,
+    tp,
     trainset,
     valset = valset,
     strategy = "p -> w",
@@ -152,9 +152,11 @@ test_that("BetterTogether returns best validation candidate when valset exists",
   expect_equal(compiled$config$marker, "p")
   expect_equal(compiled$config$teleprompter, "BetterTogether")
   expect_equal(compiled$config$best_strategy, "p")
-  expect_false(compiled$config$optimizer$flag_compilation_error_occurred)
+  result <- optimization_result(compiled)
+  details <- result$extensions$better_together
+  expect_false(details$flag_compilation_error_occurred)
 
-  candidates <- compiled$config$optimizer$candidate_programs
+  candidates <- details$candidate_programs
   expect_s3_class(candidates, "tbl_df")
   expect_equal(candidates$strategy[[1]], "p")
   expect_equal(candidates$score[[1]], 1)
@@ -171,8 +173,8 @@ test_that("BetterTogether returns latest candidate without validation", {
   )
 
   compiled <- compile(
-    tp,
     make_bt_mock_module(),
+    tp,
     data.frame(x = c("a", "b"), target = c("p", "w")),
     strategy = "p -> w",
     valset_ratio = 0,
@@ -181,7 +183,7 @@ test_that("BetterTogether returns latest candidate without validation", {
 
   expect_equal(compiled$config$marker, "w")
   expect_equal(compiled$config$best_strategy, "p -> w")
-  expect_true(all(is.na(compiled$config$optimizer$candidate_programs$score)))
+  expect_true(all(is.na(optimization_result(compiled)$trials$score)))
 })
 
 test_that("BetterTogether marks compilation errors and returns prior candidate", {
@@ -190,9 +192,9 @@ test_that("BetterTogether marks compilation errors and returns prior candidate",
     parent = Teleprompter
   )
 
-  S7::method(compile, list(BTFailingTeleprompter, S7::class_any)) <- function(
-    teleprompter,
+  S7::method(compile, list(S7::class_any, BTFailingTeleprompter)) <- function(
     program,
+    teleprompter,
     trainset,
     ...
   ) {
@@ -209,8 +211,8 @@ test_that("BetterTogether marks compilation errors and returns prior candidate",
   compiled <- NULL
   expect_warning(
     compiled <- compile(
-      tp,
       make_bt_mock_module(),
+      tp,
       data.frame(x = c("a", "b"), target = c("p", "p")),
       valset = data.frame(x = "c", target = "p"),
       strategy = "p -> f"
@@ -219,7 +221,11 @@ test_that("BetterTogether marks compilation errors and returns prior candidate",
   )
 
   expect_equal(compiled$config$marker, "p")
-  expect_true(compiled$config$optimizer$flag_compilation_error_occurred)
+  expect_true(
+    optimization_result(
+      compiled
+    )$extensions$better_together$flag_compilation_error_occurred
+  )
 })
 
 test_that("BetterTogether restores caller RNG state after seeded compilation", {
@@ -238,8 +244,8 @@ test_that("BetterTogether restores caller RNG state after seeded compilation", {
   )
 
   compile(
-    tp,
     make_bt_mock_module(),
+    tp,
     data.frame(x = c("a", "b", "c", "d"), target = c("p", "p", "p", "p")),
     strategy = "p -> w",
     valset_ratio = 0.5
@@ -257,8 +263,8 @@ test_that("BetterTogether blocks step args from overriding core compile inputs",
 
   expect_warning(
     compiled <- compile(
-      tp,
       make_bt_mock_module(),
+      tp,
       data.frame(x = "a", target = "p"),
       valset_ratio = 0,
       optimizer_compile_args = list(
@@ -268,5 +274,9 @@ test_that("BetterTogether blocks step args from overriding core compile inputs",
     "core inputs"
   )
 
-  expect_true(compiled$config$optimizer$flag_compilation_error_occurred)
+  expect_true(
+    optimization_result(
+      compiled
+    )$extensions$better_together$flag_compilation_error_occurred
+  )
 })

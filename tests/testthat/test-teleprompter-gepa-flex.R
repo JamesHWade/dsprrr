@@ -40,28 +40,25 @@ gepa_flex_test_source <- function(input = "question", output = "answer") {
 gepa_flex_test_chat <- function(response = NULL, error = NULL) {
   prompts <- character()
   output_fields <- list()
-  structure(
-    list(
-      prompts = function() prompts,
-      output_fields = function() output_fields,
-      chat_structured = function(prompt, type, ...) {
-        prompts <<- c(prompts, as.character(prompt))
-        output_fields[[length(output_fields) + 1L]] <<-
-          names(type@properties)
-        if (!is.null(error)) {
-          stop(error)
-        }
-        response
+  chat <- new_test_chat(
+    chat_structured = function(prompt, type, ...) {
+      prompts <<- c(prompts, as.character(prompt))
+      output_fields[[length(output_fields) + 1L]] <<-
+        names(type@properties)
+      if (!is.null(error)) {
+        stop(error)
       }
-    ),
-    class = "Chat"
+      response
+    }
   )
+  chat$prompts <- function() prompts
+  chat$output_fields <- function() output_fields
+  chat
 }
 
 gepa_flex_test_program <- function() {
   ordinary <- module(
-    signature("question -> draft", instructions = "Ordinary instructions."),
-    type = "predict"
+    signature("question -> draft", instructions = "Ordinary instructions.")
   )
   flexible <- suppressWarnings(flex(
     signature("draft -> answer", instructions = "Flex instructions.")
@@ -149,12 +146,11 @@ test_that("GEPA skips all work when a Flex graph has no mutable components", {
   freeze_modules(program, "$")
   provider_calls <- 0L
   evaluation_calls <- 0L
-  chat <- structure(
-    list(chat_structured = function(...) {
+  chat <- new_test_chat(
+    chat_structured = function(...) {
       provider_calls <<- provider_calls + 1L
       stop("provider must not be called")
-    }),
-    class = "Chat"
+    }
   )
   testthat::local_mocked_bindings(
     eval_program = function(...) {
@@ -165,17 +161,17 @@ test_that("GEPA skips all work when a Flex graph has no mutable components", {
   )
 
   optimized <- compile(
+    program,
     GEPA(
       metric = function(...) 1,
       population_size = 4L,
       generations = 3L,
       verbose = FALSE
     ),
-    program,
     data.frame(question = "q", answer = "a"),
     .llm = chat
   )
-  metadata <- optimized$config$optimizer
+  metadata <- gepa_test_metadata(optimized)
 
   expect_false(identical(optimized, program))
   expect_identical(optimized$module_src, program$module_src)
@@ -392,7 +388,12 @@ test_that("Flex proposer describes the executable R DSL and host tools", {
     require_sandbox = FALSE,
     max_tool_calls = 3L
   ))
-  proposed <- sub("query = question", "query = toupper(question)", source)
+  proposed <- sub(
+    "query = question",
+    "query = toupper(question)",
+    source,
+    fixed = TRUE
+  )
   chat <- gepa_flex_test_chat(list(module_src = proposed))
 
   result <- dsprrr:::gepa_propose_flex_source(
@@ -431,6 +432,9 @@ test_that("GEPA Flex tool contracts distinguish ToolDefs from functions", {
     function(query, limit = 5L) query,
     "ordinary"
   )
+  bare_tool <- \(query) query
+  class(bare_tool) <- c("ToolDef", "function")
+  bare_contract <- dsprrr:::gepa_flex_tool_contract(bare_tool, "bare")
   tool <- ellmer::tool(
     function(query, limit = 5L) query,
     name = "lookup",
@@ -449,6 +453,7 @@ test_that("GEPA Flex tool contracts distinguish ToolDefs from functions", {
   expect_identical(ordinary$arguments, c("query", "limit"))
   expect_identical(ordinary$required, "query")
   expect_identical(ordinary$defaults, list(limit = "5L"))
+  expect_identical(bare_contract$kind, "function")
   expect_identical(contract$name, "lookup")
   expect_identical(contract$kind, "tool_def")
   expect_identical(contract$description, "Look up records.")
@@ -700,27 +705,23 @@ test_that("Flex evaluation preflights and records exact predictor calls", {
     "question -> answer",
     module_src = gepa_flex_test_source()
   ))
-  chat <- structure(
-    list(
-      chat_structured = function(prompt, type, ...) {
-        fields <- names(type@properties)
-        if (identical(fields, "answer_draft")) {
-          return(list(answer_draft = "draft"))
-        }
-        if (identical(fields, c("reasoning", "answer"))) {
-          return(list(reasoning = "checked", answer = "final"))
-        }
-        stop("unexpected Flex runtime schema")
-      },
-      get_model = function() "flex-budget-test"
-    ),
-    class = "Chat"
+  chat <- new_test_chat(
+    model = "flex-budget-test",
+    chat_structured = function(prompt, type, ...) {
+      fields <- names(type@properties)
+      if (identical(fields, "answer_draft")) {
+        return(list(answer_draft = "draft"))
+      }
+      if (identical(fields, c("reasoning", "answer"))) {
+        return(list(reasoning = "checked", answer = "final"))
+      }
+      stop("unexpected Flex runtime schema")
+    }
   )
-  blocked_chat <- structure(
-    list(chat_structured = function(...) {
+  blocked_chat <- new_test_chat(
+    chat_structured = function(...) {
       stop("provider must not be reached")
-    }),
-    class = "Chat"
+    }
   )
   data <- data.frame(
     question = c("q1", "q2"),
@@ -964,19 +965,14 @@ test_that("valid candidate evaluation preserves row and error classification", {
 test_that("component population mutates complete instruction and source values", {
   program <- gepa_flex_test_program()
   proposed <- gepa_flex_test_source("draft", "answer")
-  chat <- local({
-    structure(
-      list(
-        chat_structured = function(prompt, type, ...) {
-          if (grepl("improving system instructions", prompt, fixed = TRUE)) {
-            return(list(instructions = "Improved instructions."))
-          }
-          list(module_src = proposed)
-        }
-      ),
-      class = "Chat"
-    )
-  })
+  chat <- new_test_chat(
+    chat_structured = function(prompt, type, ...) {
+      if (grepl("improving system instructions", prompt, fixed = TRUE)) {
+        return(list(instructions = "Improved instructions."))
+      }
+      list(module_src = proposed)
+    }
+  )
 
   population <- dsprrr:::gepa_initial_component_population(
     program,
@@ -1049,15 +1045,14 @@ test_that("all-component mutation is atomic, budgeted, and lineage-tracked", {
   program <- gepa_flex_test_program()
   baseline <- dsprrr:::gepa_component_candidate(program)
   proposed <- gepa_flex_test_source("draft", "answer")
-  chat <- structure(
-    list(chat_structured = function(prompt, type, ...) {
+  chat <- new_test_chat(
+    chat_structured = function(prompt, type, ...) {
       fields <- names(type@properties)
       if (identical(fields, "instructions")) {
         return(list(instructions = "Improved ordinary instructions."))
       }
       list(module_src = proposed)
-    }),
-    class = "Chat"
+    }
   )
   budget <- dsprrr:::new_optimizer_budget(dsprrr:::optimizer_control())
 
@@ -1341,8 +1336,8 @@ test_that("compile GEPA selects a valid structural Flex candidate", {
     flex("question -> answer", module_src = proposed)
   )$module_src
   proposal_calls <- 0L
-  chat <- structure(
-    list(chat_structured = function(prompt, type, ...) {
+  chat <- new_test_chat(
+    chat_structured = function(prompt, type, ...) {
       fields <- names(type@properties)
       if (identical(fields, "instructions")) {
         return(list(instructions = "Improved instruction candidate."))
@@ -1352,8 +1347,7 @@ test_that("compile GEPA selects a valid structural Flex candidate", {
         return(list(module_src = proposed))
       }
       stop("unexpected structured call")
-    }),
-    class = "Chat"
+    }
   )
   evaluated_sources <- character()
   testthat::local_mocked_bindings(
@@ -1386,12 +1380,12 @@ test_that("compile GEPA selects a valid structural Flex candidate", {
   )
 
   optimized <- compile(
-    teleprompter,
     program,
+    teleprompter,
     data.frame(question = "q", answer = "right"),
     .llm = chat
   )
-  metadata <- optimized$config$optimizer
+  metadata <- gepa_test_metadata(optimized)
 
   expect_identical(proposal_calls, 2L)
   expect_true(canonical %in% evaluated_sources)
@@ -1418,15 +1412,14 @@ test_that("compile GEPA audits but never selects an invalid Flex source", {
   ))
   baseline_source <- program$module_src
   evaluated_sources <- character()
-  chat <- structure(
-    list(chat_structured = function(prompt, type, ...) {
+  chat <- new_test_chat(
+    chat_structured = function(prompt, type, ...) {
       fields <- names(type@properties)
       if (identical(fields, "module_src")) {
         return(list(module_src = "{}"))
       }
       stop("unexpected structured call")
-    }),
-    class = "Chat"
+    }
   )
   testthat::local_mocked_bindings(
     eval_program = function(program, dataset, metric, ...) {
@@ -1458,12 +1451,12 @@ test_that("compile GEPA audits but never selects an invalid Flex source", {
   )
 
   optimized <- compile(
-    teleprompter,
     program,
+    teleprompter,
     data.frame(question = "q", answer = "a"),
     .llm = chat
   )
-  metadata <- optimized$config$optimizer
+  metadata <- gepa_test_metadata(optimized)
   population <- metadata$all_generations[[1L]]$population
   invalid <- Filter(
     function(record) !isTRUE(record$candidate_valid),
@@ -1477,13 +1470,13 @@ test_that("compile GEPA audits but never selects an invalid Flex source", {
     function(record) identical(record$scores, c(quality = 0)),
     logical(1)
   )))
-  expect_true(all(!vapply(invalid, `[[`, logical(1), "selectable")))
+  expect_true(!any(vapply(invalid, `[[`, logical(1), "selectable")))
   expect_gt(invalid[[1L]]$scores[[1L]], metadata$best_scores[[1L]])
   expect_identical(metadata$invalid_candidate_count, 2L)
   expect_identical(metadata$budget_summary$total_errors, 2L)
   expect_identical(optimized$module_src, baseline_source)
   expect_true(all(vapply(
-    metadata$pareto_frontier,
+    metadata$objective_pareto_front,
     function(entry) isTRUE(entry$candidate$candidate_valid),
     logical(1)
   )))
@@ -1493,13 +1486,13 @@ test_that("compile GEPA returns a safe composite clone on an early budget stop",
   leaf <- suppressWarnings(flex("question -> answer"))
   program <- ensemble(list(leaf))
   optimized <- compile(
+    program,
     GEPA(
       metric = function(...) 1,
       population_size = 2L,
       generations = 1L,
       verbose = FALSE
     ),
-    program,
     data.frame(question = "q", answer = "a"),
     .llm = gepa_flex_test_chat(list(module_src = gepa_flex_test_source())),
     control = dsprrr:::optimizer_control(max_provider_calls = 0L)
@@ -1509,17 +1502,16 @@ test_that("compile GEPA returns a safe composite clone on an early budget stop",
   expect_false(identical(optimized, program))
   expect_false(identical(optimized$modules[[1L]], leaf))
   expect_identical(optimized$modules[[1L]]$module_src, leaf$module_src)
-  expect_true(optimized$config$optimizer$partial)
+  expect_true(gepa_test_metadata(optimized)$partial)
   expect_identical(
-    optimized$config$optimizer$stop_reason$code,
+    gepa_test_metadata(optimized)$stop_reason$code,
     "max_provider_calls"
   )
 })
 
 test_that("ordinary programs use complete component candidates and result metadata", {
   program <- module(
-    signature("question -> answer", instructions = "Baseline."),
-    type = "predict"
+    signature("question -> answer", instructions = "Baseline.")
   )
   selector_calls <- 0L
   selector <- function(component_ids, candidate, failed_examples, context) {
@@ -1546,6 +1538,7 @@ test_that("ordinary programs use complete component candidates and result metada
   )
 
   optimized <- compile(
+    program,
     GEPA(
       metric = function(...) 1,
       population_size = 2L,
@@ -1554,10 +1547,9 @@ test_that("ordinary programs use complete component candidates and result metada
       track_best_outputs = TRUE,
       verbose = FALSE
     ),
-    program,
     data.frame(question = "q", answer = "a")
   )
-  metadata <- optimized$config$optimizer
+  metadata <- gepa_test_metadata(optimized)
 
   expect_gt(selector_calls, 0L)
   expect_identical(metadata$optimization_mode, "component_candidates")
@@ -1593,13 +1585,13 @@ test_that("GEPA separates discovery trainset from validation frontier data", {
   )
 
   optimized <- compile(
+    program,
     GEPA(
       metric = function(...) 1,
       population_size = 2L,
       generations = 1L,
       verbose = FALSE
     ),
-    program,
     data.frame(question = "train", answer = "t", split = "discovery"),
     valset = data.frame(
       question = "validation",
@@ -1607,7 +1599,7 @@ test_that("GEPA separates discovery trainset from validation frontier data", {
       split = "validation"
     )
   )
-  metadata <- optimized$config$optimizer
+  metadata <- gepa_test_metadata(optimized)
 
   expect_setequal(unique(observed_splits), c("discovery", "validation"))
   expect_true(all(metadata$validation_frontier_scores == 0.8))
@@ -1625,14 +1617,11 @@ test_that("GEPA separates discovery trainset from validation frontier data", {
 test_that("GEPA propagates candidate runtime provider conditions", {
   program <- suppressWarnings(flex("question -> answer"))
   candidate <- dsprrr:::gepa_component_candidate(program)
-  chat <- structure(
-    list(
-      chat_structured = function(...) {
-        rlang::abort("provider offline", class = "gepa_provider_outage")
-      },
-      get_model = function() "broken-provider"
-    ),
-    class = "Chat"
+  chat <- new_test_chat(
+    model = "broken-provider",
+    chat_structured = function(...) {
+      rlang::abort("provider offline", class = "gepa_provider_outage")
+    }
   )
   control <- dsprrr:::optimizer_control(max_errors = 10L, num_threads = 1L)
   budget <- dsprrr:::new_optimizer_budget(control)
@@ -1659,12 +1648,11 @@ test_that("all-component mutation rolls back at a provider budget boundary", {
   program <- gepa_flex_test_program()
   baseline <- dsprrr:::gepa_component_candidate(program)
   calls <- 0L
-  chat <- structure(
-    list(chat_structured = function(prompt, type, ...) {
+  chat <- new_test_chat(
+    chat_structured = function(prompt, type, ...) {
       calls <<- calls + 1L
       list(instructions = "Changed instructions.")
-    }),
-    class = "Chat"
+    }
   )
   budget <- dsprrr:::new_optimizer_budget(
     dsprrr:::optimizer_control(max_provider_calls = 1L)
@@ -1832,22 +1820,20 @@ test_that("GEPA proposes, executes, and selects executable Flex source", {
     source_format = "r",
     require_sandbox = FALSE
   ))
-  chat <- structure(
-    list(
-      chat_structured = function(prompt, type, ...) {
-        list(
-          module_src = paste(
-            "forward <- function(question)",
-            "Prediction(answer = toupper(question))"
-          )
+  chat <- new_test_chat(
+    model = "gepa-executable-test",
+    chat_structured = function(prompt, type, ...) {
+      list(
+        module_src = paste(
+          "forward <- function(question)",
+          "Prediction(answer = toupper(question))"
         )
-      },
-      get_model = function() "gepa-executable-test"
-    ),
-    class = "Chat"
+      )
+    }
   )
 
   optimized <- compile(
+    program,
     GEPA(
       metric = metric_exact_match(field = "answer"),
       population_size = 2L,
@@ -1856,12 +1842,11 @@ test_that("GEPA proposes, executes, and selects executable Flex source", {
       track_best_outputs = TRUE,
       verbose = FALSE
     ),
-    program,
     data.frame(question = "hello", answer = "HELLO"),
     .llm = chat,
     control = dsprrr:::optimizer_control(num_threads = 1L)
   )
-  metadata <- optimized$config$optimizer
+  metadata <- gepa_test_metadata(optimized)
 
   expect_identical(optimized$module_src, improved)
   expect_identical(metadata$best_scores, c(quality = 1))

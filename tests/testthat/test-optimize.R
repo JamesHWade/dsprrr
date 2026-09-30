@@ -37,7 +37,7 @@ test_that("optimize_grid updates module configuration with best parameters", {
 
   sig <- Signature(
     inputs = list(
-      input(name = "text", class = S7::class_character)
+      input(name = "text", type = "string")
     ),
     output_type = ellmer::type_string(),
     instructions = "Return sentiment"
@@ -50,11 +50,8 @@ test_that("optimize_grid updates module configuration with best parameters", {
     target = "positive"
   )
 
-  mock_llm <- structure(
-    list(
-      chat_structured = function(...) "unused"
-    ),
-    class = "MockChat"
+  mock_llm <- new_test_chat(
+    chat_structured = function(...) "unused"
   )
 
   metric <- function(prediction, expected_row) {
@@ -145,7 +142,7 @@ test_that("optimize_grid accepts explicit grid data frames", {
 
   sig <- Signature(
     inputs = list(
-      input(name = "text", class = S7::class_character)
+      input(name = "text", type = "string")
     ),
     output_type = ellmer::type_string(),
     instructions = "Return label"
@@ -161,11 +158,8 @@ test_that("optimize_grid accepts explicit grid data frames", {
     target = "positive"
   )
 
-  mock_llm <- structure(
-    list(
-      chat_structured = function(...) "unused"
-    ),
-    class = "MockChat"
+  mock_llm <- new_test_chat(
+    chat_structured = function(...) "unused"
   )
 
   metric <- function(prediction, expected_row) {
@@ -232,18 +226,18 @@ test_that("module_parameter_set derives defaults from signature", {
     instructions = ""
   )
 
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
   params <- module_parameters(mod)
   expect_true("input_mode" %in% params$id)
 })
 
 test_that("module_metric_summary handles modules without trials", {
   sig <- Signature(
-    inputs = list(input(name = "text", class = S7::class_character)),
+    inputs = list(input(name = "text", type = "string")),
     output_type = ellmer::type_string(),
     instructions = ""
   )
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
 
   metrics <- module_metrics(mod)
   expect_equal(nrow(metrics), 0)
@@ -252,7 +246,7 @@ test_that("module_metric_summary handles modules without trials", {
 test_that("module_trials() warns and returns an inspectable summary when all trials fail (dsprrr-hew)", {
   # Regression: which.max() on all-NA scores returns integer(0), so indexing
   # threw "attempt to select less than one element" instead of a clear message.
-  mod <- module(signature("question -> answer"), type = "predict")
+  mod <- module(signature("question -> answer"))
   mod$state$trials <- tibble::tibble(
     trial_id = 1:3,
     score = NA_real_,
@@ -266,4 +260,72 @@ test_that("module_trials() warns and returns an inspectable summary when all tri
   expect_equal(summary$n_trials, 3L)
   expect_true(is.na(summary$best_score))
   expect_true(is.na(summary$best_trial))
+})
+
+test_that("optimize_grid keeps runtime evaluations out of durable trials", {
+  mod <- module(signature("question -> answer"))
+  data <- data.frame(question = "Ready?", answer = "yes")
+  mock_llm <- new_test_chat(
+    chat_structured = function(...) list(answer = "yes")
+  )
+
+  optimize_grid(
+    mod,
+    data = data,
+    metric = metric_exact_match(field = "answer"),
+    grid = data.frame(temperature = c(0.1, 0.2)),
+    .llm = mock_llm,
+    control = list(progress = FALSE, parallel = FALSE)
+  )
+
+  expect_true("evaluation" %in% names(mod$state$optimization_history[[1L]]))
+  expect_false("evaluation" %in% names(mod$state$trials))
+  artifact <- program_artifact(mod)
+  restored <- restore_module_config(artifact)
+  expect_equal(optimization_result(restored), optimization_result(mod))
+})
+
+test_that("instructions_suffix appends to the base instructions without stacking", {
+  mod <- module(signature("text -> label", instructions = "Classify the text."))
+
+  first <- mod$copy(deep = TRUE)
+  first$apply_optimization_params(list(instructions_suffix = "Be brief."))
+  expect_identical(first$signature@instructions, "Classify the text. Be brief.")
+
+  # A later search appends to the original instructions, not the last result.
+  first$apply_optimization_params(list(instructions_suffix = "Be precise."))
+  expect_identical(
+    first$signature@instructions,
+    "Classify the text. Be precise."
+  )
+
+  # An explicit instructions value replaces them and resets the base.
+  first$apply_optimization_params(list(instructions = "Label it."))
+  expect_identical(first$signature@instructions, "Label it.")
+  first$apply_optimization_params(list(instructions_suffix = "Be brief."))
+  expect_identical(first$signature@instructions, "Label it. Be brief.")
+
+  # A suffix alone never replaces the instructions through partial matching.
+  mod$apply_optimization_params(list(instructions_suffix = "Short."))
+  expect_identical(mod$signature@instructions, "Classify the text. Short.")
+})
+
+test_that("optimize_grid() best_params can be saved", {
+  local_reset_cache()
+  llm <- new_test_chat(chat_structured = function(...) list(answer = "4"))
+  mod <- module(signature("question -> answer"))
+  data <- tibble::tibble(question = c("2+2?", "3+1?"), answer = c("4", "4"))
+
+  optimize_grid(
+    mod,
+    data,
+    metric = metric_exact_match(field = "answer"),
+    parameters = list(instructions_suffix = c("Be brief.", "Show work.")),
+    .llm = llm,
+    .cache = FALSE
+  )
+
+  expect_null(attr(mod$state$best_params, "out.attrs"))
+  path <- withr::local_tempfile(fileext = ".rds")
+  expect_no_error(save_program(mod, path))
 })

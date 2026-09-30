@@ -45,22 +45,7 @@ ReactModule <- R6::R6Class(
     ) {
       super$initialize(signature, template, demos, config, chat)
 
-      if (!is.list(tools)) {
-        cli::cli_abort("tools must be a list of ToolDef objects")
-      }
-
-      # Validate each tool is a ToolDef
-      for (i in seq_along(tools)) {
-        if (
-          !inherits(tools[[i]], "ellmer::ToolDef") &&
-            !inherits(tools[[i]], "ToolDef")
-        ) {
-          cli::cli_abort(c(
-            "All tools must be ellmer ToolDef objects",
-            "x" = "tools[[{i}]] is a {.cls {class(tools[[i]])[1]}}"
-          ))
-        }
-      }
+      validate_react_tools(tools)
 
       max_iterations <- as.integer(max_iterations)
       if (
@@ -78,13 +63,34 @@ ReactModule <- R6::R6Class(
     #' @description
     #' Add a tool to the module
     #' @param tool An ellmer ToolDef object
+    #' @param replace If `FALSE` (the default), a tool with the same name is
+    #'   an error. If `TRUE`, the new tool replaces it in place.
     #' @return The module (invisibly), for chaining
-    add_tool = function(tool) {
-      if (!inherits(tool, "ellmer::ToolDef") && !inherits(tool, "ToolDef")) {
-        cli::cli_abort("tool must be an ellmer ToolDef object")
+    add_tool = function(tool, replace = FALSE) {
+      if (!inherits(tool, "ellmer::ToolDef")) {
+        cli::cli_abort(
+          "tool must be an ellmer ToolDef object",
+          class = "dsprrr_react_tools_error"
+        )
+      }
+      if (!rlang::is_bool(replace)) {
+        cli::cli_abort("{.arg replace} must be TRUE or FALSE")
       }
 
-      self$tools <- c(self$tools, list(tool))
+      existing <- match(tool@name, self$list_tools())
+      if (is.na(existing)) {
+        self$tools <- c(self$tools, list(tool))
+      } else if (replace) {
+        self$tools[[existing]] <- tool
+      } else {
+        cli::cli_abort(
+          c(
+            "The module already has a tool named {.val {tool@name}}",
+            "i" = "Use {.code add_tool(tool, replace = TRUE)} to replace it."
+          ),
+          class = "dsprrr_react_tools_error"
+        )
+      }
 
       # Also register on stored Chat if present
       if (!is.null(self$chat)) {
@@ -143,7 +149,9 @@ ReactModule <- R6::R6Class(
         error = function(e) 0L
       )
 
-      # Register all tools on the Chat
+      # Register all tools on the Chat. `tools` is a public field, so check
+      # again that no tool would replace another of the same name.
+      validate_react_tools(self$tools)
       for (tool in self$tools) {
         llm$register_tool(tool)
       }
@@ -482,14 +490,17 @@ ReactModule <- R6::R6Class(
     #' Create a reset copy of the module
     #' @return New ReactModule with reset state
     reset_copy = function() {
-      ReactModule$new(
-        signature = self$signature,
-        tools = self$tools,
-        max_iterations = self$max_iterations,
-        template = self$template,
-        demos = list(),
-        config = list(),
-        chat = self$chat
+      artifact_copy_runtime(
+        self,
+        ReactModule$new(
+          signature = self$signature,
+          tools = self$tools,
+          max_iterations = self$max_iterations,
+          template = self$template,
+          demos = list(),
+          config = list(),
+          chat = self$chat
+        )
       )
     },
 
@@ -527,7 +538,145 @@ ReactModule <- R6::R6Class(
 
       new_module$state <- lapply(self$state, function(x) x)
 
-      new_module
+      artifact_copy_runtime(self, new_module)
     }
   )
 )
+
+
+#' Check a ReAct tool list
+#'
+#' ellmer registers tools on a Chat by name and silently replaces an existing
+#' tool with the same name, so a duplicate would shadow an earlier tool while
+#' the module still listed both.
+#' @noRd
+validate_react_tools <- function(tools) {
+  if (!is.list(tools)) {
+    cli::cli_abort(
+      "tools must be a list of ToolDef objects",
+      class = "dsprrr_react_tools_error"
+    )
+  }
+  for (i in seq_along(tools)) {
+    if (!inherits(tools[[i]], "ellmer::ToolDef")) {
+      cli::cli_abort(
+        c(
+          "All tools must be ellmer ToolDef objects",
+          "x" = "tools[[{i}]] is a {.cls {class(tools[[i]])[1]}}"
+        ),
+        class = "dsprrr_react_tools_error"
+      )
+    }
+  }
+  tool_names <- vapply(tools, function(tool) tool@name, character(1))
+  duplicates <- unique(tool_names[duplicated(tool_names)])
+  if (length(duplicates) > 0L) {
+    cli::cli_abort(
+      c(
+        "ReAct tool names must be unique",
+        "x" = "Duplicate name{?s}: {.val {duplicates}}",
+        "i" = "A later tool would replace an earlier one on the chat."
+      ),
+      class = "dsprrr_react_tools_error"
+    )
+  }
+  invisible(tools)
+}
+
+
+#' Create a tool-using ReAct module
+#'
+#' @description
+#' `react()` builds an agent that alternates between reasoning and calling
+#' tools until it can answer, then returns a structured answer that follows
+#' the signature (the ReAct pattern).
+#'
+#' @param signature A signature from [signature()], or a signature string.
+#' @param tools A list of ellmer tool definitions, made with
+#'   [ellmer::tool()], [ragnar_tool()], [create_search_tool()] or
+#'   [as_ellmer_tool()]. Their names must be unique. The module's
+#'   `$add_tool(tool, replace = FALSE)` adds one later; with `replace = TRUE`
+#'   it replaces the tool of the same name.
+#' @param max_iterations Maximum number of tool-calling rounds. Several tool
+#'   calls in one model turn count as one round. Exceeding the limit is an
+#'   error.
+#' @param chat,template,demos,config As in [module()].
+#' @param ... Must be empty.
+#'
+#' @details
+#' ellmer runs the tool-calling loop: the model's tool requests are executed
+#' and their results sent back, keeping ellmer's turn history and tool-call
+#' IDs. After the loop, one more request asks for the final answer in the
+#' signature's output format. ReAct calls do not use the response cache.
+#'
+#' [run()] accepts one input at a time for this module; use [run_dataset()]
+#' for several. With `.return_format = "structured"`, the metadata records
+#' `iterations`, `tool_calls` and `tools_used`.
+#'
+#' @return A module (an R6 object of class `ReactModule`) to use with [run()]
+#'   and [run_dataset()].
+#' @export
+#' @family program constructors
+#' @examples
+#' lookup_population <- ellmer::tool(
+#'   function(city) {
+#'     switch(city, Paris = "2.1 million", Lyon = "0.5 million", "unknown")
+#'   },
+#'   name = "lookup_population",
+#'   description = "Look up the population of a French city.",
+#'   arguments = list(city = ellmer::type_string("City name"))
+#' )
+#'
+#' agent <- react(
+#'   "question -> answer",
+#'   tools = list(lookup_population),
+#'   max_iterations = 5L
+#' )
+#' agent
+#'
+#' \dontrun{
+#' llm <- ellmer::chat_openai(model = "gpt-6-luna")
+#' run(agent, question = "How many more people live in Paris than in Lyon?", .llm = llm)
+#'
+#' questions <- data.frame(question = c("Population of Paris?", "Population of Lyon?"))
+#' run_dataset(agent, questions, .llm = llm)
+#' }
+react <- function(
+  signature,
+  tools = list(),
+  max_iterations = 10L,
+  chat = NULL,
+  template = "",
+  demos = list(),
+  config = list(),
+  ...
+) {
+  reject_partial_argument_matches(sys.call(), sys.function())
+  reject_constructor_arguments(
+    "react",
+    ...,
+    hint = "Use code_act() for tools plus code execution."
+  )
+
+  if (is.character(signature)) {
+    signature <- signature(signature)
+  }
+  if (!S7::S7_inherits(signature, Signature)) {
+    cli::cli_abort(c(
+      "`signature` must be a Signature object or string notation",
+      "x" = "You provided: {.cls {class(signature)[1]}}"
+    ))
+  }
+  assert_ellmer_chat(chat, arg = "chat", allow_null = TRUE)
+
+  mod <- ReactModule$new(
+    signature = signature,
+    tools = tools,
+    max_iterations = max_iterations,
+    template = template,
+    demos = demos,
+    config = config,
+    chat = chat
+  )
+  stamp_module_kind(mod, "react")
+}

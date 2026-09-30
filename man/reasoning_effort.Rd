@@ -2,19 +2,43 @@
 % Please edit documentation in R/parsnip.R
 \name{reasoning_effort}
 \alias{reasoning_effort}
-\title{Reasoning Effort Parameter for dials}
+\title{Reasoning effort parameter for dials}
 \usage{
 reasoning_effort()
 }
 \value{
-A dials qualitative parameter object.
+A dials qualitative parameter.
 }
 \description{
-Creates a dials parameter object for reasoning model effort level.
-Used with reasoning models like OpenAI o1/o3/o4-mini and GPT-5.
+\code{reasoning_effort()} creates a dials parameter for the reasoning effort of
+reasoning models such as gpt-6-luna, with the values \code{"low"}, \code{"medium"}
+and \code{"high"}. Use it instead of \code{\link[=temperature]{temperature()}} when tuning a reasoning
+model.
 }
 \examples{
-\dontrun{
+\dontshow{if (rlang::is_installed("dials")) withAutoprint(\{ # examplesIf}
 reasoning_effort()
+dials::grid_regular(reasoning_effort())
+\dontshow{\}) # examplesIf}
 }
+\seealso{
+Other integrations:
+\code{\link[=as_dsprrr_metric]{as_dsprrr_metric()}},
+\code{\link[=as_dsprrr_traces]{as_dsprrr_traces()}},
+\code{\link[=as_ellmer_tool]{as_ellmer_tool()}},
+\code{\link[=as_vitals_cost]{as_vitals_cost()}},
+\code{\link[=as_vitals_samples]{as_vitals_samples()}},
+\code{\link[=as_vitals_solver]{as_vitals_solver()}},
+\code{\link[=as_vitals_task]{as_vitals_task()}},
+\code{\link[=create_search_tool]{create_search_tool()}},
+\code{\link[=llm_predict]{llm_predict()}},
+\code{\link[=ragnar_tool]{ragnar_tool()}},
+\code{\link[=register_dsprrr_engine]{register_dsprrr_engine()}},
+\code{\link[=summarize_traces_df]{summarize_traces_df()}},
+\code{\link[=temperature]{temperature()}},
+\code{\link[=top_p]{top_p()}},
+\code{\link[=use_dsprrr_template]{use_dsprrr_template()}},
+\code{\link[=validate_workflow]{validate_workflow()}},
+\code{\link{vitals_metrics}}
 }
+\concept{integrations}

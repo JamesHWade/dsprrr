@@ -2,7 +2,7 @@
 % Please edit documentation in R/inspect.R
 \name{inspect_history}
 \alias{inspect_history}
-\title{Inspect LLM Call History}
+\title{List recent model calls}
 \usage{
 inspect_history(
   n = 10,
@@ -12,43 +12,60 @@ inspect_history(
 )
 }
 \arguments{
-\item{n}{Number of recent calls to return. Default is 10.}
+\item{n}{Number of recent calls to return.}
 
-\item{include_prompts}{Logical; whether to include full prompt text.
-Default is TRUE.}
+\item{include_prompts}{If \code{TRUE} (the default), include the full prompt
+text.}
 
-\item{include_responses}{Logical; whether to include full response text.
-Default is TRUE.}
+\item{include_responses}{If \code{TRUE} (the default), include the full
+response text.}
 
-\item{file}{Optional file path or writable connection. When supplied, a
-human-readable transcript of the selected history is written without ANSI
-styling.}
+\item{file}{A file path or writable connection. If given, the selected
+calls are also written there as a plain-text transcript.}
 }
 \value{
-A tibble with one row per LLM call containing:
-\itemize{
-\item \code{timestamp}: When the call was made
-\item \code{source}: Where the call originated ("dsp()" or module class name)
-\item \code{model}: The model used
-\item \code{tokens_in}: Input tokens
-\item \code{tokens_out}: Output tokens
-\item \code{cost}: Cost in USD (if available)
-\item \code{duration_s}: Duration in seconds (if available)
-\item \code{prompt}: Full prompt text (if \code{include_prompts = TRUE})
-\item \code{response}: Full response text (if \code{include_responses = TRUE})
-}
+A tibble with one row per call and columns \code{timestamp}, \code{source}
+(the module class that made the call), \code{model}, \code{tokens_in},
+\code{tokens_out}, \code{cost} (in US dollars, when known), \code{duration_s},
+\code{program_artifact_id}, \code{trace_context}, and \code{prompt} and \code{response}
+when requested. With no recorded calls, an empty tibble and a message.
 }
 \description{
-Returns a tibble of recent LLM calls across all modules and \code{dsp()} calls.
-Similar to DSPy's \code{dspy.inspect_history(n)}.
+\code{inspect_history()} returns the most recent model calls of the session as
+a tibble, across all modules, like DSPy's \code{dspy.inspect_history()}. It can
+also write them to a plain-text transcript.
+}
+\details{
+The history is kept in memory for the session and holds the most recent
+100 calls by default (\code{options(dsprrr.prompt_history_max = )}). Prediction
+modules (\code{\link[=module]{module()}}, \code{\link[=chain_of_thought]{chain_of_thought()}}) and \code{\link[=rag_module]{rag_module()}}, \code{\link[=react]{react()}},
+\code{\link[=rlm_module]{rlm_module()}} and \code{\link[=flex]{flex()}} modules add their calls to it; calls made
+inside wrappers and pipelines, and by \code{\link[=run_async]{run_async()}} or \code{\link[=run_stream]{run_stream()}}, are
+not recorded. \code{\link[=clear_prompt_history]{clear_prompt_history()}} empties it.
 }
 \examples{
-\dontrun{
-# View last 5 LLM calls
+# Empty until a module has called a model
 inspect_history(n = 5)
 
-# Get history as tibble for analysis
+\dontrun{
+qa <- module(signature("question -> answer"))
+run(qa, question = "What is 2 + 2?", .llm = ellmer::chat_openai(model = "gpt-6-luna"))
+
 history <- inspect_history(n = 20)
-sum(history$cost)  # Total cost
+sum(history$cost, na.rm = TRUE)
+
+# A plain-text transcript for sharing
+inspect_history(n = 20, file = tempfile(fileext = ".txt"))
 }
 }
+\seealso{
+Other inspection:
+\code{\link{accessors}},
+\code{\link[=clear_prompt_history]{clear_prompt_history()}},
+\code{\link[=clear_traces]{clear_traces()}},
+\code{\link[=export_traces]{export_traces()}},
+\code{\link[=get_last_prompt]{get_last_prompt()}},
+\code{\link[=session_cost]{session_cost()}},
+\code{\link[=summarize_traces]{summarize_traces()}}
+}
+\concept{inspection}

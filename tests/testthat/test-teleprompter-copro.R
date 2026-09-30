@@ -1,5 +1,24 @@
 # Tests for COPRO teleprompter
 
+copro_test_metadata <- function(program) {
+  result <- optimization_result(program)
+  utils::modifyList(
+    result$extensions$copro,
+    list(
+      final_score = result$best_score,
+      baseline_score = result$baseline_score,
+      budget_summary = result$budget,
+      stop_reason = result$budget$stop_reason,
+      error_count = result$budget$total_errors,
+      partial = identical(result$status, "partial")
+    )
+  )
+}
+
+new_copro_prompt_chat <- function(chat) {
+  new_test_chat(chat = chat)
+}
+
 test_that("COPRO can be created with defaults", {
   tp <- COPRO()
   expect_s3_class(tp, "dsprrr::COPRO")
@@ -16,7 +35,7 @@ test_that("COPRO can be created with defaults", {
 
 test_that("COPRO can be created with custom parameters", {
   metric_fn <- function(pred, exp) as.numeric(pred == exp)
-  prompt_model <- list(chat = function(...) "new instruction")
+  prompt_model <- new_copro_prompt_chat(function(...) "new instruction")
 
   tp <- COPRO(
     metric = metric_fn,
@@ -82,11 +101,11 @@ test_that("COPRO validates properties", {
 
 test_that("COPRO requires metric for compilation", {
   sig <- Signature(
-    inputs = list(input(name = "question", class = S7::class_character)),
+    inputs = list(input(name = "question", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Answer the question"
   )
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
 
   trainset <- data.frame(
     question = c("What is 2+2?", "What is 3+3?"),
@@ -95,93 +114,40 @@ test_that("COPRO requires metric for compilation", {
 
   tp <- COPRO()
   expect_error(
-    compile(tp, mod, trainset),
+    compile(mod, tp, trainset),
     "requires a metric"
   )
 })
 
 test_that("COPRO compile returns unmodified program for empty trainset", {
   sig <- Signature(
-    inputs = list(input(name = "question", class = S7::class_character)),
+    inputs = list(input(name = "question", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Answer the question"
   )
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
 
   empty_trainset <- data.frame(question = character(), answer = character())
   tp <- COPRO(metric = function(pred, exp) 1.0)
 
   expect_warning(
-    result <- compile(tp, mod, empty_trainset),
+    result <- compile(mod, tp, empty_trainset),
     "Empty trainset"
   )
   expect_identical(result, mod)
 })
 
 test_that("generate_single_copro_candidate handles Chat objects", {
-  # Create a mock Chat object
-  MockChat <- R6::R6Class(
-    "MockChat",
-    inherit = NULL,
-    public = list(
-      chat = function(prompt) {
-        "New improved instruction from Chat object"
-      }
-    )
+  prompt_model <- new_copro_prompt_chat(
+    function(prompt) "New improved instruction from Chat object"
   )
-  # Set class to include "Chat" so inherits() works
-  mock_chat <- MockChat$new()
-  class(mock_chat) <- c("Chat", class(mock_chat))
 
   result <- dsprrr:::generate_single_copro_candidate(
     "Generate new instruction",
-    prompt_model = mock_chat
+    prompt_model = prompt_model
   )
 
   expect_equal(result, "New improved instruction from Chat object")
-})
-
-test_that("generate_single_copro_candidate handles plain functions", {
-  prompt_fn <- function(prompt) {
-    "New instruction from function"
-  }
-
-  result <- dsprrr:::generate_single_copro_candidate(
-    "Generate new instruction",
-    prompt_model = prompt_fn
-  )
-
-  expect_equal(result, "New instruction from function")
-})
-
-test_that("generate_single_copro_candidate handles list with chat method", {
-  prompt_model <- list(
-    chat = function(prompt) {
-      "New instruction from list$chat"
-    }
-  )
-
-  result <- dsprrr:::generate_single_copro_candidate(
-    "Generate new instruction",
-    prompt_model = prompt_model
-  )
-
-  expect_equal(result, "New instruction from list$chat")
-})
-
-test_that("generate_single_copro_candidate handles list with chat_structured", {
-  prompt_model <- list(
-    chat_structured = function(prompt, type) {
-      "New instruction from chat_structured"
-    }
-  )
-
-  result <- dsprrr:::generate_single_copro_candidate(
-    "Generate new instruction",
-    prompt_model = prompt_model
-  )
-
-  expect_equal(result, "New instruction from chat_structured")
 })
 
 test_that("generate_single_copro_candidate returns NULL when no model", {
@@ -261,7 +227,7 @@ test_that("COPRO compile optimizes instructions", {
   best_instruction_applied <- FALSE
 
   # Mock LLM that improves with better instructions
-  mock_llm <- list(
+  mock_llm <- new_test_chat(
     chat_structured = function(prompt, type, ...) {
       call_count <<- call_count + 1L
       # Check if improved instruction is in the prompt
@@ -282,12 +248,12 @@ test_that("COPRO compile optimizes instructions", {
   )
 
   sig <- Signature(
-    inputs = list(input(name = "question", class = S7::class_character)),
+    inputs = list(input(name = "question", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Answer the question"
   )
 
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
 
   trainset <- data.frame(
     question = c("What is 2+2?", "What is 3+3?"),
@@ -309,16 +275,22 @@ test_that("COPRO compile optimizes instructions", {
     seed = 1L
   )
 
-  result <- compile(tp, mod, trainset, .llm = mock_llm)
+  result <- compile(mod, tp, trainset, .llm = mock_llm)
 
   expect_true(result$config$compiled)
   expect_equal(result$config$teleprompter, "COPRO")
-  expect_true(!is.null(result$config$optimizer$history))
-  expect_true(length(result$config$optimizer$history) > 0)
+  expect_true(!is.null(copro_test_metadata(result)$history))
+  expect_true(length(copro_test_metadata(result)$history) > 0)
+
+  restored <- restore_module_config(program_artifact(result))
+  expect_equal(
+    optimization_result(restored)$best_params,
+    optimization_result(result)$best_params
+  )
 })
 
 test_that("COPRO tracks instruction history when track_stats is TRUE", {
-  mock_llm <- list(
+  mock_llm <- new_test_chat(
     chat_structured = function(prompt, type, ...) {
       "4"
     },
@@ -328,12 +300,12 @@ test_that("COPRO tracks instruction history when track_stats is TRUE", {
   )
 
   sig <- Signature(
-    inputs = list(input(name = "question", class = S7::class_character)),
+    inputs = list(input(name = "question", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Answer the question"
   )
 
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
 
   trainset <- data.frame(
     question = "What is 2+2?",
@@ -350,19 +322,19 @@ test_that("COPRO tracks instruction history when track_stats is TRUE", {
     seed = 42L
   )
 
-  result <- compile(tp, mod, trainset, .llm = mock_llm)
+  result <- compile(mod, tp, trainset, .llm = mock_llm)
 
   # Should have history recorded
-  expect_true(length(result$config$optimizer$history) > 0)
+  expect_true(length(copro_test_metadata(result)$history) > 0)
 
   # First entry should be the baseline
-  baseline <- result$config$optimizer$history[[1]]
+  baseline <- copro_test_metadata(result)$history[[1]]
   expect_equal(baseline$iteration, 0L)
   expect_equal(baseline$instructions, "Answer the question")
 })
 
 test_that("COPRO does not track history when track_stats is FALSE", {
-  mock_llm <- list(
+  mock_llm <- new_test_chat(
     chat_structured = function(prompt, type, ...) {
       "4"
     },
@@ -372,12 +344,12 @@ test_that("COPRO does not track history when track_stats is FALSE", {
   )
 
   sig <- Signature(
-    inputs = list(input(name = "question", class = S7::class_character)),
+    inputs = list(input(name = "question", type = "string")),
     output_type = ellmer::type_string(),
     instructions = "Answer the question"
   )
 
-  mod <- module(signature = sig, type = "predict")
+  mod <- module(signature = sig)
 
   trainset <- data.frame(
     question = "What is 2+2?",
@@ -394,9 +366,9 @@ test_that("COPRO does not track history when track_stats is FALSE", {
     seed = 42L
   )
 
-  result <- compile(tp, mod, trainset, .llm = mock_llm)
+  result <- compile(mod, tp, trainset, .llm = mock_llm)
 
-  expect_null(result$config$optimizer$history)
+  expect_null(copro_test_metadata(result)$history)
 })
 
 test_that("COPRO print method works", {
@@ -414,58 +386,36 @@ test_that("COPRO print method works", {
 })
 
 test_that("COPRO accepts Chat object as prompt_model", {
-  MockChat <- R6::R6Class(
-    "MockChat",
-    inherit = NULL,
-    public = list(
-      chat = function(prompt) "instruction"
-    )
-  )
-  mock_chat <- MockChat$new()
-  class(mock_chat) <- c("Chat", class(mock_chat))
+  mock_chat <- new_copro_prompt_chat(function(prompt) "instruction")
 
   tp <- COPRO(prompt_model = mock_chat)
   expect_s3_class(tp, "dsprrr::COPRO")
 })
 
-test_that("COPRO accepts function as prompt_model", {
-  prompt_fn <- function(prompt) "instruction"
-
-  tp <- COPRO(prompt_model = prompt_fn)
-  expect_s3_class(tp, "dsprrr::COPRO")
-})
-
-test_that("COPRO accepts list with chat method as prompt_model", {
-  prompt_model <- list(chat = function(prompt) "instruction")
-
-  tp <- COPRO(prompt_model = prompt_model)
-  expect_s3_class(tp, "dsprrr::COPRO")
-})
-
-test_that("COPRO accepts list with chat_structured method as prompt_model", {
-  prompt_model <- list(chat_structured = function(prompt, type) "instruction")
-
-  tp <- COPRO(prompt_model = prompt_model)
-  expect_s3_class(tp, "dsprrr::COPRO")
-})
-
-test_that("COPRO rejects invalid prompt_model", {
+test_that("COPRO rejects non-Chat prompt models", {
   expect_error(
-    COPRO(prompt_model = 123),
-    "prompt_model must be"
+    COPRO(prompt_model = function(prompt) "instruction"),
+    "NULL or an ellmer Chat R6 object"
   )
-
   expect_error(
-    COPRO(prompt_model = list(invalid = "method")),
-    "prompt_model must be"
+    COPRO(prompt_model = list(chat = function(prompt) "instruction")),
+    "NULL or an ellmer Chat R6 object"
+  )
+  expect_error(
+    COPRO(
+      prompt_model = list(
+        chat_structured = function(prompt, type) "instruction"
+      )
+    ),
+    "NULL or an ellmer Chat R6 object"
   )
 })
 
 test_that("generate_copro_candidates deduplicates results", {
   # Create a prompt model that returns duplicates
   call_count <- 0L
-  prompt_model <- list(
-    chat = function(prompt) {
+  prompt_model <- new_copro_prompt_chat(
+    function(prompt) {
       call_count <<- call_count + 1L
       # Return same instruction every time
       "Same instruction"
@@ -488,16 +438,18 @@ test_that("generate_copro_candidates deduplicates results", {
 
 test_that("COPRO generation budget follows requested candidate order", {
   calls <- 0L
-  prompt_model <- function(prompt) {
-    calls <<- calls + 1L
-    if (calls == 1L) {
-      return(NULL)
+  prompt_model <- new_copro_prompt_chat(
+    function(prompt) {
+      calls <<- calls + 1L
+      if (calls == 1L) {
+        return(NULL)
+      }
+      if (calls == 2L) {
+        return("usable instruction")
+      }
+      stop("generation failed")
     }
-    if (calls == 2L) {
-      return("usable instruction")
-    }
-    stop("generation failed")
-  }
+  )
   budget <- dsprrr:::new_optimizer_budget(
     dsprrr:::optimizer_control(max_errors = 2L)
   )
@@ -512,7 +464,7 @@ test_that("COPRO generation budget follows requested candidate order", {
       prompt_model = prompt_model,
       budget = budget
     ),
-    "instruction generation function failed"
+    "COPRO instruction generation failed"
   )
   summary <- dsprrr:::optimizer_budget_summary(budget)
 
@@ -537,10 +489,12 @@ test_that("COPRO generation max_errors zero stops after its first request", {
     input_names = "question",
     output_col = "answer",
     breadth = 3L,
-    prompt_model = function(prompt) {
-      calls <<- calls + 1L
-      NULL
-    },
+    prompt_model = new_copro_prompt_chat(
+      function(prompt) {
+        calls <<- calls + 1L
+        NULL
+      }
+    ),
     budget = budget
   )
   summary <- dsprrr:::optimizer_budget_summary(budget)
@@ -584,10 +538,12 @@ test_that("COPRO preserves the best candidate when evaluation exhausts budget", 
     .package = "dsprrr"
   )
 
-  prompt_model <- list(chat = function(prompt) {
-    generation_calls <<- generation_calls + 1L
-    paste("Instruction", generation_calls)
-  })
+  prompt_model <- new_copro_prompt_chat(
+    function(prompt) {
+      generation_calls <<- generation_calls + 1L
+      paste("Instruction", generation_calls)
+    }
+  )
   teleprompter <- COPRO(
     metric = function(...) 1,
     breadth = 2L,
@@ -598,10 +554,10 @@ test_that("COPRO preserves the best candidate when evaluation exhausts budget", 
   )
   result <- dsprrr:::compile_copro(
     teleprompter,
-    module(signature("question -> answer"), type = "predict"),
+    module(signature("question -> answer")),
     data.frame(question = "q", answer = "a")
   )
-  optimizer <- result$config$optimizer
+  optimizer <- copro_test_metadata(result)
 
   expect_equal(eval_calls, 3L)
   expect_equal(generation_calls, 2L)
@@ -616,6 +572,9 @@ test_that("COPRO preserves the best candidate when evaluation exhausts budget", 
 test_that("COPRO retains partial evidence without selecting or logging it", {
   eval_calls <- 0L
   log_dir <- withr::local_tempdir()
+  if (.Platform$OS.type == "unix") {
+    Sys.chmod(log_dir, mode = "0700", use_umask = FALSE)
+  }
 
   testthat::local_mocked_bindings(
     identify_failed_examples = function(...) list(),
@@ -650,14 +609,15 @@ test_that("COPRO retains partial evidence without selecting or logging it", {
   result <- dsprrr:::compile_copro(
     COPRO(
       metric = function(...) 1,
-      prompt_model = function(...) "Biased partial candidate",
+      prompt_model = new_copro_prompt_chat(
+        function(...) "Biased partial candidate"
+      ),
       breadth = 1L,
       depth = 1L,
       track_stats = TRUE
     ),
     module(
-      signature("question -> answer", instructions = "Baseline"),
-      type = "predict"
+      signature("question -> answer", instructions = "Baseline")
     ),
     data.frame(
       question = c("q1", "q2"),
@@ -668,7 +628,7 @@ test_that("COPRO retains partial evidence without selecting or logging it", {
       log_dir = log_dir
     )
   )
-  optimizer <- result$config$optimizer
+  optimizer <- copro_test_metadata(result)
 
   expect_equal(eval_calls, 3L)
   expect_identical(result$signature@instructions, "Baseline")

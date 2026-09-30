@@ -1,91 +1,102 @@
-#' Optimize a Module's Implementation with Flex
+#' Flex: a module whose implementation can be optimized
 #'
 #' @description
-#' `flex()` creates an experimental module whose implementation can be
-#' optimized. Use it when the best number, order, or kind of model and tool
-#' calls is unknown. If the program shape is already clear, use a regular
-#' module or an explicit pipeline instead.
+#' `r lifecycle::badge("experimental")`
 #'
-#' The default `source_format = "json"` represents a bounded predictor graph as
-#' data. Opt-in `source_format = "r"` accepts a complete R `forward()` program
-#' for tasks that need control flow, deterministic computation, dynamic
-#' predictors, or named host tools. Executable source runs only in a fresh
-#' runner returned by `interpreter_factory` and requires an enforced sandbox by
-#' default.
+#' `flex()` creates a module whose whole implementation, not just its
+#' instructions, can be rewritten by an optimizer. Use it when the best number,
+#' order or kind of model and tool calls is unknown. If the shape of the
+#' program is already clear, use a regular module or an explicit pipeline.
+#' [GEPA()] optimizes the Flex source; most other optimizers only tune
+#' instructions or demonstrations inside a fixed module.
+#'
+#' The implementation is a source string. Declarative JSON source describes a
+#' bounded graph of predictor steps as data. Executable R source contains a
+#' complete `forward()` program, for tasks that need control flow,
+#' computation, predictors created on the fly, or named host tools; it runs
+#' only in a fresh runner from `interpreter_factory`, which must provide an
+#' enforced sandbox by default. With the default `source_format = "auto"`,
+#' the baseline and JSON-looking sources are treated as JSON, and a factory,
+#' tools, or source that does not look like JSON select R.
 #'
 #' @details
-#' Most teleprompters optimize instructions or demonstrations inside a fixed
-#' module. [GEPA] can also search each Flex module's complete `module_src`.
-#' Invalid candidates remain auditable but cannot replace the active program.
+#' ## JSON sources
 #'
-#' Version 1 sources contain `schema_version`, an ordered `steps` array, and an
-#' `outputs` object. Each step has a safe, unique `name`, a `primitive` of
-#' `"predict"` or `"chain_of_thought"`, a `signature` (`"$outer"` or DSPy
-#' string notation), an optional `instructions` string, and an `inputs` object.
-#' Input references use `"$input.<name>"` or
-#' `"$step.<earlier-step>.<field>"`. `outputs` maps every outer output field to
-#' one of the same reference forms. Sources are type checked before binding.
-#' Flex v1 supports string, number, integer, boolean, enum, array, and non-empty
-#' object signature types. Opaque `TypeJsonSchema` values and empty objects are
-#' rejected because their interfaces cannot be checked safely by this compiler.
+#' Version 1 sources contain `schema_version`, an ordered `steps` array and an
+#' `outputs` object. Each step has a unique `name`, a `primitive` of
+#' `"predict"` or `"chain_of_thought"`, a `signature` (`"$outer"` or a
+#' signature string), an optional `instructions` string and an `inputs`
+#' object. Inputs refer to `"$input.<name>"` or
+#' `"$step.<earlier-step>.<field>"`, and `outputs` maps every output field to
+#' one of those references. Sources are type checked before they are used.
+#' Supported field types are string, number, integer, boolean, enum, array and
+#' non-empty object; opaque `TypeJsonSchema` values and empty objects are
+#' rejected because their interfaces cannot be checked.
 #'
-#' Executable sources receive a small guest DSL: `Predict`,
+#' ## R sources
+#'
+#' Executable sources can use a small set of constructors: `Predict`,
 #' `ChainOfThought`, `ReAct`, `ReActV2`, `RLM`, `CodeAct`,
-#' `ProgramOfThought`, `Prediction`, `Tool`, and explicitly supplied named
-#' tools. Predictor and tool calls cross a versioned JSON boundary and run on
-#' the host; optimizer-authored source is never evaluated by the host R session.
-#' Guest bindings have a separate lexical environment from bridge state.
-#' Supplied tools are privileged host capabilities even though generated source
-#' runs in a sandbox.
+#' `ProgramOfThought`, `Prediction`, `Tool`, and the named `tools` you supply.
+#' Predictor and tool calls cross a versioned JSON boundary and run in the
+#' host; source written by an optimizer is never evaluated in your R session.
+#' The tools you supply run with your permissions, even though the source runs
+#' in a sandbox. After each call across the boundary, the source runs again
+#' from the start with the recorded responses replayed, so keep its own
+#' computation free of side effects and its loops bounded.
 #'
-#' After each bridged request, executable source runs again from the beginning
-#' with recorded host responses replayed. Keep guest-side computation pure and
-#' loops bounded because guest side effects can repeat.
+#' ## Baseline and binding
 #'
-#' When `module_src` is `NULL`, the baseline is one `Predict` call (or one
-#' `RLM` call when executable mode has tools). `$bind()` and
-#' `$apply_optimization_params()` validate new source transactionally, so an
-#' invalid candidate cannot replace the active implementation. The source is
-#' available through the read-only `$module_src` active binding.
+#' With `module_src = NULL`, the baseline is one `Predict` call (or one `RLM`
+#' call for executable mode with tools). `$bind()` and
+#' `$apply_optimization_params()` validate new source before installing it,
+#' so an invalid candidate cannot replace the working implementation. The
+#' current source is available as `$module_src`.
 #'
-#' Token streaming remains unsupported because Flex creates predictors at run
-#' time. Dataset concurrency is currently available for declarative zero- and
-#' one-step sources; executable and multi-step sources fail before provider
-#' work when a concurrent backend is requested.
+#' Token streaming is unsupported, because Flex creates predictors at run
+#' time. [run_dataset()] concurrency works for declarative sources with zero
+#' or one step; executable and multi-step sources fail before any provider
+#' call when a concurrent backend is requested.
 #'
-#' @param signature A [Signature] object or DSPy-style signature string.
+#' @param signature A signature object created by [signature()], or a DSPy-style
+#'   signature string.
 #' @param module_src A complete Flex source string, or `NULL` for a baseline.
-#' @param max_predictor_calls Maximum number of predictor invocations allowed
-#'   across the Flex bridge, or `NULL` for no limit. Declarative sources are
-#'   also checked against this bound before they are installed. Configure
-#'   separate limits for work performed inside agentic predictors.
+#' @param max_predictor_calls Maximum number of predictor calls per run
+#'   (default `100L`), or `NULL` for no limit. Declarative sources are checked
+#'   against it before they are installed. Agentic predictors, such as `ReAct`,
+#'   have their own limits for the work they do internally.
 #' @param config Optional module configuration passed to each fresh predictor.
 #' @param chat Optional ellmer `Chat` used unless `.llm` is supplied at run
 #'   time.
 #' @param tools Named host functions or ellmer ToolDef objects exposed only to
 #'   executable Flex source.
-#' @param interpreter_factory Zero-argument factory returning a fresh code
-#'   runner for every executable Flex invocation. Required when
-#'   `source_format = "r"`; not accepted for declarative JSON.
-#' @param source_format Source language: `"json"`, `"r"`, or `"auto"`.
-#'   Auto selects R when tools or a factory are supplied, or when a non-`NULL`
-#'   source does not look like JSON. It selects JSON for JSON-looking source and
-#'   for the default `NULL` baseline.
+#' @param interpreter_factory A function with no arguments that returns a
+#'   fresh code runner for every run of executable source, such as
+#'   `function() mcp_repl_runner()`. Required for R source; not accepted for
+#'   JSON source.
+#' @param source_format Source language: `"auto"` (the default), `"json"` or
+#'   `"r"`. `"auto"` selects R when tools or a factory are supplied, or when a
+#'   non-`NULL` source does not look like JSON; otherwise it selects JSON.
 #' @param require_sandbox Whether executable mode must reject runners that do
 #'   not advertise an enforced sandbox. Keep the default for generated or
 #'   otherwise untrusted source.
-#' @param max_tool_calls Maximum number of direct host-tool calls allowed in one
-#'   executable invocation, or `NULL` for no limit. Defaults to 100.
-#'
-#' @return An experimental `FlexModule`.
+#' @param max_tool_calls Maximum number of direct host-tool calls per run of
+#'   executable source (default `100L`), or `NULL` for no limit.
+#' @param ... Must be empty.
+#' @return A Flex module.
 #' @export
+#' @family program constructors
 #'
 #' @examples
 #' program <- flex("question -> answer")
-#' program$module_src
+#' cat(program$module_src)
 #'
 #' \dontrun{
-#' result <- run(program, question = "Why is the sky blue?", .llm = llm)
+#' run(
+#'   program,
+#'   question = "Why is the sky blue?",
+#'   .llm = ellmer::chat_openai(model = "gpt-6-luna")
+#' )
 #' }
 flex <- function(
   signature,
@@ -97,8 +108,15 @@ flex <- function(
   interpreter_factory = NULL,
   source_format = c("auto", "json", "r"),
   require_sandbox = TRUE,
-  max_tool_calls = 100L
+  max_tool_calls = 100L,
+  ...
 ) {
+  reject_partial_argument_matches(sys.call(), sys.function())
+  reject_constructor_arguments(
+    "flex",
+    ...,
+    hint = "Use program_of_thought(), code_act(), or rlm_module() for runner-based programs."
+  )
   flex_warn_experimental()
 
   sig <- if (is.character(signature)) {
@@ -155,7 +173,7 @@ flex <- function(
     )
   }
 
-  FlexModule$new(
+  mod <- FlexModule$new(
     signature = sig,
     module_src = module_src,
     tools = tools,
@@ -167,6 +185,7 @@ flex <- function(
     config = config,
     chat = chat
   )
+  stamp_module_kind(mod, "flex")
 }
 
 .flex_lifecycle <- new.env(parent = emptyenv())
@@ -381,9 +400,9 @@ FlexModule <- R6::R6Class(
         # A new module is deliberately constructed for every step and every
         # invocation. No demonstrations, traces, or mutable module state leak
         # between predictor calls.
-        predictor <- module(
+        predictor <- construct_module_kind(
+          kind = step$primitive,
           signature = step$signature,
-          type = step$primitive,
           config = predictor_config
         )
         result <- tryCatch(
@@ -497,17 +516,20 @@ FlexModule <- R6::R6Class(
     },
 
     reset_copy = function() {
-      FlexModule$new(
-        signature = self$signature,
-        module_src = private$.module_src,
-        tools = private$.tools,
-        interpreter_factory = private$.interpreter_factory,
-        source_format = private$.source_format,
-        max_predictor_calls = private$.max_predictor_calls,
-        max_tool_calls = private$.max_tool_calls,
-        require_sandbox = private$.require_sandbox,
-        config = self$config,
-        chat = self$chat
+      artifact_copy_runtime(
+        self,
+        FlexModule$new(
+          signature = self$signature,
+          module_src = private$.module_src,
+          tools = private$.tools,
+          interpreter_factory = private$.interpreter_factory,
+          source_format = private$.source_format,
+          max_predictor_calls = private$.max_predictor_calls,
+          max_tool_calls = private$.max_tool_calls,
+          require_sandbox = private$.require_sandbox,
+          config = self$config,
+          chat = self$chat
+        )
       )
     },
 
@@ -525,7 +547,7 @@ FlexModule <- R6::R6Class(
         chat = self$chat
       )
       new_module$state <- lapply(self$state, identity)
-      new_module
+      artifact_copy_runtime(self, new_module)
     },
 
     apply_optimization_params = function(params = list(), module_src = NULL) {
@@ -549,7 +571,7 @@ FlexModule <- R6::R6Class(
       ))
       if (
         length(param_names) != length(params) ||
-          any(!nzchar(param_names)) ||
+          !all(nzchar(param_names)) ||
           anyDuplicated(param_names)
       ) {
         cli::cli_abort(
@@ -743,7 +765,7 @@ flex_check_predictor_budget <- function(calls_started, max_predictor_calls) {
 
 flex_validate_runtime_input_names <- function(inputs, signature) {
   provided <- names(inputs) %||% character()
-  if (any(!nzchar(provided)) || anyDuplicated(provided)) {
+  if (!all(nzchar(provided)) || anyDuplicated(provided)) {
     cli::cli_abort(
       "Flex inputs must have unique, non-empty names",
       class = c(
@@ -1245,7 +1267,7 @@ flex_validate_object <- function(
     )
   }
   fields <- names(value) %||% character()
-  if (any(!nzchar(fields)) || anyDuplicated(fields)) {
+  if (!all(nzchar(fields)) || anyDuplicated(fields)) {
     flex_source_abort(
       "{context} must have unique, non-empty field names",
       class = "dsprrr_flex_schema_error"
@@ -1274,7 +1296,7 @@ flex_validate_named_map <- function(value, context) {
     )
   }
   fields <- names(value) %||% character()
-  if (length(fields) != length(value) || any(!nzchar(fields))) {
+  if (length(fields) != length(value) || !all(nzchar(fields))) {
     flex_source_abort(
       "{context} must be a JSON object with named fields",
       class = "dsprrr_flex_interface_error"
@@ -1488,6 +1510,55 @@ flex_reference_type <- function(reference, outer_signature, known_types) {
   known_types[[reference$name]][[reference$field]]
 }
 
+#' Convert a supported Flex type to its internal schema record
+#' @noRd
+flex_type_schema <- function(type) {
+  if (inherits(type, "ellmer::TypeIgnore")) {
+    return(NULL)
+  }
+
+  schema <- if (inherits(type, "ellmer::TypeBasic")) {
+    list(type = type@type)
+  } else if (inherits(type, "ellmer::TypeEnum")) {
+    list(type = "string", enum = type@values)
+  } else if (inherits(type, "ellmer::TypeArray")) {
+    list(type = "array", items = flex_type_schema(type@items))
+  } else if (inherits(type, "ellmer::TypeObject")) {
+    properties <- lapply(type@properties, flex_type_schema)
+    properties <- properties[!vapply(properties, is.null, logical(1))]
+    required <- names(type@properties)[
+      vapply(
+        type@properties,
+        function(property) {
+          isTRUE(property@required) &&
+            !inherits(property, "ellmer::TypeIgnore")
+        },
+        logical(1)
+      )
+    ]
+    list(
+      type = "object",
+      properties = properties,
+      required = required,
+      additionalProperties = isTRUE(type@additional_properties)
+    )
+  } else {
+    flex_source_abort(
+      c(
+        "Unsupported type in the Flex schema contract",
+        "x" = "Cannot convert {.cls {class(type)[1]}}."
+      ),
+      class = "dsprrr_flex_type_error"
+    )
+  }
+
+  description <- type@description
+  if (length(description) > 0L && nzchar(description)) {
+    schema$description <- description
+  }
+  schema
+}
+
 flex_type_assignable <- function(source, target) {
   source_required <- tryCatch(isTRUE(source@required), error = function(error) {
     TRUE
@@ -1498,8 +1569,8 @@ flex_type_assignable <- function(source, target) {
   if (target_required && !source_required) {
     return(FALSE)
   }
-  source_schema <- ellmer_type_to_json_schema(source)
-  target_schema <- ellmer_type_to_json_schema(target)
+  source_schema <- flex_type_schema(source)
+  target_schema <- flex_type_schema(target)
   flex_schema_assignable(source_schema, target_schema)
 }
 
@@ -1952,7 +2023,7 @@ flex_validate_runtime_value <- function(
       abort_value("{context} must be a named object")
     }
     fields <- names(value)
-    if (any(!nzchar(fields)) || anyDuplicated(fields)) {
+    if (!all(nzchar(fields)) || anyDuplicated(fields)) {
       abort_value("{context} must have unique, non-empty field names")
     }
     properties <- as.list(type@properties)
@@ -2022,7 +2093,7 @@ flex_validate_output_record <- function(
     )
   }
   actual <- names(value)
-  if (any(!nzchar(actual)) || anyDuplicated(actual)) {
+  if (!all(nzchar(actual)) || anyDuplicated(actual)) {
     flex_output_abort(
       "{context} must have unique, non-empty output names",
       class = class
@@ -2274,9 +2345,9 @@ run_flex_dataset_batch <- function(
       )
     })
     llm <- resolve_module_llm(program, .llm = .llm)
-    predictor <- module(
+    predictor <- construct_module_kind(
+      kind = step$primitive,
       signature = step$signature,
-      type = step$primitive,
       config = flex_predictor_config(program$config),
       chat = llm
     )
@@ -2397,7 +2468,7 @@ run_flex_dataset_batch <- function(
     if (run_error_present(result$metadata$error)) {
       return(structure(NA, error_message = result$metadata$error))
     }
-    extract_simple_output(result$output, program$signature@output_type)
+    result$output
   })
   simple <- if (length(simple) == 1L) simple[[1L]] else simple
   if (!is.null(error_conditions)) {

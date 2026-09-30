@@ -67,6 +67,13 @@ RAGModule <- R6::R6Class(
     },
 
     #' @description
+    #' The context field is filled in by retrieval, so callers never pass it.
+    #' @return A character vector.
+    supplied_inputs = function() {
+      self$context_format
+    },
+
+    #' @description
     #' Execute the module with given inputs
     #' @param batch Named list or data frame of inputs
     #' @param .llm Optional ellmer chat object
@@ -93,8 +100,8 @@ RAGModule <- R6::R6Class(
       # Build prompt with context
       prompt <- private$build_prompt(inputs)
 
-      # Get LLM client
-      llm <- .llm %||% self$chat %||% private$get_default_llm()
+      # Resolve the invocation Chat through the package-wide contract.
+      llm <- resolve_module_llm(self, .llm = .llm)
 
       # Record start time
       start_time <- Sys.time()
@@ -240,14 +247,17 @@ RAGModule <- R6::R6Class(
     #' @description
     #' Create a reset copy of the module
     reset_copy = function() {
-      RAGModule$new(
-        signature = self$signature,
-        store = self$store,
-        retriever = self$retriever,
-        k = self$k,
-        context_format = self$context_format,
-        config = list(),
-        chat = self$chat
+      artifact_copy_runtime(
+        self,
+        RAGModule$new(
+          signature = self$signature,
+          store = self$store,
+          retriever = self$retriever,
+          k = self$k,
+          context_format = self$context_format,
+          config = list(),
+          chat = self$chat
+        )
       )
     }
   ),
@@ -318,7 +328,11 @@ RAGModule <- R6::R6Class(
         # Use ragnar store retrieval
         docs <- tryCatch(
           {
-            results <- ragnar::ragnar_retrieve(self$store, query, k = self$k)
+            results <- ragnar::ragnar_retrieve(
+              self$store,
+              query,
+              top_k = self$k
+            )
             # Extract text content from results
             if (is.data.frame(results) && "text" %in% names(results)) {
               results$text
@@ -430,29 +444,6 @@ RAGModule <- R6::R6Class(
       paste(prompt_parts, collapse = "\n")
     },
 
-    # Get default LLM (inherited pattern from PredictModule)
-    get_default_llm = function() {
-      provider <- self$config$provider %||%
-        Sys.getenv("DSPRRR_PROVIDER", "openai")
-      provider <- switch(provider, anthropic = "claude", provider)
-
-      model_name <- self$config$model
-
-      switch(
-        provider,
-        openai = ellmer::chat_openai(model = model_name %||% "gpt-4o-mini"),
-        claude = ellmer::chat_claude(
-          model = model_name %||% "claude-sonnet-4-20250514",
-          max_tokens = self$config$max_tokens %||% 4096
-        ),
-        gemini = ellmer::chat_google_gemini(
-          model = model_name %||% "gemini-2.0-flash"
-        ),
-        ollama = ellmer::chat_ollama(model = model_name %||% "llama3.2:3b"),
-        cli::cli_abort("Unknown provider: {provider}")
-      )
-    },
-
     # Call LLM with structured output
     call_llm = function(
       llm,
@@ -477,48 +468,77 @@ RAGModule <- R6::R6Class(
 )
 
 
-#' Create a RAG Module
+#' Create a retrieval-augmented generation module
 #'
 #' @description
-#' Factory function to create a Retrieval-Augmented Generation module.
-#' RAG modules automatically retrieve relevant context from a document store
-#' before generating responses.
+#' `rag_module()` builds a module that, on every call, retrieves documents
+#' related to the input, adds them to the prompt, and asks the model to
+#' answer from them. Retrieval comes from a ragnar store or from any R
+#' function you supply.
 #'
-#' @param signature A signature string or Signature object defining inputs/outputs.
-#' @param store Optional ragnar store for document retrieval.
-#' @param retriever Optional custom retriever function. Should accept `(query, k)`
-#'   and return a character vector of documents.
-#' @param k Number of documents to retrieve (default 5).
-#' @param context_format Field name for the context in the prompt (default
-#'   "relevant_context"). This field is automatically added to inputs.
-#' @param config Optional configuration list.
-#' @param chat Optional ellmer Chat object.
+#' @param signature A signature from [signature()], or a signature string,
+#'   such as `"question -> answer"`.
+#' @param store A ragnar store (see [ragnar_tool()] for how to build one),
+#'   searched with `ragnar::ragnar_retrieve(store, query, top_k = k)`.
+#' @param retriever A function called as `retriever(query, k = k)` that
+#'   returns a character vector of documents. It takes precedence over
+#'   `store` (with a warning if both are given).
+#' @param k Number of documents to retrieve.
+#' @param context_format Name under which the retrieved text appears in the
+#'   prompt.
+#' @param config A list of settings. `fail_on_retrieval_error = TRUE` turns
+#'   retrieval errors into errors; by default they give a warning and the
+#'   model sees "No relevant context found.".
+#' @param chat An ellmer Chat stored on the module.
 #'
-#' @return A RAGModule object.
+#' @details
+#' The query is the first of the inputs `query`, `question`, `text`, `input`
+#' or `prompt`, or else the first non-empty string input. The retrieved
+#' documents are numbered (`[1] ...`) and added at the end of the prompt,
+#' under a `# Retrieved context` heading and the label `context_format`.
+#'
+#' The context is added whether or not the signature declares a
+#' `context_format` input, and callers never pass it to [run()]. If the
+#' signature does declare it, as in `"question, relevant_context -> answer"`,
+#' the retrieved text is currently written into the prompt twice.
+#'
+#' With `.return_format = "structured"`, the metadata records the `query`
+#' and the `retrieved_context`.
+#'
+#' @return A module (an R6 object of class `RAGModule`).
 #'
 #' @export
+#' @family program constructors
 #' @examples
-#' \dontrun{
-#' # With ragnar store
-#' store <- ragnar::ragnar_store_create(documents)
-#' mod <- rag_module(
-#'   "question, relevant_context -> answer",
-#'   store = store,
-#'   k = 3
+#' docs <- c(
+#'   "The Eiffel Tower is 330 metres tall.",
+#'   "The Louvre is the most visited museum in the world.",
+#'   "Paris has 20 arrondissements."
 #' )
-#'
-#' result <- run(mod, question = "What is the capital of France?")
-#'
-#' # With custom retriever
-#' my_retriever <- function(query, k) {
-#'   # Custom retrieval logic
-#'   c("Document 1 content", "Document 2 content")
+#' # A keyword retriever, so the example needs no embeddings
+#' keyword_retriever <- function(query, k) {
+#'   words <- tolower(strsplit(query, "\\W+")[[1]])
+#'   hits <- vapply(
+#'     docs,
+#'     function(doc) sum(words %in% tolower(strsplit(doc, "\\W+")[[1]])),
+#'     numeric(1)
+#'   )
+#'   unname(head(docs[order(-hits)], k))
 #' }
+#' keyword_retriever("How tall is the Eiffel Tower?", k = 2)
 #'
-#' mod <- rag_module(
-#'   "query, relevant_context -> response",
-#'   retriever = my_retriever
+#' rag <- rag_module("question -> answer", retriever = keyword_retriever, k = 2L)
+#' rag
+#'
+#' \dontrun{
+#' run(
+#'   rag,
+#'   question = "How tall is the Eiffel Tower?",
+#'   .llm = ellmer::chat_openai(model = "gpt-6-luna")
 #' )
+#'
+#' # With a ragnar store, built as shown in ?ragnar_tool
+#' rag_store <- rag_module("question -> answer", store = store, k = 3L)
 #' }
 rag_module <- function(
   signature,

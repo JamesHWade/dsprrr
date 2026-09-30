@@ -1,41 +1,34 @@
-#' Export Module Traces
+#' Export a module's traces as a tibble
 #'
 #' @description
-#' Export traces from a module as a tidy tibble for analysis and visualization.
+#' Every call of a module records a trace on it: when it ran, how long it
+#' took, the tokens and cost, and the model. `export_traces()` returns these
+#' traces as a tibble with one row per call, for analysis or plotting.
+#' Prompts and outputs are left out unless you ask for them, because they
+#' can contain sensitive data.
 #'
-#' @param module A DSPrrr module with recorded traces
-#' @param include_prompts Logical; whether to include full prompts in the output (default FALSE)
-#' @param include_outputs Logical; whether to include full outputs in the output (default FALSE)
+#' @param module A module.
+#' @param include_prompts If `TRUE`, add the prompts, as `prompt` (plain
+#'   text), `prompt_markdown` and `prompt_html`.
+#' @param include_outputs If `TRUE`, add the outputs and responses, as
+#'   `output` (a list-column), `turns`, `response`, `response_text`,
+#'   `response_markdown` and `response_html`.
 #'
-#' @return A tibble with one row per trace containing:
-#'   - timestamp: When the trace was recorded
-#'   - latency_ms: Response time in milliseconds
-#'   - input_tokens: Number of input tokens used
-#'   - output_tokens: Number of output tokens generated
-#'   - total_tokens: Total tokens (input + output)
-#'   - cost: Cost in USD (if available from the provider)
-#'   - model: The model name/version used
-#'   - prompt_length: Character length of the prompt
-#'   - prompt: The full prompt text (if include_prompts = TRUE)
-#'   - output: The model output (if include_outputs = TRUE)
+#' @return A tibble with one row per trace and the columns `timestamp`,
+#'   `latency_ms`, `input_tokens`, `cached_input_tokens`, `output_tokens`,
+#'   `total_tokens`, `cost` (in US dollars, when known), `model`,
+#'   `prompt_length`, `program_artifact_id` and `trace_context`, plus the
+#'   columns requested above. A module without traces gives an empty tibble
+#'   and a message.
 #'
 #' @export
+#' @family inspection
 #' @examples
-#' \dontrun{
-#' # Get basic trace metrics
-#' traces <- export_traces(my_module)
-#'
-#' # Include full prompts and outputs for analysis
-#' full_traces <- export_traces(my_module,
-#'                              include_prompts = TRUE,
-#'                              include_outputs = TRUE)
-#'
-#' # Visualize token usage over time
-#' library(ggplot2)
-#' ggplot(traces, aes(x = timestamp, y = total_tokens)) +
-#'   geom_line() +
-#'   geom_point()
-#' }
+#' shout <- module_fn("text -> reply", function(text) toupper(text))
+#' run(shout, text = "hello")
+#' run(shout, text = "goodbye")
+#' export_traces(shout)
+#' export_traces(shout, include_outputs = TRUE)$output
 export_traces <- function(
   module,
   include_prompts = FALSE,
@@ -49,11 +42,18 @@ export_traces <- function(
 
   if (length(traces) == 0) {
     cli::cli_inform("No traces recorded in this module")
-    return(tibble::tibble())
+    return(module$get_traces())
   }
 
-  # Start with basic metrics
+  # Start with basic metrics. `get_traces()` always carries the prompt and
+  # response text, so drop them unless the caller asked for them.
   result <- module$get_traces()
+  if (!include_prompts) {
+    result$prompt <- NULL
+  }
+  if (!include_outputs) {
+    result$response <- NULL
+  }
 
   # Add optional fields
   if (include_prompts) {
@@ -87,27 +87,30 @@ export_traces <- function(
   result
 }
 
-#' Summarize Module Traces
+#' Summarize a module's traces
 #'
 #' @description
-#' Provide a statistical summary of module traces for performance analysis.
+#' `summarize_traces()` totals a module's traces: the number of calls,
+#' tokens, cost and latency, and the calls per model. Printing the result
+#' gives a short report.
 #'
-#' @param module A DSPrrr module with recorded traces
+#' @param module A module.
 #'
-#' @return A list containing:
-#'   - n_traces: Number of traces
-#'   - total_tokens: Total tokens used across all traces
-#'   - total_cost: Total cost in USD
-#'   - avg_latency_ms: Average latency per request
-#'   - avg_tokens_per_request: Average tokens per request
-#'   - token_breakdown: List with input/output token totals
-#'   - model_usage: Table of requests per model
+#' @return A list of class `dsprrr_trace_summary` with `n_traces`,
+#'   `total_tokens`, `total_latency_ms` and `total_cost` (in US dollars, `NA`
+#'   when a cost is unknown). For a module with traces, it also has
+#'   `total_input_tokens`, `total_output_tokens`, `total_cached_tokens`,
+#'   `total_duration_s`, `avg_latency_ms`, `avg_tokens_per_request`,
+#'   `token_breakdown` (input and output totals and their ratio) and
+#'   `model_usage` (a data frame of calls per model).
 #'
 #' @export
+#' @family inspection
 #' @examples
 #' \dontrun{
-#' summary <- summarize_traces(my_module)
-#' print(summary)
+#' qa <- module(signature("question -> answer"))
+#' run(qa, question = "What is 2 + 2?", .llm = ellmer::chat_openai(model = "gpt-6-luna"))
+#' summarize_traces(qa)
 #' }
 summarize_traces <- function(module) {
   if (!inherits(module, "Module")) {
@@ -177,20 +180,25 @@ print.dsprrr_trace_summary <- function(x, ...) {
   invisible(x)
 }
 
-#' Clear Module Traces
+#' Clear a module's traces
 #'
 #' @description
-#' Clear all recorded traces from a module while preserving other state.
+#' `clear_traces()` removes the traces recorded on a module and keeps
+#' everything else, such as its demos and settings. The module is changed in
+#' place. The session's prompt history is separate; see
+#' [clear_prompt_history()].
 #'
-#' @param module A DSPrrr module
-#' @return The module (invisibly) with traces cleared
+#' @param module A module.
+#' @return The module, invisibly. A message reports how many traces were
+#'   removed.
 #'
 #' @export
+#' @family inspection
 #' @examples
-#' \dontrun{
-#' # Clear traces after analysis
-#' my_module <- clear_traces(my_module)
-#' }
+#' shout <- module_fn("text -> reply", function(text) toupper(text))
+#' run(shout, text = "hello")
+#' clear_traces(shout)
+#' nrow(export_traces(shout))
 clear_traces <- function(module) {
   if (!inherits(module, "Module")) {
     cli::cli_abort("module must be a DSPrrr Module object")

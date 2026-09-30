@@ -6,46 +6,34 @@ test_that("ReactModule class exists", {
 
 test_that("ReactModule inherits from PredictModule", {
   sig <- signature("question -> answer")
-  mod <- module(sig, type = "react")
+  mod <- react(sig)
 
   expect_s3_class(mod, "ReactModule")
   expect_s3_class(mod, "PredictModule")
   expect_s3_class(mod, "Module")
 })
 
-test_that("module() creates ReactModule for type='react'", {
+test_that("react() creates a ReactModule", {
   sig <- signature("question -> answer")
-  mod <- module(sig, type = "react")
+  mod <- react(sig)
 
   expect_s3_class(mod, "ReactModule")
 })
 
-test_that("module() auto-upgrades to ReactModule when tools provided", {
-  skip_if_not_installed("ellmer")
-
-  test_fn <- function(x) x
-  test_tool <- tryCatch(
-    ellmer::tool(
-      test_fn,
-      name = "test",
-      description = "Test tool",
-      arguments = list(x = ellmer::type_string())
-    ),
-    error = function(e) NULL
-  )
-
-  skip_if(is.null(test_tool), "Could not create test tool")
-
+test_that("module() never changes into ReAct when tools are supplied", {
   sig <- signature("question -> answer")
-  # type="predict" but tools provided -> should upgrade to react
-  mod <- module(sig, type = "predict", tools = list(test_tool))
 
-  expect_s3_class(mod, "ReactModule")
+  expect_snapshot(
+    module(sig, tools = list()),
+    error = TRUE
+  )
+  condition <- rlang::catch_cnd(module(sig, tools = list()))
+  expect_s3_class(condition, "dsprrr_module_argument_error")
 })
 
 test_that("ReactModule initializes with empty tools", {
   sig <- signature("question -> answer")
-  mod <- module(sig, type = "react")
+  mod <- react(sig)
 
   expect_length(mod$tools, 0)
   expect_equal(mod$list_tools(), character(0))
@@ -68,7 +56,7 @@ test_that("ReactModule accepts tools in constructor", {
   skip_if(is.null(test_tool), "Could not create test tool")
 
   sig <- signature("question -> answer")
-  mod <- module(sig, type = "react", tools = list(test_tool))
+  mod <- react(sig, tools = list(test_tool))
 
   expect_length(mod$tools, 1)
   expect_equal(mod$list_tools(), "my_tool")
@@ -91,7 +79,7 @@ test_that("ReactModule add_tool works", {
   skip_if(is.null(test_tool), "Could not create test tool")
 
   sig <- signature("question -> answer")
-  mod <- module(sig, type = "react")
+  mod <- react(sig)
 
   expect_length(mod$tools, 0)
 
@@ -118,7 +106,7 @@ test_that("ReactModule remove_tool works", {
   skip_if(is.null(test_tool), "Could not create test tool")
 
   sig <- signature("question -> answer")
-  mod <- module(sig, type = "react", tools = list(test_tool))
+  mod <- react(sig, tools = list(test_tool))
 
   expect_length(mod$tools, 1)
 
@@ -129,7 +117,7 @@ test_that("ReactModule remove_tool works", {
 
 test_that("ReactModule remove_tool warns for non-existent tool", {
   sig <- signature("question -> answer")
-  mod <- module(sig, type = "react")
+  mod <- react(sig)
 
   expect_warning(
     mod$remove_tool("nonexistent"),
@@ -139,14 +127,36 @@ test_that("ReactModule remove_tool warns for non-existent tool", {
 
 test_that("ReactModule max_iterations is configurable", {
   sig <- signature("question -> answer")
-  mod <- module(sig, type = "react", max_iterations = 20L)
+  mod <- react(sig, max_iterations = 20L)
 
   expect_equal(mod$max_iterations, 20L)
   expect_error(
-    module(sig, type = "react", max_iterations = 0L),
+    react(sig, max_iterations = 0L),
     "positive integer"
   )
 })
+
+ReactTestChat <- R6::R6Class(
+  "ReactTestChat",
+  inherit = TestChat,
+  public = list(
+    on_tool_request_impl = NULL,
+
+    initialize = function(..., on_tool_request = NULL) {
+      super$initialize(...)
+      self$on_tool_request_impl <- on_tool_request
+    },
+
+    register_tool = function(tool) invisible(NULL),
+
+    on_tool_request = function(callback) {
+      if (is.null(self$on_tool_request_impl)) {
+        return(function() invisible(NULL))
+      }
+      self$on_tool_request_impl(callback)
+    }
+  )
+)
 
 test_that("ReactModule forward tracks tool calls from ellmer turns", {
   turns <- list()
@@ -162,50 +172,46 @@ test_that("ReactModule forward tracks tool calls from ellmer turns", {
     role_turns[[length(role_turns)]]
   }
 
-  mock_llm <- structure(
-    list(
-      register_tool = function(tool) invisible(NULL),
-      get_turns = function(...) turns,
-      last_turn = last_turn,
-      chat = function(prompt, echo = "none", ...) {
-        user_turn <- ellmer::UserTurn(
-          contents = list(ellmer::ContentText(prompt))
-        )
-        first_tool_turn <- ellmer::AssistantTurn(
-          contents = list(ellmer::ContentToolRequest(
-            id = "call_1",
-            name = "lookup",
-            arguments = list(query = "alpha")
-          ))
-        )
-        second_tool_turn <- ellmer::AssistantTurn(
-          contents = list(ellmer::ContentToolRequest(
-            id = "call_2",
-            name = "summarize",
-            arguments = list(value = "beta")
-          ))
-        )
+  mock_llm <- ReactTestChat$new(
+    model = "mock-model",
+    chat = function(prompt, echo = "none", ...) {
+      user_turn <- ellmer::UserTurn(
+        contents = list(ellmer::ContentText(prompt))
+      )
+      first_tool_turn <- ellmer::AssistantTurn(
+        contents = list(ellmer::ContentToolRequest(
+          id = "call_1",
+          name = "lookup",
+          arguments = list(query = "alpha")
+        ))
+      )
+      second_tool_turn <- ellmer::AssistantTurn(
+        contents = list(ellmer::ContentToolRequest(
+          id = "call_2",
+          name = "summarize",
+          arguments = list(value = "beta")
+        ))
+      )
 
-        turns <<- c(
-          turns,
-          list(user_turn, first_tool_turn, second_tool_turn)
-        )
-        invisible(NULL)
-      },
-      chat_structured = function(prompt, type, echo = "none", ...) {
-        final_turn <- ellmer::AssistantTurn(
-          contents = list(ellmer::ContentText("{\"answer\":\"done\"}"))
-        )
-        turns <<- c(turns, list(final_turn))
-        list(answer = "done")
-      },
-      get_model = function() "mock-model"
-    ),
-    class = "Chat"
+      turns <<- c(
+        turns,
+        list(user_turn, first_tool_turn, second_tool_turn)
+      )
+      invisible(NULL)
+    },
+    chat_structured = function(prompt, type, echo = "none", ...) {
+      final_turn <- ellmer::AssistantTurn(
+        contents = list(ellmer::ContentText("{\"answer\":\"done\"}"))
+      )
+      turns <<- c(turns, list(final_turn))
+      list(answer = "done")
+    }
   )
+  override_test_chat_method(mock_llm, "get_turns", function(...) turns)
+  override_test_chat_method(mock_llm, "last_turn", last_turn)
 
   sig <- signature("question -> answer")
-  mod <- module(sig, type = "react")
+  mod <- react(sig)
 
   result <- mod$forward(list(question = "test"), .llm = mock_llm, trace = TRUE)
   metadata <- result$metadata[[1]]
@@ -232,41 +238,36 @@ test_that("ReactModule forward tracks tool calls from ellmer turns", {
 
 test_that("ReactModule enforces max_iterations before finalization", {
   turns <- list()
-  mock_llm <- structure(
-    list(
-      register_tool = function(tool) invisible(NULL),
-      get_turns = function(...) turns,
-      chat = function(prompt, echo = "none", ...) {
-        turns <<- c(
-          turns,
-          list(
-            ellmer::UserTurn(contents = list(ellmer::ContentText(prompt))),
-            ellmer::AssistantTurn(
-              contents = list(ellmer::ContentToolRequest(
-                id = "call_1",
-                name = "first",
-                arguments = list()
-              ))
-            ),
-            ellmer::AssistantTurn(
-              contents = list(ellmer::ContentToolRequest(
-                id = "call_2",
-                name = "second",
-                arguments = list()
-              ))
-            )
+  mock_llm <- ReactTestChat$new(
+    chat = function(prompt, echo = "none", ...) {
+      turns <<- c(
+        turns,
+        list(
+          ellmer::UserTurn(contents = list(ellmer::ContentText(prompt))),
+          ellmer::AssistantTurn(
+            contents = list(ellmer::ContentToolRequest(
+              id = "call_1",
+              name = "first",
+              arguments = list()
+            ))
+          ),
+          ellmer::AssistantTurn(
+            contents = list(ellmer::ContentToolRequest(
+              id = "call_2",
+              name = "second",
+              arguments = list()
+            ))
           )
         )
-        invisible(NULL)
-      },
-      chat_structured = function(...) stop("finalization should not run")
-    ),
-    class = "Chat"
+      )
+      invisible(NULL)
+    },
+    chat_structured = function(...) stop("finalization should not run")
   )
+  override_test_chat_method(mock_llm, "get_turns", function(...) turns)
 
-  mod <- module(
+  mod <- react(
     signature("question -> answer"),
-    type = "react",
     max_iterations = 1L
   )
   expect_error(
@@ -293,49 +294,44 @@ test_that("ReactModule iteration guard ignores tool turns from prior runs", {
     matching[[length(matching)]]
   }
 
-  mock_llm <- structure(
-    list(
-      register_tool = function(tool) invisible(NULL),
-      get_turns = function(...) turns,
-      last_turn = last_turn,
-      on_tool_request = function(callback) {
-        iteration_guard <<- callback
-        function() iteration_guard <<- NULL
-      },
-      chat = function(prompt, echo = "none", ...) {
-        turns <<- c(
-          turns,
-          list(
-            ellmer::UserTurn(contents = list(ellmer::ContentText(prompt))),
-            ellmer::AssistantTurn(
-              contents = list(ellmer::ContentToolRequest(
-                id = "new_call",
-                name = "new_tool",
-                arguments = list()
-              ))
-            )
+  mock_llm <- ReactTestChat$new(
+    model = "mock-model",
+    on_tool_request = function(callback) {
+      iteration_guard <<- callback
+      function() iteration_guard <<- NULL
+    },
+    chat = function(prompt, echo = "none", ...) {
+      turns <<- c(
+        turns,
+        list(
+          ellmer::UserTurn(contents = list(ellmer::ContentText(prompt))),
+          ellmer::AssistantTurn(
+            contents = list(ellmer::ContentToolRequest(
+              id = "new_call",
+              name = "new_tool",
+              arguments = list()
+            ))
           )
         )
-        iteration_guard(list(id = "new_call"))
-        invisible(NULL)
-      },
-      chat_structured = function(prompt, type, echo = "none", ...) {
-        turns <<- c(
-          turns,
-          list(ellmer::AssistantTurn(
-            contents = list(ellmer::ContentText("{\"answer\":\"done\"}"))
-          ))
-        )
-        list(answer = "done")
-      },
-      get_model = function() "mock-model"
-    ),
-    class = "Chat"
+      )
+      iteration_guard(list(id = "new_call"))
+      invisible(NULL)
+    },
+    chat_structured = function(prompt, type, echo = "none", ...) {
+      turns <<- c(
+        turns,
+        list(ellmer::AssistantTurn(
+          contents = list(ellmer::ContentText("{\"answer\":\"done\"}"))
+        ))
+      )
+      list(answer = "done")
+    }
   )
+  override_test_chat_method(mock_llm, "get_turns", function(...) turns)
+  override_test_chat_method(mock_llm, "last_turn", last_turn)
 
-  mod <- module(
+  mod <- react(
     signature("question -> answer"),
-    type = "react",
     max_iterations = 1L
   )
   result <- mod$forward(list(question = "test"), .llm = mock_llm)
@@ -362,7 +358,7 @@ test_that("ReactModule print includes tool info", {
   skip_if(is.null(test_tool), "Could not create test tool")
 
   sig <- signature("question -> answer")
-  mod <- module(sig, type = "react", tools = list(test_tool))
+  mod <- react(sig, tools = list(test_tool))
 
   # Capture output including cli output
   output <- capture.output(print(mod), type = "message")
@@ -396,7 +392,7 @@ test_that("ReactModule add_tool returns self invisibly", {
   skip_if(is.null(test_tool), "Could not create test tool")
 
   sig <- signature("question -> answer")
-  mod <- module(sig, type = "react")
+  mod <- react(sig)
 
   # Should be chainable
   result <- mod$add_tool(test_tool)
@@ -414,10 +410,106 @@ test_that("ReactModule rejects non-ToolDef in constructor", {
 
 test_that("ReactModule rejects non-ToolDef in add_tool", {
   sig <- signature("question -> answer")
-  mod <- module(sig, type = "react")
+  mod <- react(sig)
 
   expect_error(
     mod$add_tool("not a tool"),
     "ToolDef"
   )
+})
+
+test_that("ReactModule rejects an unnamespaced ToolDef class", {
+  sig <- signature("question -> answer")
+  bare_tool <- \(x) x
+  class(bare_tool) <- c("ToolDef", "function")
+
+  constructor_condition <- rlang::catch_cnd(
+    ReactModule$new(sig, tools = list(bare_tool))
+  )
+  mod <- react(sig)
+  add_condition <- rlang::catch_cnd(mod$add_tool(bare_tool))
+
+  expect_s3_class(constructor_condition, "rlang_error")
+  expect_match(conditionMessage(constructor_condition), "ellmer ToolDef")
+  expect_s3_class(add_condition, "rlang_error")
+  expect_match(conditionMessage(add_condition), "ellmer ToolDef")
+})
+
+test_that("ReactModule rejects duplicate tool names", {
+  make_tool <- function(value) {
+    ellmer::tool(
+      function(query) value,
+      name = "lookup",
+      description = paste("Returns", value),
+      arguments = list(query = ellmer::type_string())
+    )
+  }
+  sig <- signature("question -> answer")
+  tools <- list(make_tool("first"), make_tool("second"))
+
+  expect_error(
+    react(sig, tools = tools),
+    "Duplicate name: \"lookup\"",
+    class = "dsprrr_react_tools_error"
+  )
+  expect_error(
+    ReactModule$new(sig, tools = tools),
+    class = "dsprrr_react_tools_error"
+  )
+})
+
+test_that("ReactModule add_tool rejects a taken name unless replace = TRUE", {
+  make_tool <- function(name, value) {
+    ellmer::tool(
+      function(query) value,
+      name = name,
+      description = paste("Returns", value),
+      arguments = list(query = ellmer::type_string())
+    )
+  }
+  first <- make_tool("lookup", "first")
+  second <- make_tool("lookup", "second")
+  other <- make_tool("other", "other")
+  chat <- ellmer::chat_openai(model = "gpt-test", credentials = function() "x")
+  mod <- react("question -> answer", tools = list(first, other), chat = chat)
+
+  expect_error(
+    mod$add_tool(second),
+    "already has a tool named \"lookup\"",
+    class = "dsprrr_react_tools_error"
+  )
+  expect_identical(mod$tools, list(first, other))
+  expect_length(chat$get_tools(), 0L)
+  expect_error(mod$add_tool(second, replace = NA), "TRUE or FALSE")
+
+  mod$add_tool(second, replace = TRUE)
+
+  expect_identical(mod$list_tools(), c("lookup", "other"))
+  expect_identical(mod$tools[[1L]], second)
+  expect_identical(chat$get_tools()$lookup, second)
+})
+
+test_that("ReactModule forward refuses duplicates assigned to its tools field", {
+  make_tool <- function(value) {
+    ellmer::tool(
+      function(query) value,
+      name = "lookup",
+      description = paste("Returns", value),
+      arguments = list(query = ellmer::type_string())
+    )
+  }
+  registered <- character()
+  llm <- ReactTestChat$new(chat = function(...) stop("unexpected model call"))
+  override_test_chat_method(llm, "register_tool", function(tool) {
+    registered <<- c(registered, tool@name)
+    invisible(NULL)
+  })
+  mod <- react("question -> answer")
+  mod$tools <- list(make_tool("first"), make_tool("second"))
+
+  expect_error(
+    mod$forward(list(question = "q"), .llm = llm),
+    class = "dsprrr_react_tools_error"
+  )
+  expect_identical(registered, character())
 })

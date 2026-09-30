@@ -2,7 +2,7 @@
 % Please edit documentation in R/optimizer-accessors.R
 \name{export_module_code}
 \alias{export_module_code}
-\title{Export Module Configuration as R Code}
+\title{Export a program as standalone R code}
 \usage{
 export_module_code(
   module,
@@ -14,52 +14,55 @@ export_module_code(
 )
 }
 \arguments{
-\item{module}{A DSPrrr module to export.}
+\item{module}{A module or composed program.}
 
-\item{name}{Character; variable name for the module in generated code.
-Default is "mod".}
+\item{name}{Variable name for the program in the generated code (default
+\code{"mod"}).}
 
-\item{include_demos}{Logical; whether to include demonstration examples
-in the generated code. Default is TRUE.}
+\item{include_demos}{Whether to include the demonstrations (default
+\code{TRUE}).}
 
-\item{file}{Optional file path to write the code to. If NULL (default),
-returns the code as a character string. Existing files are atomically
-replaced only after the staged output parses successfully.}
+\item{file}{Optional path. When given, the code is written there; an
+existing file is replaced only after the new code parses.}
 
-\item{registry}{Named runtime registry; see \link{program-artifact}.}
-
-\item{trusted}{Whether trusted runtime values may be embedded. Standalone
-code export rejects registry and embedded runtime references.}
+\item{registry, trusted}{As in \code{\link[=program_artifact]{program_artifact()}}. Standalone code cannot
+embed registry or trusted runtime references, so programs that need them
+are rejected; use \code{\link[=save_program]{save_program()}} for those.}
 }
 \value{
-If \code{file} is NULL, returns the R code as a character string. If
-\code{file} is specified, writes it atomically and returns the code invisibly.
+The code as a single string, invisibly when \code{file} is given.
 }
 \description{
-Generate R code containing the complete program artifact and its restoration
-call. This preserves nested graphs and exact schemas without hand-rendering
-module fields.
+\code{export_module_code()} writes R code that rebuilds a program: the complete
+program artifact (see \code{\link[=program_artifact]{program_artifact()}}) followed by a call to
+\code{\link[=restore_module_config]{restore_module_config()}}. Nested programs and exact output schemas are
+preserved.
 }
 \examples{
-if (FALSE) {
-mod <- module(signature("text -> sentiment"), type = "predict")
-mod$optimize_grid(data, metric, parameters = list(temperature = c(0.3, 1.0)))
+mod <- module(signature("text -> sentiment"))
+path <- tempfile(fileext = ".R")
+export_module_code(mod, name = "sentiment_mod", file = path)
 
-# Get code as string
-code <- export_module_code(mod)
-cat(code)
-
-# Write to file
-export_module_code(mod, file = "optimized_module.R")
-}
+# Running the file rebuilds the program
+source(path)
+sentiment_mod
 }
 \seealso{
-Other optimizer accessors:
+Other optimization results:
 \code{\link[=apply_best_config]{apply_best_config()}},
 \code{\link[=best_demos]{best_demos()}},
 \code{\link[=best_params]{best_params()}},
 \code{\link[=config_diff]{config_diff()}},
+\code{\link[=optimization_result]{optimization_result()}},
 \code{\link[=optimization_summary]{optimization_summary()}},
 \code{\link[=top_trials]{top_trials()}}
+
+Other persistence:
+\code{\link[=pin_module_config]{pin_module_config()}},
+\code{\link[=pin_trace]{pin_trace()}},
+\code{\link[=pin_vitals_log]{pin_vitals_log()}},
+\code{\link{program-artifact}},
+\code{\link[=restore_module_config]{restore_module_config()}}
 }
-\concept{optimizer accessors}
+\concept{optimization results}
+\concept{persistence}

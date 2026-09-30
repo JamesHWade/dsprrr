@@ -88,6 +88,52 @@ test_that("has_ellmer_credentials detects multiple keys", {
   expect_true(dsprrr:::has_ellmer_credentials())
 })
 
+test_that("non-interactive vignette builds require explicit opt-in", {
+  withr::local_envvar(c(
+    CI = "",
+    `_R_CHECK_PACKAGE_NAME_` = "",
+    OPENAI_API_KEY = "test-key",
+    DSPRRR_VIGNETTES_EVAL = "",
+    VITALS_SHOULD_EVAL = ""
+  ))
+
+  expect_identical(dsprrr:::eval_vignette(), interactive())
+
+  withr::local_envvar(DSPRRR_VIGNETTES_EVAL = "true")
+  expect_identical(dsprrr:::eval_vignette(), TRUE)
+})
+
+test_that("CI replays cassettes only for pkgdown site builds", {
+  dir <- withr::local_tempdir()
+  dir.create(file.path(dir, "_vcr"))
+  writeLines("http_interactions: []", file.path(dir, "_vcr", "demo-chunk.yml"))
+  withr::local_dir(dir)
+  local_mocked_bindings(
+    current_input = function(...) "demo.Rmd",
+    .package = "knitr"
+  )
+  withr::local_envvar(c(
+    CI = "true",
+    `_R_CHECK_PACKAGE_NAME_` = "",
+    OPENAI_API_KEY = "test-key",
+    IN_PKGDOWN = "true"
+  ))
+
+  expect_true(dsprrr:::eval_vignette())
+
+  # R CMD build and R CMD check on CI stay offline.
+  withr::local_envvar(IN_PKGDOWN = "")
+  expect_false(dsprrr:::eval_vignette())
+
+  # Without cassettes, CI never calls a provider, even with credentials.
+  withr::local_envvar(IN_PKGDOWN = "true")
+  local_mocked_bindings(
+    current_input = function(...) "other.Rmd",
+    .package = "knitr"
+  )
+  expect_false(dsprrr:::eval_vignette())
+})
+
 # --- null coalescing operator tests ---
 
 test_that("null coalescing operator works correctly", {
@@ -134,10 +180,10 @@ test_that("format_inputs creates proper format", {
   sig_inputs <- list(
     input(
       name = "text",
-      class = S7::class_character,
+      type = "string",
       description = "Input text"
     ),
-    input(name = "count", class = S7::class_integer, description = "A count")
+    input(name = "count", type = "integer", description = "A count")
   )
 
   inputs <- list(text = "hello", count = 5)
@@ -157,7 +203,7 @@ test_that("format_inputs handles empty inputs", {
 
 test_that("format_inputs handles inputs without descriptions", {
   sig_inputs <- list(
-    input(name = "text", class = S7::class_character)
+    input(name = "text", type = "string")
   )
 
   inputs <- list(text = "hello")
@@ -278,4 +324,107 @@ test_that("suggest_match returns NULL for no match", {
   options <- c("question", "answer")
 
   expect_null(dsprrr:::suggest_match("xyz", options))
+})
+test_that("trace_cost accepts only canonical current-call fields", {
+  expect_equal(dsprrr:::trace_cost(list(cost = 0.1)), 0.1)
+  expect_true(is.na(dsprrr:::trace_cost(list(total_cost = 0.2))))
+})
+
+test_that("undeclared dot-prefixed inputs are rejected", {
+  sig <- signature("q -> a")
+
+  expect_error(
+    validate_signature_inputs(sig, list(q = "x", .bogus = TRUE)),
+    class = "dsprrr_reserved_input_error"
+  )
+})
+
+test_that("removed runtime arguments name their replacement", {
+  sig <- signature("q -> a")
+
+  expect_error(
+    validate_signature_inputs(sig, list(q = "x", .parallel = TRUE)),
+    ".concurrency",
+    fixed = TRUE
+  )
+  expect_error(
+    validate_signature_inputs(sig, list(q = "x", .parallel_method = "mirai")),
+    ".concurrency",
+    fixed = TRUE
+  )
+})
+
+test_that("dot-prefixed inputs are rejected for zero-input signatures", {
+  sig <- signature(
+    inputs = list(),
+    output_type = ellmer::type_string(),
+    instructions = "Say hello"
+  )
+
+  expect_error(
+    validate_signature_inputs(sig, list(.parallel = TRUE)),
+    class = "dsprrr_reserved_input_error"
+  )
+})
+
+test_that("a declared dot-prefixed field is still accepted", {
+  sig <- signature(
+    inputs = list(input(".ok")),
+    output_type = ellmer::type_string()
+  )
+
+  expect_silent(validate_signature_inputs(sig, list(.ok = "x")))
+})
+
+test_that("run() rejects the removed .parallel argument", {
+  mod <- module(signature("q -> a"))
+
+  expect_error(
+    run(mod, q = "hi", .parallel = TRUE, .llm = new_test_chat()),
+    class = "dsprrr_reserved_input_error"
+  )
+})
+
+test_that("dataset APIs reject removed arguments before empty returns", {
+  mod <- module(signature("q -> a"))
+  empty <- data.frame(q = character())
+
+  expect_snapshot(
+    error = TRUE,
+    run_dataset(mod, empty, .parallel = TRUE)
+  )
+  expect_snapshot(
+    error = TRUE,
+    evaluate(
+      mod,
+      empty,
+      metric = function(...) 1,
+      .parallel_method = "mirai"
+    )
+  )
+})
+
+test_that("dataset runtime-name validation does not force arguments", {
+  mod <- module(signature("q -> a"))
+  empty <- data.frame(q = character())
+  forced <- FALSE
+
+  condition <- rlang::catch_cnd(run_dataset(
+    mod,
+    empty,
+    .parallel = {
+      forced <<- TRUE
+      TRUE
+    }
+  ))
+
+  expect_s3_class(condition, "dsprrr_reserved_input_error")
+  expect_identical(forced, FALSE)
+  expect_no_error(run_dataset(mod, empty, .cache = FALSE))
+})
+
+test_that("the namespace does not mask base::print", {
+  # A `print` binding in the namespace sends S3method(print, ...) registrations
+  # to the namespace's own methods table, so installed objects print as lists.
+  expect_false(exists("print", envir = asNamespace("dsprrr"), inherits = FALSE))
 })

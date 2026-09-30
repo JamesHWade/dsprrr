@@ -22,7 +22,11 @@ discrete_bo_initial_stats <- function(candidates) {
 }
 
 discrete_bo_best_state <- function() {
-  list(score = -Inf, candidate_index = NA_integer_)
+  list(
+    score = -Inf,
+    candidate_index = NA_integer_,
+    trial_index = NA_integer_
+  )
 }
 
 discrete_bo_checkpoint_trial_record <- function(trial) {
@@ -35,13 +39,11 @@ discrete_bo_checkpoint_trial_record <- function(trial) {
 }
 
 discrete_bo_restore_trial_record <- function(record) {
-  if (!is.list(record)) {
-    cli::cli_abort(
-      "Discrete BO trial record is malformed",
-      class = "dsprrr_optimizer_checkpoint_malformed"
-    )
-  }
-  cost_summary <- record$cost_summary %||% list()
+  validate_trial_record(
+    record,
+    class = "dsprrr_optimizer_checkpoint_malformed"
+  )
+  cost_summary <- record$cost_summary
   token_field <- which(names(cost_summary) == "tokens_unknown")
   if (length(token_field) == 1L) {
     names(cost_summary)[[token_field]] <- "token_usage_unknown"
@@ -66,12 +68,16 @@ discrete_bo_restore_trial_record <- function(record) {
   Trial(
     trial_id = record$trial_id,
     optimizer_name = record$optimizer_name,
-    params = record$params %||% list(),
-    metric_summary = record$metric_summary %||% list(),
+    params = record$params,
+    metric_summary = record$metric_summary,
     cost_summary = cost_summary,
     start_time = parse_time(record$start_time),
     end_time = parse_time(record$end_time),
-    notes = record$notes %||% "",
+    notes = record$notes,
+    trace_context = trace_context_validate(
+      record$trace_context,
+      arg = "trace_context"
+    ),
     status = record$status
   )
 }
@@ -490,13 +496,15 @@ run_discrete_bo <- function(
       if (!is.na(score) && score > best_any$score) {
         best_any <- list(
           score = score,
-          candidate_index = as.integer(candidate_idx)
+          candidate_index = as.integer(candidate_idx),
+          trial_index = as.integer(trial_idx)
         )
       }
       if (eval_type == "full" && !is.na(score) && score > best_full$score) {
         best_full <- list(
           score = score,
-          candidate_index = as.integer(candidate_idx)
+          candidate_index = as.integer(candidate_idx),
+          trial_index = as.integer(trial_idx)
         )
       }
       active_trial$result_applied <- TRUE
@@ -556,9 +564,11 @@ run_discrete_bo <- function(
   }
 
   trial_history_tbl <- discrete_bo_history_table(trial_history, track_stats)
-  best_candidate <- discrete_bo_candidate(candidates, best_full)
+  selected_state <- best_full
+  best_candidate <- discrete_bo_candidate(candidates, selected_state)
   if (is.null(best_candidate)) {
-    best_candidate <- discrete_bo_candidate(candidates, best_any)
+    selected_state <- best_any
+    best_candidate <- discrete_bo_candidate(candidates, selected_state)
     if (!is.null(best_candidate)) {
       cli::cli_warn(
         c(
@@ -582,6 +592,19 @@ run_discrete_bo <- function(
   budget_summary <- optimizer_budget_summary(budget)
   list(
     best_candidate = best_candidate,
+    best_score = if (is.finite(selected_state$score)) {
+      selected_state$score
+    } else {
+      NA_real_
+    },
+    best_trial = if (
+      is.null(selected_state$trial_index) ||
+        is.na(selected_state$trial_index)
+    ) {
+      NULL
+    } else {
+      selected_state$trial_index
+    },
     trial_history = trial_history_tbl,
     candidate_stats = stats,
     budget_summary = budget_summary,

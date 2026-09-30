@@ -4,11 +4,11 @@
 \name{dsprrr-package}
 \alias{dsprrr}
 \alias{dsprrr-package}
-\title{dsprrr: Declarative Self-Improving Language Programs for R}
+\title{dsprrr: Declarative Self-Improving Language Programs}
 \description{
 \if{html}{\figure{logo.svg}{options: style='float: right' alt='logo' width='120'}}
 
-Build principled, test-driven, and optimizable applications using Large Language Models (LLMs) in R. Based on the DSPy framework from Stanford NLP, 'dsprrr' moves beyond simple prompt engineering to a structured programming model where LLM workflows are treated as programs that can be systematically improved. Features include declarative signatures, composable modules, automatic prompt optimization, and deep integration with the tidyverse ecosystem.
+Build declarative, test-driven, and optimizable applications with large language models (LLMs). Implements ideas from the 'DSPy' framework described by Khattab et al. (2023) \doi{10.48550/arXiv.2310.03714} through typed signatures, composable modules, evaluation, and data-driven prompt optimization. Integrates with 'ellmer' for model access and supports tracing, persistence, caching, and asynchronous execution. Designed for systematic improvement of language-model workflows in 'R'.
 }
 \seealso{
 Useful links:
@@ -20,11 +20,11 @@ Useful links:
 
 }
 \author{
-\strong{Maintainer}: James Wade \email{github@jameshwade.com} (\href{https://orcid.org/0000-0002-9740-1905}{ORCID})
+\strong{Maintainer}: James Wade \email{github@jameshwade.com} (\href{https://orcid.org/0000-0002-9740-1905}{ORCID}) [copyright holder]
 
 Authors:
 \itemize{
-  \item James Wade \email{github@jameshwade.com} (\href{https://orcid.org/0000-0002-9740-1905}{ORCID})
+  \item James Wade \email{github@jameshwade.com} (\href{https://orcid.org/0000-0002-9740-1905}{ORCID}) [copyright holder]
   \item Anatoliy Sokolov \email{ansokolov@dow.com}
 }
 

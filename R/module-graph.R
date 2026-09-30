@@ -1,32 +1,56 @@
-#' Traverse and Transform Module Graphs
+#' Inspect and transform nested programs
 #'
 #' @description
-#' Module graphs provide one cycle-safe protocol for inspecting and transforming
-#' nested dsprrr programs. Built-in adapters understand pipelines, wrappers,
-#' ensembles, and multi-chain modules. Custom `Module` subclasses can opt in by
+#' These functions list, inspect and rewrite the modules inside a composed
+#' program, such as a pipeline, ensemble or wrapper:
+#'
+#' * `module_graph()` returns one row per module occurrence.
+#' * `named_modules()` returns the modules by path.
+#' * `named_parameters()` returns the tunable leaf modules by path: modules
+#'   without children that optimizers can change, such as Predict modules.
+#' * `map_modules()` applies a function to every module and swaps in the
+#'   results.
+#' * `replace_module()` replaces the module at one path.
+#' * `freeze_modules()` and `is_module_frozen()` mark modules that rewrites
+#'   should leave alone, and check the mark.
+#' * `set_module_lm()` stores a chat on every module.
+#' * `module_children()` returns the direct children of one module.
+#'
+#' @details
+#' ## Paths
+#'
+#' Paths look like JSON pointers. `"$"` is the root, named list elements use
+#' their names, and unnamed or ambiguously named elements use one-based
+#' positions, as in `"$/steps/first"`. `/` and `~` in names are escaped as
+#' `~1` and `~0`.
+#'
+#' ## Boundaries
+#'
+#' With `boundaries = "respect"`, compiled and frozen modules are listed as
+#' boundary nodes, but neither they nor their descendants are changed. A shared
+#' module reachable through any protected path is protected everywhere.
+#' `map_modules()` visits each module object once, children before parents,
+#' and rewires every reference to the same replacement. `replace_module()`
+#' replaces one path by default; `shared = "all"` replaces every reference to
+#' the same object. Mapping can traverse cycles, but replacing a module that
+#' is part of a cycle is rejected; use `replace_module()` on one path to break
+#' the cycle first.
+#'
+#' ## Custom modules
+#'
+#' Built-in adapters understand pipelines, wrappers, ensembles and
+#' multi-chain modules. A custom `Module` subclass can join the graph by
 #' implementing two public methods:
 #'
-#' * `graph_children()` returns a list whose leaves are child `Module` objects.
-#'   Lists can be nested and can be named or unnamed.
-#' * `set_graph_children(children)` replaces that complete child structure and
-#'   returns the program invisibly. This method is required only for replacement
-#'   and mapping operations; read-only traversal needs only `graph_children()`.
+#' * `graph_children()` returns a list, possibly nested and named or unnamed,
+#'   whose leaves are the child `Module` objects.
+#' * `set_graph_children(children)` replaces the whole child structure and
+#'   returns the module invisibly. Only replacement and mapping need it.
 #'
-#' A custom module can additionally implement `graph_is_parameter()` and return
-#' `TRUE` or `FALSE` to control whether [named_parameters()] includes it.
-#'
-#' Paths use a JSON-pointer-like form. `"$"` is the root, named list elements
-#' use their names, and unnamed or ambiguously named lists use one-based numeric
-#' positions. `/` and `~` in names are escaped as `~1` and `~0`.
-#'
-#' With `boundaries = "respect"`, compiled and frozen modules are included as
-#' boundary nodes but neither they nor their descendants are mutated. A shared
-#' module reachable through any protected path is protected at every alias.
-#' Mapping visits each R6 identity once in post-order and rewires all aliases to
-#' the same replacement. [replace_module()] defaults to replacing one path and
-#' can opt into identity-wide replacement with `shared = "all"`. Mapping can
-#' safely traverse cycles, but replacing a module that participates in a cycle
-#' is rejected; use path-specific [replace_module()] to break a cycle edge.
+#' It can also implement `graph_is_parameter()`, returning `TRUE` or `FALSE`,
+#' to control whether `named_parameters()` includes it. `module_children()`
+#' reports what these methods declare, which helps when writing or testing an
+#' adapter; call it from outside `graph_children()`, not inside it.
 #'
 #' @param program A dsprrr `Module` object.
 #' @param boundaries Whether compiled and frozen modules are crossed. Inspection
@@ -48,11 +72,11 @@
 #' @param frozen Logical; `TRUE` freezes and `FALSE` unfreezes.
 #' @param module A `Module` object.
 #' @param chat An ellmer `Chat` object, or `NULL` to clear stored Chats.
-#' @param clone Whether to give each module an independent deep clone of
-#'   `chat`. The default avoids sharing mutable conversation history.
+#' @param clone Whether to give each module its own deep clone of `chat`
+#'   (default `TRUE`), so that modules do not share conversation history.
 #'
 #' @return
-#' * `module_graph()` returns a tibble with one row per graph occurrence.
+#' * `module_graph()` returns a tibble with one row per module occurrence.
 #' * `named_modules()` and `named_parameters()` return named lists.
 #' * `map_modules()` and `replace_module()` return the resulting root module.
 #' * `freeze_modules()` and `set_module_lm()` return `program` invisibly.
@@ -64,6 +88,7 @@
 #' second <- module(signature("answer -> summary"))
 #' program <- pipeline(first = first, second = second)
 #'
+#' module_graph(program)
 #' names(named_modules(program))
 #' names(named_parameters(program))
 #'
@@ -75,6 +100,7 @@
 #' freeze_modules(program, "$/steps/first")
 #' is_module_frozen(first)
 #'
+#' @family composition
 #' @name module-graph
 NULL
 
@@ -425,9 +451,7 @@ set_module_lm <- function(
   clone = TRUE
 ) {
   module_graph_check_program(program)
-  if (!is.null(chat) && !inherits(chat, "Chat")) {
-    cli::cli_abort("{.arg chat} must be an ellmer Chat object or NULL")
-  }
+  assert_ellmer_chat(chat, arg = "chat", allow_null = TRUE)
   if (!is.logical(clone) || length(clone) != 1L || is.na(clone)) {
     cli::cli_abort("{.arg clone} must be TRUE or FALSE")
   }
@@ -487,13 +511,6 @@ module_graph_clone_chat <- function(chat) {
   result
 }
 
-#' Return the child structure declared by a module
-#'
-#' This is primarily useful when implementing or testing a custom module graph
-#' adapter. Custom modules should normally implement `graph_children()` rather
-#' than call this function from that method.
-#'
-#' @param module A dsprrr `Module` object.
 #' @rdname module-graph
 #' @export
 module_children <- function(module) {

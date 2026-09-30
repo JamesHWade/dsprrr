@@ -2,7 +2,7 @@
 
 test_that("stream method exists on Module", {
   sig <- signature("text -> result")
-  mod <- module(sig, type = "predict")
+  mod <- module(sig)
 
   expect_true("stream" %in% names(mod))
   expect_true(is.function(mod$stream))
@@ -10,7 +10,7 @@ test_that("stream method exists on Module", {
 
 test_that("stream method exists on ReactModule", {
   sig <- signature("text -> result")
-  mod <- module(sig, type = "react")
+  mod <- react(sig)
 
   expect_true("stream" %in% names(mod))
   expect_true(is.function(mod$stream))
@@ -28,15 +28,12 @@ test_that("stream with callback consumes chunks", {
     coro::yield("!")
   })
 
-  mock_chat <- structure(
-    list(
-      stream = function(...) mock_gen
-    ),
-    class = "Chat"
+  mock_chat <- new_test_chat(
+    stream = function(...) mock_gen
   )
 
   sig <- signature("text -> result")
-  mod <- module(sig, type = "predict", chat = mock_chat)
+  mod <- module(sig, chat = mock_chat)
 
   result <- mod$stream(
     text = "test",
@@ -57,15 +54,12 @@ test_that("stream without callback returns generator", {
     coro::yield("test")
   })
 
-  mock_chat <- structure(
-    list(
-      stream = function(...) mock_gen
-    ),
-    class = "Chat"
+  mock_chat <- new_test_chat(
+    stream = function(...) mock_gen
   )
 
   sig <- signature("text -> result")
-  mod <- module(sig, type = "predict", chat = mock_chat)
+  mod <- module(sig, chat = mock_chat)
 
   result <- mod$stream(text = "test")
 
@@ -74,15 +68,12 @@ test_that("stream without callback returns generator", {
 })
 
 test_that("stream validates callback is function", {
-  mock_chat <- structure(
-    list(
-      stream = function(...) NULL
-    ),
-    class = "Chat"
+  mock_chat <- new_test_chat(
+    stream = function(...) NULL
   )
 
   sig <- signature("text -> result")
-  mod <- module(sig, type = "predict", chat = mock_chat)
+  mod <- module(sig, chat = mock_chat)
 
   expect_error(
     mod$stream(text = "test", callback = "not a function"),
@@ -99,21 +90,18 @@ test_that("stream includes instructions in prompt", {
     coro::yield("done")
   })
 
-  mock_chat <- structure(
-    list(
-      stream = function(prompt, ...) {
-        prompt_received <<- prompt
-        mock_gen
-      }
-    ),
-    class = "Chat"
+  mock_chat <- new_test_chat(
+    stream = function(prompt, ...) {
+      prompt_received <<- prompt
+      mock_gen
+    }
   )
 
   sig <- signature(
     "text -> result",
     instructions = "Be very helpful"
   )
-  mod <- module(sig, type = "predict", chat = mock_chat)
+  mod <- module(sig, chat = mock_chat)
 
   mod$stream(text = "test", callback = function(x) {})
 

@@ -31,53 +31,8 @@ optimizer_limit_validator <- function(
   NULL
 }
 
-#' Optimizer Control Parameters
-#'
-#' @description
-#' S7 class for configuring optimizer behavior. Provides consistent control
-#' parameters across all optimizer types.
-#'
-#' @param seed Random seed for reproducibility. Default is NULL (no seed).
-#' @param max_trials Maximum number of trials to run. Default is NULL (unlimited).
-#' @param max_errors Non-negative integer error budget. Optimizers report total
-#'   errors while stopping on a separate consecutive-error streak; each success
-#'   resets only that streak. A positive value stops on the failure that reaches
-#'   the limit. Zero permits work to begin but stops after the first failure.
-#'   When a completed evaluation returns multiple outcomes, all are included in
-#'   the final counters even if the stop boundary was crossed partway through;
-#'   the first stop reason remains unchanged and prevents scheduling new work.
-#' @param max_metric_calls Maximum metric calls, or NULL for unlimited.
-#' @param max_provider_calls Maximum verified provider calls, or NULL for
-#'   unlimited. Ambiguous provider usage stops a run that has this cap.
-#' @param max_input_tokens Maximum verified input tokens, or NULL for unlimited.
-#' @param max_output_tokens Maximum verified output tokens, or NULL for unlimited.
-#' @param max_total_tokens Maximum verified input plus output tokens, or NULL for
-#'   unlimited.
-#' @param max_cost Maximum known provider cost in US dollars, or NULL for
-#'   unlimited. Unknown cost stops a run that has this cap.
-#' @param max_elapsed_seconds Maximum active optimizer elapsed time in seconds,
-#'   or NULL for unlimited. Checkpoint downtime is excluded.
-#' @param num_threads Number of threads for parallel evaluation. Default is 1.
-#' @param progress Whether to display progress. Default is TRUE in interactive sessions.
-#' @param log_dir Directory for trial logging. Default is NULL (no logging).
-#' @param checkpoint_path Optional optimizer checkpoint file.
-#' @param resume Whether to resume from `checkpoint_path`.
-#' @param checkpoint_registry Named runtime registry used by safe program
-#'   artifacts stored in checkpoints.
-#' @param verbose Whether to print detailed output. Default is FALSE
-#' @details
-#' Finite metric, provider, token, cost, and elapsed-time limits switch
-#' optimizer evaluation to row-sized work units. The maximum postflight
-#' overshoot is one already-started evaluation row, or one already-started
-#' direct provider request for optimizer-side generation. Unknown provider,
-#' token, or cost usage stops safely when the corresponding cap is finite.
-#'
-#' BootstrapFewShot and MIPROv2 support deterministic checkpoint resume. GEPA,
-#' SIMBA, and COPRO currently provide the shared ledger and return the best
-#' partial program, but reject `resume = TRUE` until their fine-grained search
-#' state is supported.
-#'
-#' @export
+#' Internal optimizer-control record class
+#' @noRd
 OptimizerControl <- S7::new_class(
   "OptimizerControl",
   properties = list(
@@ -237,21 +192,84 @@ OptimizerControl <- S7::new_class(
   )
 )
 
-#' Create Optimizer Control
+#' Budgets and settings for an optimizer run
 #'
 #' @description
-#' Convenience function to create an OptimizerControl object with defaults.
+#' `optimizer_control()` collects the limits and options for one optimizer
+#' run: error, trial, call, token, cost and time budgets, concurrency, trial
+#' logging and checkpoints. Pass it to [compile()] as `control`. It replaces
+#' the control that the optimizer would otherwise build from its own
+#' `max_errors`, `num_threads` and `log_dir` settings.
 #'
-#' @inheritParams OptimizerControl
-#' @return An OptimizerControl object
+#' [BootstrapFewShot()], [BootstrapFewShotWithRandomSearch()], [COPRO()],
+#' [MIPROv2()], [SIMBA()], [GEPA()], [AutoResearch()] and [MetaHarness()] use
+#' `control`; the other optimizers ignore it.
+#'
+#' @details
+#' When a budget stops a run, the optimizer returns the best program found so
+#' far and marks its [optimization_result()] as `"partial"`.
+#'
+#' Finite metric, provider, token, cost and elapsed-time limits make the
+#' optimizer evaluate one row at a time, so a run overshoots a limit by at most
+#' one evaluation row that had already started (or one direct provider request
+#' made by the optimizer itself). When a cap is finite and a provider does not
+#' report its usage, tokens or cost, the run stops rather than guess.
+#'
+#' [BootstrapFewShot()] and [MIPROv2()] can resume from a checkpoint. [GEPA()],
+#' [SIMBA()] and [COPRO()] respect the budgets and return the best partial
+#' program, but reject `resume = TRUE`.
+#'
+#' @param seed Random seed, or `NULL` (the default). Currently only
+#'   [BootstrapFewShotWithRandomSearch()] reads it, in place of its own `seed`;
+#'   the other optimizers use their own `seed` argument.
+#' @param max_trials Maximum number of trials (candidate evaluations), or
+#'   `NULL` (the default) for no limit.
+#' @param max_errors Non-negative integer (default `5L`). The run stops once
+#'   this many evaluations have failed in a row; each success resets the
+#'   count, while the total number of errors is still reported. With `0L`, the
+#'   first failure stops the run. Outcomes of an evaluation that had already
+#'   started are all counted.
+#' @param max_metric_calls Maximum number of metric calls, or `NULL` for no
+#'   limit.
+#' @param max_provider_calls Maximum number of verified provider calls, or
+#'   `NULL` for no limit.
+#' @param max_input_tokens,max_output_tokens,max_total_tokens Maximum verified
+#'   input, output, or input plus output tokens, or `NULL` for no limit.
+#' @param max_cost Maximum known provider cost in US dollars, or `NULL` for no
+#'   limit.
+#' @param max_elapsed_seconds Maximum active run time in seconds, or `NULL` for
+#'   no limit. Time between a checkpoint and its resume is not counted.
+#' @param num_threads Integer number of rows evaluated at the same time
+#'   (default `1L`).
+#' @param progress Whether to show progress bars. `NA` (the default) means
+#'   `interactive()`.
+#' @param log_dir Directory for a [TrialLog] of the run, or `NULL` (the
+#'   default). [BootstrapFewShot()] ignores it and uses its own `log_dir`.
+#' @param checkpoint_path Optional file for optimizer checkpoints.
+#' @param resume Whether to resume from `checkpoint_path` (default `FALSE`).
+#' @param checkpoint_registry Named runtime registry used to save and restore
+#'   the programs stored in checkpoints; see [program_artifact()].
+#' @param verbose Currently unused.
+#'
+#' @return An `OptimizerControl` object to pass to [compile()] as `control`.
+#' @family optimizer building blocks
 #' @export
 #'
 #' @examples
-#' # Default control
-#' ctrl <- optimizer_control()
+#' optimizer_control()
 #'
-#' # With specific settings
-#' ctrl <- optimizer_control(seed = 42L, max_trials = 100L, log_dir = "logs/")
+#' # Stop after 50 trials or US$2 of known cost, whichever comes first
+#' ctrl <- optimizer_control(max_trials = 50L, max_cost = 2)
+#'
+#' \dontrun{
+#' compiled <- compile(
+#'   program,
+#'   MIPROv2(metric = metric_exact_match(field = "answer")),
+#'   trainset,
+#'   .llm = ellmer::chat_openai(model = "gpt-6-luna"),
+#'   control = ctrl
+#' )
+#' }
 optimizer_control <- function(
   seed = NULL,
   max_trials = NULL,
@@ -355,7 +373,7 @@ optimizer_control_for_teleprompter <- function(
   if (!is.null(control)) {
     if (!inherits(control, "dsprrr::OptimizerControl")) {
       cli::cli_abort(
-        "{.arg control} must be an OptimizerControl",
+        "{.arg control} must be created by {.fn optimizer_control}",
         class = "dsprrr_optimizer_control_error"
       )
     }
@@ -436,70 +454,81 @@ EvalResult <- S7::new_class(
     epoch_scores = S7::new_property(S7::class_list, default = list()),
     score_std = S7::new_property(S7::class_any, default = NA_real_),
     ci_lower = S7::new_property(S7::class_any, default = NA_real_),
-    ci_upper = S7::new_property(S7::class_any, default = NA_real_)
+    ci_upper = S7::new_property(S7::class_any, default = NA_real_),
+    trace_context = S7::new_property(
+      S7::class_list,
+      default = list(),
+      validator = function(value) {
+        trace_context_validate(value, arg = "trace_context")
+        NULL
+      }
+    )
   )
 )
 
-#' Evaluate a Program on a Dataset
+#' Evaluate a program with per-example detail
 #'
 #' @description
-#' Standard evaluation function for optimizers. Executes a module on a dataset,
-#' applies a metric to each example, and returns detailed per-example results
-#' plus aggregated statistics.
+#' `eval_program()` runs a program on a dataset, scores every row with a
+#' metric, and returns an `EvalResult` with per-example scores, errors,
+#' predictions and feedback, plus totals for tokens, cost and time. It is the
+#' evaluation the optimizers use internally. Use it when you build your own
+#' optimizer or need the same detail; for everyday evaluation, [evaluate()] is
+#' simpler.
 #'
-#' This is the core evaluation function used by all optimizers. It wraps
-#' [evaluate()] with enhanced output including:
-#' - Per-example timing and error information
-#' - Aggregated cost tracking
-#' - Standard error computation
-#' - Multi-epoch evaluation for statistical significance (when epochs > 1)
+#' @details
+#' The program is copied before it runs, so its traces are not changed. With
+#' `epochs` above 1, every row is evaluated that many times, and the result
+#' also reports the spread of the per-epoch mean scores.
 #'
-#' @param program A DSPrrr module to evaluate.
-#' @param dataset A data frame containing test examples.
-#' @param metric A metric function for scoring predictions.
-#' @param .llm Optional ellmer Chat object for LLM calls.
-#' @param control An OptimizerControl object or NULL for defaults.
-#' @param epochs Integer; number of times to repeat evaluation for statistical
-#'   significance. Defaults to 1L. When > 1, computes std and confidence intervals.
-#' @param ... Additional arguments passed to [evaluate()].
+#' @param program A module or composed program.
+#' @param dataset A data frame with the signature's input columns and the
+#'   columns the metric compares.
+#' @param metric A metric function called as `metric(prediction, expected)`,
+#'   such as `metric_exact_match(field = "answer")`.
+#' @param .llm Optional ellmer Chat.
+#' @param control An [optimizer_control()] object, or `NULL` for the defaults.
+#'   Its `num_threads` sets how many rows run at the same time and `progress`
+#'   whether to show a progress bar.
+#' @param epochs Integer number of times each row is evaluated (default `1L`).
+#' @param ... Further arguments passed to [evaluate()].
+#' @param .trace_context A named, JSON-compatible list of correlation fields
+#'   (such as an experiment ID) copied to the result and to every execution
+#'   trace.
 #'
-#' @return An EvalResult object containing:
-#'   - `examples`: tibble with per-example row_id, score, error, predicted,
-#'     feedback (textual feedback from feedback-aware metrics, see
-#'     [metric_with_feedback()]), and input columns (prefixed with input_*)
-#'   - `mean_score`: mean score across successful evaluations
-#'   - `std_error`: standard error of per-example scores (SD / sqrt(n))
-#'   - `n_evaluated`: number of successful evaluations
-#'   - `n_errors`: number of failed evaluations
-#'   - `total_tokens`: total tokens used
-#'   - `total_cost`: total cost in USD
-#'   - `total_latency_ms`: total time in milliseconds
+#' @return An `EvalResult` S7 object. Read its properties with `@`:
+#'   * `examples`: a tibble with one row per example and columns `row_id`,
+#'     `score`, `error`, `predicted`, `feedback` (from metrics made with
+#'     [metric_with_feedback()]), `program_trace`, and one `input_<name>`
+#'     column per input.
+#'   * `mean_score`, `std_error`: mean score of the successful rows and its
+#'     standard error.
+#'   * `n_evaluated`, `n_errors`: counts of successful and failed rows.
+#'   * `input_tokens`, `output_tokens`, `total_tokens`, `total_cost`,
+#'     `provider_calls`, `metric_calls`: usage totals (`NA` when unknown).
+#'   * `total_latency_ms`, `start_time`, `end_time`: timing.
+#'   * `epochs`, `epoch_scores`, `score_std`, `ci_lower`, `ci_upper`: with
+#'     `epochs` above 1, the per-epoch scores, their standard deviation and a
+#'     95% confidence interval.
+#'   * `trace_context`: the correlation fields.
 #'
-#'   When `epochs > 1`, additional fields:
-#'   - `epochs`: number of epochs run
-#'   - `epoch_scores`: list of score vectors, one per epoch
-#'   - `score_std`: standard deviation of mean scores across epochs
-#'   - `ci_lower`, `ci_upper`: 95% confidence interval bounds
-#'
+#' @family optimizer building blocks
 #' @export
 #'
 #' @examples
 #' \dontrun{
-#' sig <- signature("question -> answer")
-#' mod <- module(sig, type = "predict")
-#'
-#' dataset <- tibble::tibble(
+#' qa <- module(signature("question -> answer"))
+#' dataset <- data.frame(
 #'   question = c("What is 2+2?", "What is 3+3?"),
 #'   answer = c("4", "6")
 #' )
 #'
 #' result <- eval_program(
-#'   mod,
+#'   qa,
 #'   dataset,
 #'   metric = metric_exact_match(field = "answer"),
-#'   .llm = ellmer::chat_openai()
+#'   .llm = ellmer::chat_openai(model = "gpt-6-luna")
 #' )
-#'
 #' result@mean_score
 #' result@examples
 #' }
@@ -510,12 +539,25 @@ eval_program <- function(
   .llm = NULL,
   control = NULL,
   epochs = 1L,
-  ...
+  ...,
+  .trace_context = list()
 ) {
   # Validate inputs
   if (!inherits(program, "Module")) {
     cli::cli_abort("{.arg program} must be a DSPrrr Module object")
   }
+
+  trace_context_supplied <- !missing(.trace_context)
+  trace_context <- trace_context_resolve(
+    .trace_context,
+    supplied = trace_context_supplied
+  )
+  previous_trace_context <- trace_context_enter(
+    trace_context,
+    program = program,
+    inherit_program_id = !trace_context_supplied
+  )
+  on.exit(trace_context_restore(previous_trace_context), add = TRUE)
 
   if (!is.data.frame(dataset)) {
     cli::cli_abort("{.arg dataset} must be a data frame or tibble")
@@ -547,7 +589,8 @@ eval_program <- function(
       mean_score = NA_real_,
       std_error = NA_real_,
       n_evaluated = 0L,
-      n_errors = 0L
+      n_errors = 0L,
+      trace_context = trace_context
     ))
   }
 
@@ -707,7 +750,8 @@ eval_program <- function(
     epoch_scores = epoch_scores_list,
     score_std = score_std,
     ci_lower = ci_values[1],
-    ci_upper = ci_values[2]
+    ci_upper = ci_values[2],
+    trace_context = eval_result$trace_context %||% current_trace_context()
   )
 }
 
@@ -738,10 +782,11 @@ optimizer_usage_sum <- function(values, integer = FALSE) {
 }
 
 optimizer_metadata_provider_calls <- function(program, metadata) {
-  explicit <- metadata$provider_calls %||% metadata$n_llm_calls
-  explicit <- optimizer_usage_scalar(explicit, integer = TRUE)
-  if (!is.na(explicit)) {
-    return(explicit)
+  if ("provider_calls" %in% names(metadata)) {
+    return(optimizer_usage_scalar(
+      metadata$provider_calls,
+      integer = TRUE
+    ))
   }
 
   if (inherits(program, "FlexModule")) {
@@ -760,12 +805,11 @@ optimizer_metadata_provider_calls <- function(program, metadata) {
       step_metadata,
       function(step) {
         item <- step$metadata %||% list()
-        item_explicit <- optimizer_usage_scalar(
-          item$provider_calls %||% item$n_llm_calls,
-          integer = TRUE
-        )
-        if (!is.na(item_explicit)) {
-          return(item_explicit)
+        if ("provider_calls" %in% names(item)) {
+          return(optimizer_usage_scalar(
+            item$provider_calls,
+            integer = TRUE
+          ))
         }
         if (identical(item$cache %||% "unknown", "hit")) 0L else 1L
       },
@@ -846,7 +890,7 @@ optimizer_metadata_usage <- function(program, metadata) {
     tokens_out = tokens_out,
     total_tokens = total_tokens,
     total_cost = optimizer_usage_scalar(
-      metadata$cost %||% metadata$total_cost,
+      metadata$cost,
       integer = FALSE
     ),
     provider_calls = provider_calls
@@ -914,32 +958,32 @@ extract_optimizer_usage <- function(program, metadata, epochs = 1L) {
   )
 }
 
-#' Sample from a Dataset Deterministically
+#' Sample rows reproducibly
 #'
 #' @description
-#' Sample rows from a dataset with optional seed for reproducibility.
-#' Used by optimizers for consistent train/validation splits and
-#' demo selection.
+#' `sample_dataset()` draws `n` rows from a data frame. With a `seed`, the draw
+#' is reproducible and the session's random number stream is left as it was.
 #'
-#' @param dataset A data frame to sample from.
-#' @param n Number of rows to sample. If NULL or greater than nrow(dataset),
-#'   returns the full dataset.
-#' @param seed Random seed for reproducibility. If NULL, sampling is random.
-#' @param replace Whether to sample with replacement. Default is FALSE.
+#' @param dataset A data frame.
+#' @param n Number of rows to draw. When `n` is `NULL` or at least
+#'   `nrow(dataset)` and `replace = FALSE`, the data is returned unchanged, in
+#'   its original order.
+#' @param seed Random seed, or `NULL` (the default) to use the current random
+#'   number stream.
+#' @param replace Whether to draw with replacement (default `FALSE`).
 #'
-#' @return A data frame containing the sampled rows.
+#' @return A data frame with the drawn rows.
+#' @family optimizer building blocks
 #' @export
 #'
 #' @examples
-#' df <- tibble::tibble(x = 1:10, y = letters[1:10])
+#' df <- data.frame(x = 1:10, y = letters[1:10])
 #'
-#' # Deterministic sampling
-#' sample1 <- sample_dataset(df, n = 5, seed = 42)
-#' sample2 <- sample_dataset(df, n = 5, seed = 42)
-#' identical(sample1, sample2)  # TRUE
-#'
-#' # Random sampling (different each time)
-#' sample3 <- sample_dataset(df, n = 5)
+#' sample_dataset(df, n = 3, seed = 42)
+#' identical(
+#'   sample_dataset(df, n = 3, seed = 42),
+#'   sample_dataset(df, n = 3, seed = 42)
+#' )
 sample_dataset <- function(dataset, n = NULL, seed = NULL, replace = FALSE) {
   if (!is.data.frame(dataset)) {
     cli::cli_abort("{.arg dataset} must be a data frame")
@@ -988,24 +1032,28 @@ sample_dataset <- function(dataset, n = NULL, seed = NULL, replace = FALSE) {
   dataset[indices, , drop = FALSE]
 }
 
-#' Split Dataset into Train and Validation Sets
+#' Split data into training and validation sets
 #'
 #' @description
-#' Split a dataset into training and validation portions with optional
-#' seed for reproducibility.
+#' `split_dataset()` randomly assigns `floor(prop * nrow(dataset))` rows to a
+#' training set and the rest to a validation set, for example to get the
+#' `trainset` and `valset` that [compile()] takes.
 #'
-#' @param dataset A data frame to split.
-#' @param prop Proportion of data for training. Default is 0.8.
-#' @param seed Random seed for reproducibility.
+#' @param dataset A data frame.
+#' @param prop Share of rows for training, strictly between 0 and 1 (default
+#'   `0.8`).
+#' @param seed Random seed, or `NULL` (the default). With a seed, the session's
+#'   random number stream is left as it was.
 #'
-#' @return A list with `train` and `val` data frames.
+#' @return A list with data frames `train` and `val`.
+#' @family optimizer building blocks
 #' @export
 #'
 #' @examples
-#' df <- tibble::tibble(x = 1:100)
+#' df <- data.frame(x = 1:10)
 #' split <- split_dataset(df, prop = 0.8, seed = 42)
-#' nrow(split$train)  # ~80
-#' nrow(split$val)    # ~20
+#' nrow(split$train)
+#' split$val
 split_dataset <- function(dataset, prop = 0.8, seed = NULL) {
   if (!is.data.frame(dataset)) {
     cli::cli_abort("{.arg dataset} must be a data frame")
@@ -1061,7 +1109,7 @@ split_dataset <- function(dataset, prop = 0.8, seed = NULL) {
 #' Extract token usage and cost information from a module's traces.
 #' Used internally by optimizers for cost tracking.
 #'
-#' @param module A DSPrrr module with recorded traces.
+#' @param module A dsprrr module with recorded traces.
 #'
 #' @return A list with:
 #'   - `tokens_in`: total input tokens
@@ -1205,7 +1253,7 @@ new_optimizer_budget <- function(control = NULL, state = NULL, clock = NULL) {
   }
   if (!inherits(control, "dsprrr::OptimizerControl")) {
     cli::cli_abort(
-      "{.arg control} must be an OptimizerControl",
+      "{.arg control} must be created by {.fn optimizer_control}",
       class = "dsprrr_optimizer_invariant_error"
     )
   }
@@ -1657,13 +1705,6 @@ record_optimizer_usage <- function(
       "Optimizer usage requires a budget and a named list",
       class = "dsprrr_optimizer_invariant_error"
     )
-  }
-
-  aliases <- c(cost = "known_cost")
-  for (alias in names(aliases)) {
-    if (alias %in% names(usage) && !aliases[[alias]] %in% names(usage)) {
-      usage[[aliases[[alias]]]] <- usage[[alias]]
-    }
   }
 
   updates <- list()
@@ -2189,7 +2230,7 @@ optimizer_budget_clear_resumable_stop <- function(budget) {
 
 # Reconcile restored counters against the *current* control before any new
 # work can start. This permits raised/removed caps while failing closed for
-# stricter caps and for unknown historical usage under a newly finite cap.
+# stricter caps and for unknown restored usage under a newly finite cap.
 optimizer_budget_reconcile_current_limits <- function(
   budget,
   stage = "checkpoint_resume"
@@ -2681,10 +2722,9 @@ optimizer_unknown_provider_usage <- function() {
   )
 }
 
-# Run one direct optimizer-side model request as a bounded work unit. A direct
+# Run one direct optimizer-side Chat request as a bounded work unit. A direct
 # request is one known provider call, but token/cost usage is only known when a
-# verified Chat turn delta exposes it. Opaque function/list adapters therefore
-# stop safely after this unit when a corresponding finite cap is active.
+# verified Chat turn delta exposes it.
 optimizer_budgeted_provider_call <- function(
   budget,
   model,
@@ -2704,6 +2744,7 @@ optimizer_budgeted_provider_call <- function(
   if (is.null(model)) {
     return(list(started = FALSE, value = NULL, condition = NULL))
   }
+  model <- assert_ellmer_chat(model, arg = "model")
   if (
     !optimizer_budget_preflight(
       budget,
@@ -2722,11 +2763,7 @@ optimizer_budgeted_provider_call <- function(
     return(list(started = FALSE, value = NULL, condition = NULL))
   }
 
-  turns_before <- if (inherits(model, "Chat")) {
-    batch_chat_turns(model)
-  } else {
-    NULL
-  }
+  turns_before <- batch_chat_turns(model)
   condition <- NULL
   value <- tryCatch(
     call(),
@@ -2735,11 +2772,7 @@ optimizer_budgeted_provider_call <- function(
       NULL
     }
   )
-  metadata <- if (inherits(model, "Chat")) {
-    chat_usage_metadata(model, turns_before = turns_before)
-  } else {
-    canonical_usage_metadata()
-  }
+  metadata <- chat_usage_metadata(model, turns_before = turns_before)
   record_optimizer_usage(
     budget,
     list(
@@ -2847,7 +2880,8 @@ optimizer_combine_eval_records <- function(records, dataset) {
       examples = tibble::tibble(),
       mean_score = NA_real_,
       n_evaluated = 0L,
-      n_errors = 0L
+      n_errors = 0L,
+      trace_context = current_trace_context()
     ))
   }
   order_index <- order(vapply(records, `[[`, integer(1), "row_index"))
@@ -2940,7 +2974,8 @@ optimizer_combine_eval_records <- function(records, dataset) {
     metric_calls = metric_calls,
     provider_usage_unknown = provider_unknown || is.na(provider_calls),
     token_usage_unknown = token_unknown,
-    total_latency_ms = optimizer_eval_known_sum(records, "latency_ms")
+    total_latency_ms = optimizer_eval_known_sum(records, "latency_ms"),
+    trace_context = current_trace_context()
   )
 }
 
@@ -2957,7 +2992,7 @@ optimizer_budget_requires_row_units <- function(budget) {
   !all(vapply(limits, is.null, logical(1)))
 }
 
-# Evaluate one candidate while preserving the legacy whole-evaluation path when
+# Evaluate one candidate with the whole-evaluation path when
 # no fine-grained resource cap is active. Any metric/provider/token/cost/time cap
 # switches to row units so its only postflight overshoot is one started row.
 optimizer_eval_candidate <- function(
@@ -2997,7 +3032,7 @@ optimizer_eval_candidate <- function(
       planned_outcomes = max(1L, nrow(dataset))
     )
   ) {
-    return(EvalResult())
+    return(EvalResult(trace_context = current_trace_context()))
   }
   result <- eval_program(
     program,
@@ -3235,7 +3270,7 @@ optimizer_budget_summary <- function(budget) {
 #'
 #' @param trial_count Current number of trials completed.
 #' @param error_count Current number of consecutive errors.
-#' @param control OptimizerControl object with budget settings.
+#' @param control An object created by [optimizer_control()] with budget settings.
 #'
 #' @return A list with:
 #'   - `should_stop`: logical indicating if optimization should stop
@@ -3306,11 +3341,8 @@ get_input_names <- function(signature) {
   vapply(signature@inputs, function(x) x$name, character(1))
 }
 
-#' Print method for EvalResult
-#' @param x An EvalResult object
-#' @param ... Additional arguments (unused)
-#' @export
-print.EvalResult <- function(x, ...) {
+# Print an EvalResult object through its S7 method.
+print_eval_result <- function(x, ...) {
   cli::cli_h3("Evaluation Result")
 
   if (is.na(x@mean_score)) {
@@ -3356,6 +3388,3 @@ print.EvalResult <- function(x, ...) {
 
   invisible(x)
 }
-
-# Register S7 print method
-S7::method(print, EvalResult) <- print.EvalResult

@@ -4,39 +4,64 @@
 \alias{run_async}
 \title{Run a module asynchronously}
 \usage{
-run_async(module, ..., .llm = NULL)
+run_async(module, ..., .llm = NULL, .trace_context = list())
 }
 \arguments{
-\item{module}{A dsprrr Module object}
+\item{module}{A prediction module from \code{\link[=module]{module()}} or \code{\link[=chain_of_thought]{chain_of_thought()}},
+or a \code{\link[=program_of_thought]{program_of_thought()}}, \code{\link[=code_act]{code_act()}} or \code{\link[=rlm_module]{rlm_module()}} module
+configured with \code{interpreter_factory}.}
 
-\item{...}{Named inputs matching the module's signature}
+\item{...}{Inputs named after the signature's input fields (single
+values).}
 
-\item{.llm}{Optional ellmer Chat object}
+\item{.llm}{An ellmer Chat; see \code{\link[=run]{run()}} for how it is chosen when
+omitted. Give concurrent calls separate chats, for example with
+\code{llm$clone()}.}
+
+\item{.trace_context}{A named, JSON-compatible list, as in \code{\link[=run]{run()}}. The
+promise carries it in its \code{dsprrr_trace_context} attribute.}
 }
 \value{
-A promise that resolves to the structured output
+A promise that resolves to the module's output, the same value
+that \code{\link[=run]{run()}} returns by default.
 }
 \description{
-Executes a module and returns a promise that resolves to the result.
-Useful for running multiple modules in parallel.
-Ordinary \code{PredictModule} objects use the provider's native async path.
-ProgramOfThought, CodeAct, and RLM modules use an isolated background process
-when configured with \code{interpreter_factory}. Caller-owned runners are rejected
-because they cannot be safely shared across concurrent invocations.
+\code{run_async()} starts one call of a module and returns a promise instead of
+waiting for the result, so a Shiny app or other event loop stays
+responsive and several calls can be in flight at once. Handle the result
+with the promises package, for example \code{promises::then()}.
+}
+\details{
+Prediction modules call ellmer's \code{chat_structured_async()} directly: the
+call does not use the response cache and records no trace or prompt
+history. Code-running modules run their whole workflow in a separate mirai
+process with a fresh interpreter; modules bound to a caller-owned \code{runner}
+are rejected, because one runner cannot serve concurrent calls. Other
+modules, such as \code{\link[=react]{react()}} or pipelines, are rejected; use \code{\link[=run]{run()}}.
 }
 \examples{
 \dontrun{
-# Run multiple modules in parallel
-promises <- list(
-  run_async(mod1, question = "Q1"),
-  run_async(mod2, question = "Q2"),
-  run_async(mod3, question = "Q3")
-)
+llm <- ellmer::chat_openai(model = "gpt-6-luna")
+summarize <- module(signature("text -> summary"))
 
-# Wait for all to complete
-promises::promise_all(.list = promises) |>
+first <- run_async(summarize, text = "First article ...", .llm = llm$clone())
+second <- run_async(summarize, text = "Second article ...", .llm = llm$clone())
+
+promises::promise_all(first, second) |>
   promises::then(function(results) {
-    # Process results
+    vapply(results, function(r) r$summary, character(1))
   })
 }
 }
+\seealso{
+Other execution:
+\code{\link[=concurrency_control]{concurrency_control()}},
+\code{\link[=evaluate]{evaluate()}},
+\code{\link[=predict.Module]{predict.Module()}},
+\code{\link[=run]{run()}},
+\code{\link[=run_dataset]{run_dataset()}},
+\code{\link[=run_stream]{run_stream()}},
+\code{\link[=stream_async]{stream_async()}},
+\code{\link[=stream_listener]{stream_listener()}}
+}
+\concept{execution}
