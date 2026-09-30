@@ -89,7 +89,7 @@ get_output(result)
 #> [1] "HELLO"
 #> 
 get_metadata(result)$latency_ms
-#> [1] 0.06961823
+#> [1] 0.0629425
 # Function-backed modules make no model calls, so these are NA
 get_tokens(result)
 #> $input_tokens

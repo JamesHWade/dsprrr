@@ -73,9 +73,9 @@ trial <- create_trial(
 )
 trial
 #> 
-#> ── Trial: trial_20260930_002139_ncnyz0 
+#> ── Trial: trial_20260930_174401_ncnyz0 
 #> • Status: pending
 #> Optimizer: my-search
 #> Params: max_bootstrapped_demos, instructions
-#> Started: 2026-09-30 00:21:39
+#> Started: 2026-09-30 17:44:01
 ```

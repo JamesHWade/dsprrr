@@ -186,7 +186,7 @@ is a temporary folder, which R deletes when the session ends:</p>
 <code class="sourceCode R"><span><span class="va">board</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://pins.rstudio.com/reference/board_folder.html" class="external-link">board_temp</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="../reference/pin_module_config.html">pin_module_config</a></span><span class="op">(</span><span class="va">board</span>, <span class="st">"sentiment-classifier"</span>, <span class="va">classifier</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Creating new version '20260930T002409Z-87ec2'</span></span>
+<span><span class="co">#&gt; Creating new version '20260930T174635Z-56386'</span></span>
 <span><span class="co">#&gt; Writing to pin 'sentiment-classifier'</span></span>
 <span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Pinned program artifact: <span style="color: #0000BB;">"sentiment-classifier"</span></span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Root module: <span style="color: #0000BB;">&lt;PredictModule&gt;</span></span></span>
@@ -302,7 +302,7 @@ next to the configuration:</p>
 <span><span class="co">#&gt; [1] "neutral"</span></span>
 <span></span>
 <span><span class="fu"><a href="../reference/pin_trace.html">pin_trace</a></span><span class="op">(</span><span class="va">board</span>, <span class="st">"sentiment-traces"</span>, <span class="va">classifier</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Creating new version '20260930T002411Z-b4bb0'</span></span>
+<span><span class="co">#&gt; Creating new version '20260930T174637Z-0c98a'</span></span>
 <span><span class="co">#&gt; Writing to pin 'sentiment-traces'</span></span>
 <span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Pinned 4 traces: <span style="color: #0000BB;">"sentiment-traces"</span></span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Total tokens: 941</span></span></code></pre></div>
@@ -313,10 +313,10 @@ one row per call, including the call made right after compiling:</p>
 <span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 4 × 11</span></span></span>
 <span><span class="co">#&gt;     timestamp latency_ms input_tokens cached_input_tokens output_tokens</span></span>
 <span><span class="co">#&gt;         <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>        <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>               <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>         <span style="color: #949494; font-style: italic;">&lt;int&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> <span style="text-decoration: underline;">1</span>790<span style="text-decoration: underline;">727</span>849.       849.          101                   0             7</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> <span style="text-decoration: underline;">1</span>790<span style="text-decoration: underline;">727</span>850.       421.          200                   0             7</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> <span style="text-decoration: underline;">1</span>790<span style="text-decoration: underline;">727</span>851.       373.          271                   0             7</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span> <span style="text-decoration: underline;">1</span>790<span style="text-decoration: underline;">727</span>851.       387.          341                   0             7</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> <span style="text-decoration: underline;">1</span>790<span style="text-decoration: underline;">790</span>395.       875.          101                   0             7</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> <span style="text-decoration: underline;">1</span>790<span style="text-decoration: underline;">790</span>397.       427.          200                   0             7</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> <span style="text-decoration: underline;">1</span>790<span style="text-decoration: underline;">790</span>397.       381.          271                   0             7</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span> <span style="text-decoration: underline;">1</span>790<span style="text-decoration: underline;">790</span>398.       396.          341                   0             7</span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># ℹ 6 more variables: total_tokens &lt;int&gt;, cost &lt;dbl&gt;, model &lt;chr&gt;,</span></span></span>
 <span><span class="co">#&gt; <span style="color: #949494;">#   prompt_length &lt;int&gt;, program_artifact_id &lt;chr&gt;, trace_context &lt;list&gt;</span></span></span></code></pre></div>
 <p>The tibble leaves out prompts and responses, so you can share it

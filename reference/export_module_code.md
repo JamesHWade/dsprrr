@@ -76,7 +76,7 @@ Other persistence:
 mod <- module(signature("text -> sentiment"))
 path <- tempfile(fileext = ".R")
 export_module_code(mod, name = "sentiment_mod", file = path)
-#> Module code written to /tmp/RtmpQlgZnT/file1ba04f6024de.R
+#> Module code written to /tmp/Rtmp4xxnp9/file1b1b738acbad.R
 
 # Running the file rebuilds the program
 source(path)

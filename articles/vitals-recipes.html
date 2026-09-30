@@ -174,10 +174,10 @@ plus a <code>target</code> column with the expected answer:</p>
 <span></span>
 <span><span class="va">task</span><span class="op">$</span><span class="fu">eval</span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Solving</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Solving <span style="color: #B2B2B2;">[1.7s]</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Solving <span style="color: #B2B2B2;">[1.8s]</span></span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Scoring</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Scoring <span style="color: #B2B2B2;">[81ms]</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Scoring <span style="color: #B2B2B2;">[92ms]</span></span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="va">task</span><span class="op">$</span><span class="fu">get_samples</span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 2 × 9</span></span></span>
@@ -246,10 +246,10 @@ randomly sampled training rows to the prompt as examples:</p>
 <span></span>
 <span><span class="va">test_task</span><span class="op">$</span><span class="fu">eval</span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Solving</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Solving <span style="color: #B2B2B2;">[765ms]</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Solving <span style="color: #B2B2B2;">[802ms]</span></span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Scoring</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Scoring <span style="color: #B2B2B2;">[60ms]</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Scoring <span style="color: #B2B2B2;">[63ms]</span></span></span>
 <span><span class="co">#&gt; </span></span>
 <span></span>
 <span><span class="va">test_task</span><span class="op">$</span><span class="fu">get_samples</span><span class="op">(</span><span class="op">)</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"target"</span>, <span class="st">"result"</span>, <span class="st">"score"</span><span class="op">)</span><span class="op">]</span></span>
@@ -331,10 +331,10 @@ fields and the grader sees the reasoning too:</p>
 <span></span>
 <span><span class="va">task</span><span class="op">$</span><span class="fu">eval</span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Solving</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Solving <span style="color: #B2B2B2;">[740ms]</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Solving <span style="color: #B2B2B2;">[771ms]</span></span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Scoring</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Scoring <span style="color: #B2B2B2;">[277ms]</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Scoring <span style="color: #B2B2B2;">[294ms]</span></span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="va">task</span><span class="op">$</span><span class="fu">get_samples</span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 2 × 10</span></span></span>
@@ -367,10 +367,10 @@ first row fails because “function” is missing:</p>
 <span></span>
 <span><span class="va">task</span><span class="op">$</span><span class="fu">eval</span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Solving</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Solving <span style="color: #B2B2B2;">[735ms]</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Solving <span style="color: #B2B2B2;">[784ms]</span></span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Scoring</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Scoring <span style="color: #B2B2B2;">[60ms]</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Scoring <span style="color: #B2B2B2;">[67ms]</span></span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="va">task</span><span class="op">$</span><span class="fu">get_samples</span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 2 × 9</span></span></span>
@@ -414,10 +414,10 @@ so pull fields out of it to build a readable table:</p>
 <span></span>
 <span><span class="va">task</span><span class="op">$</span><span class="fu">eval</span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Solving</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Solving <span style="color: #B2B2B2;">[1.8s]</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Solving <span style="color: #B2B2B2;">[1.9s]</span></span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Scoring</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Scoring <span style="color: #B2B2B2;">[107ms]</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Scoring <span style="color: #B2B2B2;">[115ms]</span></span></span>
 <span><span class="co">#&gt; </span></span>
 <span></span>
 <span><span class="va">samples</span> <span class="op">&lt;-</span> <span class="va">task</span><span class="op">$</span><span class="fu">get_samples</span><span class="op">(</span><span class="op">)</span></span>
@@ -478,16 +478,16 @@ answer two word problems, graded by <code><a href="https://vitals.tidyverse.org/
 <span>  <span class="va">results</span><span class="op">[[</span><span class="va">name</span><span class="op">]</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">task</span><span class="op">$</span><span class="fu">get_samples</span><span class="op">(</span><span class="op">)</span><span class="op">$</span><span class="va">score</span> <span class="op">==</span> <span class="st">"C"</span><span class="op">)</span></span>
 <span><span class="op">}</span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Solving</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Solving <span style="color: #B2B2B2;">[734ms]</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Solving <span style="color: #B2B2B2;">[756ms]</span></span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Scoring</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Scoring <span style="color: #B2B2B2;">[218ms]</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Scoring <span style="color: #B2B2B2;">[229ms]</span></span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Solving</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Solving <span style="color: #B2B2B2;">[745ms]</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Solving <span style="color: #B2B2B2;">[777ms]</span></span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Scoring</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Scoring <span style="color: #B2B2B2;">[253ms]</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Scoring <span style="color: #B2B2B2;">[272ms]</span></span></span>
 <span><span class="co">#&gt; </span></span>
 <span></span>
 <span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span>variant <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">results</span><span class="op">)</span>, accuracy <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/unlist.html" class="external-link">unlist</a></span><span class="op">(</span><span class="va">results</span><span class="op">)</span><span class="op">)</span></span>
@@ -536,10 +536,10 @@ answer:</p>
 <span></span>
 <span><span class="va">task</span><span class="op">$</span><span class="fu">eval</span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Solving</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Solving <span style="color: #B2B2B2;">[2.9s]</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Solving <span style="color: #B2B2B2;">[3s]</span></span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Scoring</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Scoring <span style="color: #B2B2B2;">[168ms]</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Scoring <span style="color: #B2B2B2;">[172ms]</span></span></span>
 <span><span class="co">#&gt; </span></span>
 <span></span>
 <span><span class="va">scores</span> <span class="op">&lt;-</span> <span class="va">task</span><span class="op">$</span><span class="fu">get_samples</span><span class="op">(</span><span class="op">)</span></span>
