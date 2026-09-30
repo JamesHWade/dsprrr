@@ -61,7 +61,7 @@ Other integrations:
 ``` r
 project <- file.path(tempdir(), "my-project")
 use_dsprrr_template("targets", path = project)
-#> Created: /tmp/Rtmp9ba7jM/my-project/_targets.R
+#> Created: /tmp/RtmpQlgZnT/my-project/_targets.R
 list.files(project)
 #> [1] "_targets.R"
 ```

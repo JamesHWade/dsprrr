@@ -153,7 +153,9 @@ pass on the Codex sandbox metadata it needs.</p></dd>
 
 
 <dt id="arg-timeout">timeout<a class="anchor" aria-label="anchor" href="#arg-timeout"></a></dt>
-<dd><p>Maximum execution time per call, in seconds (default 30).</p></dd>
+<dd><p>Maximum time for one <code>$execute()</code> or <code>$reset()</code> call, in
+seconds (default 30). Code still running after it is interrupted and
+reported as a timeout error; see Details.</p></dd>
 
 
 <dt id="arg-max-output-chars">max_output_chars<a class="anchor" aria-label="anchor" href="#arg-max-output-chars"></a></dt>
@@ -204,6 +206,22 @@ Because dsprrr did not start that server, it cannot vouch for the sandbox:
 the runner is marked unverified and optimizers that require a sandbox
 reject it. <code>$shutdown()</code> then ends the runner but leaves your connection
 open. A runner that dsprrr starts shuts down only the transport it started.</p>
+</div>
+
+<div class="section">
+<h3 id="long-running-code">Long-running code<a class="anchor" aria-label="anchor" href="#long-running-code"></a></h3>
+
+
+<p>mcptools waits only about 4 seconds for each reply from mcp-repl, so dsprrr
+asks mcp-repl to wait at most 3 seconds per request. Code that runs longer
+keeps running: mcp-repl reports it as busy, and dsprrr collects the rest of
+its output with further requests until it finishes, then returns all of it
+together, without mcp-repl's busy status lines. Code still running after
+<code>timeout</code> seconds is interrupted, as with Ctrl-C, and <code>$execute()</code> returns
+a timeout error; the session and its variables are kept. If the interrupt
+does not stop the code, or mcp-repl does not reply in time, the runner
+cannot be used again, so that a late reply can never be read as the answer
+to a later request.</p>
 </div>
 
 <div class="section">

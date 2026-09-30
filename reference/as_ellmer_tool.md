@@ -13,7 +13,7 @@ as_ellmer_tool(
   name = NULL,
   description = NULL,
   .llm = NULL,
-  annotations = list(),
+  annotations = NULL,
   output = c("auto", "json", "text", "raw"),
   copy = c("none", "deep"),
   error = c("reject", "abort", "return"),
@@ -47,9 +47,34 @@ as_ellmer_tool(
 
 - annotations:
 
-  A list of ellmer tool annotations, passed to
-  [`ellmer::tool()`](https://ellmer.tidyverse.org/reference/tool.html),
-  for example to mark the tool read-only.
+  Tool annotations from
+  [`ellmer::tool_annotations()`](https://ellmer.tidyverse.org/reference/tool_annotations.html),
+  which tell a chat or an agent runtime what the tool may do. With
+  `NULL` (the default), they are inferred from the module. A prediction
+  module, such as one from
+  [`module()`](https://jameshwade.github.io/dsprrr/reference/module.md)
+  or
+  [`chain_of_thought()`](https://jameshwade.github.io/dsprrr/reference/chain_of_thought.md),
+  only sends its inputs to the model provider of its chat and changes
+  nothing, so its tool is marked read-only and closed-world
+  (`read_only_hint = TRUE`, `open_world_hint = FALSE`). A module
+  compiled with
+  [`KNNFewShot()`](https://jameshwade.github.io/dsprrr/reference/KNNFewShot.md)
+  is marked the same way when the module it wraps is; its `vectorizer`
+  is assumed only to compute embeddings. Other modules get no
+  annotations, because they can run your functions, tools or code: for
+  example
+  [`module_fn()`](https://jameshwade.github.io/dsprrr/reference/module_fn.md),
+  [`react()`](https://jameshwade.github.io/dsprrr/reference/react.md),
+  [`code_act()`](https://jameshwade.github.io/dsprrr/reference/code_act.md),
+  [`rlm_module()`](https://jameshwade.github.io/dsprrr/reference/rlm_module.md),
+  [`flex()`](https://jameshwade.github.io/dsprrr/reference/flex.md),
+  pipelines and wrappers such as
+  [`refine()`](https://jameshwade.github.io/dsprrr/reference/refine.md).
+  Use [`list()`](https://rdrr.io/r/base/list.html) for no annotations,
+  or pass your own. Agent runtimes may restrict tools without
+  annotations, for example by treating them as destructive or as needing
+  network access.
 
 - output:
 

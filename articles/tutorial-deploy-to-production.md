@@ -62,7 +62,7 @@ when the session ends:
 board <- board_temp()
 
 pin_module_config(board, "sentiment-classifier", classifier)
-#> Creating new version '20260926T220302Z-59990'
+#> Creating new version '20260930T002409Z-87ec2'
 #> Writing to pin 'sentiment-classifier'
 #> ✔ Pinned program artifact: "sentiment-classifier"
 #> ℹ Root module: <PredictModule>
@@ -125,6 +125,69 @@ To use a saved module in a targets pipeline or a Quarto report, see [Run
 dsprrr in
 pipelines](https://jameshwade.github.io/dsprrr/articles/orchestration.md).
 
+## Keep a reviewed version
+
+A pin keeps every version you save. To also record which version a
+person approved for production, and what it was compiled from, keep the
+program in [graft](https://jameshwade.github.io/graft/). Save the whole
+program with
+[`save_program()`](https://jameshwade.github.io/dsprrr/reference/program-artifact.md),
+store it with its training examples as evidence, and accept it for a
+purpose:
+
+``` r
+
+store <- graft::graft_store("programs", create = TRUE)
+id <- program_artifact_id(classifier)
+path <- save_program(classifier, tempfile(fileext = ".rds"))
+
+examples <- graft::graft_save(
+  store,
+  as.character(jsonlite::toJSON(trainset)),
+  id = "sentiment:trainset",
+  media_type = "application/json"
+)
+program <- graft::graft_save_file(
+  store,
+  path,
+  id = "sentiment:program",
+  dependencies = examples
+)
+graft::graft_accept(
+  store,
+  program,
+  stream = "sentiment-classifier",
+  expected = NULL,
+  key = id,
+  actor = "reviewer",
+  reason = "Checked its evaluation on held-out reviews",
+  purpose = "production"
+)
+```
+
+In production, load whichever program is accepted now:
+
+``` r
+
+recall <- graft::graft_recall(
+  store,
+  stream = "sentiment-classifier",
+  purpose = "production",
+  eligible = TRUE
+)
+path <- tempfile(fileext = ".rds")
+writeBin(recall@roots[[1]]@bytes, path)
+production <- load_program(path)
+
+identical(program_artifact_id(production), id)
+```
+
+The ID from
+[`program_artifact_id()`](https://jameshwade.github.io/dsprrr/reference/program-artifact.md)
+is also recorded in every call’s metadata and trace, so a trace points
+to the exact program that was reviewed. graft keeps each acceptance, and
+any later withdrawal, in the stream’s history.
+
 ## Save and inspect traces
 
 A module records a trace for each call it makes, with token counts,
@@ -144,7 +207,7 @@ run(classifier, review = "Does the job.", .llm = chat)
 #> [1] "neutral"
 
 pin_trace(board, "sentiment-traces", classifier)
-#> Creating new version '20260926T220304Z-5a2d5'
+#> Creating new version '20260930T002411Z-b4bb0'
 #> Writing to pin 'sentiment-traces'
 #> ✔ Pinned 4 traces: "sentiment-traces"
 #> ℹ Total tokens: 941
@@ -160,10 +223,10 @@ export_traces(classifier)
 #> # A tibble: 4 × 11
 #>     timestamp latency_ms input_tokens cached_input_tokens output_tokens
 #>         <dbl>      <dbl>        <int>               <int>         <int>
-#> 1 1790460183.       860.          101                   0             7
-#> 2 1790460184.       423.          200                   0             7
-#> 3 1790460184.       376.          271                   0             7
-#> 4 1790460185.       411.          341                   0             7
+#> 1 1790727849.       849.          101                   0             7
+#> 2 1790727850.       421.          200                   0             7
+#> 3 1790727851.       373.          271                   0             7
+#> 4 1790727851.       387.          341                   0             7
 #> # ℹ 6 more variables: total_tokens <int>, cost <dbl>, model <chr>,
 #> #   prompt_length <int>, program_artifact_id <chr>, trace_context <list>
 ```

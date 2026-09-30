@@ -35,6 +35,9 @@ react(
   [`create_search_tool()`](https://jameshwade.github.io/dsprrr/reference/create_search_tool.md)
   or
   [`as_ellmer_tool()`](https://jameshwade.github.io/dsprrr/reference/as_ellmer_tool.md).
+  Their names must be unique. The module's
+  `$add_tool(tool, replace = FALSE)` adds one later; with
+  `replace = TRUE` it replaces the tool of the same name.
 
 - max_iterations:
 

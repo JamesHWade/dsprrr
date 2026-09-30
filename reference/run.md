@@ -91,7 +91,9 @@ Any other dot-prefixed name is an error.
   [`local_lm()`](https://jameshwade.github.io/dsprrr/reference/with_lm.md),
   and the default chat; see
   [`get_default_chat()`](https://jameshwade.github.io/dsprrr/reference/get_default_chat.md)
-  for the full order.
+  for the full order. An agent that follows ellmer's Chat protocol, such
+  as a deputy `Agent`, also works; see
+  [`vignette("models-and-providers")`](https://jameshwade.github.io/dsprrr/articles/models-and-providers.md).
 
 - `.cache`:
 

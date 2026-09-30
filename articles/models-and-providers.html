@@ -355,12 +355,51 @@ calls it:</p>
 <p><code>output = "json"</code> hands the result back as JSON text. The
 default, <code>"auto"</code>, returns an R list, which ellmer 0.5.0
 converts with a deprecation warning.</p>
+<p>A prediction module’s tool is marked read-only and closed-world,
+because it only sends its inputs to its Chat’s provider. Agent runtimes
+that check tool annotations use this: <a href="https://jameshwade.github.io/deputy/" class="external-link">deputy</a>, for example,
+runs the tool in its default <code>"standard"</code> permission mode
+without web access, and in <code>"readonly"</code> mode when you list it
+in <code>tool_allowlist</code>. Tools from modules that can run your
+functions or tools, such as <code><a href="../reference/module_fn.html">module_fn()</a></code> or
+<code><a href="../reference/react.html">react()</a></code>, carry no annotations unless you pass them.</p>
+</div>
+<div class="section level2">
+<h2 id="run-modules-through-an-agent-runtime">Run modules through an agent runtime<a class="anchor" aria-label="anchor" href="#run-modules-through-an-agent-runtime"></a>
+</h2>
+<p>An agent runtime that follows ellmer’s Chat protocol can be the Chat
+a module uses. With a deputy <code>Agent</code>, each call is one of the
+agent’s runs, so its permissions, hooks and usage limits apply, and its
+system prompt frames the request. <code><a href="../reference/evaluate.html">evaluate()</a></code> and the
+optimizers run each row on an independent copy of the agent, as they do
+with any Chat:</p>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">agent</span> <span class="op">&lt;-</span> <span class="fu">deputy</span><span class="fu">::</span><span class="va">Agent</span><span class="op">$</span><span class="fu">new</span><span class="op">(</span></span>
+<span>  chat <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-luna"</span><span class="op">)</span>,</span>
+<span>  system_prompt <span class="op">=</span> <span class="st">"Classify customer reviews for the support team."</span>,</span>
+<span>  usage_limits <span class="op">=</span> <span class="fu">deputy</span><span class="fu">::</span><span class="fu">UsageLimits</span><span class="op">(</span>max_requests <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
+<span>  <span class="va">classify</span>,</span>
+<span>  text <span class="op">=</span> <span class="st">"Arrived broken."</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="va">agent</span>,</span>
+<span>  .trace_context <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>request_id <span class="op">=</span> <span class="st">"r-42"</span><span class="op">)</span>,</span>
+<span>  .return_format <span class="op">=</span> <span class="st">"structured"</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">result</span><span class="op">$</span><span class="va">metadata</span><span class="op">$</span><span class="va">agent_run</span></span></code></pre></div>
+<p>dsprrr passes the program’s ID and your <code>.trace_context</code>
+to the agent under <code>run_context$dsprrr</code>, and records the
+agent’s run in the call’s metadata and trace as <code>agent_run</code>
+(its <code>run_id</code>, <code>agent_id</code>, <code>session_id</code>
+and <code>stop_reason</code>), so each trace can be matched with the
+agent’s own records. Responses from an agent are never cached, because
+the agent’s hooks and limits must see every call.</p>
 </div>
 <div class="section level2">
 <h2 id="timeouts-and-retries">Timeouts and retries<a class="anchor" aria-label="anchor" href="#timeouts-and-retries"></a>
 </h2>
 <p>ellmer applies both. Set them with options before you make calls:</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">options</a></span><span class="op">(</span></span>
 <span>  ellmer_timeout_s <span class="op">=</span> <span class="fl">600</span>, <span class="co"># default 300 seconds</span></span>
 <span>  ellmer_max_tries <span class="op">=</span> <span class="fl">5</span> <span class="co"># default 3</span></span>
@@ -375,7 +414,7 @@ see <a href="orchestration.html">Run dsprrr in pipelines</a>.</p>
 </h2>
 <p><code><a href="../reference/run_async.html">run_async()</a></code> returns a promise that resolves to the named
 list <code><a href="../reference/run.html">run()</a></code> would return:</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://rstudio.github.io/promises/" class="external-link">promises</a></span><span class="op">)</span></span>
 <span><span class="va">qa</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
@@ -401,7 +440,7 @@ is simpler.</p>
 </h2>
 <p><code><a href="../reference/run_stream.html">run_stream()</a></code> passes output to callbacks as it arrives.
 Attach a <code><a href="../reference/stream_listener.html">stream_listener()</a></code> to an output field:</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">writer</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"topic -&gt; essay"</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="../reference/run_stream.html">run_stream</a></span><span class="op">(</span></span>
@@ -419,7 +458,7 @@ and records no trace. An <code>on_status</code> callback receives step
 and field events, one set per step for a pipeline.</p>
 <p><code><a href="../reference/stream_async.html">stream_async()</a></code> returns a coro async generator of text
 chunks, not a promise. Read it inside <code><a href="https://coro.r-lib.org/reference/async.html" class="external-link">coro::async()</a></code>:</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/r-lib/coro" class="external-link">coro</a></span><span class="op">)</span></span>
 <span><span class="va">chunks</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/stream_async.html">stream_async</a></span><span class="op">(</span></span>
 <span>  <span class="va">writer</span>,</span>

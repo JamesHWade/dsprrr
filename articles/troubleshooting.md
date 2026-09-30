@@ -564,10 +564,10 @@ dir.create(shared_dir)
 Sys.chmod(shared_dir, mode = "0755") # readable by other accounts
 configure_cache(disk_path = shared_dir)
 try(run(qa, question = "What is the capital of France?", .llm = chat))
-#> Warning: ! Disk caching is unavailable at /tmp/Rtmp4WiLwE/shared-cache
+#> Warning: ! Disk caching is unavailable at /tmp/RtmpKCHl0r/shared-cache
 #> ✖ an existing private cache directory must have mode exactly 0700, but it is
 #>   755; restrict it yourself, then retry: chmod 700
-#>   '/tmp/Rtmp4WiLwE/shared-cache'
+#>   '/tmp/RtmpKCHl0r/shared-cache'
 #> ℹ Falling back to memory-only caching for this session.
 #> This warning is displayed once per session.
 #> Error in openai_key() : Can't find env var `OPENAI_API_KEY`.

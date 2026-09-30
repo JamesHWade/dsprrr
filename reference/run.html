@@ -159,7 +159,8 @@ Any other dot-prefixed name is an error.</p><dl><dt><code>.llm</code></dt>
 <dd><p>An ellmer Chat to use for this call. It takes precedence
 over the chat stored on the module, a chat set with <code><a href="with_lm.html">with_lm()</a></code> or
 <code><a href="with_lm.html">local_lm()</a></code>, and the default chat; see <code><a href="get_default_chat.html">get_default_chat()</a></code> for the
-full order.</p></dd>
+full order. An agent that follows ellmer's Chat protocol, such as a
+deputy <code>Agent</code>, also works; see <code><a href="../articles/models-and-providers.html">vignette("models-and-providers")</a></code>.</p></dd>
 
 <dt><code>.cache</code></dt>
 <dd><p><code>NULL</code> (the default) follows <code><a href="configure_cache.html">configure_cache()</a></code>.

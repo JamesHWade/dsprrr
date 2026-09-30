@@ -46,5 +46,5 @@ restored$as_tibble()[, c("trial_id", "status")]
 #> # A tibble: 1 × 2
 #>   trial_id                     status 
 #>   <chr>                        <chr>  
-#> 1 trial_20260926_220042_e01i28 pending
+#> 1 trial_20260930_002148_e01i28 pending
 ```

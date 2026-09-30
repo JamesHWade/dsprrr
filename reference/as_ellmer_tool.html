@@ -106,7 +106,7 @@ are the module's input fields, with their types and descriptions.</p>
 <span>  name <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  description <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  .llm <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  annotations <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  annotations <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  output <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"auto"</span>, <span class="st">"json"</span>, <span class="st">"text"</span>, <span class="st">"raw"</span><span class="op">)</span>,</span>
 <span>  copy <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"none"</span>, <span class="st">"deep"</span><span class="op">)</span>,</span>
 <span>  error <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"reject"</span>, <span class="st">"abort"</span>, <span class="st">"return"</span><span class="op">)</span>,</span>
@@ -139,8 +139,21 @@ the module's own chat or the default chat (see <code><a href="get_default_chat.h
 
 
 <dt id="arg-annotations">annotations<a class="anchor" aria-label="anchor" href="#arg-annotations"></a></dt>
-<dd><p>A list of ellmer tool annotations, passed to
-<code><a href="https://ellmer.tidyverse.org/reference/tool.html" class="external-link">ellmer::tool()</a></code>, for example to mark the tool read-only.</p></dd>
+<dd><p>Tool annotations from <code><a href="https://ellmer.tidyverse.org/reference/tool_annotations.html" class="external-link">ellmer::tool_annotations()</a></code>,
+which tell a chat or an agent runtime what the tool may do. With <code>NULL</code>
+(the default), they are inferred from the module. A prediction module,
+such as one from <code><a href="module.html">module()</a></code> or <code><a href="chain_of_thought.html">chain_of_thought()</a></code>, only sends its
+inputs to the model provider of its chat and changes nothing, so its
+tool is marked read-only and closed-world (<code>read_only_hint = TRUE</code>,
+<code>open_world_hint = FALSE</code>). A module compiled with <code><a href="KNNFewShot.html">KNNFewShot()</a></code> is
+marked the same way when the module it wraps is; its <code>vectorizer</code> is
+assumed only to compute embeddings. Other modules get no annotations,
+because they can run your functions, tools or code: for example
+<code><a href="module_fn.html">module_fn()</a></code>, <code><a href="react.html">react()</a></code>, <code><a href="code_act.html">code_act()</a></code>, <code><a href="rlm_module.html">rlm_module()</a></code>, <code><a href="flex.html">flex()</a></code>,
+pipelines and wrappers such as <code><a href="refine.html">refine()</a></code>. Use <code><a href="https://rdrr.io/r/base/list.html" class="external-link">list()</a></code> for no
+annotations, or pass your own. Agent runtimes may restrict tools without
+annotations, for example by treating them as destructive or as needing
+network access.</p></dd>
 
 
 <dt id="arg-output">output<a class="anchor" aria-label="anchor" href="#arg-output"></a></dt>

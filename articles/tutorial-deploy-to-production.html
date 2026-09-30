@@ -186,7 +186,7 @@ is a temporary folder, which R deletes when the session ends:</p>
 <code class="sourceCode R"><span><span class="va">board</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://pins.rstudio.com/reference/board_folder.html" class="external-link">board_temp</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="../reference/pin_module_config.html">pin_module_config</a></span><span class="op">(</span><span class="va">board</span>, <span class="st">"sentiment-classifier"</span>, <span class="va">classifier</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Creating new version '20260926T220302Z-59990'</span></span>
+<span><span class="co">#&gt; Creating new version '20260930T002409Z-87ec2'</span></span>
 <span><span class="co">#&gt; Writing to pin 'sentiment-classifier'</span></span>
 <span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Pinned program artifact: <span style="color: #0000BB;">"sentiment-classifier"</span></span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Root module: <span style="color: #0000BB;">&lt;PredictModule&gt;</span></span></span>
@@ -232,12 +232,65 @@ pipeline or a Quarto report, see <a href="orchestration.html">Run dsprrr
 in pipelines</a>.</p>
 </div>
 <div class="section level2">
+<h2 id="keep-a-reviewed-version">Keep a reviewed version<a class="anchor" aria-label="anchor" href="#keep-a-reviewed-version"></a>
+</h2>
+<p>A pin keeps every version you save. To also record which version a
+person approved for production, and what it was compiled from, keep the
+program in <a href="https://jameshwade.github.io/graft/" class="external-link">graft</a>. Save
+the whole program with <code><a href="../reference/program-artifact.html">save_program()</a></code>, store it with its
+training examples as evidence, and accept it for a purpose:</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">store</span> <span class="op">&lt;-</span> <span class="fu">graft</span><span class="fu">::</span><span class="fu">graft_store</span><span class="op">(</span><span class="st">"programs"</span>, create <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span><span class="va">id</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/program-artifact.html">program_artifact_id</a></span><span class="op">(</span><span class="va">classifier</span><span class="op">)</span></span>
+<span><span class="va">path</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/program-artifact.html">save_program</a></span><span class="op">(</span><span class="va">classifier</span>, <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".rds"</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">examples</span> <span class="op">&lt;-</span> <span class="fu">graft</span><span class="fu">::</span><span class="fu">graft_save</span><span class="op">(</span></span>
+<span>  <span class="va">store</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">as.character</a></span><span class="op">(</span><span class="fu">jsonlite</span><span class="fu">::</span><span class="fu"><a href="https://jeroen.r-universe.dev/jsonlite/reference/fromJSON.html" class="external-link">toJSON</a></span><span class="op">(</span><span class="va">trainset</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  id <span class="op">=</span> <span class="st">"sentiment:trainset"</span>,</span>
+<span>  media_type <span class="op">=</span> <span class="st">"application/json"</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">program</span> <span class="op">&lt;-</span> <span class="fu">graft</span><span class="fu">::</span><span class="fu">graft_save_file</span><span class="op">(</span></span>
+<span>  <span class="va">store</span>,</span>
+<span>  <span class="va">path</span>,</span>
+<span>  id <span class="op">=</span> <span class="st">"sentiment:program"</span>,</span>
+<span>  dependencies <span class="op">=</span> <span class="va">examples</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu">graft</span><span class="fu">::</span><span class="fu">graft_accept</span><span class="op">(</span></span>
+<span>  <span class="va">store</span>,</span>
+<span>  <span class="va">program</span>,</span>
+<span>  stream <span class="op">=</span> <span class="st">"sentiment-classifier"</span>,</span>
+<span>  expected <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  key <span class="op">=</span> <span class="va">id</span>,</span>
+<span>  actor <span class="op">=</span> <span class="st">"reviewer"</span>,</span>
+<span>  reason <span class="op">=</span> <span class="st">"Checked its evaluation on held-out reviews"</span>,</span>
+<span>  purpose <span class="op">=</span> <span class="st">"production"</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>In production, load whichever program is accepted now:</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">recall</span> <span class="op">&lt;-</span> <span class="fu">graft</span><span class="fu">::</span><span class="fu">graft_recall</span><span class="op">(</span></span>
+<span>  <span class="va">store</span>,</span>
+<span>  stream <span class="op">=</span> <span class="st">"sentiment-classifier"</span>,</span>
+<span>  purpose <span class="op">=</span> <span class="st">"production"</span>,</span>
+<span>  eligible <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".rds"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/readBin.html" class="external-link">writeBin</a></span><span class="op">(</span><span class="va">recall</span><span class="op">@</span><span class="va">roots</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">@</span><span class="va">bytes</span>, <span class="va">path</span><span class="op">)</span></span>
+<span><span class="va">production</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/program-artifact.html">load_program</a></span><span class="op">(</span><span class="va">path</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="fu"><a href="../reference/program-artifact.html">program_artifact_id</a></span><span class="op">(</span><span class="va">production</span><span class="op">)</span>, <span class="va">id</span><span class="op">)</span></span></code></pre></div>
+<p>The ID from <code><a href="../reference/program-artifact.html">program_artifact_id()</a></code> is also recorded in
+every call’s metadata and trace, so a trace points to the exact program
+that was reviewed. graft keeps each acceptance, and any later
+withdrawal, in the stream’s history.</p>
+</div>
+<div class="section level2">
 <h2 id="save-and-inspect-traces">Save and inspect traces<a class="anchor" aria-label="anchor" href="#save-and-inspect-traces"></a>
 </h2>
 <p>A module records a trace for each call it makes, with token counts,
 latency, cost and model. Run the module a few times, then pin its traces
 next to the configuration:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">classifier</span>, review <span class="op">=</span> <span class="st">"Great product!"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
 <span><span class="co">#&gt; $sentiment</span></span>
 <span><span class="co">#&gt; [1] "positive"</span></span>
@@ -249,21 +302,21 @@ next to the configuration:</p>
 <span><span class="co">#&gt; [1] "neutral"</span></span>
 <span></span>
 <span><span class="fu"><a href="../reference/pin_trace.html">pin_trace</a></span><span class="op">(</span><span class="va">board</span>, <span class="st">"sentiment-traces"</span>, <span class="va">classifier</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Creating new version '20260926T220304Z-5a2d5'</span></span>
+<span><span class="co">#&gt; Creating new version '20260930T002411Z-b4bb0'</span></span>
 <span><span class="co">#&gt; Writing to pin 'sentiment-traces'</span></span>
 <span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Pinned 4 traces: <span style="color: #0000BB;">"sentiment-traces"</span></span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Total tokens: 941</span></span></code></pre></div>
 <p><code><a href="../reference/export_traces.html">export_traces()</a></code> returns the same data as a tibble with
 one row per call, including the call made right after compiling:</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/export_traces.html">export_traces</a></span><span class="op">(</span><span class="va">classifier</span><span class="op">)</span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 4 × 11</span></span></span>
 <span><span class="co">#&gt;     timestamp latency_ms input_tokens cached_input_tokens output_tokens</span></span>
 <span><span class="co">#&gt;         <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>        <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>               <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>         <span style="color: #949494; font-style: italic;">&lt;int&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> <span style="text-decoration: underline;">1</span>790<span style="text-decoration: underline;">460</span>183.       860.          101                   0             7</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> <span style="text-decoration: underline;">1</span>790<span style="text-decoration: underline;">460</span>184.       423.          200                   0             7</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> <span style="text-decoration: underline;">1</span>790<span style="text-decoration: underline;">460</span>184.       376.          271                   0             7</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span> <span style="text-decoration: underline;">1</span>790<span style="text-decoration: underline;">460</span>185.       411.          341                   0             7</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> <span style="text-decoration: underline;">1</span>790<span style="text-decoration: underline;">727</span>849.       849.          101                   0             7</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> <span style="text-decoration: underline;">1</span>790<span style="text-decoration: underline;">727</span>850.       421.          200                   0             7</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> <span style="text-decoration: underline;">1</span>790<span style="text-decoration: underline;">727</span>851.       373.          271                   0             7</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span> <span style="text-decoration: underline;">1</span>790<span style="text-decoration: underline;">727</span>851.       387.          341                   0             7</span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># ℹ 6 more variables: total_tokens &lt;int&gt;, cost &lt;dbl&gt;, model &lt;chr&gt;,</span></span></span>
 <span><span class="co">#&gt; <span style="color: #949494;">#   prompt_length &lt;int&gt;, program_artifact_id &lt;chr&gt;, trace_context &lt;list&gt;</span></span></span></code></pre></div>
 <p>The tibble leaves out prompts and responses, so you can share it

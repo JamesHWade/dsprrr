@@ -124,7 +124,9 @@ the signature (the ReAct pattern).</p>
 <dt id="arg-tools">tools<a class="anchor" aria-label="anchor" href="#arg-tools"></a></dt>
 <dd><p>A list of ellmer tool definitions, made with
 <code><a href="https://ellmer.tidyverse.org/reference/tool.html" class="external-link">ellmer::tool()</a></code>, <code><a href="ragnar_tool.html">ragnar_tool()</a></code>, <code><a href="create_search_tool.html">create_search_tool()</a></code> or
-<code><a href="as_ellmer_tool.html">as_ellmer_tool()</a></code>.</p></dd>
+<code><a href="as_ellmer_tool.html">as_ellmer_tool()</a></code>. Their names must be unique. The module's
+<code>$add_tool(tool, replace = FALSE)</code> adds one later; with <code>replace = TRUE</code>
+it replaces the tool of the same name.</p></dd>
 
 
 <dt id="arg-max-iterations">max_iterations<a class="anchor" aria-label="anchor" href="#arg-max-iterations"></a></dt>

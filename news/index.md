@@ -122,6 +122,13 @@ First development changelog. dsprrr is experimental; the API may change.
 
 ### New features
 
+- Modules run through an agent runtime that follows ellmer’s Chat
+  protocol, such as a deputy `Agent`, are now correlated with the
+  agent’s runs. dsprrr passes the program ID and `.trace_context` to the
+  agent as `run_context$dsprrr`, and records the agent’s run (`run_id`,
+  `agent_id`, `session_id` and `stop_reason`) as `agent_run` in each
+  call’s metadata and trace. Plain ellmer Chats are called as before.
+
 - Experimental calibrated decision outputs, following DSPy 3.4’s
   decision types.
   [`with_decisions()`](https://jameshwade.github.io/dsprrr/reference/with_decisions.md)
@@ -334,6 +341,41 @@ First development changelog. dsprrr is experimental; the API may change.
   a better candidate.
 
 ### Bug fixes
+
+- [`mcp_repl_runner()`](https://jameshwade.github.io/dsprrr/reference/mcp_repl_runner.md)
+  now runs code that takes longer than about 4 seconds. mcptools waits
+  only about 4 seconds for a reply, but `timeout` (30 seconds by
+  default) was passed to mcp-repl as its wait, so a slower reply was
+  dropped: the runner failed with “unsupported response type: NULL” and
+  could not be reused, and on a connection shared with another runner
+  the late reply could answer the next request. Each request now waits
+  at most 3 seconds; dsprrr collects the output of longer code until it
+  finishes, and code still running after `timeout` seconds is
+  interrupted and returned as a timeout error. A missing reply, an
+  interrupt that does not stop the code, or an interrupted request makes
+  the runner unusable, so a late reply can never answer a later request.
+
+- [`as_ellmer_tool()`](https://jameshwade.github.io/dsprrr/reference/as_ellmer_tool.md)
+  now marks tools made from prediction modules
+  ([`module()`](https://jameshwade.github.io/dsprrr/reference/module.md),
+  [`chain_of_thought()`](https://jameshwade.github.io/dsprrr/reference/chain_of_thought.md),
+  and
+  [`KNNFewShot()`](https://jameshwade.github.io/dsprrr/reference/KNNFewShot.md)
+  programs that wrap one) as read-only and closed-world. Such a tool
+  only sends its inputs to its chat’s model provider, but without
+  annotations agent runtimes such as deputy treated it as destructive
+  and as needing network access, so it was refused in read-only and plan
+  modes. Modules that can run functions, tools or code still get no
+  annotations. `annotations = NULL` (the new default) infers them;
+  `annotations = list()` gives none, and annotations you pass are used
+  as given.
+
+- [`react()`](https://jameshwade.github.io/dsprrr/reference/react.md)
+  now rejects tools with duplicate names, and a ReAct module’s
+  `$add_tool()` rejects a name it already has. ellmer registers tools on
+  a chat by name, so a second tool with the same name silently replaced
+  the first while the module still listed both.
+  `$add_tool(tool, replace = TRUE)` replaces a tool deliberately.
 
 - [`metric_exact_match()`](https://jameshwade.github.io/dsprrr/reference/metric_exact_match.md)
   and
