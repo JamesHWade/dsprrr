@@ -28,7 +28,9 @@ supported.}
 \code{"inherit-codex"} is rejected because \code{mcptools::mcp_tools()} does not
 pass on the Codex sandbox metadata it needs.}
 
-\item{timeout}{Maximum execution time per call, in seconds (default 30).}
+\item{timeout}{Maximum time for one \verb{$execute()} or \verb{$reset()} call, in
+seconds (default 30). Code still running after it is interrupted and
+reported as a timeout error; see Details.}
 
 \item{max_output_chars}{Maximum number of output characters returned per
 call (default \code{100000L}).}
@@ -76,6 +78,20 @@ Because dsprrr did not start that server, it cannot vouch for the sandbox:
 the runner is marked unverified and optimizers that require a sandbox
 reject it. \verb{$shutdown()} then ends the runner but leaves your connection
 open. A runner that dsprrr starts shuts down only the transport it started.
+}
+
+\subsection{Long-running code}{
+
+mcptools waits only about 4 seconds for each reply from mcp-repl, so dsprrr
+asks mcp-repl to wait at most 3 seconds per request. Code that runs longer
+keeps running: mcp-repl reports it as busy, and dsprrr collects the rest of
+its output with further requests until it finishes, then returns all of it
+together, without mcp-repl's busy status lines. Code still running after
+\code{timeout} seconds is interrupted, as with Ctrl-C, and \verb{$execute()} returns
+a timeout error; the session and its variables are kept. If the interrupt
+does not stop the code, or mcp-repl does not reply in time, the runner
+cannot be used again, so that a late reply can never be read as the answer
+to a later request.
 }
 
 \subsection{Output limits}{

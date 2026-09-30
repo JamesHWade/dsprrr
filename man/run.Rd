@@ -60,7 +60,8 @@ Any other dot-prefixed name is an error.
 \item{\code{.llm}}{An ellmer Chat to use for this call. It takes precedence
 over the chat stored on the module, a chat set with \code{\link[=with_lm]{with_lm()}} or
 \code{\link[=local_lm]{local_lm()}}, and the default chat; see \code{\link[=get_default_chat]{get_default_chat()}} for the
-full order.}
+full order. An agent that follows ellmer's Chat protocol, such as a
+deputy \code{Agent}, also works; see \code{vignette("models-and-providers")}.}
 \item{\code{.cache}}{\code{NULL} (the default) follows \code{\link[=configure_cache]{configure_cache()}}.
 \code{FALSE} skips the response cache for this call. \code{TRUE} uses it when
 caching is enabled globally and has no effect otherwise.}

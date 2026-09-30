@@ -434,3 +434,82 @@ test_that("ReactModule rejects an unnamespaced ToolDef class", {
   expect_s3_class(add_condition, "rlang_error")
   expect_match(conditionMessage(add_condition), "ellmer ToolDef")
 })
+
+test_that("ReactModule rejects duplicate tool names", {
+  make_tool <- function(value) {
+    ellmer::tool(
+      function(query) value,
+      name = "lookup",
+      description = paste("Returns", value),
+      arguments = list(query = ellmer::type_string())
+    )
+  }
+  sig <- signature("question -> answer")
+  tools <- list(make_tool("first"), make_tool("second"))
+
+  expect_error(
+    react(sig, tools = tools),
+    "Duplicate name: \"lookup\"",
+    class = "dsprrr_react_tools_error"
+  )
+  expect_error(
+    ReactModule$new(sig, tools = tools),
+    class = "dsprrr_react_tools_error"
+  )
+})
+
+test_that("ReactModule add_tool rejects a taken name unless replace = TRUE", {
+  make_tool <- function(name, value) {
+    ellmer::tool(
+      function(query) value,
+      name = name,
+      description = paste("Returns", value),
+      arguments = list(query = ellmer::type_string())
+    )
+  }
+  first <- make_tool("lookup", "first")
+  second <- make_tool("lookup", "second")
+  other <- make_tool("other", "other")
+  chat <- ellmer::chat_openai(model = "gpt-test", credentials = function() "x")
+  mod <- react("question -> answer", tools = list(first, other), chat = chat)
+
+  expect_error(
+    mod$add_tool(second),
+    "already has a tool named \"lookup\"",
+    class = "dsprrr_react_tools_error"
+  )
+  expect_identical(mod$tools, list(first, other))
+  expect_length(chat$get_tools(), 0L)
+  expect_error(mod$add_tool(second, replace = NA), "TRUE or FALSE")
+
+  mod$add_tool(second, replace = TRUE)
+
+  expect_identical(mod$list_tools(), c("lookup", "other"))
+  expect_identical(mod$tools[[1L]], second)
+  expect_identical(chat$get_tools()$lookup, second)
+})
+
+test_that("ReactModule forward refuses duplicates assigned to its tools field", {
+  make_tool <- function(value) {
+    ellmer::tool(
+      function(query) value,
+      name = "lookup",
+      description = paste("Returns", value),
+      arguments = list(query = ellmer::type_string())
+    )
+  }
+  registered <- character()
+  llm <- ReactTestChat$new(chat = function(...) stop("unexpected model call"))
+  override_test_chat_method(llm, "register_tool", function(tool) {
+    registered <<- c(registered, tool@name)
+    invisible(NULL)
+  })
+  mod <- react("question -> answer")
+  mod$tools <- list(make_tool("first"), make_tool("second"))
+
+  expect_error(
+    mod$forward(list(question = "q"), .llm = llm),
+    class = "dsprrr_react_tools_error"
+  )
+  expect_identical(registered, character())
+})

@@ -89,6 +89,7 @@ PredictModule <- R6::R6Class(
 
       # Record start time
       start_time <- Sys.time()
+      run_before <- chat_last_run_id(llm)
 
       # Make LLM call (pass inputs for multimodal support)
       decisions <- module_decisions(self)
@@ -227,6 +228,12 @@ PredictModule <- R6::R6Class(
       if (!is.null(decoded$decisions)) {
         metadata$decisions <- decoded$decisions
       }
+      # A chat that records runs, such as a deputy Agent, made this call as one
+      # of its runs.
+      agent_run <- chat_new_run_receipt(llm, run_before)
+      if (!is.null(agent_run)) {
+        metadata$agent_run <- agent_run
+      }
 
       # Record trace if requested - store ellmer turns directly
       if (trace) {
@@ -246,6 +253,9 @@ PredictModule <- R6::R6Class(
           cache = cache_state$status,
           provider_calls = provider_calls
         )
+        if (!is.null(agent_run)) {
+          trace_entry$agent_run <- agent_run
+        }
 
         # Optionally include full chat object for advanced replay
         if (isTRUE(self$config$store_chat_in_traces)) {

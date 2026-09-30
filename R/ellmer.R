@@ -19,8 +19,21 @@ copy_ellmer_type <- function(type) {
 #'   signature's instructions.
 #' @param .llm The chat the module uses when the tool is called. With `NULL`,
 #'   the module's own chat or the default chat (see [get_default_chat()]).
-#' @param annotations A list of ellmer tool annotations, passed to
-#'   [ellmer::tool()], for example to mark the tool read-only.
+#' @param annotations Tool annotations from [ellmer::tool_annotations()],
+#'   which tell a chat or an agent runtime what the tool may do. With `NULL`
+#'   (the default), they are inferred from the module. A prediction module,
+#'   such as one from [module()] or [chain_of_thought()], only sends its
+#'   inputs to the model provider of its chat and changes nothing, so its
+#'   tool is marked read-only and closed-world (`read_only_hint = TRUE`,
+#'   `open_world_hint = FALSE`). A module compiled with [KNNFewShot()] is
+#'   marked the same way when the module it wraps is; its `vectorizer` is
+#'   assumed only to compute embeddings. Other modules get no annotations,
+#'   because they can run your functions, tools or code: for example
+#'   [module_fn()], [react()], [code_act()], [rlm_module()], [flex()],
+#'   pipelines and wrappers such as [refine()]. Use `list()` for no
+#'   annotations, or pass your own. Agent runtimes may restrict tools without
+#'   annotations, for example by treating them as destructive or as needing
+#'   network access.
 #' @param output How the tool returns its result:
 #'   - `"auto"` (the default): the module's output with fields in signature
 #'     order.
@@ -65,7 +78,7 @@ as_ellmer_tool <- function(
   name = NULL,
   description = NULL,
   .llm = NULL,
-  annotations = list(),
+  annotations = NULL,
   output = c("auto", "json", "text", "raw"),
   copy = c("none", "deep"),
   error = c("reject", "abort", "return"),
@@ -86,6 +99,7 @@ as_ellmer_tool <- function(
       "i" = "Create a module with {.fn module}"
     ))
   }
+  annotations <- annotations %||% module_tool_annotations(module)
 
   # Generate name from signature if not provided
   if (is.null(name)) {
@@ -199,6 +213,32 @@ as_ellmer_tool <- function(
     description = description,
     arguments = arg_specs,
     annotations = annotations
+  )
+}
+
+#' Tool annotations inferred from a module
+#'
+#' A Predict module formats a prompt and makes structured requests to its
+#' chat, whose provider the host chose; ellmer does not run tools for
+#' structured requests. Subclasses such as ReAct and Flex can run tools or
+#' code, so only the exact class qualifies, and a KNN wrapper qualifies
+#' through the module it wraps. Everything else claims nothing.
+#' @noRd
+module_tool_annotations <- function(module) {
+  if (module_only_predicts(module)) {
+    ellmer::tool_annotations(read_only_hint = TRUE, open_world_hint = FALSE)
+  } else {
+    list()
+  }
+}
+
+#' @noRd
+module_only_predicts <- function(module) {
+  switch(
+    class(module)[[1L]],
+    PredictModule = TRUE,
+    KNNFewShotModule = module_only_predicts(module$module),
+    FALSE
   )
 }
 

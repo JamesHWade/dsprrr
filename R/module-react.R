@@ -45,19 +45,7 @@ ReactModule <- R6::R6Class(
     ) {
       super$initialize(signature, template, demos, config, chat)
 
-      if (!is.list(tools)) {
-        cli::cli_abort("tools must be a list of ToolDef objects")
-      }
-
-      # Validate each tool is an ellmer ToolDef
-      for (i in seq_along(tools)) {
-        if (!inherits(tools[[i]], "ellmer::ToolDef")) {
-          cli::cli_abort(c(
-            "All tools must be ellmer ToolDef objects",
-            "x" = "tools[[{i}]] is a {.cls {class(tools[[i]])[1]}}"
-          ))
-        }
-      }
+      validate_react_tools(tools)
 
       max_iterations <- as.integer(max_iterations)
       if (
@@ -75,13 +63,34 @@ ReactModule <- R6::R6Class(
     #' @description
     #' Add a tool to the module
     #' @param tool An ellmer ToolDef object
+    #' @param replace If `FALSE` (the default), a tool with the same name is
+    #'   an error. If `TRUE`, the new tool replaces it in place.
     #' @return The module (invisibly), for chaining
-    add_tool = function(tool) {
+    add_tool = function(tool, replace = FALSE) {
       if (!inherits(tool, "ellmer::ToolDef")) {
-        cli::cli_abort("tool must be an ellmer ToolDef object")
+        cli::cli_abort(
+          "tool must be an ellmer ToolDef object",
+          class = "dsprrr_react_tools_error"
+        )
+      }
+      if (!rlang::is_bool(replace)) {
+        cli::cli_abort("{.arg replace} must be TRUE or FALSE")
       }
 
-      self$tools <- c(self$tools, list(tool))
+      existing <- match(tool@name, self$list_tools())
+      if (is.na(existing)) {
+        self$tools <- c(self$tools, list(tool))
+      } else if (replace) {
+        self$tools[[existing]] <- tool
+      } else {
+        cli::cli_abort(
+          c(
+            "The module already has a tool named {.val {tool@name}}",
+            "i" = "Use {.code add_tool(tool, replace = TRUE)} to replace it."
+          ),
+          class = "dsprrr_react_tools_error"
+        )
+      }
 
       # Also register on stored Chat if present
       if (!is.null(self$chat)) {
@@ -140,7 +149,9 @@ ReactModule <- R6::R6Class(
         error = function(e) 0L
       )
 
-      # Register all tools on the Chat
+      # Register all tools on the Chat. `tools` is a public field, so check
+      # again that no tool would replace another of the same name.
+      validate_react_tools(self$tools)
       for (tool in self$tools) {
         llm$register_tool(tool)
       }
@@ -533,6 +544,46 @@ ReactModule <- R6::R6Class(
 )
 
 
+#' Check a ReAct tool list
+#'
+#' ellmer registers tools on a Chat by name and silently replaces an existing
+#' tool with the same name, so a duplicate would shadow an earlier tool while
+#' the module still listed both.
+#' @noRd
+validate_react_tools <- function(tools) {
+  if (!is.list(tools)) {
+    cli::cli_abort(
+      "tools must be a list of ToolDef objects",
+      class = "dsprrr_react_tools_error"
+    )
+  }
+  for (i in seq_along(tools)) {
+    if (!inherits(tools[[i]], "ellmer::ToolDef")) {
+      cli::cli_abort(
+        c(
+          "All tools must be ellmer ToolDef objects",
+          "x" = "tools[[{i}]] is a {.cls {class(tools[[i]])[1]}}"
+        ),
+        class = "dsprrr_react_tools_error"
+      )
+    }
+  }
+  tool_names <- vapply(tools, function(tool) tool@name, character(1))
+  duplicates <- unique(tool_names[duplicated(tool_names)])
+  if (length(duplicates) > 0L) {
+    cli::cli_abort(
+      c(
+        "ReAct tool names must be unique",
+        "x" = "Duplicate name{?s}: {.val {duplicates}}",
+        "i" = "A later tool would replace an earlier one on the chat."
+      ),
+      class = "dsprrr_react_tools_error"
+    )
+  }
+  invisible(tools)
+}
+
+
 #' Create a tool-using ReAct module
 #'
 #' @description
@@ -543,7 +594,9 @@ ReactModule <- R6::R6Class(
 #' @param signature A signature from [signature()], or a signature string.
 #' @param tools A list of ellmer tool definitions, made with
 #'   [ellmer::tool()], [ragnar_tool()], [create_search_tool()] or
-#'   [as_ellmer_tool()].
+#'   [as_ellmer_tool()]. Their names must be unique. The module's
+#'   `$add_tool(tool, replace = FALSE)` adds one later; with `replace = TRUE`
+#'   it replaces the tool of the same name.
 #' @param max_iterations Maximum number of tool-calling rounds. Several tool
 #'   calls in one model turn count as one round. Exceeding the limit is an
 #'   error.

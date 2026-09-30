@@ -136,6 +136,65 @@ that holds R functions or tools also needs a `registry` when you save and
 restore it; see `pin_module_config()`. To use a saved module in a targets
 pipeline or a Quarto report, see [Run dsprrr in pipelines](orchestration.html).
 
+## Keep a reviewed version
+
+A pin keeps every version you save. To also record which version a person
+approved for production, and what it was compiled from, keep the program in
+[graft](https://jameshwade.github.io/graft/). Save the whole program with
+`save_program()`, store it with its training examples as evidence, and accept
+it for a purpose:
+
+```{r graft-promote}
+#| eval: false
+store <- graft::graft_store("programs", create = TRUE)
+id <- program_artifact_id(classifier)
+path <- save_program(classifier, tempfile(fileext = ".rds"))
+
+examples <- graft::graft_save(
+  store,
+  as.character(jsonlite::toJSON(trainset)),
+  id = "sentiment:trainset",
+  media_type = "application/json"
+)
+program <- graft::graft_save_file(
+  store,
+  path,
+  id = "sentiment:program",
+  dependencies = examples
+)
+graft::graft_accept(
+  store,
+  program,
+  stream = "sentiment-classifier",
+  expected = NULL,
+  key = id,
+  actor = "reviewer",
+  reason = "Checked its evaluation on held-out reviews",
+  purpose = "production"
+)
+```
+
+In production, load whichever program is accepted now:
+
+```{r graft-load}
+#| eval: false
+recall <- graft::graft_recall(
+  store,
+  stream = "sentiment-classifier",
+  purpose = "production",
+  eligible = TRUE
+)
+path <- tempfile(fileext = ".rds")
+writeBin(recall@roots[[1]]@bytes, path)
+production <- load_program(path)
+
+identical(program_artifact_id(production), id)
+```
+
+The ID from `program_artifact_id()` is also recorded in every call's metadata
+and trace, so a trace points to the exact program that was reviewed. graft
+keeps each acceptance, and any later withdrawal, in the stream's history.
+
 ## Save and inspect traces
 
 A module records a trace for each call it makes, with token counts, latency,

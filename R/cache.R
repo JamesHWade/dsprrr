@@ -2916,10 +2916,9 @@ is_cache_envelope <- function(x) {
 #' as a separate argument, so a multimodal payload list is spliced in.
 #' @noRd
 chat_structured_parts <- function(llm, prompt, output_type) {
-  do.call(
-    llm$chat_structured,
-    c(prompt_parts(prompt), list(type = output_type, echo = "none"))
-  )
+  args <- c(prompt_parts(prompt), list(type = output_type, echo = "none"))
+  args$run_context <- chat_run_context(llm)
+  do.call(llm$chat_structured, args)
 }
 
 #' Split a prompt payload into the parts ellmer expects
