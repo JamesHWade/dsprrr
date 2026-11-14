@@ -86,12 +86,68 @@ First development changelog. dsprrr is experimental; the API may change.
 
 ## New features
 
+* `conversation_history()` copies supported ellmer turns into a versioned,
+  tagged data envelope. `history_turns()` rebuilds fresh native turns, and
+  `load_history()` / `save_history()` persist the allowlisted history as
+  JSON. Assistant JSON and finish reasons are retained; usage, cost, and
+  duration metadata are reset. Unsupported and uploaded content, unresolved
+  tool requests, and unsafe data fail explicitly. Tool errors retain only
+  their message. Saved histories can contain sensitive conversation data.
+  RLM results now carry a version-2 conversation history of bounded, textual
+  invocation records and complete tagged final outputs. ReAct turns and RLM
+  exchanges are distinct history kinds and cannot be mixed.
+
+* `get_history()` returns the portable conversation history retained in a
+  structured result, or `NULL` when history was not requested.
+
+* `run()` accepts explicit `.history` for scalar root ReAct and RLM calls when
+  `.return_format = "structured"`. ReAct seeds portable turns without
+  executing prior tools. RLM renders bounded prior evidence into action and
+  fallback prompts, requires an invocation-owned interpreter factory, and
+  starts each call with fresh variables. Both return updated history through
+  `get_history()`; dataset, asynchronous and streaming entrypoints reject it.
+
+* `chain_of_thought()` now supports opt-in native provider thinking metadata
+  and a concise plan field, while retaining rationale output as the default.
+  Native thinking is available through `get_metadata()` when the provider
+  returns ellmer `ContentThinking`; it remains `NULL` when no current-call
+  thinking block is present. Native mode supports scalar synchronous and
+  asynchronous calls, and plan mode requires structured output.
+
+* `run_async()` keeps simple output as its default and now supports
+  `.return_format = "structured"` for Predict modules. It records canonical
+  success and failure traces, including decision and provider reasoning
+  metadata when available. Each resolved Chat stays reserved until its promise
+  settles; use separate Chats for overlapping calls. Factory-backed modules
+  retain simple results and reject structured results until they can preserve
+  the same trace contract.
+
+* `rlm_module()` and `rlm()` now support `reasoning_mode = "native"` for
+  code-only action responses with provider thinking metadata, and
+  `reasoning_mode = "plan"` for actions with a concise explicit plan. The
+  existing `"rationale"` action schema remains the default. Native metadata is
+  exposed on structured scalar results and remains absent when the provider
+  returns no thinking blocks; batch, async and streaming routes reject native
+  RLM execution before work begins.
+
 * Modules run through an agent runtime that follows ellmer's Chat protocol,
   such as a deputy `Agent`, are now correlated with the agent's runs. dsprrr
   passes the program ID and `.trace_context` to the agent as
   `run_context$dsprrr`, and records the agent's run (`run_id`, `agent_id`,
   `session_id` and `stop_reason`) as `agent_run` in each call's metadata and
   trace. Plain ellmer Chats are called as before.
+
+* `react()` accepts `finalization = "submit"` to let the model return its
+  schema-validated answer through a reserved `submit` tool call. This completes
+  in the tool loop without a separate structured-output request. The default
+  `finalization = "structured"` retains the existing follow-up behavior.
+
+* ReAct modules now support `run_async()` with sequential tool execution and
+  an awaited structured follow-up. `react_async_control()` adds ordered
+  progress events and cooperative cancellation between provider requests and
+  tools; it does not interrupt an active request or tool. Failure traces keep
+  partial Chat history, pending tool requests, and observed native tool results
+  distinct so unrun tools are never represented as completed.
 
 * Experimental calibrated decision outputs, following DSPy 3.4's decision
   types. `with_decisions()` attaches `decision_bool()`, `decision_score()`, or
@@ -202,6 +258,13 @@ First development changelog. dsprrr is experimental; the API may change.
   reports it, and runner policy. The one-call `rlm()` helper now creates a fresh
   managed `mcp-repl` sandbox factory by default, while still accepting an
   explicit runner or interpreter factory.
+
+  Recursive query slices also accept ordered JSON-native text and image records.
+  Remote images require HTTPS URLs without user info and up to 2,048 bytes;
+  inline image data is limited to 524,288 base64 bytes and the runner's
+  control-frame bound. Local paths and PDF records fail explicitly, and guest
+  records need no ellmer dependency. The managed mcp-repl runner defaults to a
+  3,000-byte control-frame limit.
 
 * The code-runner protocol now has explicit `start()`/`shutdown()` lifecycle
   hooks, typed repairable execution versus terminal interpreter failures, and

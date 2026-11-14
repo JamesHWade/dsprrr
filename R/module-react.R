@@ -34,6 +34,9 @@ ReactModule <- R6::R6Class(
     #' @param demos Optional list of demonstrations
     #' @param config Optional configuration list
     #' @param chat Optional ellmer Chat object
+    #' @param finalization How to obtain the final output. `"structured"` makes
+    #'   a structured follow-up request. `"submit"` accepts a schema-validated
+    #'   `submit` tool call during the tool loop.
     initialize = function(
       signature,
       tools = list(),
@@ -41,11 +44,20 @@ ReactModule <- R6::R6Class(
       template = "",
       demos = list(),
       config = list(),
-      chat = NULL
+      chat = NULL,
+      finalization = "structured"
     ) {
       super$initialize(signature, template, demos, config, chat)
 
       validate_react_tools(tools)
+      finalization <- validate_react_finalization(
+        config$.react_finalization %||% finalization
+      )
+      if (identical(finalization, "submit")) {
+        validate_react_submit_tool_names(tools)
+        react_submit_tool(signature@output_type)
+      }
+      self$config$.react_finalization <- finalization
 
       max_iterations <- as.integer(max_iterations)
       if (
@@ -134,7 +146,23 @@ ReactModule <- R6::R6Class(
     #' @param trace Logical whether to record trace information
     #' @param ... Additional arguments
     #' @return Tibble with result, .chat, .metadata columns
-    forward = function(batch, .llm = NULL, trace = TRUE, ...) {
+    forward = function(batch, .llm = NULL, trace = TRUE, ..., .history = NULL) {
+      assert_explicit_react_history(
+        self,
+        .history,
+        entrypoint = "ReactModule$forward()"
+      )
+      if (
+        !is.null(.history) &&
+          is.data.frame(batch) &&
+          nrow(batch) != 1L
+      ) {
+        assert_explicit_history_scalar(
+          .history,
+          list(kind = "batch"),
+          "ReactModule$forward()"
+        )
+      }
       # Handle both list and data frame inputs
       if (is.data.frame(batch)) {
         inputs <- as.list(batch[1, , drop = FALSE])
@@ -142,18 +170,57 @@ ReactModule <- R6::R6Class(
         inputs <- batch
       }
 
+      if (!is.null(.history)) {
+        assert_explicit_history_scalar(
+          .history,
+          module_input_contract(self, inputs),
+          "ReactModule$forward()"
+        )
+      }
+
       request <- build_module_request(self, inputs)
       llm <- resolve_module_llm(self, .llm = .llm)
+      if (!is.null(.history)) {
+        llm <- react_history_prepare(llm, .history)
+      }
+      finalization <- validate_react_finalization(
+        self$config$.react_finalization %||% "structured"
+      )
+      validate_react_tools(self$tools)
       start_turn_count <- tryCatch(
         length(llm$get_turns()),
         error = function(e) 0L
       )
 
+      submit_runtime <- NULL
+      remove_submit_callback <- NULL
+      submit_invocation_marker <- if (identical(finalization, "submit")) {
+        new.env(parent = emptyenv())
+      } else {
+        NULL
+      }
+      if (identical(finalization, "submit")) {
+        submit_runtime <- react_submit_prepare(
+          llm,
+          self$tools,
+          self$signature@output_type
+        )
+        on.exit(
+          react_submit_cleanup(
+            llm,
+            submit_runtime,
+            remove_submit_callback
+          ),
+          add = TRUE
+        )
+      }
+
       # Register all tools on the Chat. `tools` is a public field, so check
       # again that no tool would replace another of the same name.
-      validate_react_tools(self$tools)
-      for (tool in self$tools) {
-        llm$register_tool(tool)
+      if (!identical(finalization, "submit")) {
+        for (tool in self$tools) {
+          llm$register_tool(tool)
+        }
       }
 
       prompt <- request$full_prompt
@@ -189,6 +256,83 @@ ReactModule <- R6::R6Class(
         ))
       }
 
+      if (identical(finalization, "submit")) {
+        remove_submit_callback <- react_submit_on_request_end(
+          llm,
+          function(turn) {
+            if (!inherits(turn, "ellmer::AssistantTurn")) {
+              return(invisible(NULL))
+            }
+
+            current_turns <- get_turns_safe(llm)
+            current_run_turns <- if (length(current_turns) > start_turn_count) {
+              current_turns[
+                seq.int(start_turn_count + 1L, length(current_turns))
+              ]
+            } else {
+              list(turn)
+            }
+            iteration_count <- count_tool_iterations(current_run_turns)
+            if (iteration_count > self$max_iterations) {
+              cli::cli_abort(
+                "ReAct exceeded max_iterations ({self$max_iterations})",
+                class = "dsprrr_react_iteration_limit"
+              )
+            }
+
+            requests <- Filter(
+              function(content) {
+                inherits(content, "ellmer::ContentToolRequest")
+              },
+              turn@contents
+            )
+            submit_requests <- Filter(
+              function(request) identical(request@name, "submit"),
+              requests
+            )
+            if (length(submit_requests) == 0L) {
+              return(invisible(NULL))
+            }
+            if (length(requests) != 1L || length(submit_requests) != 1L) {
+              cli::cli_abort(
+                c(
+                  "A ReAct submit request cannot share a turn with other tools",
+                  "i" = "The request was rejected before any tool was run."
+                ),
+                class = "dsprrr_react_submit_mixed_tools"
+              )
+            }
+
+            submit_request <- submit_requests[[1L]]
+            submitted_value <- tryCatch(
+              react_submit_validate(
+                submit_request@arguments,
+                self$signature@output_type,
+                !inherits(
+                  self$signature@output_type,
+                  "ellmer::TypeObject"
+                )
+              ),
+              dsprrr_react_submit_validation_error = function(error) error
+            )
+            if (
+              inherits(
+                submitted_value,
+                "dsprrr_react_submit_validation_error"
+              )
+            ) {
+              submit_runtime$validation_state$invalid_submit <- submitted_value
+              return(invisible(NULL))
+            }
+            react_submit_completed(
+              submit_request,
+              submitted_value,
+              submit_invocation_marker
+            )
+          }
+        )
+      }
+
       # ellmer's callback fires before executing a tool. The returned remover
       # keeps this per-run guard from leaking into subsequent conversations.
       if (is.function(llm$on_tool_request)) {
@@ -214,6 +358,9 @@ ReactModule <- R6::R6Class(
       }
 
       n_turns_before <- length(get_turns_safe(llm))
+      submit_completion <- NULL
+      user_turn_before_completion <- NULL
+      final_turn_before_completion <- NULL
 
       tryCatch(
         {
@@ -222,8 +369,30 @@ ReactModule <- R6::R6Class(
             c(prompt_parts(request$payload), list(echo = "none"))
           )
         },
+        dsprrr_react_submit_completed = function(error) {
+          if (
+            !identical(finalization, "submit") ||
+              is.null(submit_invocation_marker) ||
+              !identical(
+                error$invocation_marker,
+                submit_invocation_marker
+              )
+          ) {
+            stop(error)
+          }
+          submit_completion <<- error
+          invisible(NULL)
+        },
         error = function(e) {
-          if (inherits(e, "dsprrr_react_iteration_limit")) {
+          if (
+            inherits(
+              e,
+              c(
+                "dsprrr_react_iteration_limit",
+                "dsprrr_react_submit_mixed_tools"
+              )
+            )
+          ) {
             stop(e)
           }
           cli::cli_abort(
@@ -233,6 +402,30 @@ ReactModule <- R6::R6Class(
           )
         }
       )
+
+      if (!is.null(submit_completion)) {
+        user_turn_before_completion <- tryCatch(
+          llm$last_turn(role = "user"),
+          error = function(e) NULL
+        )
+        final_turn_before_completion <- tryCatch(
+          llm$last_turn(role = "assistant"),
+          error = function(e) NULL
+        )
+        react_submit_complete(
+          llm,
+          submit_completion$request,
+          submit_completion$value
+        )
+      } else if (identical(finalization, "submit")) {
+        cli::cli_abort(
+          c(
+            "ReAct submit finalization requires a valid submit tool call",
+            "i" = "The model returned without submitting the declared output."
+          ),
+          class = "dsprrr_react_submit_missing"
+        )
+      }
 
       all_conversation_turns <- get_turns_safe(llm)
       n_turns_after <- length(all_conversation_turns)
@@ -289,22 +482,25 @@ ReactModule <- R6::R6Class(
         )
       }
 
-      # Get final structured output
-      result <- tryCatch(
-        {
-          llm$chat_structured(
-            "Based on the conversation above, provide your final answer.",
-            type = self$signature@output_type,
-            echo = "none"
-          )
-        },
-        error = function(e) {
-          cli::cli_abort(
-            "Failed to get structured output: {e$message}",
-            parent = e
-          )
-        }
-      )
+      result <- if (!is.null(submit_completion)) {
+        submit_completion$value
+      } else {
+        tryCatch(
+          {
+            llm$chat_structured(
+              "Based on the conversation above, provide your final answer.",
+              type = self$signature@output_type,
+              echo = "none"
+            )
+          },
+          error = function(e) {
+            cli::cli_abort(
+              "Failed to get structured output: {e$message}",
+              parent = e
+            )
+          }
+        )
+      }
 
       # Calculate metrics
       end_time <- Sys.time()
@@ -313,13 +509,21 @@ ReactModule <- R6::R6Class(
 
       # Get the final assistant turn
       final_turn <- tryCatch(
-        llm$last_turn(role = "assistant"),
+        final_turn_before_completion %||% llm$last_turn(role = "assistant"),
         error = function(e) NULL
       )
 
       # Get the initial user turn
+      new_user_turns <- Filter(
+        function(turn) identical(turn@role, "user"),
+        new_turns
+      )
       user_turn <- tryCatch(
-        llm$last_turn(role = "user"),
+        if (length(new_user_turns) > 0L) {
+          new_user_turns[[1L]]
+        } else {
+          user_turn_before_completion %||% llm$last_turn(role = "user")
+        },
         error = function(e) NULL
       )
       turns <- tryCatch(
@@ -353,7 +557,18 @@ ReactModule <- R6::R6Class(
       }
 
       # Add final turn metrics
-      if (!is.null(final_turn) && !is.null(final_turn@tokens)) {
+      final_turn_in_all_turns <- !is.null(final_turn) &&
+        any(vapply(
+          all_turns,
+          identical,
+          logical(1),
+          final_turn
+        ))
+      if (
+        !is.null(final_turn) &&
+          !final_turn_in_all_turns &&
+          !is.null(final_turn@tokens)
+      ) {
         total_input <- total_input + (final_turn@tokens[1] %||% 0)
         total_output <- total_output + (final_turn@tokens[2] %||% 0)
         total_cached <- total_cached + (final_turn@tokens[3] %||% 0)
@@ -363,6 +578,12 @@ ReactModule <- R6::R6Class(
       total_cost <- sum_cost_values(turn_costs)
 
       model <- tryCatch(llm$get_model(), error = function(e) NA_character_)
+
+      conversation_history <- if (!is.null(.history)) {
+        react_history_finish(llm, .history)
+      } else {
+        NULL
+      }
 
       # Create metadata
       metadata <- list(
@@ -380,13 +601,25 @@ ReactModule <- R6::R6Class(
         iterations = iterations,
         tool_calls = tool_calls,
         history = turns,
-        finalization = "structured-followup",
+        finalization = if (!is.null(submit_completion)) {
+          "submit"
+        } else {
+          "structured-followup"
+        },
+        termination_reason = if (!is.null(submit_completion)) {
+          "submitted"
+        } else {
+          "structured"
+        },
         tools_used = unique(vapply(
           tool_calls,
           function(x) x$tool_name,
           character(1)
         ))
       )
+      if (!is.null(.history)) {
+        metadata$conversation_history <- conversation_history
+      }
 
       # Record trace if requested
       if (trace) {
@@ -402,6 +635,8 @@ ReactModule <- R6::R6Class(
           all_turns = all_turns,
           tool_calls = tool_calls,
           iterations = iterations,
+          finalization = metadata$finalization,
+          termination_reason = metadata$termination_reason,
           latency_ms = latency_ms,
           tokens = list(
             input_tokens = total_input,
@@ -499,6 +734,7 @@ ReactModule <- R6::R6Class(
           signature = self$signature,
           tools = self$tools,
           max_iterations = self$max_iterations,
+          finalization = self$config$.react_finalization %||% "structured",
           template = self$template,
           demos = list(),
           config = list(),
@@ -533,6 +769,7 @@ ReactModule <- R6::R6Class(
         signature = new_signature,
         tools = self$tools, # Tools are immutable ToolDef objects
         max_iterations = self$max_iterations,
+        finalization = self$config$.react_finalization %||% "structured",
         template = self$template,
         demos = new_demos,
         config = new_config,
@@ -591,8 +828,8 @@ validate_react_tools <- function(tools) {
 #'
 #' @description
 #' `react()` builds an agent that alternates between reasoning and calling
-#' tools until it can answer, then returns a structured answer that follows
-#' the signature (the ReAct pattern).
+#' tools until it can answer, then returns an answer that follows the signature
+#' (the ReAct pattern).
 #'
 #' @param signature A signature from [signature()], or a signature string.
 #' @param tools A list of ellmer tool definitions, made with
@@ -604,13 +841,21 @@ validate_react_tools <- function(tools) {
 #'   calls in one model turn count as one round. Exceeding the limit is an
 #'   error.
 #' @param chat,template,demos,config As in [module()].
+#' @param finalization How to obtain the final output. `"structured"` (the
+#'   default) makes a structured follow-up request. `"submit"` adds a reserved
+#'   `submit` tool and returns a valid submission from the tool loop.
 #' @param ... Must be empty.
 #'
 #' @details
 #' ellmer runs the tool-calling loop: the model's tool requests are executed
 #' and their results sent back, keeping ellmer's turn history and tool-call
-#' IDs. After the loop, one more request asks for the final answer in the
-#' signature's output format. ReAct calls do not use the response cache.
+#' IDs. With `finalization = "structured"`, one more request asks for the final
+#' answer in the signature's output format. With `finalization = "submit"`,
+#' the model calls the schema-derived `submit` tool to finish within the same
+#' loop. The submission is validated against the signature, and no additional
+#' provider request is made after it. Submit finalization requires an ellmer
+#' Chat with public request-end callbacks and tool-registry methods. ReAct calls
+#' do not use the response cache.
 #'
 #' [run()] accepts one input at a time for this module; use [run_dataset()]
 #' for several. With `.return_format = "structured"`, the metadata records
@@ -635,6 +880,7 @@ validate_react_tools <- function(tools) {
 #'   tools = list(lookup_population),
 #'   max_iterations = 5L
 #' )
+#' submit_agent <- react("question -> answer", finalization = "submit")
 #' agent
 #'
 #' \dontrun{
@@ -652,6 +898,7 @@ react <- function(
   template = "",
   demos = list(),
   config = list(),
+  finalization = c("structured", "submit"),
   ...
 ) {
   reject_partial_argument_matches(sys.call(), sys.function())
@@ -672,10 +919,29 @@ react <- function(
   }
   assert_ellmer_chat(chat, arg = "chat", allow_null = TRUE)
 
+  finalization <- tryCatch(
+    match.arg(finalization),
+    error = function(error) {
+      cli::cli_abort(
+        "{.arg finalization} must be {.val structured} or {.val submit}",
+        class = "dsprrr_react_finalization_error",
+        parent = error
+      )
+    }
+  )
+  if (is.null(config)) {
+    config <- list()
+  }
+  if (!is.list(config)) {
+    cli::cli_abort("{.arg config} must be a list")
+  }
+  config$.react_finalization <- finalization
+
   mod <- ReactModule$new(
     signature = signature,
     tools = tools,
     max_iterations = max_iterations,
+    finalization = finalization,
     template = template,
     demos = demos,
     config = config,

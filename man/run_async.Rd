@@ -4,7 +4,15 @@
 \alias{run_async}
 \title{Run a module asynchronously}
 \usage{
-run_async(module, ..., .llm = NULL, .trace_context = list())
+run_async(
+  module,
+  ...,
+  .llm = NULL,
+  .return_format = c("simple", "structured"),
+  .trace_context = list(),
+  .history = NULL,
+  .control = NULL
+)
 }
 \arguments{
 \item{module}{A prediction module from \code{\link[=module]{module()}} or \code{\link[=chain_of_thought]{chain_of_thought()}},
@@ -18,12 +26,25 @@ values).}
 omitted. Give concurrent calls separate chats, for example with
 \code{llm$clone()}.}
 
+\item{.return_format}{Either \code{"simple"} (the default), which resolves to the
+output value, or \code{"structured"}, which resolves to a \code{dsprrr_result} with
+\code{output}, \code{chat}, and \code{metadata} fields.}
+
 \item{.trace_context}{A named, JSON-compatible list, as in \code{\link[=run]{run()}}. The
-promise carries it in its \code{dsprrr_trace_context} attribute.}
+promise carries it in its \code{dsprrr_trace_context} attribute. Direct Predict
+calls also record it in the module's traces.}
+
+\item{.history}{Explicit conversation history is not supported by async
+execution; use synchronous \code{\link[=run]{run()}} for scalar root ReAct continuation.}
+
+\item{.control}{An optional \code{\link[=react_async_control]{react_async_control()}} for cooperative
+cancellation and progress reporting. Supported only for \code{\link[=react]{react()}} modules.}
 }
 \value{
-A promise that resolves to the module's output, the same value
-that \code{\link[=run]{run()}} returns by default.
+A promise that resolves to the module's output, matching
+\code{\link[=run]{run()}}'s default result, or to a \code{dsprrr_result} when
+\code{.return_format = "structured"}. Provider, decoding, and completion
+failures reject the promise.
 }
 \description{
 \code{run_async()} starts one call of a module and returns a promise instead of
@@ -32,12 +53,29 @@ responsive and several calls can be in flight at once. Handle the result
 with the promises package, for example \code{promises::then()}.
 }
 \details{
-Prediction modules call ellmer's \code{chat_structured_async()} directly: the
-call does not use the response cache and records no trace or prompt
-history. Code-running modules run their whole workflow in a separate mirai
-process with a fresh interpreter; modules bound to a caller-owned \code{runner}
+Prediction modules call ellmer's \code{chat_structured_async()} directly. These
+calls bypass the response cache and record one trace on either success or
+failure. Structured results include canonical usage, decisions, and any
+provider-supplied native reasoning blocks recorded for the current call;
+unavailable usage remains \code{NA} and absent native reasoning remains \code{NULL}.
+ReAct failures and cancellations preserve the partial native Chat history,
+observed tool results, and requested-versus-result status in the trace. That
+partial history is not a portable continuation or an instruction to replay
+tools.
+Factory-backed code-running modules keep their simple result behavior;
+structured results are rejected because that worker path does not yet
+preserve the same trace contract. Modules bound to a caller-owned \code{runner}
 are rejected, because one runner cannot serve concurrent calls. Other
-modules, such as \code{\link[=react]{react()}} or pipelines, are rejected; use \code{\link[=run]{run()}}.
+specialized modules, such as pipelines, are rejected; use \code{\link[=run]{run()}}.
+
+Each direct provider call reserves its resolved Chat until the promise
+settles. A concurrent call using that same Chat is rejected before provider
+work; use separate Chats for overlapping calls.
+
+ReAct modules use ellmer's sequential async tool loop and await their
+structured follow-up when configured. Their optional \code{.control} reports
+progress and supports cooperative cancellation between requests and tools;
+it does not interrupt a request or tool already in progress.
 }
 \examples{
 \dontrun{

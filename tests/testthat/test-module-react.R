@@ -359,6 +359,7 @@ test_that("ReactModule forward tracks tool calls from ellmer turns", {
     "ellmer::Turn"
   )))
   expect_identical(metadata$finalization, "structured-followup")
+  expect_identical(metadata$termination_reason, "structured")
   expect_true(is.na(metadata$cost))
   expect_equal(mod$state$traces[[1]]$iterations, 2L)
 })

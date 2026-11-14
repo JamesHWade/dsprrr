@@ -842,3 +842,57 @@ test_that("GEPA reflection receives feedback from bounded RLM trajectories", {
     fixed = TRUE
   )))
 })
+
+test_that("GEPA reflection accepts plan-only RLM action traces", {
+  skip_if_not_installed("callr")
+  local_reset_cache()
+
+  runner <- r_code_runner(timeout = 10, persistent = TRUE)
+  withr::defer(runner$shutdown())
+  program <- make_rlm_optimizer_program(
+    runner,
+    reasoning_mode = "plan"
+  )
+  chat <- make_rlm_optimizer_chat()
+  observed_plans <- character()
+  plan_metric <- metric_with_trace(
+    function(prediction, expected, program_trace) {
+      event <- program_trace$events[[length(program_trace$events)]]
+      action <- event$history[[1L]]
+      observed_plans <<- c(observed_plans, action$plan)
+      list(
+        score = 0,
+        feedback = paste0("PLAN-ONLY-FEEDBACK: ", action$plan)
+      )
+    },
+    field = "answer"
+  )
+
+  run <- capture_rlm_optimizer_warnings(
+    compile(
+      program,
+      GEPA(
+        metric = plan_metric,
+        population_size = 2L,
+        generations = 2L,
+        mutation_rate = 1,
+        crossover_rate = 0,
+        component_selector = "round_robin",
+        use_merge = FALSE,
+        seed = 29L,
+        verbose = FALSE
+      ),
+      data.frame(question = "inspect", answer = "yes"),
+      .llm = chat
+    )
+  )
+  expect_only_rlm_fallback_warnings(run)
+
+  expect_gt(length(observed_plans), 0L)
+  expect_true(all(nzchar(observed_plans)))
+  expect_true(any(grepl(
+    "PLAN-ONLY-FEEDBACK:",
+    chat$optimizer_state$reflection_prompts,
+    fixed = TRUE
+  )))
+})

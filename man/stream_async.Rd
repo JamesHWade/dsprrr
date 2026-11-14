@@ -4,7 +4,7 @@
 \alias{stream_async}
 \title{Stream a module's text output asynchronously}
 \usage{
-stream_async(module, ..., .llm = NULL)
+stream_async(module, ..., .llm = NULL, .history = NULL)
 }
 \arguments{
 \item{module}{A prediction module from \code{\link[=module]{module()}} or \code{\link[=chain_of_thought]{chain_of_thought()}}.
@@ -14,6 +14,9 @@ Other modules are rejected before any request; use \code{\link[=run]{run()}} for
 
 \item{.llm}{An ellmer Chat; see \code{\link[=run]{run()}} for how it is chosen when
 omitted.}
+
+\item{.history}{Explicit conversation history is not supported by async
+streaming; use synchronous \code{\link[=run]{run()}} for scalar root ReAct continuation.}
 }
 \value{
 An async generator that yields the response text in chunks.
@@ -27,7 +30,11 @@ structured results, use \code{\link[=run_stream]{run_stream()}}.
 }
 \details{
 The generator comes from ellmer's \code{Chat$stream_async()}. The call does not
-use the response cache and records no trace.
+use the response cache and records no trace. It returns unstructured text,
+so \code{chain_of_thought(mode = "plan")} and \code{mode = "native"} are rejected
+rather than dropping the plan field or native metadata. Use \code{\link[=run_async]{run_async()}}
+for a structured plan, or synchronous structured \code{\link[=run]{run()}} for native
+metadata.
 }
 \examples{
 \dontrun{
