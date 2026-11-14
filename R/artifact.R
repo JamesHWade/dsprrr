@@ -3451,6 +3451,10 @@ artifact_validate_field_domains <- function(node, malformed) {
     malformed(paste0("Node ", node$id, " has invalid ", label, "."))
   }
   fields <- node$fields
+  react_finalization <- node$config$.react_finalization
+  valid_react_finalization <- is.null(react_finalization) ||
+    (artifact_is_character_scalar(react_finalization, nonempty = TRUE) &&
+      react_finalization %in% c("structured", "submit"))
   valid_template <- function(value) artifact_is_character_scalar(value)
   valid_demos <- function(value) artifact_is_plain_list(value)
   positive_integer <- function(value) {
@@ -3469,7 +3473,8 @@ artifact_validate_field_domains <- function(node, malformed) {
     node$class,
     ReactModule = valid_template(fields$template) &&
       valid_demos(fields$demos) &&
-      positive_integer(fields$max_iterations),
+      positive_integer(fields$max_iterations) &&
+      valid_react_finalization,
     PredictModule = valid_template(fields$template) &&
       valid_demos(fields$demos),
     PipelineModule = artifact_validate_pipeline_fields(node, malformed),

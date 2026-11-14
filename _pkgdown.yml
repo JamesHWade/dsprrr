@@ -245,6 +245,14 @@ reference:
     - stream_async
     - accessors
 
+  - title: Conversation history
+    desc: Copy, inspect, and save portable ellmer conversation turns.
+    contents:
+    - conversation_history
+    - history_turns
+    - save_history
+    - load_history
+
   - title: Validate outputs
     desc: Check outputs and retry with feedback when a check fails.
     contents:

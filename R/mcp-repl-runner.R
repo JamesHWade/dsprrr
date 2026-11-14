@@ -771,9 +771,24 @@ McpReplRunner <- R6::R6Class(
         # The module decodes this value again after the runner boundary. Mark
         # it with a process-local identity so arbitrary classed R
         # objects returned by generated code cannot impersonate control frames.
-        decode_rlm_control(raw_text, .control_nonce, .attest = TRUE)
+        tryCatch(
+          decode_rlm_control(
+            raw_text,
+            .control_nonce,
+            .attest = TRUE,
+            max_bytes = control_max_bytes
+          ),
+          dsprrr_rlm_control_frame_size_error = identity
+        )
       } else {
         NULL
+      }
+      if (inherits(control_value, "dsprrr_rlm_control_frame_size_error")) {
+        return(mcp_repl_transport_error_result(
+          "control-frame-limit",
+          stdout = text,
+          duration_ms = duration_ms
+        ))
       }
       if (identical(control_protocol, "flex") && is.null(control_value)) {
         return(mcp_repl_transport_error_result(
