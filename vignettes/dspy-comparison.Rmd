@@ -437,6 +437,9 @@ This first resume contract covers sequential `round_robin` component
 selection over plain Predict leaves and built-in predictor pipelines, with
 plain-data predictions. It rejects Flex, custom module types or selectors,
 custom Chats, and Chats containing tools or prior turns before provider work.
+Mutable searches require at least one validation row, using `trainset` when
+`valset` is omitted. Metrics must return finite scores or `NA`; infinite scores
+are rejected before their row is saved.
 Algorithm configuration and model/runtime identities must match the saved
 search; resource limits may change. Checkpoints retain search state, row
 evidence, lineage, and RNG state without serializing live Chats or executable
