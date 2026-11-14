@@ -1385,3 +1385,240 @@ test_that("checkpointed GEPA rejects opaque and stateful Chats before work", {
   expect_false(file.exists(custom_path))
   expect_false(file.exists(turns_path))
 })
+
+test_that("checkpointed GEPA refreshes partial summaries at record commits", {
+  mocks <- gepa_resume_test_mocks()
+  testthat::local_mocked_bindings(
+    eval_program = mocks$eval_program,
+    gepa_propose_component_instructions = mocks$propose,
+    .package = "dsprrr"
+  )
+  program <- gepa_resume_test_program()
+  dataset <- data.frame(
+    question = c("q1", "q2"),
+    answer = c("a1", "a2")
+  )
+  teleprompter <- GEPA(
+    metrics = gepa_resume_test_metrics(),
+    population_size = 2L,
+    generations = 2L,
+    mutation_rate = 1,
+    crossover_rate = 0,
+    selection = "current_best",
+    seed = 86L,
+    verbose = FALSE,
+    track_stats = TRUE
+  )
+  component_specs <- gepa_checkpoint_supported_program(program)
+  interrupt <- new.env(parent = emptyenv())
+  interrupt$path <- NULL
+  interrupt$record_count <- NA_integer_
+  interrupt$generation <- NA_integer_
+  writer_observations <- new.env(parent = emptyenv())
+  writer_observations$n <- 0L
+  original_writer <- optimizer_checkpoint_write
+  testthat::local_mocked_bindings(
+    optimizer_checkpoint_write = function(
+      context,
+      phase,
+      search_state,
+      ...
+    ) {
+      result <- original_writer(context, phase, search_state, ...)
+      checkpoint <- optimizer_checkpoint_read(context$path)
+      gepa_checkpoint_state_validate(
+        checkpoint$progress$search_state,
+        program,
+        component_specs,
+        names(gepa_resume_test_metrics()),
+        dataset,
+        dataset,
+        teleprompter,
+        context$budget
+      )
+      writer_observations$n <- writer_observations$n + 1L
+      if (
+        identical(context$path, interrupt$path) &&
+          identical(phase, "evaluating") &&
+          identical(search_state$generation, interrupt$generation) &&
+          identical(
+            length(search_state$all_records),
+            interrupt$record_count
+          ) &&
+          is.null(search_state$active_candidate)
+      ) {
+        interrupt$record_count <- NA_integer_
+        stop("injected interruption after durable candidate commit")
+      }
+      result
+    },
+    .package = "dsprrr"
+  )
+
+  path <- withr::local_tempfile(fileext = ".rds")
+  full_path <- withr::local_tempfile(fileext = ".rds")
+  unlink(c(path, full_path))
+  withr::local_seed(917L)
+  caller_rng <- get(".Random.seed", envir = globalenv())
+
+  partial <- gepa_resume_test_compile(
+    path,
+    control_args = list(max_metric_calls = 5L),
+    program = program,
+    trainset = dataset,
+    teleprompter = teleprompter
+  )
+  expect_true(gepa_test_metadata(partial)$partial)
+  expect_identical(get(".Random.seed", envir = globalenv()), caller_rng)
+  partial_state <- optimizer_checkpoint_read(path)$progress$search_state
+  expect_length(partial_state$all_generations[["1"]]$record_keys, 2L)
+  expect_length(partial_state$all_generations[["2"]]$record_keys, 0L)
+  generation_one_summary <- partial_state$all_generations[["1"]]
+
+  interrupt$path <- path
+  interrupt$record_count <- 3L
+  interrupt$generation <- 2L
+  expect_error(
+    gepa_resume_test_compile(
+      path,
+      control_args = list(max_metric_calls = 100L),
+      program = program,
+      trainset = dataset,
+      teleprompter = teleprompter,
+      resume = TRUE
+    ),
+    "injected interruption after durable candidate commit"
+  )
+  expect_identical(get(".Random.seed", envir = globalenv()), caller_rng)
+  first_commit <- optimizer_checkpoint_read(path)
+  first_commit_state <- first_commit$progress$search_state
+  expect_length(first_commit_state$all_records, 3L)
+  expect_length(first_commit_state$all_generations[["2"]]$record_keys, 1L)
+  expect_identical(
+    first_commit_state$all_generations[["1"]],
+    generation_one_summary
+  )
+
+  calls_before_same_limit <- c(mocks$eval_calls$n, mocks$proposal_calls$n)
+  stopped <- gepa_resume_test_compile(
+    path,
+    control_args = list(max_metric_calls = 6L),
+    program = program,
+    trainset = dataset,
+    teleprompter = teleprompter,
+    resume = TRUE
+  )
+  expect_true(gepa_test_metadata(stopped)$partial)
+  expect_identical(
+    c(mocks$eval_calls$n, mocks$proposal_calls$n),
+    calls_before_same_limit
+  )
+  second_partial_state <- optimizer_checkpoint_read(path)$progress$search_state
+  expect_length(second_partial_state$all_generations[["2"]]$record_keys, 1L)
+  expect_identical(
+    second_partial_state$all_generations[["1"]],
+    generation_one_summary
+  )
+
+  interrupt$record_count <- 4L
+  expect_error(
+    gepa_resume_test_compile(
+      path,
+      control_args = list(max_metric_calls = 100L),
+      program = program,
+      trainset = dataset,
+      teleprompter = teleprompter,
+      resume = TRUE
+    ),
+    "injected interruption after durable candidate commit"
+  )
+  expect_identical(get(".Random.seed", envir = globalenv()), caller_rng)
+  second_commit_state <- optimizer_checkpoint_read(path)$progress$search_state
+  expect_length(second_commit_state$all_records, 4L)
+  expect_length(second_commit_state$all_generations[["2"]]$record_keys, 2L)
+  expect_identical(
+    second_commit_state$all_generations[["1"]],
+    generation_one_summary
+  )
+
+  resumed <- gepa_resume_test_compile(
+    path,
+    control_args = list(max_metric_calls = 100L),
+    program = program,
+    trainset = dataset,
+    teleprompter = teleprompter,
+    resume = TRUE
+  )
+  resumed_checkpoint <- optimizer_checkpoint_read(path)
+  calls_after_completion <- c(mocks$eval_calls$n, mocks$proposal_calls$n)
+  terminal <- gepa_resume_test_compile(
+    path,
+    control_args = list(max_metric_calls = 100L),
+    program = program,
+    trainset = dataset,
+    teleprompter = teleprompter,
+    resume = TRUE
+  )
+  expect_identical(
+    c(mocks$eval_calls$n, mocks$proposal_calls$n),
+    calls_after_completion
+  )
+  expect_false(gepa_test_metadata(terminal)$partial)
+  expect_identical(get(".Random.seed", envir = globalenv()), caller_rng)
+
+  full_mocks <- gepa_resume_test_mocks()
+  testthat::local_mocked_bindings(
+    eval_program = full_mocks$eval_program,
+    gepa_propose_component_instructions = full_mocks$propose,
+    .package = "dsprrr"
+  )
+  full <- gepa_resume_test_compile(
+    full_path,
+    program = program,
+    trainset = dataset,
+    teleprompter = teleprompter
+  )
+  full_checkpoint <- optimizer_checkpoint_read(full_path)
+
+  expect_gt(writer_observations$n, 0L)
+  expect_identical(c(mocks$eval_calls$n, mocks$proposal_calls$n), c(8L, 3L))
+  expect_identical(
+    c(full_mocks$eval_calls$n, full_mocks$proposal_calls$n),
+    c(8L, 3L)
+  )
+  expect_identical(
+    resumed_checkpoint$progress$search_state$all_records,
+    full_checkpoint$progress$search_state$all_records
+  )
+  expect_identical(
+    resumed_checkpoint$progress$search_state$all_generations,
+    full_checkpoint$progress$search_state$all_generations
+  )
+  expect_identical(resumed_checkpoint$rng, full_checkpoint$rng)
+  expect_identical(
+    gepa_test_metadata(resumed)$all_generations,
+    gepa_test_metadata(full)$all_generations
+  )
+  expect_identical(
+    gepa_test_metadata(resumed)$best_scores,
+    gepa_test_metadata(full)$best_scores
+  )
+  expect_identical(
+    resumed_checkpoint$budget[c(
+      "attempts",
+      "successes",
+      "total_errors",
+      "metric_calls",
+      "provider_calls",
+      "trials"
+    )],
+    full_checkpoint$budget[c(
+      "attempts",
+      "successes",
+      "total_errors",
+      "metric_calls",
+      "provider_calls",
+      "trials"
+    )]
+  )
+})

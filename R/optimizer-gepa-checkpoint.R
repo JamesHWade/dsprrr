@@ -1583,6 +1583,32 @@ gepa_checkpoint_best_record_key <- function(records, selection, metric_names) {
   keys[[best]]
 }
 
+gepa_checkpoint_refresh_generation_summary <- function(state, teleprompter) {
+  if (!isTRUE(gepa_teleprompter_property(teleprompter, "track_stats", TRUE))) {
+    return(state)
+  }
+  generation_records <- state$all_records[state$generation_record_keys]
+  complete_keys <- names(generation_records)[vapply(
+    generation_records,
+    function(record) isTRUE(record$complete),
+    logical(1)
+  )]
+  complete_keys <- complete_keys %||% character()
+  complete_records <- generation_records[complete_keys]
+  candidate_valid <- vapply(
+    complete_records,
+    function(record) isTRUE(record$candidate_valid),
+    logical(1)
+  )
+  state$all_generations[[as.character(state$generation)]] <- list(
+    generation = as.integer(state$generation),
+    record_keys = complete_keys,
+    n_selectable = as.integer(sum(candidate_valid)),
+    n_invalid = as.integer(sum(!candidate_valid))
+  )
+  state
+}
+
 gepa_checkpoint_update_selection <- function(
   state,
   teleprompter,
@@ -1609,31 +1635,6 @@ gepa_checkpoint_update_selection <- function(
       metric_threshold = teleprompter@metric_threshold
     )
   })
-  generation_records <- state$all_records[state$generation_record_keys]
-  complete_keys <- names(generation_records)[vapply(
-    generation_records,
-    function(record) isTRUE(record$complete),
-    logical(1)
-  )]
-  complete_keys <- complete_keys %||% character()
-  complete_records <- lapply(
-    generation_records[complete_keys],
-    function(record) {
-      gepa_checkpoint_hydrate_record(
-        record,
-        program,
-        validation_dataset,
-        discovery_dataset,
-        metrics,
-        component_specs,
-        metric_threshold = teleprompter@metric_threshold
-      )
-    }
-  )
-  selectable_current <- Filter(
-    gepa_component_record_selectable,
-    complete_records
-  )
   if (
     state$candidate_index > length(state$population) &&
       is.null(state$active_candidate)
@@ -1643,21 +1644,7 @@ gepa_checkpoint_update_selection <- function(
       as.integer(state$generation)
     )
   }
-  if (isTRUE(gepa_teleprompter_property(teleprompter, "track_stats", TRUE))) {
-    state$all_generations[[as.character(state$generation)]] <- list(
-      generation = as.integer(state$generation),
-      record_keys = complete_keys,
-      n_selectable = as.integer(length(selectable_current)),
-      n_invalid = as.integer(sum(
-        !vapply(
-          complete_records,
-          function(record) isTRUE(record$candidate_valid),
-          logical(1)
-        )
-      ))
-    )
-  }
-  state
+  gepa_checkpoint_refresh_generation_summary(state, teleprompter)
 }
 
 gepa_checkpoint_write <- function(
@@ -3017,6 +3004,10 @@ compile_gepa_checkpointed <- function(
         state["active_candidate"] <- list(NULL)
         state["active_evaluation"] <- list(NULL)
         state$candidate_index <- as.integer(state$candidate_index + 1L)
+        state <- gepa_checkpoint_refresh_generation_summary(
+          state,
+          teleprompter
+        )
         write_checkpoint(gepa_checkpoint_best_program(
           state,
           program,
