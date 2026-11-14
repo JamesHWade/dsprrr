@@ -7,7 +7,8 @@
 save_history(history, path)
 }
 \arguments{
-\item{history}{An object created by conversation_history() or load_history().}
+\item{history}{An object created by conversation_history(), loaded by
+load_history(), or returned in structured result metadata.}
 
 \item{path}{A file path for the JSON document.}
 }

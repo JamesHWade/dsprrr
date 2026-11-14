@@ -93,6 +93,9 @@ First development changelog. dsprrr is experimental; the API may change.
   duration metadata are reset. Unsupported and uploaded content, unresolved
   tool requests, and unsafe data fail explicitly. Tool errors retain only
   their message. Saved histories can contain sensitive conversation data.
+  RLM results now carry a version-2 conversation history of bounded, textual
+  invocation records and complete tagged final outputs. ReAct turns and RLM
+  exchanges are distinct history kinds and cannot be mixed.
 
 * `chain_of_thought()` now supports opt-in native provider thinking metadata
   and a concise plan field, while retaining rationale output as the default.
