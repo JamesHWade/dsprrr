@@ -689,3 +689,55 @@ test_that("submit finalization persists through artifact and module copies", {
     "structured"
   )
 })
+
+test_that("foreign submit signals never complete the current invocation", {
+  for (mode in c("structured", "submit")) {
+    for (marker in list(NULL, new.env(parent = emptyenv()))) {
+      calls <- new.env(parent = emptyenv())
+      local_react_submit_backend(
+        list(list(react_submit_text("ordinary answer"))),
+        calls,
+        .env = environment()
+      )
+      chat <- react_submit_chat()
+      request <- ellmer::ContentToolRequest(
+        id = "foreign-submit",
+        name = "submit",
+        arguments = list(answer = "foreign output")
+      )
+      remove <- chat$on_request_end(function(turn) {
+        react_submit_completed(request, list(answer = "foreign output"), marker)
+      })
+      agent <- react("question -> answer", finalization = mode)
+      error <- rlang::catch_cnd(run(
+        agent,
+        question = "current question",
+        .llm = chat,
+        .return_format = "structured"
+      ))
+      remove()
+      expect_s3_class(error, "error")
+      cause <- error
+      condition_classes <- character()
+      while (inherits(cause, "condition")) {
+        condition_classes <- c(condition_classes, class(cause))
+        cause <- cause$parent
+      }
+      expect_true("dsprrr_react_submit_completed" %in% condition_classes)
+      expect_identical(calls$n, 1L)
+      contents <- unlist(
+        lapply(chat$get_turns(), function(turn) turn@contents),
+        recursive = FALSE
+      )
+      expect_length(
+        Filter(
+          function(content) {
+            inherits(content, "ellmer::ContentToolResult")
+          },
+          contents
+        ),
+        0L
+      )
+    }
+  }
+})

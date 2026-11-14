@@ -97,19 +97,46 @@ test_that("each batch row records the run that answered it", {
 })
 
 test_that("asynchronous calls pass the trace fields too", {
+  skip_if_not_installed("promises")
+  skip_if_not_installed("later")
   chat <- AgentRuntimeTestChat$new()
   program <- module(signature("question -> answer"))
 
-  program$run_async(
+  promise <- program$run_async(
     question = "What is 2 + 2?",
     .llm = chat,
+    .return_format = "structured",
     .trace_context = list(request_id = "async")
   )
+  state <- new.env(parent = emptyenv())
+  state$done <- FALSE
+  observer <- promises::then(
+    promise,
+    function(value) {
+      state$value <- value
+      state$done <- TRUE
+      NULL
+    },
+    function(error) {
+      state$error <- error
+      state$done <- TRUE
+      NULL
+    }
+  )
+  deadline <- Sys.time() + 10
+  while (!state$done && Sys.time() < deadline) {
+    later::run_now(0.05)
+  }
+  invisible(observer)
 
+  expect_true(state$done)
+  expect_null(state$error)
   expect_identical(
     chat$run_contexts[[1]]$dsprrr$trace_context,
     list(request_id = "async")
   )
+  expect_identical(state$value$metadata$agent_run$run_id, "run_1")
+  expect_length(program$state$traces, 1L)
 })
 
 test_that("a call that made no new run has no receipt", {

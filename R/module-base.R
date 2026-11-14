@@ -83,6 +83,8 @@ Module <- R6::R6Class(
     #' @param .progress Logical for progress bar (currently unused, for API consistency)
     #' @param .return_format Either "simple" or "structured"
     #' @param .trace_context A named JSON-compatible correlation context
+    #' @param .history A portable history for scalar root ReAct calls. A
+    #'   non-`NULL` history requires structured output.
     #' @return Module outputs. For .return_format="simple", returns the output value directly.
     #'   For "structured", returns a tibble with output, chat, and metadata columns.
     run = function(
@@ -94,8 +96,21 @@ Module <- R6::R6Class(
       .progress = TRUE,
       .return_format = "simple",
       .cache = NULL,
-      .trace_context = list()
+      .trace_context = list(),
+      .history = NULL
     ) {
+      if (!is.null(.history)) {
+        assert_explicit_react_history(
+          self,
+          .history,
+          entrypoint = "module$run()"
+        )
+        .return_format <- match.arg(
+          .return_format,
+          c("simple", "structured")
+        )
+        assert_explicit_history_structured(.history, .return_format)
+      }
       if (!is.null(.llm)) {
         assert_ellmer_chat(.llm, arg = ".llm")
       } else {
@@ -157,6 +172,11 @@ Module <- R6::R6Class(
       )
 
       input_contract <- module_input_contract(self, inputs)
+      assert_explicit_history_scalar(
+        .history,
+        input_contract,
+        "module$run()"
+      )
 
       if (identical(input_contract$kind, "batch")) {
         assert_native_reasoning_batch_supported(self)
@@ -264,7 +284,20 @@ Module <- R6::R6Class(
       }
 
       # Single input processing
-      result <- self$forward(inputs, .llm = .llm, trace = TRUE, .cache = .cache)
+      result <- if (is.null(.history)) {
+        self$forward(inputs, .llm = .llm, trace = TRUE, .cache = .cache)
+      } else {
+        do.call(
+          self$forward,
+          list(
+            inputs,
+            .llm = .llm,
+            trace = TRUE,
+            .cache = .cache,
+            .history = .history
+          )
+        )
+      }
 
       if (.return_format == "simple") {
         return(result$output[[1]])
@@ -866,7 +899,8 @@ Module <- R6::R6Class(
     #' @description
     #' Run the module asynchronously
     #'
-    #' Returns a promise that resolves to the structured output.
+    #' Returns a promise that resolves to the module output by default, or a
+    #' structured result when `.return_format = "structured"`.
     #' Useful for running multiple modules in parallel.
     #' Ordinary Predict modules use the provider's native async path.
     #' ProgramOfThought, CodeAct, and RLM use an isolated mirai process when
@@ -874,16 +908,32 @@ Module <- R6::R6Class(
     #'
     #' @param ... Named inputs matching the signature
     #' @param .llm Optional ellmer chat object
+    #' @param .return_format Either "simple" or "structured"
     #' @param .trace_context A named JSON-compatible correlation context
+    #' @param .history Explicit conversation history is not supported by async
+    #'   execution.
     #' @return A promise that resolves to the result
-    run_async = function(..., .llm = NULL, .trace_context = list()) {
+    run_async = function(
+      ...,
+      .llm = NULL,
+      .return_format = c("simple", "structured"),
+      .trace_context = list(),
+      .history = NULL
+    ) {
+      reject_explicit_history_entrypoint(.history, "module$run_async()")
       if (missing(.trace_context)) {
-        return(dsprrr::run_async(self, ..., .llm = .llm))
+        return(dsprrr::run_async(
+          self,
+          ...,
+          .llm = .llm,
+          .return_format = .return_format
+        ))
       }
       dsprrr::run_async(
         self,
         ...,
         .llm = .llm,
+        .return_format = .return_format,
         .trace_context = .trace_context
       )
     },
@@ -897,8 +947,11 @@ Module <- R6::R6Class(
     #'
     #' @param ... Named inputs matching the signature
     #' @param .llm Optional ellmer chat object
+    #' @param .history Explicit conversation history is not supported by
+    #'   async streaming.
     #' @return A promise that resolves to an async generator
-    stream_async = function(..., .llm = NULL) {
+    stream_async = function(..., .llm = NULL, .history = NULL) {
+      reject_explicit_history_entrypoint(.history, "module$stream_async()")
       dsprrr::stream_async(self, ..., .llm = .llm)
     },
 
@@ -913,9 +966,12 @@ Module <- R6::R6Class(
     #' @param ... Named inputs matching the signature
     #' @param .llm Optional ellmer chat object
     #' @param callback Optional function to call with each text chunk
+    #' @param .history Explicit conversation history is not supported by
+    #'   streaming.
     #' @return If callback is NULL, returns a coro generator. Otherwise, returns
     #'   the full response text invisibly after streaming completes.
-    stream = function(..., .llm = NULL, callback = NULL) {
+    stream = function(..., .llm = NULL, callback = NULL, .history = NULL) {
+      reject_explicit_history_entrypoint(.history, "module$stream()")
       assert_direct_provider_async_supported(self, "stream")
       inputs <- list(...)
       request <- build_module_request(self, inputs)

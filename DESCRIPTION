@@ -47,6 +47,7 @@ Suggests:
     callr,
     coro,
     dials,
+    httr2,
     knitr,
     later,
     mcptools (>= 1.0.1),
@@ -83,6 +84,7 @@ Collate:
     'ellmer.R'
     'evaluate.R'
     'flex-code-bridge.R'
+    'history-runtime.R'
     'history.R'
     'input.R'
     'inspect.R'
