@@ -47,6 +47,7 @@ Suggests:
     callr,
     coro,
     dials,
+    httr2,
     knitr,
     later,
     mcptools (>= 1.0.1),

@@ -177,6 +177,7 @@ test_that("Module$run_async forwards structured format and decision evidence", {
 
 
 test_that("async Chat receives normalized multimodal prompt parts", {
+  skip_if_not_installed("httr2")
   skip_if_not_installed("promises")
   skip_if_not_installed("later")
   request_bodies <- list()
