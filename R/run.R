@@ -11,6 +11,11 @@
 #'   of the runtime arguments described below. RLM modules ([rlm_module()])
 #'   treat every value as one context object whatever its length; use
 #'   [run_dataset()] to run them several times.
+#' @param .history A `dsprrr_history` from [conversation_history()] or
+#'   [load_history()]. The default `NULL` keeps existing Chat behavior. A
+#'   non-`NULL` history is supported for scalar root [react()] modules and
+#'   requires `.return_format = "structured"`; the result carries the new
+#'   history in `metadata$conversation_history`.
 #'
 #' @section Runtime arguments:
 #' These arguments start with a dot so they cannot clash with input names.
@@ -51,7 +56,9 @@
 #' Batches must have inputs of one common length, or length 1. If every input
 #' has length zero, `run()` returns an empty list without calling the model.
 #' Modules with their own execution loop, such as [react()], accept single
-#' inputs only; use [run_dataset()] for them.
+#' inputs only; use [run_dataset()] for them when no conversation history is
+#' supplied. Explicit ReAct history is supported only for scalar root ReAct
+#' calls with `.return_format = "structured"`.
 #'
 #' An input can also be an ellmer content object, such as
 #' `ellmer::content_image_file("receipt.png")`; prediction modules send it to
@@ -70,8 +77,10 @@
 #'   With `.return_format = "structured"`, a list of class `dsprrr_result`
 #'   with elements `output` (as above), `chat` (the ellmer Chat used) and
 #'   `metadata` (model, prompt, token counts, cost, latency, cache status and
-#'   error). A batch returns a list of these with class `dsprrr_batch_result`.
-#'   Use [get_output()], [get_metadata()] or [get_cost()] to read them.
+#'   error). When explicit ReAct history is supplied, the updated history is
+#'   stored in `metadata$conversation_history`. A batch returns a list of these
+#'   with class `dsprrr_batch_result`. Use [get_output()], [get_metadata()],
+#'   [get_history()] or [get_cost()] to read them.
 #' @export
 #' @family execution
 #' @examples
@@ -96,10 +105,24 @@
 #' res <- run(classify, text = "Great!", .llm = llm, .return_format = "structured")
 #' res$metadata$cost
 #'
+#' # Explicit ReAct history is returned for a later scalar continuation
+#' agent <- react("question -> answer")
+#' first <- run(
+#'   agent,
+#'   question = "What is 2 + 2?",
+#'   .llm = llm,
+#'   .history = conversation_history(),
+#'   .return_format = "structured"
+#' )
+#' next_history <- get_history(first)
+#'
 #' # Skip the response cache for one call
 #' run(classify, text = "Great!", .llm = llm, .cache = FALSE)
 #' }
-run <- function(module, ...) {
+run <- function(module, ..., .history = NULL) {
+  if (!is.null(.history)) {
+    assert_explicit_react_history(module, .history, entrypoint = "run()")
+  }
   UseMethod("run")
 }
 
@@ -261,8 +284,14 @@ run.Module <- function(
   .return_format = "simple",
   .show_prompt = FALSE,
   .cache = NULL,
-  .trace_context = list()
+  .trace_context = list(),
+  .history = NULL
 ) {
+  assert_explicit_react_history(module, .history, entrypoint = "run()")
+  if (!is.null(.history)) {
+    .return_format <- match.arg(.return_format, c("simple", "structured"))
+    assert_explicit_history_structured(.history, .return_format)
+  }
   if (!is.null(.llm)) {
     assert_ellmer_chat(.llm, arg = ".llm")
   } else {
@@ -298,6 +327,7 @@ run.Module <- function(
 
   inputs <- list(...)
   input_contract <- module_input_contract(module, inputs)
+  assert_explicit_history_scalar(.history, input_contract, "run()")
   if (identical(input_contract$kind, "batch")) {
     assert_native_reasoning_batch_supported(module)
   }
@@ -430,6 +460,9 @@ run.Module <- function(
   } else {
     execution_args$.concurrency <- concurrency
   }
+  if (!is.null(.history)) {
+    execution_args$.history <- .history
+  }
   trace_context_annotate_result(
     do.call(module$run, c(inputs, execution_args)),
     fields = invocation_trace_fields
@@ -447,8 +480,11 @@ run.PredictModule <- function(
   .return_format = "simple",
   .show_prompt = FALSE,
   .cache = NULL,
-  .trace_context = list()
+  .trace_context = list(),
+  .history = NULL
 ) {
+  assert_explicit_react_history(module, .history, entrypoint = "run()")
+  assert_explicit_history_structured(.history, .return_format)
   trace_context_supplied <- !missing(.trace_context)
   trace_context <- trace_context_resolve(
     .trace_context,
@@ -501,6 +537,7 @@ run.PredictModule <- function(
   )
 
   input_contract <- module_input_contract(module, inputs)
+  assert_explicit_history_scalar(.history, input_contract, "run()")
 
   if (identical(input_contract$kind, "batch")) {
     assert_native_reasoning_batch_supported(module)
@@ -558,7 +595,8 @@ run.PredictModule <- function(
         .llm = .llm,
         .verbose = .verbose,
         .return_format = .return_format,
-        .cache = .cache
+        .cache = .cache,
+        .history = .history
       ),
       fields = invocation_trace_fields
     ))
@@ -1229,7 +1267,7 @@ strip_run_trace <- function(result) {
 
 #' Commit worker traces once, in deterministic input order
 #' @noRd
-commit_run_traces <- function(module, traces) {
+commit_run_traces <- function(module, traces, source = "PredictModule") {
   if (length(traces) == 0L) {
     return(invisible(module))
   }
@@ -1248,7 +1286,7 @@ commit_run_traces <- function(module, traces) {
   traces <- lapply(traces, trace_context_annotate_event)
   module$state$traces <- append(module$state$traces, traces)
   for (trace in traces) {
-    add_to_global_history(trace, source = "PredictModule")
+    add_to_global_history(trace, source = source)
   }
   invisible(module)
 }
@@ -1740,14 +1778,21 @@ run_predict_forward <- function(
   .llm,
   .verbose,
   .return_format,
-  .cache
+  .cache,
+  .history = NULL
 ) {
-  result <- module$forward(
-    inputs,
-    .llm = .llm,
-    trace = TRUE,
-    .cache = .cache
-  )
+  result <- if (is.null(.history)) {
+    module$forward(inputs, .llm = .llm, trace = TRUE, .cache = .cache)
+  } else {
+    forward_args <- list(
+      inputs,
+      .llm = .llm,
+      trace = TRUE,
+      .cache = .cache,
+      .history = .history
+    )
+    do.call(module$forward, forward_args)
+  }
   if (.verbose && !is.null(result$metadata[[1]]$prompt)) {
     cli::cli_h3("Generated Prompt")
     cli::cli_code(result$metadata[[1]]$prompt)
@@ -3875,6 +3920,8 @@ call_llm <- function(
 #'   sent to the module.
 #' @param ... Only `.cache` is accepted here, with the same meaning as in
 #'   [run()]. Any other dot-prefixed argument is an error.
+#' @param .history Explicit continuation history is currently not supported
+#'   for row-wise dataset execution and is rejected before any row runs.
 #'
 #' @details
 #' A row that fails gets `NA` in `result` and a warning; with
@@ -3905,7 +3952,8 @@ call_llm <- function(
 #'   .return_format = "structured"
 #' )
 #' }
-run_dataset <- function(module, ...) {
+run_dataset <- function(module, ..., .history = NULL) {
+  reject_explicit_history_entrypoint(.history, "run_dataset()")
   UseMethod("run_dataset")
 }
 
@@ -3931,8 +3979,10 @@ run_dataset.Module <- function(
   .progress = TRUE,
   .return_format = "simple",
   ...,
-  .trace_context = list()
+  .trace_context = list(),
+  .history = NULL
 ) {
+  reject_explicit_history_entrypoint(.history, "run_dataset()")
   validate_runtime_dot_arguments(
     match.call(expand.dots = FALSE),
     allowed_names = ".cache"

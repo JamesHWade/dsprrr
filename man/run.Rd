@@ -4,7 +4,7 @@
 \alias{run}
 \title{Run a module on named inputs}
 \usage{
-run(module, ...)
+run(module, ..., .history = NULL)
 }
 \arguments{
 \item{module}{A module, such as one created with \code{\link[=module]{module()}},
@@ -14,6 +14,12 @@ run(module, ...)
 of the runtime arguments described below. RLM modules (\code{\link[=rlm_module]{rlm_module()}})
 treat every value as one context object whatever its length; use
 \code{\link[=run_dataset]{run_dataset()}} to run them several times.}
+
+\item{.history}{A \code{dsprrr_history} from \code{\link[=conversation_history]{conversation_history()}} or
+\code{\link[=load_history]{load_history()}}. The default \code{NULL} keeps existing Chat behavior. A
+non-\code{NULL} history is supported for scalar root \code{\link[=react]{react()}} modules and
+requires \code{.return_format = "structured"}; the result carries the new
+history in \code{metadata$conversation_history}.}
 }
 \value{
 With \code{.return_format = "simple"}, the outputs as a named list with
@@ -25,8 +31,10 @@ list with one such result per input element.
 With \code{.return_format = "structured"}, a list of class \code{dsprrr_result}
 with elements \code{output} (as above), \code{chat} (the ellmer Chat used) and
 \code{metadata} (model, prompt, token counts, cost, latency, cache status and
-error). A batch returns a list of these with class \code{dsprrr_batch_result}.
-Use \code{\link[=get_output]{get_output()}}, \code{\link[=get_metadata]{get_metadata()}} or \code{\link[=get_cost]{get_cost()}} to read them.
+error). When explicit ReAct history is supplied, the updated history is
+stored in \code{metadata$conversation_history}. A batch returns a list of these
+with class \code{dsprrr_batch_result}. Use \code{\link[=get_output]{get_output()}}, \code{\link[=get_metadata]{get_metadata()}},
+\code{\link[=get_history]{get_history()}} or \code{\link[=get_cost]{get_cost()}} to read them.
 }
 \description{
 \code{run()} calls a module with inputs named after its signature's input fields
@@ -42,7 +50,9 @@ failed row becomes \code{NA} with a warning, and with
 Batches must have inputs of one common length, or length 1. If every input
 has length zero, \code{run()} returns an empty list without calling the model.
 Modules with their own execution loop, such as \code{\link[=react]{react()}}, accept single
-inputs only; use \code{\link[=run_dataset]{run_dataset()}} for them.
+inputs only; use \code{\link[=run_dataset]{run_dataset()}} for them when no conversation history is
+supplied. Explicit ReAct history is supported only for scalar root ReAct
+calls with \code{.return_format = "structured"}.
 
 An input can also be an ellmer content object, such as
 \code{ellmer::content_image_file("receipt.png")}; prediction modules send it to
@@ -105,6 +115,17 @@ run(classify, text = c("I love this!", "This is bad"), .llm = llm)
 # Structured results carry the Chat and call metadata
 res <- run(classify, text = "Great!", .llm = llm, .return_format = "structured")
 res$metadata$cost
+
+# Explicit ReAct history is returned for a later scalar continuation
+agent <- react("question -> answer")
+first <- run(
+  agent,
+  question = "What is 2 + 2?",
+  .llm = llm,
+  .history = conversation_history(),
+  .return_format = "structured"
+)
+next_history <- get_history(first)
 
 # Skip the response cache for one call
 run(classify, text = "Great!", .llm = llm, .cache = FALSE)

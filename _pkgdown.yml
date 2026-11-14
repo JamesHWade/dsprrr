@@ -240,6 +240,7 @@ reference:
     - predict.Module
     - concurrency_control
     - run_async
+    - react_async_control
     - run_stream
     - stream_listener
     - stream_async

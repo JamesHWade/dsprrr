@@ -94,6 +94,14 @@ First development changelog. dsprrr is experimental; the API may change.
   tool requests, and unsafe data fail explicitly. Tool errors retain only
   their message. Saved histories can contain sensitive conversation data.
 
+* `get_history()` returns the portable conversation history retained in a
+  structured result, or `NULL` when history was not requested.
+
+* `run()` accepts explicit `.history` for scalar root ReAct calls when
+  `.return_format = "structured"`. The call clones the current Chat, seeds
+  portable turns without executing prior tools, and returns the updated state
+  through `get_history()`.
+
 * `chain_of_thought()` now supports opt-in native provider thinking metadata
   and a concise plan field, while retaining rationale output as the default.
   Native thinking is available through `get_metadata()` when the provider
@@ -109,6 +117,14 @@ First development changelog. dsprrr is experimental; the API may change.
   retain simple results and reject structured results until they can preserve
   the same trace contract.
 
+* `rlm_module()` and `rlm()` now support `reasoning_mode = "native"` for
+  code-only action responses with provider thinking metadata, and
+  `reasoning_mode = "plan"` for actions with a concise explicit plan. The
+  existing `"rationale"` action schema remains the default. Native metadata is
+  exposed on structured scalar results and remains absent when the provider
+  returns no thinking blocks; batch, async and streaming routes reject native
+  RLM execution before work begins.
+
 * Modules run through an agent runtime that follows ellmer's Chat protocol,
   such as a deputy `Agent`, are now correlated with the agent's runs. dsprrr
   passes the program ID and `.trace_context` to the agent as
@@ -120,6 +136,13 @@ First development changelog. dsprrr is experimental; the API may change.
   schema-validated answer through a reserved `submit` tool call. This completes
   in the tool loop without a separate structured-output request. The default
   `finalization = "structured"` retains the existing follow-up behavior.
+
+* ReAct modules now support `run_async()` with sequential tool execution and
+  an awaited structured follow-up. `react_async_control()` adds ordered
+  progress events and cooperative cancellation between provider requests and
+  tools; it does not interrupt an active request or tool. Failure traces keep
+  partial Chat history, pending tool requests, and observed native tool results
+  distinct so unrun tools are never represented as completed.
 
 * Experimental calibrated decision outputs, following DSPy 3.4's decision
   types. `with_decisions()` attaches `decision_bool()`, `decision_score()`, or

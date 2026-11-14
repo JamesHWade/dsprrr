@@ -177,6 +177,7 @@ test_that("Module$run_async forwards structured format and decision evidence", {
 
 
 test_that("async Chat receives normalized multimodal prompt parts", {
+  skip_if_not_installed("httr2")
   skip_if_not_installed("promises")
   skip_if_not_installed("later")
   request_bodies <- list()
@@ -450,6 +451,7 @@ test_that("partial global history appends roll back on warning errors", {
   local_reset_cache()
   withr::local_options(
     dsprrr.prompt_history_max = NA_real_,
+    rlib_warning_verbosity = "verbose",
     warn = 2
   )
   real_history_sink <- add_to_global_history
@@ -486,17 +488,10 @@ test_that("partial global history appends roll back on warning errors", {
   expect_identical(trace$output, NA)
   expect_identical(trace$metadata$error_stage, "completion")
   expect_identical(trace$trace_context, context)
-  history_after <- .dsprrr_env$prompt_history
-  expect_gte(length(history_after), length(history_before))
-  expect_lte(length(history_after) - length(history_before), 1L)
-  if (length(history_after) > length(history_before)) {
-    new_history <- utils::tail(history_after, 1L)[[1L]]
-    expect_identical(new_history$metadata$error_stage, "completion")
-  }
-  expect_equal(
-    prompt_history_generation() - generation_before,
-    length(history_after) - length(history_before)
-  )
+  # Always emit the real warning in this fixture, without consuming its
+  # process-wide frequency throttle or affecting later tests.
+  expect_identical(.dsprrr_env$prompt_history, history_before)
+  expect_identical(prompt_history_generation(), generation_before)
   expect_no_error(assert_async_chat_available(mock$chat))
 })
 

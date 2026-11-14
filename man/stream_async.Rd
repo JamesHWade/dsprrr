@@ -4,7 +4,7 @@
 \alias{stream_async}
 \title{Stream a module's text output asynchronously}
 \usage{
-stream_async(module, ..., .llm = NULL)
+stream_async(module, ..., .llm = NULL, .history = NULL)
 }
 \arguments{
 \item{module}{A prediction module from \code{\link[=module]{module()}} or \code{\link[=chain_of_thought]{chain_of_thought()}}.
@@ -14,6 +14,9 @@ Other modules are rejected before any request; use \code{\link[=run]{run()}} for
 
 \item{.llm}{An ellmer Chat; see \code{\link[=run]{run()}} for how it is chosen when
 omitted.}
+
+\item{.history}{Explicit conversation history is not supported by async
+streaming; use synchronous \code{\link[=run]{run()}} for scalar root ReAct continuation.}
 }
 \value{
 An async generator that yields the response text in chunks.
