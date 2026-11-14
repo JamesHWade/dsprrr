@@ -93,7 +93,12 @@ react_submit_tool <- function(output_type, validation_state = NULL) {
       ))
     }
     tryCatch(
-      react_submit_validate(values, output_type, bare_output),
+      react_submit_validate(
+        values,
+        output_type,
+        bare_output,
+        json_shape = FALSE
+      ),
       dsprrr_react_submit_validation_error = function(error) {
         ellmer::tool_reject(paste(
           "The submitted output does not match the declared schema:",
@@ -231,6 +236,62 @@ react_submit_on_request_end <- function(chat, callback) {
   remove_callback
 }
 
+#' Check JSON array and object shapes against a submit schema
+#' @noRd
+react_submit_validate_json_shape <- function(value, type, context, class) {
+  if (is.null(value) || inherits(type, "ellmer::TypeIgnore")) {
+    return(invisible(NULL))
+  }
+
+  if (inherits(type, "ellmer::TypeArray")) {
+    if (
+      !is.list(value) ||
+        is.data.frame(value) ||
+        !is.null(names(value))
+    ) {
+      cli::cli_abort(
+        "{context} must be a JSON array",
+        class = class
+      )
+    }
+    for (index in seq_along(value)) {
+      react_submit_validate_json_shape(
+        value[[index]],
+        type@items,
+        paste0(context, "[[", index, "]]"),
+        class
+      )
+    }
+    return(invisible(NULL))
+  }
+
+  if (inherits(type, "ellmer::TypeObject")) {
+    fields <- names(value)
+    if (
+      !is.list(value) ||
+        is.data.frame(value) ||
+        is.null(fields)
+    ) {
+      cli::cli_abort(
+        "{context} must be a JSON object",
+        class = class
+      )
+    }
+    properties <- as.list(type@properties)
+    for (field in fields) {
+      if (field %in% names(properties)) {
+        react_submit_validate_json_shape(
+          value[[field]],
+          properties[[field]],
+          paste0(context, "$", field),
+          class
+        )
+      }
+    }
+  }
+  invisible(NULL)
+}
+
 #' Check nested object names before ignored properties can be stripped
 #' @noRd
 react_submit_validate_object_names <- function(
@@ -332,9 +393,26 @@ react_submit_validate_object_names <- function(
 
 #' Validate a submit request against the declared output schema
 #' @noRd
-react_submit_validate <- function(arguments, output_type, bare_output) {
+react_submit_validate <- function(
+  arguments,
+  output_type,
+  bare_output,
+  json_shape = TRUE
+) {
   context <- "ReAct submit output"
   class <- "dsprrr_react_submit_validation_error"
+  if (
+    isTRUE(json_shape) &&
+      (is.null(arguments) ||
+        !is.list(arguments) ||
+        is.data.frame(arguments) ||
+        is.null(names(arguments)))
+  ) {
+    cli::cli_abort(
+      "{context} arguments must be a JSON object",
+      class = class
+    )
+  }
   if (is.null(arguments)) {
     arguments <- list()
   }
@@ -370,6 +448,14 @@ react_submit_validate <- function(arguments, output_type, bare_output) {
       paste0(context, "$value"),
       class
     )
+    if (isTRUE(json_shape)) {
+      react_submit_validate_json_shape(
+        value,
+        output_type,
+        paste0(context, "$value"),
+        class
+      )
+    }
     value <- flex_strip_ignored_runtime_values(
       value,
       output_type,
@@ -391,6 +477,14 @@ react_submit_validate <- function(arguments, output_type, bare_output) {
     context,
     class
   )
+  if (isTRUE(json_shape)) {
+    react_submit_validate_json_shape(
+      arguments,
+      output_type,
+      context,
+      class
+    )
+  }
   value <- flex_strip_ignored_runtime_values(
     arguments,
     output_type,

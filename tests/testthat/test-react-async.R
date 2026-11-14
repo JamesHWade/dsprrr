@@ -408,6 +408,125 @@ test_that("invalid submit repairs within the async iteration limit", {
   expect_match(repair[[1L]]$output, "must be one of")
 })
 
+test_that("async submit rejects raw array scalars and repairs with a singleton array", {
+  skip_if_not_installed("promises")
+  skip_if_not_installed("later")
+  state <- new.env(parent = emptyenv())
+  local_react_async_backend(
+    list(
+      list(react_async_test_function_call(
+        "submit",
+        '{"value":"raw scalar"}',
+        1L
+      )),
+      list(react_async_test_function_call(
+        "submit",
+        '{"value":["one item"]}',
+        2L
+      ))
+    ),
+    state
+  )
+  chat <- react_async_test_chat()
+  module <- react(
+    signature(
+      inputs = list(input("question")),
+      output_type = ellmer::type_array(ellmer::type_string())
+    ),
+    finalization = "submit",
+    max_iterations = 2L
+  )
+
+  expect_warning(
+    outcome <- react_async_test_settle(react_async_test_run(
+      module,
+      list(question = "Submit an array"),
+      chat
+    )),
+    "Failed to evaluate 1 tool call"
+  )
+
+  expect_null(outcome$error)
+  expect_identical(outcome$value$output, list("one item"))
+  expect_identical(outcome$value$metadata$iterations, 2L)
+  expect_identical(outcome$value$metadata$finalization, "submit")
+  expect_identical(outcome$value$metadata$termination_reason, "submitted")
+  expect_identical(state$count, 2L)
+  tool_calls <- outcome$value$metadata$tool_calls
+  expect_identical(
+    vapply(tool_calls, `[[`, character(1), "tool_id"),
+    c("fc_1", "fc_2")
+  )
+  expect_identical(
+    vapply(tool_calls, `[[`, character(1), "status"),
+    c("result", "result")
+  )
+  expect_identical(
+    vapply(tool_calls, `[[`, logical(1), "is_error"),
+    c(TRUE, FALSE)
+  )
+  observed <- outcome$value$metadata$observed_tool_results
+  expect_identical(
+    vapply(observed, function(item) item$result@request@id, character(1)),
+    c("fc_1", "fc_2")
+  )
+  expect_match(conditionMessage(observed[[1L]]$result@error), "array")
+  expect_null(observed[[2L]]$result@error)
+  repair <- Filter(
+    function(item) identical(item$type, "function_call_output"),
+    state$bodies[[2L]]$input
+  )
+  expect_length(repair, 1L)
+  expect_identical(repair[[1L]]$call_id, "fc_1")
+  expect_match(tolower(repair[[1L]]$output), "array")
+  expect_length(chat$get_tools(), 0L)
+  expect_no_error(assert_async_chat_available(chat))
+})
+
+test_that("async submit completes an empty object without another request", {
+  skip_if_not_installed("promises")
+  skip_if_not_installed("later")
+  state <- new.env(parent = emptyenv())
+  local_react_async_backend(
+    list(
+      list(react_async_test_function_call("submit", "{}", 1L))
+    ),
+    state
+  )
+  chat <- react_async_test_chat()
+  module <- react(
+    signature(
+      inputs = list(input("question")),
+      output_type = ellmer::type_object()
+    ),
+    finalization = "submit"
+  )
+
+  outcome <- react_async_test_settle(react_async_test_run(
+    module,
+    list(question = "Return an empty object"),
+    chat
+  ))
+
+  expect_null(outcome$error)
+  expect_identical(outcome$value$output, stats::setNames(list(), character()))
+  expect_identical(outcome$value$metadata$finalization, "submit")
+  expect_identical(outcome$value$metadata$termination_reason, "submitted")
+  expect_identical(state$count, 1L)
+  expect_identical(outcome$value$metadata$iterations, 1L)
+  expect_length(outcome$value$metadata$tool_calls, 1L)
+  expect_identical(outcome$value$metadata$tool_calls[[1L]]$tool_id, "fc_1")
+  expect_identical(outcome$value$metadata$tool_calls[[1L]]$status, "result")
+  expect_false(outcome$value$metadata$tool_calls[[1L]]$is_error)
+  expect_length(outcome$value$metadata$observed_tool_results, 1L)
+  expect_identical(
+    outcome$value$metadata$observed_tool_results[[1L]]$result@request@id,
+    "fc_1"
+  )
+  expect_length(chat$get_tools(), 0L)
+  expect_no_error(assert_async_chat_available(chat))
+})
+
 test_that("mixed submit requests fail before async tool side effects", {
   skip_if_not_installed("promises")
   skip_if_not_installed("later")
