@@ -229,6 +229,105 @@ react_submit_on_request_end <- function(chat, callback) {
   remove_callback
 }
 
+#' Check nested object names before ignored properties can be stripped
+#' @noRd
+react_submit_validate_object_names <- function(
+  value,
+  type,
+  context,
+  class
+) {
+  if (is.null(value) || inherits(type, "ellmer::TypeIgnore")) {
+    return(invisible(NULL))
+  }
+
+  properties <- if (inherits(type, "ellmer::TypeObject")) {
+    as.list(type@properties)
+  } else {
+    NULL
+  }
+  item_type <- if (inherits(type, "ellmer::TypeArray")) {
+    type@items
+  } else {
+    NULL
+  }
+
+  validate_names <- function(fields, object_context) {
+    if (anyNA(fields) || any(!nzchar(fields)) || anyDuplicated(fields)) {
+      cli::cli_abort(
+        "{object_context} must have unique, non-empty field names",
+        class = class
+      )
+    }
+  }
+
+  if (is.data.frame(value)) {
+    fields <- names(value) %||% character()
+    validate_names(fields, context)
+    if (
+      inherits(type, "ellmer::TypeArray") &&
+        inherits(item_type, "ellmer::TypeObject")
+    ) {
+      for (index in seq_len(nrow(value))) {
+        row <- lapply(value, function(column) column[[index]])
+        names(row) <- fields
+        react_submit_validate_object_names(
+          row,
+          item_type,
+          paste0(context, "[[", index, "]]"),
+          class
+        )
+      }
+    } else if (inherits(type, "ellmer::TypeObject")) {
+      for (field in fields) {
+        property <- properties[[field]]
+        react_submit_validate_object_names(
+          value[[field]],
+          property,
+          paste0(context, "$", field),
+          class
+        )
+      }
+    }
+    return(invisible(NULL))
+  }
+
+  if (!is.list(value)) {
+    return(invisible(NULL))
+  }
+  fields <- names(value)
+  if (!is.null(fields)) {
+    validate_names(fields, context)
+  }
+
+  for (index in seq_along(value)) {
+    field <- if (is.null(fields)) "" else fields[[index]]
+    child_type <- if (!is.null(item_type)) {
+      item_type
+    } else if (
+      !is.null(properties) &&
+        nzchar(field) &&
+        field %in% names(properties)
+    ) {
+      properties[[field]]
+    } else {
+      NULL
+    }
+    child_context <- if (nzchar(field)) {
+      paste0(context, "$", field)
+    } else {
+      paste0(context, "[[", index, "]]")
+    }
+    react_submit_validate_object_names(
+      value[[index]],
+      child_type,
+      child_context,
+      class
+    )
+  }
+  invisible(NULL)
+}
+
 #' Validate a submit request against the declared output schema
 #' @noRd
 react_submit_validate <- function(arguments, output_type, bare_output) {
@@ -237,7 +336,6 @@ react_submit_validate <- function(arguments, output_type, bare_output) {
   if (is.null(arguments)) {
     arguments <- list()
   }
-
   if (bare_output) {
     argument_names <- names(arguments) %||% character()
     if (
@@ -264,6 +362,12 @@ react_submit_validate <- function(arguments, output_type, bare_output) {
     } else {
       NULL
     }
+    react_submit_validate_object_names(
+      value,
+      output_type,
+      paste0(context, "$value"),
+      class
+    )
     value <- flex_strip_ignored_runtime_values(
       value,
       output_type,
@@ -279,6 +383,12 @@ react_submit_validate <- function(arguments, output_type, bare_output) {
     return(value)
   }
 
+  react_submit_validate_object_names(
+    arguments,
+    output_type,
+    context,
+    class
+  )
   value <- flex_strip_ignored_runtime_values(
     arguments,
     output_type,

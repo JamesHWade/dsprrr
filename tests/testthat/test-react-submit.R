@@ -463,6 +463,220 @@ test_that("bare output schemas submit through a value field", {
   expect_length(errors, 3L)
 })
 
+test_that("duplicate submit object keys are repairable at every depth", {
+  calls <- new.env(parent = emptyenv())
+  sig <- signature(
+    inputs = list(input("question")),
+    output_type = ellmer::type_object(
+      answer = ellmer::type_string(),
+      details = ellmer::type_object(note = ellmer::type_string()),
+      sources = ellmer::type_array(
+        ellmer::type_object(label = ellmer::type_string())
+      )
+    )
+  )
+  local_react_submit_backend(
+    list(
+      list(react_submit_function_call(
+        "submit",
+        paste0(
+          '{"answer":"first","answer":"second",',
+          '"details":{"note":"ok"},',
+          '"sources":[{"label":"source"}]}'
+        ),
+        1L
+      )),
+      list(react_submit_function_call(
+        "submit",
+        paste0(
+          '{"answer":"ok",',
+          '"details":{"note":"first","note":"second"},',
+          '"sources":[{"label":"source"}]}'
+        ),
+        2L
+      )),
+      list(react_submit_function_call(
+        "submit",
+        paste0(
+          '{"answer":"ok","details":{"note":"ok"},',
+          '"sources":[{"label":"first","label":"second"}]}'
+        ),
+        3L
+      )),
+      list(react_submit_function_call(
+        "submit",
+        paste0(
+          '{"answer":"ok","details":{"note":"ok"},',
+          '"sources":[{"label":"source"}]}'
+        ),
+        4L
+      ))
+    ),
+    calls
+  )
+  chat <- react_submit_chat()
+  mod <- react(sig, finalization = "submit", max_iterations = 4L)
+
+  result <- suppressWarnings(run(
+    mod,
+    question = "Summarize this evidence",
+    .llm = chat,
+    .return_format = "structured"
+  ))
+
+  expect_identical(
+    result$output,
+    list(
+      answer = "ok",
+      details = list(note = "ok"),
+      sources = list(list(label = "source"))
+    )
+  )
+  expect_identical(result$metadata$iterations, 4L)
+  expect_identical(calls$n, 4L)
+  repair_results <- lapply(calls$bodies[-1L], function(body) {
+    Filter(
+      function(item) identical(item$type, "function_call_output"),
+      body$input
+    )
+  })
+  expect_true(all(vapply(repair_results, length, integer(1)) >= 1L))
+  expect_true(all(vapply(
+    repair_results,
+    function(items) {
+      any(vapply(
+        items,
+        function(item) {
+          grepl(
+            "unique, non-empty field names",
+            item$output
+          )
+        },
+        logical(1)
+      ))
+    },
+    logical(1)
+  )))
+})
+
+test_that("bare array submit checks object item keys before stripping", {
+  calls <- new.env(parent = emptyenv())
+  sig <- signature(
+    inputs = list(input("question")),
+    output_type = ellmer::type_array(
+      ellmer::type_object(label = ellmer::type_string())
+    )
+  )
+  local_react_submit_backend(
+    list(
+      list(react_submit_function_call(
+        "submit",
+        '{"value":[{"label":"first","label":"second"}]}',
+        1L
+      )),
+      list(react_submit_function_call(
+        "submit",
+        '{"value":[{"label":"source"}]}',
+        2L
+      ))
+    ),
+    calls
+  )
+  chat <- react_submit_chat()
+  mod <- react(sig, finalization = "submit", max_iterations = 2L)
+
+  result <- suppressWarnings(run(
+    mod,
+    question = "List the source",
+    .llm = chat,
+    .return_format = "structured"
+  ))
+
+  expect_identical(result$output, list(list(label = "source")))
+  expect_identical(calls$n, 2L)
+  tool_outputs <- Filter(
+    function(item) identical(item$type, "function_call_output"),
+    calls$bodies[[2L]]$input
+  )
+  expect_true(any(vapply(
+    tool_outputs,
+    function(item) grepl("unique, non-empty field names", item$output),
+    logical(1)
+  )))
+})
+
+test_that("duplicate checks preserve null, empty, and ignored field handling", {
+  optional_type <- ellmer::type_object(
+    maybe = ellmer::type_string(required = FALSE)
+  )
+  array_ignore_type <- ellmer::type_array(ellmer::type_object(
+    answer = ellmer::type_string(),
+    ignored = ellmer::type_ignore()
+  ))
+  ignored_type <- ellmer::type_object(
+    answer = ellmer::type_string(),
+    ignored = ellmer::type_ignore()
+  )
+
+  expect_identical(
+    react_submit_validate(
+      list(maybe = NULL),
+      optional_type,
+      bare_output = FALSE
+    ),
+    list(maybe = NULL)
+  )
+  expect_identical(
+    react_submit_validate(
+      list(),
+      ellmer::type_object(),
+      bare_output = FALSE
+    ),
+    stats::setNames(list(), character())
+  )
+  expect_identical(
+    react_submit_validate(
+      list(answer = "ready", ignored = NULL),
+      ignored_type,
+      bare_output = FALSE
+    ),
+    list(answer = "ready")
+  )
+  expect_identical(
+    react_submit_validate(
+      list(value = list(list(answer = "ready", ignored = NULL))),
+      array_ignore_type,
+      bare_output = TRUE
+    ),
+    list(list(answer = "ready"))
+  )
+  ignored_condition <- rlang::catch_cnd(react_submit_validate(
+    list(answer = "ready", ignored = "not null"),
+    ignored_type,
+    bare_output = FALSE
+  ))
+  expect_s3_class(ignored_condition, "dsprrr_react_submit_validation_error")
+  expect_match(conditionMessage(ignored_condition), "ignored and must be NULL")
+  ignored_array_condition <- rlang::catch_cnd(react_submit_validate(
+    list(
+      value = list(list(
+        answer = "ready",
+        ignored = list(key = "first", key = "second")
+      ))
+    ),
+    array_ignore_type,
+    bare_output = TRUE
+  ))
+  expect_s3_class(
+    ignored_array_condition,
+    "dsprrr_react_submit_validation_error"
+  )
+  expect_match(
+    conditionMessage(ignored_array_condition),
+    "ignored and must be NULL"
+  )
+})
+
 test_that("submit finalization persists through artifact and module copies", {
   mod <- react("question -> answer", finalization = "submit")
   restored <- restore_module_config(program_artifact(mod))
