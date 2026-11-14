@@ -11,9 +11,9 @@ conversation_history(turns = list())
 The empty list constructs an empty history.}
 }
 \value{
-An object with class dsprrr_history. Its format and version fields
-identify the envelope; kind is NULL for an empty history and react for
-native turn history. RLM history is reserved for a future version.
+An object with class dsprrr_history. This constructor creates a
+version-1 empty or ReAct history. RLM execution returns version-2 history
+containing observed invocation exchanges in result metadata.
 }
 \description{
 Converts native ellmer user and assistant turns into a versioned envelope
@@ -38,9 +38,15 @@ attached to runtime tools, or usage, cost, or duration metadata. Conversation
 text, reasoning, media, and tool data may still be sensitive; protect saved
 history files accordingly.
 
+RLM histories instead store visible task previews, inert code and observed
+output text, plus complete typed final outputs. They do not restore variables
+or interpreter state. ReAct turns and RLM exchanges cannot be mixed.
+
 Saved JSON is limited to 16 MiB; retained string and media data are limited
 to 12 MiB. Histories also have limits on turns, nesting depth, and values.
-Oversized histories fail explicitly rather than silently truncating evidence.
+RLM histories additionally retain at most 100 exchanges and 1,000 observed
+steps, with a canonical rendered context limit of 128 KiB. Oversized
+histories fail explicitly rather than silently truncating evidence.
 }
 \examples{
 turns <- list(

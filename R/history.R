@@ -8,9 +8,9 @@
 #' @param turns An unnamed list of ellmer UserTurn and AssistantTurn objects.
 #'   The empty list constructs an empty history.
 #'
-#' @return An object with class dsprrr_history. Its format and version fields
-#'   identify the envelope; kind is NULL for an empty history and react for
-#'   native turn history. RLM history is reserved for a future version.
+#' @return An object with class dsprrr_history. This constructor creates a
+#'   version-1 empty or ReAct history. RLM execution returns version-2 history
+#'   containing observed invocation exchanges in result metadata.
 #'
 #' @details
 #' Supported content includes text, JSON, thinking with JSON-safe extra data,
@@ -29,9 +29,15 @@
 #' text, reasoning, media, and tool data may still be sensitive; protect saved
 #' history files accordingly.
 #'
+#' RLM histories instead store visible task previews, inert code and observed
+#' output text, plus complete typed final outputs. They do not restore variables
+#' or interpreter state. ReAct turns and RLM exchanges cannot be mixed.
+#'
 #' Saved JSON is limited to 16 MiB; retained string and media data are limited
 #' to 12 MiB. Histories also have limits on turns, nesting depth, and values.
-#' Oversized histories fail explicitly rather than silently truncating evidence.
+#' RLM histories additionally retain at most 100 exchanges and 1,000 observed
+#' steps, with a canonical rendered context limit of 128 KiB. Oversized
+#' histories fail explicitly rather than silently truncating evidence.
 #'
 #' @examples
 #' turns <- list(
@@ -71,21 +77,30 @@ conversation_history <- function(turns = list()) {
 
 #' Reconstruct native ellmer turns from conversation history
 #'
-#' @param history An object created by conversation_history() or load_history().
+#' @param history An object created by conversation_history(), loaded by
+#'   load_history(), or returned in structured result metadata.
 #'
-#' @return A fresh unnamed list of ellmer UserTurn and AssistantTurn objects.
-#'   Assistant JSON and finish reason are retained. Usage, cost, and duration
-#'   metadata use ellmer defaults.
+#' @return A fresh unnamed list of ellmer UserTurn and AssistantTurn objects
+#'   for empty or ReAct histories. RLM histories contain observed invocation
+#'   exchanges and cannot be reconstructed as ellmer turns. Assistant JSON and
+#'   finish reason are retained. Usage, cost, and duration metadata use ellmer
+#'   defaults.
 #'
 #' @export
 history_turns <- function(history) {
   history <- history_validate_envelope(history)
+  if (identical(history$kind, "rlm")) {
+    history_abort(
+      "RLM histories contain observed invocation exchanges, not ellmer turns"
+    )
+  }
   lapply(history$turns, history_decode_turn)
 }
 
 #' Save conversation history as JSON
 #'
-#' @param history An object created by conversation_history() or load_history().
+#' @param history An object created by conversation_history(), loaded by
+#'   load_history(), or returned in structured result metadata.
 #' @param path A file path for the JSON document.
 #'
 #' @return The path, invisibly.
@@ -161,6 +176,9 @@ history_limits <- function() {
     nodes = 100000L,
     parser_nodes = 1000000L,
     turns = 10000L,
+    rlm_exchanges = 100L,
+    rlm_steps = 1000L,
+    rlm_render_bytes = 128 * 1024,
     data_bytes = 12 * 1024^2,
     json_bytes = 16 * 1024^2
   )
@@ -614,29 +632,53 @@ history_validate_envelope <- function(history, require_class = TRUE) {
     }
     history <- unclass(history)
   }
-  fields <- history_object_fields(
-    history,
-    c("format", "version", "kind", "turns"),
-    "Conversation history envelope"
-  )
+  history <- history_plain_object(history, "Conversation history envelope")
+  field_names <- attr(history, "names", exact = TRUE)
+  required <- c("format", "version", "kind")
+  if (length(setdiff(required, field_names)) > 0L) {
+    history_abort("Conversation history envelope is missing required fields")
+  }
   if (
     !identical(
-      history_plain_string(fields$format, "History format"),
+      history_plain_string(history[["format"]], "History format"),
       "dsprrr_conversation_history"
     )
   ) {
     history_abort("Unknown conversation history format")
   }
+  version <- history[["version"]]
   if (
-    !is.null(attributes(fields$version)) ||
-      !is.numeric(fields$version) ||
-      length(fields$version) != 1L ||
-      is.na(fields$version) ||
-      !is.finite(fields$version) ||
-      fields$version != 1
+    !is.null(attributes(version)) ||
+      !is.numeric(version) ||
+      length(version) != 1L ||
+      is.na(version) ||
+      !is.finite(version)
   ) {
     history_abort("Unsupported conversation history version")
   }
+  kind <- history[["kind"]]
+  if (!is.null(kind)) {
+    kind <- history_plain_string(kind, "History kind")
+  }
+
+  if (identical(as.numeric(version), 1)) {
+    return(history_validate_v1_envelope(history))
+  }
+  if (identical(as.numeric(version), 2) && identical(kind, "rlm")) {
+    return(history_validate_rlm_envelope(history))
+  }
+  if (identical(as.numeric(version), 2)) {
+    history_abort("Unsupported conversation history version or kind")
+  }
+  history_abort("Unsupported conversation history version")
+}
+
+history_validate_v1_envelope <- function(history) {
+  fields <- history_object_fields(
+    history,
+    c("format", "version", "kind", "turns"),
+    "Conversation history envelope"
+  )
   if (!is.null(fields$kind) && !identical(fields$kind, "react")) {
     history_abort("Unsupported conversation history kind")
   }
@@ -700,6 +742,8 @@ history_plain_object <- function(value, label) {
     is.null(field_names) ||
       !is.character(field_names) ||
       !is.null(attributes(field_names)) ||
+      anyNA(field_names) ||
+      !all(nzchar(field_names)) ||
       anyDuplicated(field_names)
   ) {
     history_abort(paste0(label, " has missing or duplicate fields"))

@@ -93,6 +93,9 @@ First development changelog. dsprrr is experimental; the API may change.
   duration metadata are reset. Unsupported and uploaded content, unresolved
   tool requests, and unsafe data fail explicitly. Tool errors retain only
   their message. Saved histories can contain sensitive conversation data.
+  RLM results now carry a version-2 conversation history of bounded, textual
+  invocation records and complete tagged final outputs. ReAct turns and RLM
+  exchanges are distinct history kinds and cannot be mixed.
 
 * `get_history()` returns the portable conversation history retained in a
   structured result, or `NULL` when history was not requested.

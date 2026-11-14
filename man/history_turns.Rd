@@ -7,12 +7,15 @@
 history_turns(history)
 }
 \arguments{
-\item{history}{An object created by conversation_history() or load_history().}
+\item{history}{An object created by conversation_history(), loaded by
+load_history(), or returned in structured result metadata.}
 }
 \value{
-A fresh unnamed list of ellmer UserTurn and AssistantTurn objects.
-Assistant JSON and finish reason are retained. Usage, cost, and duration
-metadata use ellmer defaults.
+A fresh unnamed list of ellmer UserTurn and AssistantTurn objects
+for empty or ReAct histories. RLM histories contain observed invocation
+exchanges and cannot be reconstructed as ellmer turns. Assistant JSON and
+finish reason are retained. Usage, cost, and duration metadata use ellmer
+defaults.
 }
 \description{
 Reconstruct native ellmer turns from conversation history
