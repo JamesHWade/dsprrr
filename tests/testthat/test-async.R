@@ -102,7 +102,7 @@ test_that("async rejection traverses module wrappers", {
   expect_identical(condition$module_path, "$")
 })
 
-test_that("direct async paths reject React before provider work", {
+test_that("ReAct async preflights the ellmer tool-loop API", {
   agent <- react(signature("question -> answer"))
   provider_calls <- 0L
   chat <- new_test_chat(
@@ -117,8 +117,26 @@ test_that("direct async paths reject React before provider work", {
     provider_calls <<- provider_calls + 1L
   }
 
+  condition <- expect_error(
+    run_async(agent, question = "Why?", .llm = chat),
+    class = "dsprrr_react_async_chat_error"
+  )
+  expect_match(conditionMessage(condition), "Missing public Chat methods")
+  expect_match(conditionMessage(condition), "chat_async")
+  expect_match(conditionMessage(condition), "on_tool_request")
+  expect_identical(provider_calls, 0L)
+})
+
+test_that("async streaming paths continue to reject ReAct", {
+  agent <- react(signature("question -> answer"))
+  provider_calls <- 0L
+  chat <- new_test_chat(
+    stream = function(...) {
+      provider_calls <<- provider_calls + 1L
+    }
+  )
+
   operations <- list(
-    run_async = function() run_async(agent, question = "Why?", .llm = chat),
     stream_async = function() {
       stream_async(agent, question = "Why?", .llm = chat)
     },
