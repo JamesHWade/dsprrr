@@ -29,6 +29,10 @@
 #' text, reasoning, media, and tool data may still be sensitive; protect saved
 #' history files accordingly.
 #'
+#' Saved JSON is limited to 16 MiB; retained string and media data are limited
+#' to 12 MiB. Histories also have limits on turns, nesting depth, and values.
+#' Oversized histories fail explicitly rather than silently truncating evidence.
+#'
 #' @examples
 #' turns <- list(
 #'   ellmer::UserTurn(list(ellmer::ContentText("What is 2 + 2?"))),
@@ -93,7 +97,7 @@ save_history <- function(history, path) {
   history_check_json_size(json)
   path <- history_path(path)
   tryCatch(
-    writeLines(json, con = path, useBytes = TRUE),
+    writeBin(charToRaw(enc2utf8(json)), con = path),
     error = function(error) {
       history_abort(
         paste0(

@@ -714,3 +714,19 @@ test_that("classed value and name attributes are rejected before generics", {
   )
   expect_false(length_called)
 })
+
+test_that("history saved at the file-size limit can be loaded", {
+  history <- conversation_history()
+  limits <- history_limits()
+  limits$json_bytes <- nchar(history_to_json(history), type = "bytes")
+  testthat::local_mocked_bindings(
+    history_limits = function() limits,
+    .package = "dsprrr"
+  )
+  path <- withr::local_tempfile(fileext = ".json")
+
+  save_history(history, path)
+
+  expect_equal(file.info(path)$size, limits$json_bytes)
+  expect_identical(load_history(path), history)
+})
