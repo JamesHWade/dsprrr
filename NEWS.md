@@ -86,6 +86,13 @@ First development changelog. dsprrr is experimental; the API may change.
 
 ## New features
 
+* `chain_of_thought()` now supports opt-in native provider thinking metadata
+  and a concise plan field, while retaining rationale output as the default.
+  Native thinking is available through `get_metadata()` when the provider
+  returns ellmer `ContentThinking`; it remains `NULL` when no current-call
+  thinking block is present. Native mode is limited to scalar synchronous runs,
+  and plan mode requires structured output.
+
 * Modules run through an agent runtime that follows ellmer's Chat protocol,
   such as a deputy `Agent`, are now correlated with the agent's runs. dsprrr
   passes the program ID and `.trace_context` to the agent as

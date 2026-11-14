@@ -32,7 +32,9 @@ NULL
 #' history. Code-running modules run their whole workflow in a separate mirai
 #' process with a fresh interpreter; modules bound to a caller-owned `runner`
 #' are rejected, because one runner cannot serve concurrent calls. Other
-#' modules, such as [react()] or pipelines, are rejected; use [run()].
+#' modules, such as [react()] or pipelines, are rejected; use [run()]. Native
+#' reasoning mode is also rejected because this path does not return provider
+#' turns or native reasoning metadata.
 #'
 #' @return A promise that resolves to the module's output, the same value
 #'   that [run()] returns by default.
@@ -56,6 +58,7 @@ run_async <- function(module, ..., .llm = NULL, .trace_context = list()) {
   if (!inherits(module, "Module")) {
     cli::cli_abort("{.arg module} must be a dsprrr Module object")
   }
+  assert_native_reasoning_metadata_supported(module, "run_async")
   trace_context_supplied <- !missing(.trace_context)
   trace_context <- trace_context_resolve(
     .trace_context,
@@ -278,7 +281,11 @@ run_factory_interpreter_async <- function(module, inputs, .llm = NULL) {
 #'
 #' @details
 #' The generator comes from ellmer's `Chat$stream_async()`. The call does not
-#' use the response cache and records no trace.
+#' use the response cache and records no trace. It returns unstructured text,
+#' so `chain_of_thought(mode = "plan")` and `mode = "native"` are rejected
+#' rather than dropping the plan field or native metadata. Use [run_async()]
+#' for a structured plan, or synchronous structured [run()] for native
+#' metadata.
 #'
 #' @return An async generator that yields the response text in chunks.
 #'
@@ -302,6 +309,7 @@ stream_async <- function(module, ..., .llm = NULL) {
   if (!inherits(module, "Module")) {
     cli::cli_abort("{.arg module} must be a dsprrr Module object")
   }
+  assert_reasoning_text_stream_supported(module)
   assert_direct_provider_async_supported(module, "stream_async")
 
   inputs <- list(...)
@@ -390,7 +398,9 @@ stream_listener <- function(field, callback) {
 #' [module_fn()] or [react()]) is an error, raised before any request is
 #' made.
 #'
-#' Streaming runs do not use the response cache and record no traces.
+#' Streaming runs do not use the response cache and record no traces. Native
+#' reasoning mode is rejected because this result contract does not return
+#' provider turns or native reasoning metadata.
 #'
 #' ## Status events
 #'
@@ -427,6 +437,7 @@ run_stream <- function(
   if (!inherits(module, "Module")) {
     cli::cli_abort("{.arg module} must be a dsprrr Module object")
   }
+  assert_native_reasoning_metadata_supported(module, "run_stream")
   listeners <- normalize_stream_listeners(listeners)
 
   if (!is.null(on_status) && !is.function(on_status)) {

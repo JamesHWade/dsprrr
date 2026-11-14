@@ -15,6 +15,11 @@
 #'   `total_tokens`.
 #' - `get_cost()` returns the estimated cost in US dollars.
 #'
+#' For `chain_of_thought(mode = "native")`, `get_metadata(result)$native_reasoning`
+#' is a list of ellmer `ContentThinking` objects from the current provider
+#' turn, or `NULL` if the provider did not expose thinking content. dsprrr does
+#' not synthesize text for this field.
+#'
 #' For [run_dataset()] results, use the `result` and `.metadata` columns
 #' instead.
 #'

@@ -136,6 +136,13 @@ with_reasoning <- function(
   original_type <- sig@output_type
   original_fields <- extract_output_fields(original_type)
 
+  if (reasoning_field %in% names(original_fields)) {
+    cli::cli_abort(
+      "Cannot add {.field {reasoning_field}} because the signature already has that output field",
+      class = "dsprrr_signature_transform_error"
+    )
+  }
+
   # Build reasoning description
   reasoning_desc <- paste0(
     "Reasoning: ",
@@ -200,25 +207,47 @@ with_reasoning <- function(
 #' Create a chain-of-thought module
 #'
 #' @description
-#' `chain_of_thought()` is `module(with_reasoning(x))`: a prediction module
-#' whose output starts with a `reasoning` field, so the model reasons step by
-#' step before it gives the other outputs.
+#' `chain_of_thought()` creates a prediction module with one of three
+#' reasoning modes. The default, `"rationale"`, keeps the existing behavior:
+#' it adds a `reasoning` output field before the requested fields. `"plan"`
+#' adds a short, explicit `plan` field before the requested fields. `"native"`
+#' keeps the signature unchanged and exposes provider-supplied reasoning
+#' metadata when the provider records it in ellmer turns.
 #'
 #' @param x A signature from [signature()], or a signature string.
 #' @param prefix Start of the reasoning field's description; see
-#'   [with_reasoning()].
+#'   [with_reasoning()]. Used only when `mode = "rationale"`.
 #' @param chat,template,demos,config As in [module()].
+#' @param mode The reasoning behavior: `"rationale"` (the default), `"native"`
+#'   or `"plan"`. `"native"` does not select a model or enable provider
+#'   reasoning by itself. Configure provider parameters such as
+#'   `reasoning_effort` through `chat` or `config`, using ellmer's supported
+#'   parameters.
 #' @param ... Must be empty.
 #'
-#' @return A prediction module, as from [module()]. [run()] returns the
-#'   reasoning along with the other outputs, for example
-#'   `list(reasoning = "...", answer = "...")`.
+#' @return A prediction module, as from [module()]. The `"rationale"` and
+#'   `"plan"` modes include their field in the output. With `"native"`, the
+#'   output keeps the signature's fields; on a structured result,
+#'   `get_metadata()` exposes `native_reasoning` as a list of ellmer
+#'   `ContentThinking` objects from the current call, or `NULL` when the
+#'   provider did not expose any. It never synthesizes a reasoning string.
+#'
+#' Native metadata is currently supported for synchronous scalar [run()]
+#'   calls. Native mode errors before provider work for batch, asynchronous or
+#'   streaming execution, whose current result contracts do not preserve these
+#'   turns.
 #'
 #' @export
 #' @family program constructors
 #' @examples
 #' solver <- chain_of_thought("question -> answer: float")
 #' solver
+#'
+#' native_solver <- chain_of_thought(
+#'   "question -> answer: float",
+#'   mode = "native",
+#'   config = list(reasoning_effort = "low")
+#' )
 #'
 #' \dontrun{
 #' result <- run(
@@ -228,6 +257,14 @@ with_reasoning <- function(
 #' )
 #' result$reasoning
 #' result$answer
+#'
+#' native_result <- run(
+#'   native_solver,
+#'   question = "What is 15 * 24?",
+#'   .llm = ellmer::chat_openai(model = "gpt-6-luna"),
+#'   .return_format = "structured"
+#' )
+#' get_metadata(native_result)$native_reasoning
 #' }
 chain_of_thought <- function(
   x,
@@ -236,12 +273,38 @@ chain_of_thought <- function(
   template = "",
   demos = list(),
   config = list(),
+  mode = c("rationale", "native", "plan"),
   ...
 ) {
   reject_partial_argument_matches(sys.call(), sys.function())
   reject_constructor_arguments("chain_of_thought", ...)
 
-  cot_sig <- with_reasoning(x, prefix = prefix)
+  mode <- if (identical(mode, c("rationale", "native", "plan"))) {
+    "rationale"
+  } else {
+    validate_reasoning_mode(mode)
+  }
+  config <- normalize_module_config(config)
+  if (!is.null(config$reasoning_mode)) {
+    configured_mode <- validate_reasoning_mode(config$reasoning_mode)
+    if (!identical(configured_mode, mode)) {
+      cli::cli_abort(
+        c(
+          "Conflicting chain-of-thought modes",
+          "x" = "{.arg mode} is {.val {mode}}, but `config$reasoning_mode` is {.val {configured_mode}}."
+        ),
+        class = "dsprrr_reasoning_mode_error"
+      )
+    }
+  }
+  config$reasoning_mode <- mode
+
+  cot_sig <- switch(
+    mode,
+    rationale = with_reasoning(x, prefix = prefix),
+    native = signature_transform_input(x),
+    plan = with_plan(x)
+  )
   mod <- module(
     cot_sig,
     chat = chat,
@@ -250,6 +313,232 @@ chain_of_thought <- function(
     config = config
   )
   stamp_module_kind(mod, "chain_of_thought")
+}
+
+#' Add a concise plan field to a signature
+#' @noRd
+with_plan <- function(x) {
+  sig <- signature_transform_input(x)
+  original_fields <- extract_output_fields(sig@output_type)
+
+  if ("plan" %in% names(original_fields)) {
+    cli::cli_abort(
+      "Cannot add {.field plan} because the signature already has that output field",
+      class = "dsprrr_signature_transform_error"
+    )
+  }
+
+  plan_type <- ellmer::type_string(
+    description = paste0(
+      "A brief plan of no more than three high-level steps. ",
+      "Do not include detailed reasoning."
+    )
+  )
+  output_fields <- c(list(plan = plan_type), original_fields)
+  output_type <- do.call(ellmer::type_object, output_fields)
+
+  input_names <- if (length(sig@inputs) > 0L) {
+    paste0(
+      "`",
+      vapply(sig@inputs, function(input) input$name, character(1)),
+      "`",
+      collapse = ", "
+    )
+  } else {
+    "the inputs"
+  }
+  output_names <- paste0("`", names(original_fields), "`", collapse = ", ")
+  plan_instructions <- paste0(
+    "Given ",
+    input_names,
+    ", give a brief plan of no more than three high-level steps in `plan`. ",
+    "Do not include detailed reasoning. Then produce ",
+    output_names,
+    "."
+  )
+  instructions <- if (nzchar(sig@instructions)) {
+    paste(sig@instructions, plan_instructions, sep = "\n\n")
+  } else {
+    plan_instructions
+  }
+
+  Signature(
+    inputs = sig@inputs,
+    output_type = output_type,
+    instructions = instructions
+  )
+}
+
+#' Validate a reasoning mode value
+#' @noRd
+validate_reasoning_mode <- function(mode) {
+  choices <- c("rationale", "native", "plan")
+  if (
+    !is.character(mode) ||
+      length(mode) != 1L ||
+      is.na(mode) ||
+      !mode %in% choices
+  ) {
+    cli::cli_abort(
+      c(
+        "Invalid chain-of-thought mode",
+        "x" = "{.arg mode} must be one of {.val {choices}}."
+      ),
+      class = "dsprrr_reasoning_mode_error"
+    )
+  }
+  mode
+}
+
+#' Get a module's reasoning mode, preserving old chain-of-thought artifacts
+#' @noRd
+module_reasoning_mode <- function(module) {
+  mode <- module$config$reasoning_mode
+  if (is.null(mode)) {
+    if (identical(module$config$.module_kind, "chain_of_thought")) {
+      return("rationale")
+    }
+    return(NULL)
+  }
+  validate_reasoning_mode(mode)
+}
+
+#' Return provider-supplied thinking blocks from assistant turns
+#' @noRd
+native_reasoning_from_turns <- function(turns) {
+  if (!is.list(turns) || length(turns) == 0L) {
+    return(NULL)
+  }
+
+  content <- list()
+  for (turn in turns) {
+    if (!inherits(turn, "ellmer::AssistantTurn")) {
+      next
+    }
+    turn_content <- tryCatch(turn@contents, error = function(e) list())
+    if (!is.list(turn_content)) {
+      next
+    }
+    content <- c(
+      content,
+      Filter(
+        function(item) inherits(item, "ellmer::ContentThinking"),
+        turn_content
+      )
+    )
+  }
+
+  if (length(content) == 0L) NULL else content
+}
+
+#' Find the path to a module configured for one reasoning mode
+#' @noRd
+module_reasoning_mode_path <- function(module, mode) {
+  mode <- validate_reasoning_mode(mode)
+  seen <- character()
+
+  visit <- function(value, path) {
+    if (inherits(value, "Module")) {
+      address <- format(rlang::obj_address(value))
+      if (address %in% seen) {
+        return(NULL)
+      }
+      seen <<- c(seen, address)
+      if (identical(module_reasoning_mode(value), mode)) {
+        return(path)
+      }
+      return(visit(module_children(value), path))
+    }
+
+    if (is.list(value)) {
+      for (i in seq_along(value)) {
+        name <- names(value)[i]
+        label <- if (!is.null(name) && !is.na(name) && nzchar(name)) {
+          name
+        } else {
+          as.character(i)
+        }
+        found <- visit(value[[i]], paste0(path, "/", label))
+        if (!is.null(found)) {
+          return(found)
+        }
+      }
+    }
+    NULL
+  }
+
+  visit(module, "$")
+}
+
+#' Reject native reasoning when execution would discard provider turns
+#' @noRd
+assert_native_reasoning_metadata_supported <- function(module, operation) {
+  path <- module_reasoning_mode_path(module, "native")
+  if (is.null(path)) {
+    return(invisible(module))
+  }
+
+  cli::cli_abort(
+    c(
+      "{.fn {operation}} cannot preserve native reasoning metadata",
+      "x" = "Native reasoning is configured at graph path {.code {path}}.",
+      "i" = "Use a synchronous scalar {.fn run} call with {.code .return_format = \"structured\"}."
+    ),
+    class = "dsprrr_reasoning_metadata_unsupported",
+    operation = operation,
+    module_path = path
+  )
+}
+
+#' Reject native reasoning in batch paths without per-row thinking turns
+#' @noRd
+assert_native_reasoning_batch_supported <- function(module) {
+  path <- module_reasoning_mode_path(module, "native")
+  if (is.null(path)) {
+    return(invisible(module))
+  }
+
+  cli::cli_abort(
+    c(
+      "Batch execution cannot preserve native reasoning metadata",
+      "x" = "Native reasoning is configured at graph path {.code {path}}.",
+      "i" = "Run one input at a time with {.code .return_format = \"structured\"}."
+    ),
+    class = c(
+      "dsprrr_reasoning_batch_unsupported",
+      "dsprrr_batch_unsupported_module"
+    ),
+    module_path = path
+  )
+}
+
+#' Reject text-only streaming for CoT modes with structured output contracts
+#' @noRd
+assert_reasoning_text_stream_supported <- function(module) {
+  for (mode in c("native", "plan")) {
+    path <- module_reasoning_mode_path(module, mode)
+    if (is.null(path)) {
+      next
+    }
+
+    contract <- if (identical(mode, "native")) {
+      "provider reasoning metadata"
+    } else {
+      "the explicit plan output field"
+    }
+    cli::cli_abort(
+      c(
+        "stream_async() cannot preserve {contract}",
+        "x" = "Mode {.val {mode}} is configured at graph path {.code {path}}.",
+        "i" = "Use {.fn run_async} for structured output, or {.fn run} when native metadata is needed."
+      ),
+      class = "dsprrr_reasoning_metadata_unsupported",
+      operation = "stream_async",
+      module_path = path,
+      reasoning_mode = mode
+    )
+  }
+  invisible(module)
 }
 
 #' Extract Output Fields from an ellmer Type

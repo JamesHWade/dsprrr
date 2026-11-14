@@ -55,6 +55,11 @@ and one list per row for a batch or an evaluation.
 \item \code{get_cost()} returns the estimated cost in US dollars.
 }
 
+For \code{chain_of_thought(mode = "native")}, \code{get_metadata(result)$native_reasoning}
+is a list of ellmer \code{ContentThinking} objects from the current provider
+turn, or \code{NULL} if the provider did not expose thinking content. dsprrr does
+not synthesize text for this field.
+
 For \code{\link[=run_dataset]{run_dataset()}} results, use the \code{result} and \code{.metadata} columns
 instead.
 }

@@ -159,6 +159,7 @@ Module <- R6::R6Class(
       input_contract <- module_input_contract(self, inputs)
 
       if (identical(input_contract$kind, "batch")) {
+        assert_native_reasoning_batch_supported(self)
         if (interpreter_workflow_module(self)) {
           assert_factory_interpreter_async_supported(self, "run")
           runtime_chat <- .llm %||%
