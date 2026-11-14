@@ -4,7 +4,14 @@
 \alias{run_stream}
 \title{Run a module with streaming callbacks}
 \usage{
-run_stream(module, ..., .llm = NULL, listeners = list(), on_status = NULL)
+run_stream(
+  module,
+  ...,
+  .llm = NULL,
+  listeners = list(),
+  on_status = NULL,
+  .history = NULL
+)
 }
 \arguments{
 \item{module}{A module or a pipeline from \code{\link[=pipeline]{pipeline()}}.}
@@ -18,6 +25,9 @@ omitted.}
 
 \item{on_status}{A function called with a list for each progress event
 (see below), or \code{NULL}.}
+
+\item{.history}{Explicit conversation history is not supported by streaming;
+use synchronous \code{\link[=run]{run()}} for scalar root ReAct continuation.}
 }
 \value{
 The output, invisibly, in the same form as \code{\link[=run]{run()}} returns it.
