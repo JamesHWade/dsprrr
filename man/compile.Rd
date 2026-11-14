@@ -21,6 +21,10 @@ input columns and the expected outputs.
 \item \code{valset}: an optional validation data frame, for teleprompters that
 use one. It may also be given as the fourth argument.
 \item \code{.llm}: an ellmer Chat for the program's calls (see \code{\link[=run]{run()}}).
+\item \code{.reflection_llm}: for \code{\link[=GEPA]{GEPA()}}, the ellmer Chat used to propose
+instruction and Flex source changes. If omitted, an explicitly
+supplied \code{.llm} is also used for reflection for compatibility. GEPA
+errors before evaluation when a mutable search has no reflection Chat.
 \item \code{.trace_context}: a named, JSON-compatible list copied into the
 metadata and traces of the calls made while compiling.
 }

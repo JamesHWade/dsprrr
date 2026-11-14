@@ -83,6 +83,7 @@ Collate:
     'ellmer.R'
     'evaluate.R'
     'flex-code-bridge.R'
+    'history.R'
     'input.R'
     'inspect.R'
     'mcp-repl-runner.R'

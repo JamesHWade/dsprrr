@@ -14,11 +14,12 @@
 #' combined and rewritten again. GEPA can also rewrite the complete source of a
 #' [flex()] module.
 #'
-#' Reflection uses the chat passed to [compile()] as `.llm`, the same chat that
-#' runs the program; there is no separate reflection model argument. Without
-#' `.llm`, no model is asked: rewritten instructions get the fixed sentence
-#' "Focus on the failed cases and be more explicit." (or "Be more explicit and
-#' accurate.") appended, and Flex sources stay unchanged.
+#' Candidate evaluation uses the chat passed to [compile()] as `.llm`.
+#' Reflection proposals use `.reflection_llm`, also passed to [compile()]. If
+#' `.reflection_llm` is omitted, an explicitly supplied `.llm` remains the
+#' compatibility fallback for reflection. Mutable GEPA searches require one
+#' of these chats; GEPA reports a configuration error instead of silently
+#' appending a fixed instruction suffix when no reflection chat is available.
 #'
 #' @details
 #' ## Feedback metrics
@@ -59,6 +60,21 @@
 #' signature, field schemas, allowed tools and primitives, and the failed rows
 #' with their feedback. Proposed sources are validated before use; an invalid
 #' source is recorded with a failure score and can never be selected.
+#'
+#' `.reflection_llm` is the reflection Chat, while `.llm` remains the task Chat
+#' for candidate evaluation. When `.reflection_llm` is omitted, an explicitly
+#' supplied `.llm` is used for both roles for compatibility. The optimization
+#' result records supplied model names and the reflection route in
+#' `extensions$gepa$model_routing`. If `.llm` is omitted, `task_model` is
+#' `NULL` because the regular module/default Chat resolver chooses the task
+#' Chat at evaluation time, and `task_chat_source` records
+#' `"runtime_resolution"`. Both roles share the optimizer's resource budget;
+#' reflection requests are attributed to GEPA reflection stages.
+#'
+#' GEPA deep-clones the reflection Chat for each proposal and clears the
+#' clone's conversation turns. Model settings are retained, proposal calls do
+#' not share conversation history, and the supplied Chat is not mutated by
+#' reflection.
 #'
 #' @param metrics Optional named list of metric functions. The first one picks
 #'   the failed rows shown to reflection; with `selection = "pareto"`, all of
@@ -143,12 +159,13 @@
 #'   question = c("What is 2 + 2?", "What is the capital of France?"),
 #'   answer = c("4", "Paris")
 #' )
-#' # `.llm` runs the program and writes the reflections
+#' # `.llm` runs the program; `.reflection_llm` writes the reflections.
 #' optimized <- compile(
 #'   qa,
 #'   tp,
 #'   trainset,
-#'   .llm = ellmer::chat_openai(model = "gpt-6-luna")
+#'   .llm = ellmer::chat_openai(model = "gpt-6-luna"),
+#'   .reflection_llm = ellmer::chat_openai(model = "gpt-6-astra")
 #' )
 #' optimization_result(optimized)
 #' }
@@ -330,12 +347,20 @@ compile_gepa <- function(
   trainset,
   valset = NULL,
   .llm = NULL,
+  .reflection_llm = NULL,
   control = NULL,
   ...
 ) {
   if (!inherits(program, "Module")) {
     cli::cli_abort("GEPA currently only supports Module objects")
   }
+
+  assert_ellmer_chat(.llm, arg = ".llm", allow_null = TRUE)
+  assert_ellmer_chat(
+    .reflection_llm,
+    arg = ".reflection_llm",
+    allow_null = TRUE
+  )
 
   if (!is.data.frame(trainset)) {
     cli::cli_abort("{.arg trainset} must be a data frame")
@@ -353,6 +378,34 @@ compile_gepa <- function(
     cli::cli_abort(
       "{.arg track_best_outputs = TRUE} requires {.arg track_stats = TRUE}",
       class = "dsprrr_gepa_config_error"
+    )
+  }
+
+  reflection_chat <- .reflection_llm %||% .llm
+  reflection_chat_source <- if (!is.null(.reflection_llm)) {
+    "reflection_llm"
+  } else if (!is.null(.llm)) {
+    "legacy_task_llm"
+  } else {
+    "unavailable"
+  }
+  task_chat_source <- if (is.null(.llm)) {
+    "runtime_resolution"
+  } else {
+    "compile_llm"
+  }
+  component_specs <- gepa_program_component_specs(program)
+  if (length(component_specs) > 0L && is.null(reflection_chat)) {
+    cli::cli_abort(
+      c(
+        "GEPA requires a reflection Chat to propose candidate changes",
+        "i" = "Supply {.arg .reflection_llm} to {.fn compile}.",
+        "i" = paste(
+          "For compatibility, an explicitly supplied {.arg .llm}",
+          "is also used for reflection."
+        )
+      ),
+      class = "dsprrr_gepa_reflection_error"
     )
   }
 
@@ -412,6 +465,9 @@ compile_gepa <- function(
     metrics = metrics,
     metric_names = metric_names,
     .llm = .llm,
+    .reflection_llm = reflection_chat,
+    task_chat_source = task_chat_source,
+    reflection_chat_source = reflection_chat_source,
     control = control,
     budget = budget,
     trial_log = trial_log
@@ -582,9 +638,20 @@ gepa_mutate_instruction <- function(
   unit_id = "gepa:reflection"
 ) {
   if (is.null(.llm)) {
-    return(gepa_fallback_mutation(instruction, failed_examples))
+    cli::cli_abort(
+      c(
+        "GEPA cannot reflect without a reflection Chat",
+        "i" = "Supply {.arg .reflection_llm} to {.fn compile}.",
+        "i" = paste(
+          "An explicitly supplied {.arg .llm} remains a compatibility",
+          "fallback."
+        )
+      ),
+      class = "dsprrr_gepa_reflection_error"
+    )
   }
   assert_ellmer_chat(.llm, arg = ".llm")
+  .llm <- gepa_clone_reflection_chat(.llm)
 
   prompt <- gepa_reflection_prompt(instruction, failed_examples)
   type <- ellmer::type_object(instructions = ellmer::type_string())
@@ -707,6 +774,21 @@ gepa_fallback_mutation <- function(instruction, failed_examples) {
   }
 
   paste(instruction, suffix)
+}
+
+gepa_chat_model_name <- function(chat) {
+  if (is.null(chat)) {
+    return(NULL)
+  }
+  model <- ellmer_chat_model(chat)
+  if (is.null(model)) {
+    return(NULL)
+  }
+  model@name
+}
+
+gepa_clone_reflection_chat <- function(chat) {
+  clone_ellmer_chat(chat, arg = ".reflection_llm", reset_turns = TRUE)
 }
 
 # Print a GEPA object through its S7 method.

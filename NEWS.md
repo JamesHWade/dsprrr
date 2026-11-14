@@ -86,6 +86,21 @@ First development changelog. dsprrr is experimental; the API may change.
 
 ## New features
 
+* `conversation_history()` copies supported ellmer turns into a versioned,
+  tagged data envelope. `history_turns()` rebuilds fresh native turns, and
+  `load_history()` / `save_history()` persist the allowlisted history as
+  JSON. Assistant JSON and finish reasons are retained; usage, cost, and
+  duration metadata are reset. Unsupported and uploaded content, unresolved
+  tool requests, and unsafe data fail explicitly. Tool errors retain only
+  their message. Saved histories can contain sensitive conversation data.
+
+* `chain_of_thought()` now supports opt-in native provider thinking metadata
+  and a concise plan field, while retaining rationale output as the default.
+  Native thinking is available through `get_metadata()` when the provider
+  returns ellmer `ContentThinking`; it remains `NULL` when no current-call
+  thinking block is present. Native mode is limited to scalar synchronous runs,
+  and plan mode requires structured output.
+
 * Modules run through an agent runtime that follows ellmer's Chat protocol,
   such as a deputy `Agent`, are now correlated with the agent's runs. dsprrr
   passes the program ID and `.trace_context` to the agent as
@@ -151,6 +166,13 @@ First development changelog. dsprrr is experimental; the API may change.
   supplied, training rows remain exclusive to discovery/reflection while
   validation rows drive selection, per-example winners, and optional retained
   outputs.
+
+* `GEPA()` can use a separate `.reflection_llm` Chat for instruction and Flex
+  proposals while `.llm` remains the task Chat for candidate evaluation.
+  An explicitly supplied `.llm` remains the compatibility fallback when
+  `.reflection_llm` is omitted. Mutable searches without either Chat now fail
+  with a configuration error instead of silently appending fixed instruction
+  text. Reflection calls remain part of the shared optimizer resource budget.
 
 * `optimization_result()` provides one read-only result contract across every
   optimizer, including optimizer identity, completion or partial status,
