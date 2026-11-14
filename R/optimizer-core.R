@@ -215,8 +215,15 @@ OptimizerControl <- S7::new_class(
 #' made by the optimizer itself). When a cap is finite and a provider does not
 #' report its usage, tokens or cost, the run stops rather than guess.
 #'
-#' [BootstrapFewShot()] and [MIPROv2()] can resume from a checkpoint. [GEPA()],
-#' [SIMBA()] and [COPRO()] respect the budgets and return the best partial
+#' [BootstrapFewShot()] and [MIPROv2()] can resume from a checkpoint.
+#' [GEPA()] supports resume for sequential `round_robin` searches over plain
+#' `Predict` leaves and built-in predictor pipelines when each prediction is
+#' plain data. It rejects Flex modules, other selectors, custom module types or
+#' Chats, Chats with tools, and Chats with existing turns. GEPA stores each
+#' completed proposal and evaluation row. A provider request that finishes
+#' after the previous checkpoint was written but before its result is committed
+#' can be retried after a crash; GEPA does not guarantee exactly-once provider
+#' effects. [SIMBA()] and [COPRO()] respect budgets and return the best partial
 #' program, but reject `resume = TRUE`.
 #'
 #' @param seed Random seed, or `NULL` (the default). Currently only
@@ -2799,7 +2806,7 @@ optimizer_budgeted_provider_call <- function(
 
 optimizer_eval_row_record <- function(eval_result, row_index) {
   example <- eval_result@examples[1L, , drop = FALSE]
-  list(
+  record <- list(
     row_index = as.integer(row_index),
     score = as.numeric(example$score[[1L]] %||% NA_real_),
     error = as.character(example$error[[1L]] %||% NA_character_),
@@ -2824,9 +2831,29 @@ optimizer_eval_row_record <- function(eval_result, row_index) {
     tokens_unknown = eval_result@token_usage_unknown,
     latency_ms = eval_result@total_latency_ms
   )
+  if ("error_class" %in% names(example)) {
+    record$error_class <- as.character(
+      example$error_class[[1L]] %||% NA_character_
+    )
+  }
+  record
 }
 
-optimizer_eval_checkpoint_records <- function(records) {
+optimizer_eval_checkpoint_records <- function(records, project = NULL) {
+  if (is.function(project)) {
+    projected <- project(records)
+    if (!is.list(projected) || length(projected) != length(records)) {
+      cli::cli_abort(
+        "Optimizer row projection must return one record per evaluation row",
+        class = "dsprrr_optimizer_checkpoint_unsafe_value"
+      )
+    }
+    return(optimizer_checkpoint_sanitize(
+      projected,
+      "progress.evaluation_rows"
+    ))
+  }
+
   lapply(records, function(record) {
     record$predicted <- NULL
     # Raw trace events can contain prompts and model responses. They are useful
@@ -2853,7 +2880,9 @@ optimizer_eval_restore_records <- function(records) {
         class = "dsprrr_optimizer_checkpoint_malformed"
       )
     }
-    record$predicted <- record$predicted %||% NA
+    if (!"predicted" %in% names(record)) {
+      record["predicted"] <- list(NA)
+    }
     record$program_trace <- record$program_trace %||% NULL
     record
   })
@@ -2912,6 +2941,19 @@ optimizer_combine_eval_records <- function(records, dataset) {
     feedback = feedback,
     program_trace = traces
   )
+  if (
+    any(vapply(
+      records,
+      function(record) !is.null(record$error_class),
+      logical(1)
+    ))
+  ) {
+    examples$error_class <- vapply(
+      records,
+      function(record) record$error_class %||% NA_character_,
+      character(1)
+    )
+  }
   input_names <- intersect(names(dataset), names(dataset))
   for (name in input_names) {
     examples[[paste0("input_", name)]] <- dataset[[name]][row_indices]
@@ -3056,6 +3098,29 @@ optimizer_eval_candidate <- function(
   result
 }
 
+optimizer_clone_program_leaf_chats <- function(program) {
+  graph <- module_graph(program, boundaries = "cross", cycles = "error")
+  leaf <- vapply(
+    graph$path,
+    function(path) {
+      prefix <- if (identical(path, "$")) "$/" else paste0(path, "/")
+      !any(startsWith(graph$path, prefix))
+    },
+    logical(1)
+  )
+  for (module in graph$module[leaf]) {
+    chat <- tryCatch(module$chat, error = function(error) NULL)
+    if (!is.null(chat)) {
+      module$chat <- clone_ellmer_chat(
+        chat,
+        arg = "module$chat",
+        reset_turns = TRUE
+      )
+    }
+  }
+  program
+}
+
 # Evaluate one optimizer candidate in row-sized work units. The maximum
 # postflight overshoot is therefore the usage of one already-started evaluation
 # row in the current sequential implementation. When the shared concurrency
@@ -3072,6 +3137,8 @@ optimizer_eval_program <- function(
   unit_id,
   partial_records = list(),
   on_progress = NULL,
+  checkpoint_projection = NULL,
+  clone_program_per_row = FALSE,
   ...
 ) {
   if (is.null(control)) {
@@ -3079,6 +3146,22 @@ optimizer_eval_program <- function(
   }
   if (!is.data.frame(dataset)) {
     cli::cli_abort("{.arg dataset} must be a data frame")
+  }
+  if (
+    !is.logical(clone_program_per_row) ||
+      length(clone_program_per_row) != 1L ||
+      is.na(clone_program_per_row)
+  ) {
+    cli::cli_abort(
+      "{.arg clone_program_per_row} must be TRUE or FALSE",
+      class = "dsprrr_optimizer_checkpoint_config_error"
+    )
+  }
+  if (!is.null(checkpoint_projection) && !is.function(checkpoint_projection)) {
+    cli::cli_abort(
+      "{.arg checkpoint_projection} must be a function or NULL",
+      class = "dsprrr_optimizer_checkpoint_config_error"
+    )
   }
   optimizer_budget_validate_stage(stage)
   records <- optimizer_eval_restore_records(partial_records)
@@ -3130,11 +3213,24 @@ optimizer_eval_program <- function(
       break
     }
     started_trial <- TRUE
+    row_program <- if (isTRUE(clone_program_per_row)) {
+      copy_module(program)
+    } else {
+      program
+    }
+    if (isTRUE(clone_program_per_row) && is.null(.llm)) {
+      row_program <- optimizer_clone_program_leaf_chats(row_program)
+    }
+    row_llm <- if (isTRUE(clone_program_per_row) && !is.null(.llm)) {
+      clone_ellmer_chat(.llm, arg = ".llm", reset_turns = TRUE)
+    } else {
+      .llm
+    }
     row_result <- eval_program(
-      program,
+      row_program,
       dataset[row_index, , drop = FALSE],
       metric,
-      .llm = .llm,
+      .llm = row_llm,
       control = optimizer_control(
         seed = control@seed,
         max_errors = control@max_errors,
@@ -3161,7 +3257,10 @@ optimizer_eval_program <- function(
     optimizer_budget_complete_unit(budget, row_unit_id)
     if (is.function(on_progress)) {
       on_progress(
-        optimizer_eval_checkpoint_records(records),
+        optimizer_eval_checkpoint_records(
+          records,
+          project = checkpoint_projection
+        ),
         row_index,
         budget
       )
@@ -3180,7 +3279,10 @@ optimizer_eval_program <- function(
   }
   if (is.function(on_progress)) {
     on_progress(
-      optimizer_eval_checkpoint_records(records),
+      optimizer_eval_checkpoint_records(
+        records,
+        project = checkpoint_projection
+      ),
       if (length(records) == 0L) {
         0L
       } else {

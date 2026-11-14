@@ -115,6 +115,7 @@ Collate:
     'optimizer-checkpoint.R'
     'optimizer-core.R'
     'optimizer-discrete-bo.R'
+    'optimizer-gepa-checkpoint.R'
     'optimizer-logging.R'
     'orchestration.R'
     'pareto.R'

@@ -52,8 +52,18 @@
 #' failures and feedback, per-row winner frontiers, component selection,
 #' lineage-aware merges and Pareto selection over several metrics, but runs a
 #' fixed number of generations instead of DSPy's budget-driven search.
-#' Checkpoint resume, cached subsample merge acceptance and inference-time
-#' candidate selection are not implemented.
+#' Checkpoint resume is available for sequential searches with the
+#' `round_robin` component selector over plain `Predict` leaves and built-in
+#' predictor pipelines. Checkpointed predictions must be plain data. Flex
+#' modules, other component selectors, custom module types, custom Chats,
+#' Chats with tools, and Chats with existing conversation turns are rejected
+#' before provider work. Resource limits may change when resuming; the
+#' algorithm configuration and runtime identities must match.
+#'
+#' Completed proposals and evaluation rows are restored without repeating
+#' their work. A provider request that finishes after the last checkpoint was
+#' written but before its result is committed may be retried after a crash, so
+#' checkpoint resume does not guarantee exactly-once provider effects.
 #'
 #' A Flex source is optimized as one component: its dynamically built inner
 #' predictors are not tuned separately. The source proposer sees the task and
@@ -64,11 +74,10 @@
 #' `.reflection_llm` is the reflection Chat, while `.llm` remains the task Chat
 #' for candidate evaluation. When `.reflection_llm` is omitted, an explicitly
 #' supplied `.llm` is used for both roles for compatibility. The optimization
-#' result records supplied model names and the reflection route in
-#' `extensions$gepa$model_routing`. If `.llm` is omitted, `task_model` is
-#' `NULL` because the regular module/default Chat resolver chooses the task
-#' Chat at evaluation time, and `task_chat_source` records
-#' `"runtime_resolution"`. Both roles share the optimizer's resource budget;
+#' result records model names and the reflection route in
+#' `extensions$gepa$model_routing`. If `.llm` is omitted, `task_model` reports
+#' the effective attached/default Chat model when it can be resolved, and
+#' `task_chat_source` records `"runtime_resolution"`. Both roles share the optimizer's resource budget;
 #' reflection requests are attributed to GEPA reflection stages.
 #'
 #' GEPA deep-clones the reflection Chat for each proposal and clears the
@@ -423,6 +432,27 @@ compile_gepa <- function(
     metric_names <- paste0("metric_", seq_along(metrics))
   }
 
+  control <- optimizer_control_for_teleprompter(
+    teleprompter,
+    control = control
+  )
+
+  if (optimizer_checkpoint_enabled(control)) {
+    return(compile_gepa_checkpointed(
+      teleprompter = teleprompter,
+      program = program,
+      discovery_dataset = trainset,
+      validation_dataset = valset %||% trainset,
+      metrics = metrics,
+      metric_names = metric_names,
+      .llm = .llm,
+      .reflection_llm = reflection_chat,
+      task_chat_source = task_chat_source,
+      reflection_chat_source = reflection_chat_source,
+      control = control
+    ))
+  }
+
   if (!is.null(teleprompter@seed) && !is.na(teleprompter@seed)) {
     old_seed <- if (exists(".Random.seed", envir = globalenv())) {
       get(".Random.seed", envir = globalenv())
@@ -444,11 +474,6 @@ compile_gepa <- function(
     )
   }
 
-  control <- optimizer_control_for_teleprompter(
-    teleprompter,
-    control = control
-  )
-  optimizer_require_ledger_only_checkpoint(control, "GEPA")
   budget <- new_optimizer_budget(control)
 
   trial_log <- if (!is.null(control@log_dir)) {
