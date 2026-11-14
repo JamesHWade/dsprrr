@@ -39,10 +39,10 @@ output keeps the signature's fields; on a structured result,
 \code{ContentThinking} objects from the current call, or \code{NULL} when the
 provider did not expose any. It never synthesizes a reasoning string.
 
-Native metadata is currently supported for synchronous scalar \code{\link[=run]{run()}}
-calls. Native mode errors before provider work for batch, asynchronous or
-streaming execution, whose current result contracts do not preserve these
-turns.
+Native metadata is supported in structured results from synchronous scalar
+\code{\link[=run]{run()}} calls and direct \code{\link[=run_async]{run_async()}} calls. Native mode errors before
+provider work for batch or streaming execution, whose current result
+contracts do not preserve these turns.
 }
 \description{
 \code{chain_of_thought()} creates a prediction module with one of three

@@ -122,10 +122,11 @@ First development changelog. dsprrr is experimental; the API may change.
   retain simple results and reject structured results until they can preserve
   the same trace contract.
 
-* `rlm_module()` and `rlm()` now support `reasoning_mode = "native"` for
-  code-only action responses with provider thinking metadata, and
-  `reasoning_mode = "plan"` for actions with a concise explicit plan. The
-  existing `"rationale"` action schema remains the default. Native metadata is
+* `rlm_module(reasoning_mode = "native")` and
+  `rlm(.reasoning_mode = "native")` now support code-only action responses
+  with provider thinking metadata. Both arguments also accept `"plan"` for
+  actions with a concise explicit plan. The existing `"rationale"` action
+  schema remains the default. Native metadata is
   exposed on structured scalar results and remains absent when the provider
   returns no thinking blocks; batch, async and streaming routes reject native
   RLM execution before work begins.
@@ -594,8 +595,8 @@ First development changelog. dsprrr is experimental; the API may change.
   as free. Private atomic checkpoints preserve fingerprints, RNG state,
   counters, lineage, best partial programs, and append-only trial logs;
   Bootstrap and MIPRO resume without repeating completed paid rows. GEPA,
-  SIMBA, and COPRO share the same ledger and typed stop reasons while their
-  fine-grained resume engines remain explicitly tracked follow-ups. Sticky
+  SIMBA, and COPRO share the same ledger and typed stop reasons; fine-grained
+  resume for SIMBA and COPRO remains an explicitly tracked follow-up. Sticky
   error-budget stops survive checkpoint round-trips, and MIPRO retains its
   requested worker count when no explicit optimizer control overrides it
   (#dsprrr-krq4).

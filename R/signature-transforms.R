@@ -232,10 +232,10 @@ with_reasoning <- function(
 #'   `ContentThinking` objects from the current call, or `NULL` when the
 #'   provider did not expose any. It never synthesizes a reasoning string.
 #'
-#' Native metadata is currently supported for synchronous scalar [run()]
-#'   calls. Native mode errors before provider work for batch, asynchronous or
-#'   streaming execution, whose current result contracts do not preserve these
-#'   turns.
+#' Native metadata is supported in structured results from synchronous scalar
+#'   [run()] calls and direct [run_async()] calls. Native mode errors before
+#'   provider work for batch or streaming execution, whose current result
+#'   contracts do not preserve these turns.
 #'
 #' @export
 #' @family program constructors
