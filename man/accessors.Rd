@@ -67,6 +67,10 @@ is a list of ellmer \code{ContentThinking} objects from the current provider
 turn, or \code{NULL} if the provider did not expose thinking content. dsprrr does
 not synthesize text for this field.
 
+For \code{rlm_module(reasoning_mode = "native")}, the same field contains
+provider thinking blocks from action calls in order; the integer vector
+\code{native_reasoning_action_indices} identifies the action for each block.
+
 For \code{\link[=run_dataset]{run_dataset()}} results, use the \code{result} and \code{.metadata} columns
 instead.
 }

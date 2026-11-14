@@ -61,6 +61,20 @@ NULL
 #' outputs. Opaque `TypeJsonSchema` outputs are rejected when the module is
 #' created, because they cannot be checked in the repair loop.
 #'
+#' `reasoning_mode` changes the action predictor, not the declared final
+#' output. `"rationale"` preserves the existing `reasoning` and `code` action
+#' fields. `"native"` requests code only and records provider-supplied
+#' `ContentThinking` blocks in `get_metadata()` when they are present; the
+#' structured metadata also has `native_reasoning_action_indices`, aligned
+#' with those blocks. `"plan"` records a concise explicit `plan` with each
+#' action. Retrieve native metadata from structured scalar [run()] results.
+#' Batch, asynchronous and streaming paths reject native RLMs before execution.
+#' A custom `generate_action` module must accept one required string `state`
+#' input and return required string fields for the selected mode. Native custom
+#' actions also set `config$reasoning_mode = "native"` so provider thinking is
+#' captured using the same current-turn contract. The constructor validates
+#' these contracts without rewriting the supplied module.
+#'
 #' ## Runners
 #'
 #' Supply exactly one of `runner` and `interpreter_factory`. For model-written
@@ -111,6 +125,12 @@ NULL
 #'   Use `0L` to disable them.
 #' @param max_output_chars Maximum number of characters of each execution
 #'   result shown to the model (default `10000L`).
+#' @param reasoning_mode How the action predictor handles reasoning:
+#'   `"rationale"` (the default) returns a short `reasoning` field,
+#'   `"native"` asks for code only and exposes provider-supplied thinking
+#'   blocks in structured result metadata when available, and `"plan"` returns
+#'   a concise explicit `plan` with the code. Native thinking is not synthesized
+#'   when the provider does not return it.
 #' @param sub_lm Optional ellmer Chat for sub-queries. `NULL` uses the chat of
 #'   the call.
 #' @param verbose Whether to print progress (default `FALSE`).
@@ -168,6 +188,7 @@ rlm_module <- function(
   chat = NULL,
   generate_action = NULL,
   extract = NULL,
+  reasoning_mode = c("rationale", "native", "plan"),
   ...
 ) {
   reject_partial_argument_matches(sys.call(), sys.function())
@@ -183,6 +204,10 @@ rlm_module <- function(
   if (is.character(signature)) {
     signature <- signature(signature)
   }
+
+  reasoning <- normalize_rlm_reasoning_config(reasoning_mode, config)
+  reasoning_mode <- reasoning$mode
+  config <- reasoning$config
 
   if (!S7::S7_inherits(signature, Signature)) {
     cli::cli_abort(c(
@@ -222,6 +247,7 @@ rlm_module <- function(
 
   mod <- RLMModule$new(
     signature = signature,
+    reasoning_mode = reasoning_mode,
     runner = binding$runner,
     interpreter_factory = binding$interpreter_factory,
     max_iterations = max_iterations,
@@ -236,6 +262,58 @@ rlm_module <- function(
     extract = extract
   )
   stamp_module_kind(mod, "rlm")
+}
+
+
+normalize_rlm_reasoning_config <- function(reasoning_mode, config) {
+  choices <- c("rationale", "native", "plan")
+  mode <- if (identical(reasoning_mode, choices)) {
+    "rationale"
+  } else {
+    validate_rlm_reasoning_mode(reasoning_mode)
+  }
+  config <- normalize_module_config(config)
+  if (!is.null(config$reasoning_mode)) {
+    configured_mode <- validate_rlm_reasoning_mode(
+      config$reasoning_mode,
+      arg = "config$reasoning_mode"
+    )
+    if (!identical(configured_mode, mode)) {
+      cli::cli_abort(
+        c(
+          "Conflicting RLM reasoning modes",
+          "x" = "{.arg reasoning_mode} is {.val {mode}}, but `config$reasoning_mode` is {.val {configured_mode}}."
+        ),
+        class = "dsprrr_reasoning_mode_error"
+      )
+    }
+  }
+  config$reasoning_mode <- mode
+  list(mode = mode, config = config)
+}
+
+
+validate_rlm_reasoning_mode <- function(mode, arg = "reasoning_mode") {
+  choices <- c("rationale", "native", "plan")
+  valid <- is.character(mode) &&
+    length(mode) == 1L &&
+    !is.na(mode) &&
+    mode %in% choices
+  if (!valid) {
+    message <- if (identical(arg, "reasoning_mode")) {
+      "{.arg reasoning_mode} must be one of {.val {choices}}."
+    } else {
+      "{.code config$reasoning_mode} must be one of {.val {choices}}."
+    }
+    cli::cli_abort(
+      c(
+        "Invalid RLM reasoning mode",
+        "x" = message
+      ),
+      class = "dsprrr_reasoning_mode_error"
+    )
+  }
+  mode
 }
 
 
@@ -302,7 +380,51 @@ rlm_chat_prompt <- function(chat, prompt) {
 }
 
 
-new_rlm_action_module <- function() {
+new_rlm_action_module <- function(reasoning_mode = "rationale") {
+  reasoning_mode <- validate_rlm_reasoning_mode(reasoning_mode)
+  properties <- switch(
+    reasoning_mode,
+    rationale = list(
+      reasoning = ellmer::type_string(
+        description = "Brief rationale for the next operation"
+      ),
+      code = ellmer::type_string(
+        description = "One non-empty R expression or block to execute"
+      )
+    ),
+    native = list(
+      code = ellmer::type_string(
+        description = "One non-empty R expression or block to execute"
+      )
+    ),
+    plan = list(
+      plan = ellmer::type_string(
+        description = "A concise high-level plan for this operation"
+      ),
+      code = ellmer::type_string(
+        description = "One non-empty R expression or block to execute"
+      )
+    )
+  )
+  config <- if (identical(reasoning_mode, "native")) {
+    list(reasoning_mode = "native")
+  } else {
+    list()
+  }
+  action_instructions <- c(
+    "Choose the next useful R operation for an iterative investigation.",
+    "Use the supplied state as the complete source of task and trajectory context."
+  )
+  instruction_suffix <- switch(
+    reasoning_mode,
+    rationale = NULL,
+    native = "Return code only; provider reasoning is recorded as metadata when available.",
+    plan = "Include a concise high-level plan with the code."
+  )
+  if (!is.null(instruction_suffix)) {
+    action_instructions <- c(action_instructions, instruction_suffix)
+  }
+
   PredictModule$new(
     signature = signature(
       inputs = list(input(
@@ -310,19 +432,10 @@ new_rlm_action_module <- function() {
         type = ellmer::type_string(),
         description = "RLM task, available variables, and prior REPL trajectory"
       )),
-      output_type = ellmer::type_object(
-        reasoning = ellmer::type_string(
-          description = "Brief rationale for the next operation"
-        ),
-        code = ellmer::type_string(
-          description = "One non-empty R expression or block to execute"
-        )
-      ),
-      instructions = paste(
-        "Choose the next useful R operation for an iterative investigation.",
-        "Use the supplied state as the complete source of task and trajectory context."
-      )
-    )
+      output_type = do.call(ellmer::type_object, properties),
+      instructions = paste(action_instructions, collapse = " ")
+    ),
+    config = config
   )
 }
 
@@ -441,7 +554,7 @@ validate_rlm_predictor_state_input <- function(signature, predictor, class) {
 }
 
 
-validate_rlm_action_predictor <- function(module) {
+validate_rlm_action_predictor <- function(module, reasoning_mode) {
   predictor <- "generate_action"
   class <- "dsprrr_rlm_generate_action_contract_error"
   signature <- tryCatch(module$signature, error = function(error) NULL)
@@ -455,22 +568,60 @@ validate_rlm_action_predictor <- function(module) {
   validate_rlm_predictor_state_input(signature, predictor, class)
 
   output_type <- signature@output_type
+  expected_fields <- switch(
+    reasoning_mode,
+    rationale = c("reasoning", "code"),
+    native = "code",
+    plan = c("plan", "code")
+  )
   valid <- inherits(output_type, "ellmer::TypeObject") &&
     isTRUE(output_type@required) &&
-    !isTRUE(output_type@additional_properties) &&
-    identical(names(output_type@properties), c("reasoning", "code")) &&
+    all(expected_fields %in% names(output_type@properties)) &&
     all(vapply(
-      output_type@properties,
+      output_type@properties[expected_fields],
       rlm_predictor_required_string,
       logical(1)
     ))
+  if (identical(reasoning_mode, "rationale")) {
+    valid <- valid &&
+      !isTRUE(output_type@additional_properties) &&
+      identical(names(output_type@properties), expected_fields) &&
+      all(vapply(
+        output_type@properties,
+        rlm_predictor_required_string,
+        logical(1)
+      ))
+  } else {
+    valid <- valid && !"reasoning" %in% names(output_type@properties)
+  }
   if (!valid) {
+    expected_description <- switch(
+      reasoning_mode,
+      rationale = "exactly the required string fields {.field reasoning} and {.field code}",
+      native = "a required string {.field code} field and no {.field reasoning} output field",
+      plan = "required string {.field plan} and {.field code} fields"
+    )
     rlm_predictor_abort(
       predictor,
-      paste(
-        "It must return exactly the required string fields",
-        "{.field reasoning} and {.field code}."
-      ),
+      paste("It must return", expected_description, "."),
+      class
+    )
+  }
+  configured_mode <- module_reasoning_mode(module)
+  if (
+    (!is.null(configured_mode) &&
+      !identical(configured_mode, reasoning_mode)) ||
+      (identical(reasoning_mode, "native") &&
+        !identical(configured_mode, "native"))
+  ) {
+    expected_mode <- if (identical(reasoning_mode, "native")) {
+      "{.val native} so provider thinking metadata is captured"
+    } else {
+      "absent or {.val {reasoning_mode}}"
+    }
+    rlm_predictor_abort(
+      predictor,
+      paste0("Its configured reasoning mode must be ", expected_mode, "."),
       class
     )
   }
@@ -507,7 +658,11 @@ validate_rlm_extract_predictor <- function(module, output_type) {
 }
 
 
-validate_rlm_predictor_children <- function(children, output_type) {
+validate_rlm_predictor_children <- function(
+  children,
+  output_type,
+  reasoning_mode = "rationale"
+) {
   if (
     !is.list(children) ||
       !identical(names(children), c("generate_action", "extract")) ||
@@ -522,7 +677,7 @@ validate_rlm_predictor_children <- function(children, output_type) {
       )
     )
   }
-  validate_rlm_action_predictor(children$generate_action)
+  validate_rlm_action_predictor(children$generate_action, reasoning_mode)
   validate_rlm_extract_predictor(children$extract, output_type)
   invisible(children)
 }
@@ -823,6 +978,7 @@ RLMModule <- R6::R6Class(
     #' @param max_iterations Maximum REPL iterations
     #' @param max_llm_calls Maximum recursive LLM calls
     #' @param max_output_chars Maximum output size
+    #' @param reasoning_mode How the action predictor handles reasoning
     #' @param sub_lm Optional LLM for recursive queries
     #' @param verbose Whether to print progress
     #' @param tools User-defined tools
@@ -843,8 +999,13 @@ RLMModule <- R6::R6Class(
       chat = NULL,
       interpreter_factory = NULL,
       generate_action = NULL,
-      extract = NULL
+      extract = NULL,
+      reasoning_mode = c("rationale", "native", "plan")
     ) {
+      reasoning <- normalize_rlm_reasoning_config(reasoning_mode, config)
+      reasoning_mode <- reasoning$mode
+      config <- reasoning$config
+
       binding <- normalize_code_runner_binding(
         runner = runner,
         interpreter_factory = interpreter_factory,
@@ -907,11 +1068,15 @@ RLMModule <- R6::R6Class(
         )
       }
       validate_rlm_sub_lm(sub_lm)
-      generate_action <- generate_action %||% new_rlm_action_module()
+      generate_action <- generate_action %||%
+        new_rlm_action_module(
+          reasoning_mode
+        )
       extract <- extract %||% new_rlm_extract_module(signature@output_type)
       validate_rlm_predictor_children(
         list(generate_action = generate_action, extract = extract),
-        signature@output_type
+        signature@output_type,
+        reasoning_mode = reasoning_mode
       )
       super$initialize(
         signature = signature,
@@ -952,6 +1117,15 @@ RLMModule <- R6::R6Class(
       ...
     ) {
       validate_cache_arg(.cache)
+      reasoning_mode <- module_reasoning_mode(self)
+      validate_rlm_predictor_children(
+        list(
+          generate_action = self$generate_action,
+          extract = self$extract
+        ),
+        self$signature@output_type,
+        reasoning_mode = reasoning_mode
+      )
       # Handle inputs
       if (is.data.frame(batch)) {
         if (nrow(batch) != 1L) {
@@ -1118,21 +1292,24 @@ RLMModule <- R6::R6Class(
             )
 
             # Record in history
-            history[[iter]] <- list(
-              iteration = iter,
-              reasoning = response$reasoning,
-              code = response$code,
-              output = exec_result$formatted_output,
-              success = exec_result$success,
-              is_final = exec_result$is_final,
-              action_metadata = private$compact_action_metadata(
-                response$metadata
-              ),
-              execution_metadata = list(
-                duration_ms = exec_result$raw_result$duration_ms %||% NA_real_,
-                error_type = exec_result$raw_result$error_type %||% NULL
-              )
+            action_history <- list(iteration = iter)
+            if (identical(reasoning_mode, "rationale")) {
+              action_history$reasoning <- response$reasoning
+            } else if (identical(reasoning_mode, "plan")) {
+              action_history$plan <- response$plan
+            }
+            action_history$code <- response$code
+            action_history$output <- exec_result$formatted_output
+            action_history$success <- exec_result$success
+            action_history$is_final <- exec_result$is_final
+            action_history$action_metadata <- private$compact_action_metadata(
+              response$metadata
             )
+            action_history$execution_metadata <- list(
+              duration_ms = exec_result$raw_result$duration_ms %||% NA_real_,
+              error_type = exec_result$raw_result$error_type %||% NULL
+            )
+            history[[iter]] <- action_history
 
             # Check for SUBMIT() termination
             if (isTRUE(exec_result$success) && isTRUE(exec_result$is_final)) {
@@ -1297,6 +1474,16 @@ RLMModule <- R6::R6Class(
               "caller-owned"
             }
           )
+          if (!identical(reasoning_mode, "rationale")) {
+            metadata$reasoning_mode <- reasoning_mode
+          }
+          if (identical(reasoning_mode, "native")) {
+            native_reasoning <- private$aggregate_native_reasoning(history)
+            metadata["native_reasoning"] <- list(native_reasoning$contents)
+            metadata["native_reasoning_action_indices"] <- list(
+              native_reasoning$action_indices
+            )
+          }
 
           tibble::tibble(
             output = list(output),
@@ -1322,6 +1509,7 @@ RLMModule <- R6::R6Class(
         self,
         RLMModule$new(
           signature = self$signature,
+          reasoning_mode = module_reasoning_mode(self),
           runner = self$runner,
           interpreter_factory = self$interpreter_factory,
           max_iterations = self$max_iterations,
@@ -1344,6 +1532,7 @@ RLMModule <- R6::R6Class(
     deepcopy = function() {
       copied <- RLMModule$new(
         signature = self$signature,
+        reasoning_mode = module_reasoning_mode(self),
         runner = self$runner,
         max_iterations = self$max_iterations,
         max_llm_calls = self$max_llm_calls,
@@ -1387,7 +1576,11 @@ RLMModule <- R6::R6Class(
     #' @param children Named child-module list
     #' @return The children, invisibly
     validate_graph_children = function(children) {
-      validate_rlm_predictor_children(children, self$signature@output_type)
+      validate_rlm_predictor_children(
+        children,
+        self$signature@output_type,
+        reasoning_mode = module_reasoning_mode(self)
+      )
     },
 
     #' @description
@@ -1712,6 +1905,21 @@ RLMModule <- R6::R6Class(
         task_instructions <- "Answer the declared task using only supported evidence."
       }
 
+      response_format <- switch(
+        module_reasoning_mode(self),
+        rationale = paste(
+          '- "reasoning": Your thought process for this step',
+          '- "code": R code to execute (single string)',
+          sep = "\n"
+        ),
+        native = '- "code": R code to execute (single string)',
+        plan = paste(
+          '- "plan": A concise high-level plan for this operation',
+          '- "code": R code to execute (single string)',
+          sep = "\n"
+        )
+      )
+
       glue::glue(
         "
 You are working in an R REPL environment. Your goal is to answer the query by
@@ -1743,12 +1951,31 @@ writing R code to explore and analyze the provided context.
 
 ## Response Format
 Return JSON with:
-- \"reasoning\": Your thought process for this step
-- \"code\": R code to execute (single string)
+{response_format}
 
 The code's output will be shown to you. Continue until you call SUBMIT().
 "
       )
+    },
+
+    #' Render the mode-specific annotation retained for one RLM action
+    format_action_annotation = function(action) {
+      mode <- module_reasoning_mode(self)
+      field <- switch(
+        mode,
+        rationale = "reasoning",
+        native = NULL,
+        plan = "plan"
+      )
+      if (is.null(field) || !field %in% names(action)) {
+        return("")
+      }
+      label <- if (identical(mode, "plan")) "Plan" else "Reasoning"
+      value <- action[[field]]
+      if (is.null(value)) {
+        value <- ""
+      }
+      paste0(label, ": ", paste(as.character(value), collapse = " "))
     },
 
     #' Build prompt for a specific iteration
@@ -1762,10 +1989,11 @@ The code's output will be shown to you. Continue until you call SUBMIT().
       history_parts <- vapply(
         history,
         function(h) {
+          annotation <- private$format_action_annotation(h)
           glue::glue(
             "
 ## Iteration {h$iteration}
-Reasoning: {h$reasoning}
+{annotation}
 
 Code:
 ```r
@@ -1816,6 +2044,7 @@ Code:
         }
       )
       result <- action_result$output[[1L]]
+      reasoning_mode <- module_reasoning_mode(self)
 
       valid_code <- is.character(result$code) &&
         length(result$code) == 1L &&
@@ -1830,17 +2059,57 @@ Code:
           class = "dsprrr_rlm_action_error"
         )
       }
+      if (identical(reasoning_mode, "plan")) {
+        valid_plan <- is.character(result$plan) &&
+          length(result$plan) == 1L &&
+          !is.na(result$plan) &&
+          nzchar(trimws(result$plan))
+        if (!valid_plan) {
+          cli::cli_abort(
+            c(
+              "LLM returned an invalid RLM action",
+              "i" = "{.field plan} must be one non-empty string."
+            ),
+            class = "dsprrr_rlm_action_error"
+          )
+        }
+      }
       metadata <- private$normalize_predictor_metadata(
         self$generate_action,
         action_result$metadata[[1L]] %||% list()
       )
+      if (identical(reasoning_mode, "native")) {
+        native_reasoning <- metadata$native_reasoning
+        if (
+          !is.null(native_reasoning) &&
+            (!is.list(native_reasoning) ||
+              !all(vapply(
+                native_reasoning,
+                inherits,
+                logical(1),
+                "ellmer::ContentThinking"
+              )))
+        ) {
+          cli::cli_abort(
+            c(
+              "Native RLM action metadata is incompatible",
+              "x" = "{.field native_reasoning} must be a list of ellmer ContentThinking objects or NULL."
+            ),
+            class = "dsprrr_rlm_action_metadata_error"
+          )
+        }
+      }
 
-      list(
-        reasoning = result$reasoning %||% "",
-        code = strip_rlm_code_fences(result$code),
-        metadata = metadata,
-        chat = action_result$chat[[1L]] %||% action_llm
-      )
+      response <- list()
+      if (identical(reasoning_mode, "rationale")) {
+        response$reasoning <- result$reasoning %||% ""
+      } else if (identical(reasoning_mode, "plan")) {
+        response$plan <- result$plan %||% ""
+      }
+      response$code <- strip_rlm_code_fences(result$code)
+      response$metadata <- metadata
+      response$chat <- action_result$chat[[1L]] %||% action_llm
+      response
     },
 
     #' Execute code with RLM tools injected
@@ -2635,9 +2904,10 @@ Code:
       trajectory <- vapply(
         history,
         function(h) {
+          annotation <- private$format_action_annotation(h)
           glue::glue(
             "Iteration {h$iteration}:
-Reasoning: {h$reasoning}
+{annotation}
 Code: {h$code}
 Output: {private$format_excerpt(h$output, max_chars = self$max_output_chars)}"
           )
@@ -2913,9 +3183,40 @@ answer possible with what was discovered.
         "duration_s",
         "latency_ms",
         "cache",
-        "provider_calls"
+        "provider_calls",
+        "reasoning_mode",
+        "native_reasoning"
       )
       metadata[intersect(fields, names(metadata))]
+    },
+
+    #' Flatten provider thinking blocks and retain their action positions
+    aggregate_native_reasoning = function(history) {
+      contents <- list()
+      action_indices <- integer()
+      for (i in seq_along(history)) {
+        blocks <- history[[i]]$action_metadata$native_reasoning
+        if (!is.list(blocks) || length(blocks) == 0L) {
+          next
+        }
+        blocks <- Filter(
+          function(block) inherits(block, "ellmer::ContentThinking"),
+          blocks
+        )
+        if (length(blocks) == 0L) {
+          next
+        }
+        contents <- c(contents, blocks)
+        action_indices <- c(action_indices, rep.int(i, length(blocks)))
+      }
+      list(
+        contents = if (length(contents) == 0L) NULL else contents,
+        action_indices = if (length(action_indices) == 0L) {
+          NULL
+        } else {
+          action_indices
+        }
+      )
     },
 
     #' Get a model name without making model metadata mandatory for test doubles
@@ -3212,6 +3513,9 @@ answer possible with what was discovered.
 #' @param .max_llm_calls Integer maximum number of sub-queries (default `50L`).
 #' @param .max_output_chars Maximum number of characters of each execution
 #'   result shown to the model (default `10000L`).
+#' @param .reasoning_mode Action reasoning behavior: `"rationale"` (the
+#'   default), `"native"` (code only, with provider thinking metadata when
+#'   available), or `"plan"` (a concise plan and code).
 #' @param .sub_lm Optional ellmer Chat for `llm_query()` sub-queries. `NULL`
 #'   uses `.llm`; set `.max_llm_calls = 0L` to disable sub-queries.
 #' @param .tools Named list of R functions or ellmer tools that the generated
@@ -3241,6 +3545,17 @@ answer possible with what was discovered.
 #'   .max_llm_calls = 0L
 #' )
 #'
+#' # Native provider thinking is available on structured scalar results
+#' native_result <- rlm(
+#'   "document, question -> answer",
+#'   document = "Owner: team-a\nObligation: rotate keys quarterly",
+#'   question = "What are the main themes?",
+#'   .llm = ellmer::chat_openai(model = "gpt-6-luna"),
+#'   .reasoning_mode = "native",
+#'   .return_format = "structured"
+#' )
+#' get_metadata(native_result)$native_reasoning
+#'
 #' # Rich local R objects need a trusted runner that can stage them
 #' sessions <- data.frame(
 #'   release = c("2.3.9", "2.4.0"),
@@ -3264,6 +3579,7 @@ rlm <- function(
   .max_iterations = 20L,
   .max_llm_calls = 50L,
   .max_output_chars = 10000L,
+  .reasoning_mode = c("rationale", "native", "plan"),
   .sub_lm = NULL,
   .tools = list(),
   .verbose = FALSE,
@@ -3288,6 +3604,7 @@ rlm <- function(
     max_iterations = .max_iterations,
     max_llm_calls = .max_llm_calls,
     max_output_chars = .max_output_chars,
+    reasoning_mode = .reasoning_mode,
     sub_lm = .sub_lm,
     verbose = .verbose,
     tools = .tools

@@ -117,6 +117,14 @@ First development changelog. dsprrr is experimental; the API may change.
   retain simple results and reject structured results until they can preserve
   the same trace contract.
 
+* `rlm_module()` and `rlm()` now support `reasoning_mode = "native"` for
+  code-only action responses with provider thinking metadata, and
+  `reasoning_mode = "plan"` for actions with a concise explicit plan. The
+  existing `"rationale"` action schema remains the default. Native metadata is
+  exposed on structured scalar results and remains absent when the provider
+  returns no thinking blocks; batch, async and streaming routes reject native
+  RLM execution before work begins.
+
 * Modules run through an agent runtime that follows ellmer's Chat protocol,
   such as a deputy `Agent`, are now correlated with the agent's runs. dsprrr
   passes the program ID and `.trace_context` to the agent as

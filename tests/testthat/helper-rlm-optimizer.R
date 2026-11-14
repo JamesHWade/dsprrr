@@ -34,17 +34,28 @@ make_rlm_optimizer_chat <- function() {
           return(list(instructions = "EXTRACT-TUNED"))
         }
 
-        if (setequal(fields, c("reasoning", "code"))) {
+        if (
+          setequal(fields, c("reasoning", "code")) ||
+            setequal(fields, c("plan", "code")) ||
+            identical(fields, "code")
+        ) {
           state$action_prompts <- c(state$action_prompts, prompt)
           state$action_tuned <- grepl("ACTION-TUNED", prompt, fixed = TRUE) ||
             grepl("ACTION-HARNESS", prompt, fixed = TRUE)
-          return(list(
-            reasoning = "Inspect a bounded piece of evidence.",
+          action <- list(
             code = paste0(
               "paste0('TRACE_HEAD_', strrep('x', 500L), ",
               "'_TRACE_TAIL')"
             )
-          ))
+          )
+          if ("reasoning" %in% fields) {
+            action$reasoning <- "Inspect a bounded piece of evidence."
+            action <- action[c("reasoning", "code")]
+          } else if ("plan" %in% fields) {
+            action$plan <- "Inspect bounded evidence and report the result."
+            action <- action[c("plan", "code")]
+          }
+          return(action)
         }
 
         state$extract_prompts <- c(state$extract_prompts, prompt)
@@ -61,7 +72,11 @@ make_rlm_optimizer_chat <- function() {
   chat
 }
 
-make_rlm_optimizer_program <- function(runner, max_output_chars = 96L) {
+make_rlm_optimizer_program <- function(
+  runner,
+  max_output_chars = 96L,
+  reasoning_mode = "rationale"
+) {
   rlm_module(
     signature(
       "question -> answer",
@@ -70,7 +85,8 @@ make_rlm_optimizer_program <- function(runner, max_output_chars = 96L) {
     runner = runner,
     max_iterations = 1L,
     max_llm_calls = 0L,
-    max_output_chars = max_output_chars
+    max_output_chars = max_output_chars,
+    reasoning_mode = reasoning_mode
   )
 }
 
