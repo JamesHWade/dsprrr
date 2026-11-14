@@ -121,8 +121,8 @@ and [upgrade guide](https://dspy.ai/current/community/upgrading-to-3-5/).
 | DSPy | dsprrr | Notes |
 |------|--------|-------|
 | `dspy.Predict` | `module(sig)` | Core predictor |
-| `dspy.ChainOfThought` | `chain_of_thought()`, `with_reasoning()` | Implemented as signature transforms |
-| `dspy.ReAct` (`ReActV2` is deprecated) | `react(sig)` | Native ellmer turn history, tool-call IDs, multiple calls per assistant turn, enforced iteration limit, then structured finalization. DSPy's typed `submit` completion is a separate contract; `run_async()` does not yet accept `react()` modules, so run them with `run()` |
+| `dspy.ChainOfThought` | `chain_of_thought()`, `with_reasoning()` | Default rationale transform; opt-in native provider reasoning or a short explicit plan |
+| `dspy.ReAct` (`ReActV2` is deprecated) | `react(sig)` | Native ellmer turns and tool-call IDs, ordered rich tool content, an enforced iteration limit, and opt-in typed `submit` finalization. Structured follow-up remains the default |
 | `dspy.ProgramOfThought` (removed in DSPy 3.5) | `program_of_thought()` | Generates and executes **R** code (not Python); accepts either a caller-owned reused runner or a fresh per-invocation interpreter factory. dsprrr keeps it supported; DSPy points users to `RLM` and `Flex` |
 | `dspy.CodeAct` (removed in DSPy 3.5) | `code_act()` | Hybrid tools + R code execution with an enforced inner tool-call limit; accepts either a caller-owned reused runner or a fresh per-invocation interpreter factory. The built-in runner is trusted-input-only, and sandboxed backends can implement the runner protocol |
 | `dspy.BestOfN` | `best_of_n()` | Reward-function-guided retries |
@@ -141,6 +141,37 @@ zero-argument `interpreter_factory` that creates a fresh runner per
 invocation. Executable Flex accepts only the factory form and requires an
 enforced sandbox by default, while JSON Flex needs no interpreter; see
 [Flex: optimize a whole program](flex-optimization.html).
+
+### Reasoning and typed completion
+
+`chain_of_thought()` keeps its existing rationale field by default. Native
+mode keeps the original output schema and exposes provider-supplied thinking
+in structured metadata; an absent thinking block remains `NULL`. Plan mode
+adds a short, explicit plan to the requested output. Neither mode promises
+to recover a model's private reasoning or change provider settings.
+
+```{r}
+native_qa <- chain_of_thought("question -> answer", mode = "native")
+result <- run(
+  native_qa,
+  question = "What is the capital of France?",
+  .return_format = "structured"
+)
+result$metadata$native_reasoning
+
+planned_qa <- chain_of_thought("question -> answer", mode = "plan")
+```
+
+For ReAct, `finalization = "submit"` makes the final answer a typed tool
+call. Invalid submissions return repair feedback within the iteration
+budget. A valid submission must be the only tool call in its turn; mixed
+submission/action turns fail before tool effects. This avoids the extra
+extraction request used by the default `finalization = "structured"`.
+
+```{r}
+agent <- react("question -> answer", finalization = "submit")
+run(agent, question = "What is the capital of France?")
+```
 
 ### RLM
 
@@ -161,6 +192,26 @@ differences a DSPy user will notice:
 | Returned value | Prediction with reusable ordered History; native reasoning may have no visible summary | `run()` output plus structured metadata, including a bounded trajectory |
 | Typed outputs | Signature adapters validate the Python/Pydantic type | ellmer string, number, integer, boolean, enum, array, and object types; opaque `TypeJsonSchema` nodes are rejected |
 | Host tools | Interpreter-defined | Run in the host R process, outside the guest sandbox |
+
+Recursive query context can contain an ordered mix of text and images.
+Generated R code passes plain records to `llm_query()` or aligned slices to
+`llm_query_batched()`; the guest does not need ellmer installed:
+
+```r
+llm_query(
+  "What does this figure show?",
+  context_slice = list(
+    list(type = "text", text = "Compare the two panels."),
+    list(type = "image_url", url = "https://example.com/figure.png")
+  )
+)
+```
+
+HTTPS image URLs and bounded inline image data are supported. PDF and local
+file records are rejected. The runner's transport cap also applies: a valid
+image record can still be too large for a managed MCP control frame. These
+queries preserve replay identity, ordering, and call budgets; they do not
+establish that every provider/model can interpret images.
 
 RLM remains experimental in dsprrr: the execution and result contracts are
 tested, but the convenience API may still change. For a worked example, see
@@ -184,7 +235,7 @@ declarative output contracts with automatic feedback injection.
 | `BootstrapFewShotWithRandomSearch` | `BootstrapFewShotWithRandomSearch` | Random search over ordinary labeled/bootstrap candidates; rejects programs containing Flex or RLM rather than returning a baseline-only no-op |
 | `MIPROv2` | `MIPROv2` | Root Predict modules search instruction + demo candidates; nested graphs search child instructions with `max_bootstrapped_demos = 0L`. Candidates are chosen with a UCB1 bandit rather than Bayesian optimization |
 | `SIMBA` | `SIMBA` | Adapted: hard-example mining + LLM-generated rules; simplified vs. the full introspective algorithm |
-| `GEPA` | `GEPA` | Adapted reflective optimization for instructions and complete Flex sources, with separate train/validation roles, multi-objective selection, lineage, and optional retained outputs. DSPy 3.3.1's per-metric `objective_scores` and `frontier_type` map to dsprrr's named `metrics` list with Pareto selection. Cached subsample merge acceptance, fine-grained resume, parallel candidate evaluation, and built-in experiment trackers remain different |
+| `GEPA` | `GEPA` | Adapted reflective optimization for instructions and complete Flex sources, with separate train/validation roles, multi-objective selection, lineage, and optional retained outputs. DSPy 3.3.1's per-metric `objective_scores` and `frontier_type` map to dsprrr's named `metrics` list with Pareto selection. Task evaluation and reflection can use separate Chats with shared budget accounting. Cached subsample merge acceptance, fine-grained resume, parallel candidate evaluation, and built-in experiment trackers remain different |
 | `COPRO` | `COPRO` | Equivalent (coordinate ascent over instructions) |
 | `KNNFewShot` | `KNNFewShot` | Equivalent |
 | Experimental `ReAnchor` (3.4) | `ReAnchor()` (experimental) | Same gap-midpoint candidates, fold check, and restore-if-not-better rule; single Predict modules only. `compile()` runs the module over the training set to record evidence (twice when outputs first have to be switched to evidence decoding) and scores any `valset`; the search over settings then re-decodes that evidence without further provider calls |
@@ -227,6 +278,28 @@ compiled <- compile(qa, tp, trainset)
 
 The feedback for failed examples goes into GEPA's reflection prompt, so the
 reflection model sees why each output failed as well as which ones did.
+
+### Choosing a reflection model
+
+Pass `.reflection_llm` to `compile()` to separate GEPA proposal generation
+from task evaluation. Each reflection request starts from an independent
+Chat, and both stages contribute to the optimizer budget. An explicit
+`.llm` remains the legacy reflection fallback; an omitted task override can
+still resolve through the program's normal runtime configuration.
+
+```{r}
+compiled <- compile(
+  qa,
+  GEPA(metric = metric),
+  trainset,
+  .llm = task_chat,
+  .reflection_llm = reflection_chat
+)
+```
+
+Mutable search without an effective reflection Chat fails before evaluation.
+This is an adapted GEPA implementation; separate models alone do not establish
+algorithmic parity or an improvement on held-out data.
 
 ### Trace-aware metrics
 
@@ -388,8 +461,8 @@ priority order:
    usage, cost, cache state, timing, and normalized errors across every module.
 4. Package-level OpenTelemetry spans for module, optimizer, evaluation,
    cache, and tool activity, composed with ellmer's provider telemetry.
-5. Native reasoning-trace capture as a typed output (analogous to
-   `dspy.Reasoning`).
+5. A typed reasoning output analogous to `dspy.Reasoning`. Provider-native
+   thinking is available as metadata; it is not a required generated field.
 6. Predictor-local RLM demo evidence so MIPROv2 can bootstrap child demos;
    its graph mode currently tunes child instructions only, while GEPA selects
    the RLM child components explicitly.
