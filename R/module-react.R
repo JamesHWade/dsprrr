@@ -217,7 +217,7 @@ ReactModule <- R6::R6Class(
 
       tryCatch(
         {
-          llm$chat(prompt, echo = "none")
+          llm$chat(request$payload, echo = "none")
         },
         error = function(e) {
           if (inherits(e, "dsprrr_react_iteration_limit")) {

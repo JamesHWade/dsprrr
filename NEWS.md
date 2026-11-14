@@ -279,7 +279,8 @@ First development changelog. dsprrr is experimental; the API may change.
   `$add_tool()` rejects a name it already has. ellmer registers tools on a
   chat by name, so a second tool with the same name silently replaced the
   first while the module still listed both. `$add_tool(tool, replace = TRUE)`
-  replaces a tool deliberately.
+  replaces a tool deliberately. Its initial chat request now also preserves
+  image and PDF content objects while keeping prompt traces readable.
 
 * `metric_exact_match()` and `metric_f1()` now work without `field` in
   `evaluate()`, `optimize_grid()`, and `compile()`. Those functions pass the
