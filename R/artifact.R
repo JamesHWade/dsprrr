@@ -4266,6 +4266,8 @@ artifact_construct_module <- function(node, children, registry, trusted) {
     ),
     RLMModule = RLMModule$new(
       signature = signature,
+      reasoning_mode = config$reasoning_mode %||%
+        c("rationale", "native", "plan"),
       runner = runtime(fields$runner),
       interpreter_factory = runtime(fields$interpreter_factory),
       max_iterations = fields$max_iterations,

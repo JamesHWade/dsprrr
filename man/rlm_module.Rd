@@ -18,6 +18,7 @@ rlm_module(
   chat = NULL,
   generate_action = NULL,
   extract = NULL,
+  reasoning_mode = c("rationale", "native", "plan"),
   ...
 )
 }
@@ -66,6 +67,13 @@ the code (advanced).}
 
 \item{extract}{Optional replacement for the fallback extraction predictor
 (advanced).}
+
+\item{reasoning_mode}{How the action predictor handles reasoning:
+\code{"rationale"} (the default) returns a short \code{reasoning} field,
+\code{"native"} asks for code only and exposes provider-supplied thinking
+blocks in structured result metadata when available, and \code{"plan"} returns
+a concise explicit \code{plan} with the code. Native thinking is not synthesized
+when the provider does not return it.}
 
 \item{...}{Must be empty.}
 }
@@ -122,6 +130,20 @@ attempt.
 RLM checks string, number, integer, boolean, enum, array and object
 outputs. Opaque \code{TypeJsonSchema} outputs are rejected when the module is
 created, because they cannot be checked in the repair loop.
+
+\code{reasoning_mode} changes the action predictor, not the declared final
+output. \code{"rationale"} preserves the existing \code{reasoning} and \code{code} action
+fields. \code{"native"} requests code only and records provider-supplied
+\code{ContentThinking} blocks in \code{get_metadata()} when they are present; the
+structured metadata also has \code{native_reasoning_action_indices}, aligned
+with those blocks. \code{"plan"} records a concise explicit \code{plan} with each
+action. Retrieve native metadata from structured scalar \code{\link[=run]{run()}} results.
+Batch, asynchronous and streaming paths reject native RLMs before execution.
+A custom \code{generate_action} module must accept one required string \code{state}
+input and return required string fields for the selected mode. Native custom
+actions also set \code{config$reasoning_mode = "native"} so provider thinking is
+captured using the same current-turn contract. The constructor validates
+these contracts without rewriting the supplied module.
 }
 
 \subsection{Runners}{

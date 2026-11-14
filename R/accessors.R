@@ -20,6 +20,10 @@
 #' turn, or `NULL` if the provider did not expose thinking content. dsprrr does
 #' not synthesize text for this field.
 #'
+#' For `rlm_module(reasoning_mode = "native")`, the same field contains
+#' provider thinking blocks from action calls in order; the integer vector
+#' `native_reasoning_action_indices` identifies the action for each block.
+#'
 #' For [run_dataset()] results, use the `result` and `.metadata` columns
 #' instead.
 #'
