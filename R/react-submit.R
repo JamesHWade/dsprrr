@@ -528,7 +528,8 @@ react_submit_complete <- function(chat, request, value) {
       value,
       auto_unbox = TRUE,
       null = "null",
-      dataframe = "rows"
+      dataframe = "rows",
+      digits = 17
     ))
   )
   turns <- chat$get_turns()
