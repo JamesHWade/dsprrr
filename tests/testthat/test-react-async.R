@@ -527,6 +527,71 @@ test_that("async submit completes an empty object without another request", {
   expect_no_error(assert_async_chat_available(chat))
 })
 
+test_that("async submit preserves numeric precision in the paired tool result", {
+  skip_if_not_installed("promises")
+  skip_if_not_installed("later")
+  state <- new.env(parent = emptyenv())
+  accepted_value <- 0.000000123456789012345
+  local_react_async_backend(
+    list(list(react_async_test_function_call(
+      "submit",
+      '{"value":0.000000123456789012345}',
+      1L
+    ))),
+    state
+  )
+  chat <- react_async_test_chat()
+  module <- react(
+    signature(
+      inputs = list(input("question")),
+      output_type = ellmer::type_number()
+    ),
+    finalization = "submit"
+  )
+
+  outcome <- react_async_test_settle(react_async_test_run(
+    module,
+    list(question = "Keep the accepted numeric value exact"),
+    chat
+  ))
+
+  expect_null(outcome$error)
+  expect_identical(outcome$value$output, accepted_value)
+  expect_identical(state$count, 1L)
+  expect_identical(outcome$value$metadata$termination_reason, "submitted")
+  expect_length(outcome$value$metadata$observed_tool_results, 1L)
+  observed <- outcome$value$metadata$observed_tool_results[[1L]]
+  expect_identical(observed$tool_id, "fc_1")
+  expect_identical(observed$result@request@id, "fc_1")
+  observed_value <- jsonlite::fromJSON(
+    observed$result@value,
+    simplifyVector = FALSE
+  )
+  expect_identical(observed_value, accepted_value)
+
+  turn_contents <- unlist(
+    lapply(chat$get_turns(), function(turn) turn@contents),
+    recursive = FALSE
+  )
+  retained_results <- Filter(
+    function(content) inherits(content, "ellmer::ContentToolResult"),
+    turn_contents
+  )
+  expect_length(retained_results, 1L)
+  retained_result <- retained_results[[1L]]
+  expect_identical(retained_result, observed$result)
+  expect_identical(retained_result@request@id, observed$tool_id)
+  retained_value <- jsonlite::fromJSON(
+    retained_result@value,
+    simplifyVector = FALSE
+  )
+  expect_identical(retained_value, observed_value)
+  expect_identical(retained_value, outcome$value$output)
+  expect_identical(retained_value, accepted_value)
+  expect_length(chat$get_tools(), 0L)
+  expect_no_error(assert_async_chat_available(chat))
+})
+
 test_that("mixed submit requests fail before async tool side effects", {
   skip_if_not_installed("promises")
   skip_if_not_installed("later")
