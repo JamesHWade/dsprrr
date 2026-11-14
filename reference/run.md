@@ -8,7 +8,7 @@ recycled.
 ## Usage
 
 ``` r
-run(module, ...)
+run(module, ..., .history = NULL)
 ```
 
 ## Arguments
@@ -32,6 +32,24 @@ run(module, ...)
   [`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md)
   to run them several times.
 
+- .history:
+
+  A `dsprrr_history` from
+  [`conversation_history()`](https://jameshwade.github.io/dsprrr/reference/conversation_history.md)
+  or
+  [`load_history()`](https://jameshwade.github.io/dsprrr/reference/load_history.md).
+  The default `NULL` keeps existing Chat behavior. A non-`NULL` history
+  is supported for scalar root
+  [`react()`](https://jameshwade.github.io/dsprrr/reference/react.md)
+  and
+  [`rlm_module()`](https://jameshwade.github.io/dsprrr/reference/rlm_module.md)
+  calls and requires `.return_format = "structured"`; the result carries
+  the new history in `metadata$conversation_history`. ReAct and RLM
+  histories cannot be mixed. RLM history requires an
+  `interpreter_factory` and retains bounded textual evidence, not
+  interpreter variables. Dataset, asynchronous and streaming entrypoints
+  reject history.
+
 ## Value
 
 With `.return_format = "simple"`, the outputs as a named list with one
@@ -44,10 +62,12 @@ result per input element.
 With `.return_format = "structured"`, a list of class `dsprrr_result`
 with elements `output` (as above), `chat` (the ellmer Chat used) and
 `metadata` (model, prompt, token counts, cost, latency, cache status and
-error). A batch returns a list of these with class
-`dsprrr_batch_result`. Use
+error). When explicit history is supplied, the updated history is stored
+in `metadata$conversation_history`. A batch returns a list of these with
+class `dsprrr_batch_result`. Use
 [`get_output()`](https://jameshwade.github.io/dsprrr/reference/accessors.md),
-[`get_metadata()`](https://jameshwade.github.io/dsprrr/reference/accessors.md)
+[`get_metadata()`](https://jameshwade.github.io/dsprrr/reference/accessors.md),
+[`get_history()`](https://jameshwade.github.io/dsprrr/reference/accessors.md)
 or
 [`get_cost()`](https://jameshwade.github.io/dsprrr/reference/accessors.md)
 to read them.
@@ -65,7 +85,9 @@ model. Modules with their own execution loop, such as
 [`react()`](https://jameshwade.github.io/dsprrr/reference/react.md),
 accept single inputs only; use
 [`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md)
-for them.
+for them when no conversation history is supplied. Explicit history is
+supported only for scalar root ReAct and RLM calls with
+`.return_format = "structured"`.
 
 An input can also be an ellmer content object, such as
 `ellmer::content_image_file("receipt.png")`; prediction modules send it
@@ -175,6 +197,17 @@ run(classify, text = c("I love this!", "This is bad"), .llm = llm)
 # Structured results carry the Chat and call metadata
 res <- run(classify, text = "Great!", .llm = llm, .return_format = "structured")
 res$metadata$cost
+
+# Explicit ReAct history is returned for a later scalar continuation
+agent <- react("question -> answer")
+first <- run(
+  agent,
+  question = "What is 2 + 2?",
+  .llm = llm,
+  .history = conversation_history(),
+  .return_format = "structured"
+)
+next_history <- get_history(first)
 
 # Skip the response cache for one call
 run(classify, text = "Great!", .llm = llm, .cache = FALSE)

@@ -52,7 +52,7 @@ status <- dsprrr_sitrep()
 #> 
 #> ── Packages ──
 #> 
-#> ✔ ellmer 0.5.0 (OK)
+#> ✔ ellmer 0.5.2 (OK)
 #> ✔ dsprrr 0.0.0.9000
 #> 
 #> 

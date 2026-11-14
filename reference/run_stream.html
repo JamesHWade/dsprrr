@@ -110,7 +110,14 @@ last.</p>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">run_stream</span><span class="op">(</span><span class="va">module</span>, <span class="va">...</span>, .llm <span class="op">=</span> <span class="cn">NULL</span>, listeners <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>, on_status <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">run_stream</span><span class="op">(</span></span>
+<span>  <span class="va">module</span>,</span>
+<span>  <span class="va">...</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  listeners <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  on_status <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  .history <span class="op">=</span> <span class="cn">NULL</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -138,6 +145,11 @@ omitted.</p></dd>
 <dd><p>A function called with a list for each progress event
 (see below), or <code>NULL</code>.</p></dd>
 
+
+<dt id="arg--history">.history<a class="anchor" aria-label="anchor" href="#arg--history"></a></dt>
+<dd><p>Explicit conversation history is not supported by streaming;
+use synchronous <code><a href="run.html">run()</a></code> for scalar root ReAct continuation.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -158,7 +170,9 @@ receive the complete value once. When coro is installed, a listener on the
 single string field of a module that is not a prediction module (such as
 <code><a href="module_fn.html">module_fn()</a></code> or <code><a href="react.html">react()</a></code>) is an error, raised before any request is
 made.</p>
-<p>Streaming runs do not use the response cache and record no traces.</p>
+<p>Streaming runs do not use the response cache and record no traces. Native
+reasoning mode is rejected because this result contract does not return
+provider turns or native reasoning metadata.</p>
 </div>
 
 <div class="section">

@@ -64,7 +64,7 @@ info$title
 #> [1] "Declarative Self-Improving Language Programs"
 lengths(info[c("r_files", "exports", "dependencies")])
 #>      r_files      exports dependencies 
-#>           72          169           18
+#>           79          175           18
 ```
 
 ## Four stages

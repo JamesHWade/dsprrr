@@ -9,13 +9,15 @@ complete source of a
 [`flex()`](https://jameshwade.github.io/dsprrr/reference/flex.md)
 module.
 
-Reflection uses the chat passed to
+Candidate evaluation uses the chat passed to
 [`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md)
-as `.llm`, the same chat that runs the program; there is no separate
-reflection model argument. Without `.llm`, no model is asked: rewritten
-instructions get the fixed sentence "Focus on the failed cases and be
-more explicit." (or "Be more explicit and accurate.") appended, and Flex
-sources stay unchanged.
+as `.llm`. Reflection proposals use `.reflection_llm`, also passed to
+[`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md).
+If `.reflection_llm` is omitted, an explicitly supplied `.llm` remains
+the compatibility fallback for reflection. Mutable GEPA searches require
+one of these chats; GEPA reports a configuration error instead of
+silently appending a fixed instruction suffix when no reflection chat is
+available.
 
 ## Usage
 
@@ -170,8 +172,23 @@ This is an adapted implementation. It keeps reflective rewriting guided
 by failures and feedback, per-row winner frontiers, component selection,
 lineage-aware merges and Pareto selection over several metrics, but runs
 a fixed number of generations instead of DSPy's budget-driven search.
-Checkpoint resume, cached subsample merge acceptance and inference-time
-candidate selection are not implemented.
+Checkpoint resume is available for sequential searches with the
+`round_robin` component selector over plain `Predict` leaves and
+built-in predictor pipelines. Checkpointed predictions must be plain
+data. Flex modules, other component selectors, custom module types,
+custom Chats, Chats with tools, and Chats with existing conversation
+turns are rejected before provider work. Checkpointed searches with
+mutable components require at least one validation row, using `trainset`
+when `valset` is omitted. Checkpointed metrics must return finite scores
+or `NA`; infinite scores are rejected before their evaluation row is
+saved. Resource limits may change when resuming; the algorithm
+configuration and runtime identities must match.
+
+Completed proposals and evaluation rows are restored without repeating
+their work. A provider request that finishes after the last checkpoint
+was written but before its result is committed may be retried after a
+crash, so checkpoint resume does not guarantee exactly-once provider
+effects.
 
 A Flex source is optimized as one component: its dynamically built inner
 predictors are not tuned separately. The source proposer sees the task
@@ -179,6 +196,22 @@ and signature, field schemas, allowed tools and primitives, and the
 failed rows with their feedback. Proposed sources are validated before
 use; an invalid source is recorded with a failure score and can never be
 selected.
+
+`.reflection_llm` is the reflection Chat, while `.llm` remains the task
+Chat for candidate evaluation. When `.reflection_llm` is omitted, an
+explicitly supplied `.llm` is used for both roles for compatibility. The
+optimization result records model names and the reflection route in
+`extensions$gepa$model_routing`. Without checkpointing, an omitted
+`.llm` leaves `task_model` as `NULL`, and `task_chat_source` records
+`"runtime_resolution"`. Checkpointed searches additionally report the
+effective attached/default Chat models when they can be resolved. Both
+roles share the optimizer's resource budget; reflection requests are
+attributed to GEPA reflection stages.
+
+GEPA deep-clones the reflection Chat for each proposal and clears the
+clone's conversation turns. Model settings are retained, proposal calls
+do not share conversation history, and the supplied Chat is not mutated
+by reflection.
 
 ## See also
 
@@ -250,12 +283,13 @@ trainset <- data.frame(
   question = c("What is 2 + 2?", "What is the capital of France?"),
   answer = c("4", "Paris")
 )
-# `.llm` runs the program and writes the reflections
+# `.llm` runs the program; `.reflection_llm` writes the reflections.
 optimized <- compile(
   qa,
   tp,
   trainset,
-  .llm = ellmer::chat_openai(model = "gpt-6-luna")
+  .llm = ellmer::chat_openai(model = "gpt-6-luna"),
+  .reflection_llm = ellmer::chat_openai(model = "gpt-6-astra")
 )
 optimization_result(optimized)
 } # }

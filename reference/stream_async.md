@@ -10,7 +10,7 @@ per-field callbacks and structured results, use
 ## Usage
 
 ``` r
-stream_async(module, ..., .llm = NULL)
+stream_async(module, ..., .llm = NULL, .history = NULL)
 ```
 
 ## Arguments
@@ -35,6 +35,13 @@ stream_async(module, ..., .llm = NULL)
   [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md) for
   how it is chosen when omitted.
 
+- .history:
+
+  Explicit conversation history is not supported by async streaming; use
+  synchronous
+  [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md) for
+  scalar root ReAct continuation.
+
 ## Value
 
 An async generator that yields the response text in chunks.
@@ -42,7 +49,13 @@ An async generator that yields the response text in chunks.
 ## Details
 
 The generator comes from ellmer's `Chat$stream_async()`. The call does
-not use the response cache and records no trace.
+not use the response cache and records no trace. It returns unstructured
+text, so `chain_of_thought(mode = "plan")` and `mode = "native"` are
+rejected rather than dropping the plan field or native metadata. Use
+[`run_async()`](https://jameshwade.github.io/dsprrr/reference/run_async.md)
+for a structured plan, or synchronous structured
+[`run()`](https://jameshwade.github.io/dsprrr/reference/run.md) for
+native metadata.
 
 ## See also
 

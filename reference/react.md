@@ -1,8 +1,8 @@
 # Create a tool-using ReAct module
 
 `react()` builds an agent that alternates between reasoning and calling
-tools until it can answer, then returns a structured answer that follows
-the signature (the ReAct pattern).
+tools until it can answer, then returns an answer that follows the
+signature (the ReAct pattern).
 
 ## Usage
 
@@ -15,6 +15,7 @@ react(
   template = "",
   demos = list(),
   config = list(),
+  finalization = c("structured", "submit"),
   ...
 )
 ```
@@ -49,6 +50,12 @@ react(
   As in
   [`module()`](https://jameshwade.github.io/dsprrr/reference/module.md).
 
+- finalization:
+
+  How to obtain the final output. `"structured"` (the default) makes a
+  structured follow-up request. `"submit"` adds a reserved `submit` tool
+  and returns a valid submission from the tool loop.
+
 - ...:
 
   Must be empty.
@@ -63,9 +70,14 @@ A module (an R6 object of class `ReactModule`) to use with
 
 ellmer runs the tool-calling loop: the model's tool requests are
 executed and their results sent back, keeping ellmer's turn history and
-tool-call IDs. After the loop, one more request asks for the final
-answer in the signature's output format. ReAct calls do not use the
-response cache.
+tool-call IDs. With `finalization = "structured"`, one more request asks
+for the final answer in the signature's output format. With
+`finalization = "submit"`, the model calls the schema-derived `submit`
+tool to finish within the same loop. The submission is validated against
+the signature, and no additional provider request is made after it.
+Submit finalization requires an ellmer Chat with public request-end
+callbacks and tool-registry methods. ReAct calls do not use the response
+cache.
 
 [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md) accepts
 one input at a time for this module; use
@@ -104,6 +116,7 @@ agent <- react(
   tools = list(lookup_population),
   max_iterations = 5L
 )
+submit_agent <- react("question -> answer", finalization = "submit")
 agent
 #> 
 #> ── ReactModule ──

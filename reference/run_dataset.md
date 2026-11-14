@@ -9,7 +9,7 @@ accepts one input at a time.
 ## Usage
 
 ``` r
-run_dataset(module, ...)
+run_dataset(module, ..., .history = NULL)
 
 # S3 method for class 'Module'
 run_dataset(
@@ -21,7 +21,8 @@ run_dataset(
   .progress = TRUE,
   .return_format = "simple",
   ...,
-  .trace_context = list()
+  .trace_context = list(),
+  .history = NULL
 )
 ```
 
@@ -39,6 +40,11 @@ run_dataset(
   Only `.cache` is accepted here, with the same meaning as in
   [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md). Any
   other dot-prefixed argument is an error.
+
+- .history:
+
+  Explicit continuation history is currently not supported for row-wise
+  dataset execution and is rejected before any row runs.
 
 - data:
 

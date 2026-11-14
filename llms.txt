@@ -291,6 +291,8 @@ asynchronously or as a stream, and read what came back.
   : Control how batches run in parallel
 - [`run_async()`](https://jameshwade.github.io/dsprrr/reference/run_async.md)
   : Run a module asynchronously
+- [`react_async_control()`](https://jameshwade.github.io/dsprrr/reference/react_async_control.md)
+  : Create cooperative control for asynchronous ReAct execution
 - [`run_stream()`](https://jameshwade.github.io/dsprrr/reference/run_stream.md)
   : Run a module with streaming callbacks
 - [`stream_listener()`](https://jameshwade.github.io/dsprrr/reference/stream_listener.md)
@@ -299,9 +301,23 @@ asynchronously or as a stream, and read what came back.
   : Stream a module's text output asynchronously
 - [`get_output()`](https://jameshwade.github.io/dsprrr/reference/accessors.md)
   [`get_metadata()`](https://jameshwade.github.io/dsprrr/reference/accessors.md)
+  [`get_history()`](https://jameshwade.github.io/dsprrr/reference/accessors.md)
   [`get_tokens()`](https://jameshwade.github.io/dsprrr/reference/accessors.md)
   [`get_cost()`](https://jameshwade.github.io/dsprrr/reference/accessors.md)
   : Extract outputs, metadata and costs from results
+
+## Conversation history
+
+Copy, inspect, and save portable ellmer conversation turns.
+
+- [`conversation_history()`](https://jameshwade.github.io/dsprrr/reference/conversation_history.md)
+  : Construct a portable conversation history
+- [`history_turns()`](https://jameshwade.github.io/dsprrr/reference/history_turns.md)
+  : Reconstruct native ellmer turns from conversation history
+- [`save_history()`](https://jameshwade.github.io/dsprrr/reference/save_history.md)
+  : Save conversation history as JSON
+- [`load_history()`](https://jameshwade.github.io/dsprrr/reference/load_history.md)
+  : Load conversation history from JSON
 
 ## Validate outputs
 

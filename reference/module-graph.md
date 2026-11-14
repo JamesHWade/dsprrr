@@ -228,9 +228,9 @@ module_graph(program)
 #> # A tibble: 3 × 13
 #>   path          parent_path depth class id    canonical_path shared cycle frozen
 #>   <chr>         <chr>       <int> <chr> <chr> <chr>          <lgl>  <lgl> <lgl> 
-#> 1 $             NA              0 Pipe… 0x55… $              FALSE  FALSE FALSE 
-#> 2 $/steps/first $               1 Pred… 0x55… $/steps/first  FALSE  FALSE FALSE 
-#> 3 $/steps/seco… $               1 Pred… 0x55… $/steps/second FALSE  FALSE FALSE 
+#> 1 $             NA              0 Pipe… 0x56… $              FALSE  FALSE FALSE 
+#> 2 $/steps/first $               1 Pred… 0x56… $/steps/first  FALSE  FALSE FALSE 
+#> 3 $/steps/seco… $               1 Pred… 0x56… $/steps/second FALSE  FALSE FALSE 
 #> # ℹ 4 more variables: compiled <lgl>, protected <lgl>, boundary <chr>,
 #> #   module <list>
 names(named_modules(program))

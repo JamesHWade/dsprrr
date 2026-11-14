@@ -5,21 +5,23 @@ wrong (with the metric's feedback when there is any), and asks it to rewrite
 the instructions. Over several generations the best candidates are kept,
 combined and rewritten again. GEPA can also rewrite the complete source of a
 flex() module.
-Reflection uses the chat passed to compile() as .llm, the same chat that
-runs the program; there is no separate reflection model argument. Without
-.llm, no model is asked: rewritten instructions get the fixed sentence
-&quot;Focus on the failed cases and be more explicit.&quot; (or &quot;Be more explicit and
-accurate.&quot;) appended, and Flex sources stay unchanged."><meta property="og:description" content="GEPA() improves a program's instructions by reflection. It scores a
+Candidate evaluation uses the chat passed to compile() as .llm.
+Reflection proposals use .reflection_llm, also passed to compile(). If
+.reflection_llm is omitted, an explicitly supplied .llm remains the
+compatibility fallback for reflection. Mutable GEPA searches require one
+of these chats; GEPA reports a configuration error instead of silently
+appending a fixed instruction suffix when no reflection chat is available."><meta property="og:description" content="GEPA() improves a program's instructions by reflection. It scores a
 population of candidate programs, shows a model the rows a candidate got
 wrong (with the metric's feedback when there is any), and asks it to rewrite
 the instructions. Over several generations the best candidates are kept,
 combined and rewritten again. GEPA can also rewrite the complete source of a
 flex() module.
-Reflection uses the chat passed to compile() as .llm, the same chat that
-runs the program; there is no separate reflection model argument. Without
-.llm, no model is asked: rewritten instructions get the fixed sentence
-&quot;Focus on the failed cases and be more explicit.&quot; (or &quot;Be more explicit and
-accurate.&quot;) appended, and Flex sources stay unchanged."><meta property="og:image" content="https://jameshwade.github.io/dsprrr/logo.svg"></head><body>
+Candidate evaluation uses the chat passed to compile() as .llm.
+Reflection proposals use .reflection_llm, also passed to compile(). If
+.reflection_llm is omitted, an explicitly supplied .llm remains the
+compatibility fallback for reflection. Mutable GEPA searches require one
+of these chats; GEPA reports a configuration error instead of silently
+appending a fixed instruction suffix when no reflection chat is available."><meta property="og:image" content="https://jameshwade.github.io/dsprrr/logo.svg"></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -116,11 +118,12 @@ wrong (with the metric's feedback when there is any), and asks it to rewrite
 the instructions. Over several generations the best candidates are kept,
 combined and rewritten again. GEPA can also rewrite the complete source of a
 <code><a href="flex.html">flex()</a></code> module.</p>
-<p>Reflection uses the chat passed to <code><a href="compile.html">compile()</a></code> as <code>.llm</code>, the same chat that
-runs the program; there is no separate reflection model argument. Without
-<code>.llm</code>, no model is asked: rewritten instructions get the fixed sentence
-"Focus on the failed cases and be more explicit." (or "Be more explicit and
-accurate.") appended, and Flex sources stay unchanged.</p>
+<p>Candidate evaluation uses the chat passed to <code><a href="compile.html">compile()</a></code> as <code>.llm</code>.
+Reflection proposals use <code>.reflection_llm</code>, also passed to <code><a href="compile.html">compile()</a></code>. If
+<code>.reflection_llm</code> is omitted, an explicitly supplied <code>.llm</code> remains the
+compatibility fallback for reflection. Mutable GEPA searches require one
+of these chats; GEPA reports a configuration error instead of silently
+appending a fixed instruction suffix when no reflection chat is available.</p>
     </div>
 
     <div class="section level2">
@@ -285,13 +288,39 @@ candidates, their scores and lineage are stored in
 failures and feedback, per-row winner frontiers, component selection,
 lineage-aware merges and Pareto selection over several metrics, but runs a
 fixed number of generations instead of DSPy's budget-driven search.
-Checkpoint resume, cached subsample merge acceptance and inference-time
-candidate selection are not implemented.</p>
+Checkpoint resume is available for sequential searches with the
+<code>round_robin</code> component selector over plain <code>Predict</code> leaves and built-in
+predictor pipelines. Checkpointed predictions must be plain data. Flex
+modules, other component selectors, custom module types, custom Chats,
+Chats with tools, and Chats with existing conversation turns are rejected
+before provider work. Checkpointed searches with mutable components require
+at least one validation row, using <code>trainset</code> when <code>valset</code> is omitted.
+Checkpointed metrics must return finite scores or <code>NA</code>; infinite scores are
+rejected before their evaluation row is saved. Resource limits may change
+when resuming; the algorithm configuration and runtime identities must match.</p>
+<p>Completed proposals and evaluation rows are restored without repeating
+their work. A provider request that finishes after the last checkpoint was
+written but before its result is committed may be retried after a crash, so
+checkpoint resume does not guarantee exactly-once provider effects.</p>
 <p>A Flex source is optimized as one component: its dynamically built inner
 predictors are not tuned separately. The source proposer sees the task and
 signature, field schemas, allowed tools and primitives, and the failed rows
 with their feedback. Proposed sources are validated before use; an invalid
 source is recorded with a failure score and can never be selected.</p>
+<p><code>.reflection_llm</code> is the reflection Chat, while <code>.llm</code> remains the task Chat
+for candidate evaluation. When <code>.reflection_llm</code> is omitted, an explicitly
+supplied <code>.llm</code> is used for both roles for compatibility. The optimization
+result records model names and the reflection route in
+<code>extensions$gepa$model_routing</code>. Without checkpointing, an omitted <code>.llm</code>
+leaves <code>task_model</code> as <code>NULL</code>, and <code>task_chat_source</code> records
+<code>"runtime_resolution"</code>. Checkpointed searches additionally report the
+effective attached/default Chat models when they can be resolved. Both roles
+share the optimizer's resource budget; reflection requests are attributed to
+GEPA reflection stages.</p>
+<p>GEPA deep-clones the reflection Chat for each proposal and clears the
+clone's conversation turns. Model settings are retained, proposal calls do
+not share conversation history, and the supplied Chat is not mutated by
+reflection.</p>
 </div>
 
     </div>
@@ -365,12 +394,13 @@ source is recorded with a failure score and can never be selected.</p>
 <span class="r-in"><span>  question <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"What is 2 + 2?"</span>, <span class="st">"What is the capital of France?"</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>  answer <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"4"</span>, <span class="st">"Paris"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="co"># `.llm` runs the program and writes the reflections</span></span></span>
+<span class="r-in"><span><span class="co"># `.llm` runs the program; `.reflection_llm` writes the reflections.</span></span></span>
 <span class="r-in"><span><span class="va">optimized</span> <span class="op">&lt;-</span> <span class="fu"><a href="compile.html">compile</a></span><span class="op">(</span></span></span>
 <span class="r-in"><span>  <span class="va">qa</span>,</span></span>
 <span class="r-in"><span>  <span class="va">tp</span>,</span></span>
 <span class="r-in"><span>  <span class="va">trainset</span>,</span></span>
-<span class="r-in"><span>  .llm <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-luna"</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  .llm <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-luna"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  .reflection_llm <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-astra"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">optimized</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>

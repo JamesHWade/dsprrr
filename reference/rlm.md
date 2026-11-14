@@ -24,6 +24,7 @@ rlm(
   .max_iterations = 20L,
   .max_llm_calls = 50L,
   .max_output_chars = 10000L,
+  .reasoning_mode = c("rationale", "native", "plan"),
   .sub_lm = NULL,
   .tools = list(),
   .verbose = FALSE,
@@ -44,9 +45,9 @@ rlm(
 
   Named inputs, plus
   [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md)
-  options such as `.return_format`. Each input is staged as one
-  variable, including vectors, lists, matrices and data frames. For
-  several investigations, create an
+  options such as `.return_format` and `.history`. Each input is staged
+  as one variable, including vectors, lists, matrices and data frames.
+  For several investigations, create an
   [`rlm_module()`](https://jameshwade.github.io/dsprrr/reference/rlm_module.md)
   and use
   [`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md)
@@ -75,6 +76,12 @@ rlm(
 
   Maximum number of characters of each execution result shown to the
   model (default `10000L`).
+
+- .reasoning_mode:
+
+  Action reasoning behavior: `"rationale"` (the default), `"native"`
+  (code only, with provider thinking metadata when available), or
+  `"plan"` (a concise plan and code).
 
 - .sub_lm:
 
@@ -142,6 +149,17 @@ result <- rlm(
   .max_iterations = 4L,
   .max_llm_calls = 0L
 )
+
+# Native provider thinking is available on structured scalar results
+native_result <- rlm(
+  "document, question -> answer",
+  document = "Owner: team-a\nObligation: rotate keys quarterly",
+  question = "What are the main themes?",
+  .llm = ellmer::chat_openai(model = "gpt-6-luna"),
+  .reasoning_mode = "native",
+  .return_format = "structured"
+)
+get_metadata(native_result)$native_reasoning
 
 # Rich local R objects need a trusted runner that can stage them
 sessions <- data.frame(

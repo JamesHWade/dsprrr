@@ -122,12 +122,87 @@ First development changelog. dsprrr is experimental; the API may change.
 
 ### New features
 
+- [`conversation_history()`](https://jameshwade.github.io/dsprrr/reference/conversation_history.md)
+  copies supported ellmer turns into a versioned, tagged data envelope.
+  [`history_turns()`](https://jameshwade.github.io/dsprrr/reference/history_turns.md)
+  rebuilds fresh native turns, and
+  [`load_history()`](https://jameshwade.github.io/dsprrr/reference/load_history.md)
+  /
+  [`save_history()`](https://jameshwade.github.io/dsprrr/reference/save_history.md)
+  persist the allowlisted history as JSON. Assistant JSON and finish
+  reasons are retained; usage, cost, and duration metadata are reset.
+  Unsupported and uploaded content, unresolved tool requests, and unsafe
+  data fail explicitly. Tool errors retain only their message. Saved
+  histories can contain sensitive conversation data. RLM results now
+  carry a version-2 conversation history of bounded, textual invocation
+  records and complete tagged final outputs. ReAct turns and RLM
+  exchanges are distinct history kinds and cannot be mixed.
+
+- [`get_history()`](https://jameshwade.github.io/dsprrr/reference/accessors.md)
+  returns the portable conversation history retained in a structured
+  result, or `NULL` when history was not requested.
+
+- [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md)
+  accepts explicit `.history` for scalar root ReAct and RLM calls when
+  `.return_format = "structured"`. ReAct seeds portable turns without
+  executing prior tools. RLM renders bounded prior evidence into action
+  and fallback prompts, requires an invocation-owned interpreter
+  factory, and starts each call with fresh variables. Both return
+  updated history through
+  [`get_history()`](https://jameshwade.github.io/dsprrr/reference/accessors.md);
+  dataset, asynchronous and streaming entrypoints reject it.
+
+- [`chain_of_thought()`](https://jameshwade.github.io/dsprrr/reference/chain_of_thought.md)
+  now supports opt-in native provider thinking metadata and a concise
+  plan field, while retaining rationale output as the default. Native
+  thinking is available through
+  [`get_metadata()`](https://jameshwade.github.io/dsprrr/reference/accessors.md)
+  when the provider returns ellmer `ContentThinking`; it remains `NULL`
+  when no current-call thinking block is present. Native mode supports
+  scalar synchronous and asynchronous calls, and plan mode requires
+  structured output.
+
+- [`run_async()`](https://jameshwade.github.io/dsprrr/reference/run_async.md)
+  keeps simple output as its default and now supports
+  `.return_format = "structured"` for Predict modules. It records
+  canonical success and failure traces, including decision and provider
+  reasoning metadata when available. Each resolved Chat stays reserved
+  until its promise settles; use separate Chats for overlapping calls.
+  Factory-backed modules retain simple results and reject structured
+  results until they can preserve the same trace contract.
+
+- `rlm_module(reasoning_mode = "native")` and
+  `rlm(.reasoning_mode = "native")` now support code-only action
+  responses with provider thinking metadata. Both arguments also accept
+  `"plan"` for actions with a concise explicit plan. The existing
+  `"rationale"` action schema remains the default. Native metadata is
+  exposed on structured scalar results and remains absent when the
+  provider returns no thinking blocks; batch, async and streaming routes
+  reject native RLM execution before work begins.
+
 - Modules run through an agent runtime that follows ellmer’s Chat
   protocol, such as a deputy `Agent`, are now correlated with the
   agent’s runs. dsprrr passes the program ID and `.trace_context` to the
   agent as `run_context$dsprrr`, and records the agent’s run (`run_id`,
   `agent_id`, `session_id` and `stop_reason`) as `agent_run` in each
   call’s metadata and trace. Plain ellmer Chats are called as before.
+
+- [`react()`](https://jameshwade.github.io/dsprrr/reference/react.md)
+  accepts `finalization = "submit"` to let the model return its
+  schema-validated answer through a reserved `submit` tool call. This
+  completes in the tool loop without a separate structured-output
+  request. The default `finalization = "structured"` retains the
+  existing follow-up behavior.
+
+- ReAct modules now support
+  [`run_async()`](https://jameshwade.github.io/dsprrr/reference/run_async.md)
+  with sequential tool execution and an awaited structured follow-up.
+  [`react_async_control()`](https://jameshwade.github.io/dsprrr/reference/react_async_control.md)
+  adds ordered progress events and cooperative cancellation between
+  provider requests and tools; it does not interrupt an active request
+  or tool. Failure traces keep partial Chat history, pending tool
+  requests, and observed native tool results distinct so unrun tools are
+  never represented as completed.
 
 - Experimental calibrated decision outputs, following DSPy 3.4’s
   decision types.
@@ -197,6 +272,28 @@ First development changelog. dsprrr is experimental; the API may change.
   rows remain exclusive to discovery/reflection while validation rows
   drive selection, per-example winners, and optional retained outputs.
 
+- [`GEPA()`](https://jameshwade.github.io/dsprrr/reference/GEPA.md) can
+  use a separate `.reflection_llm` Chat for instruction and Flex
+  proposals while `.llm` remains the task Chat for candidate evaluation.
+  An explicitly supplied `.llm` remains the compatibility fallback when
+  `.reflection_llm` is omitted. Mutable searches without either Chat now
+  fail with a configuration error instead of silently appending fixed
+  instruction text. Reflection calls remain part of the shared optimizer
+  resource budget.
+
+- [`GEPA()`](https://jameshwade.github.io/dsprrr/reference/GEPA.md) can
+  resume checkpoints for sequential `round_robin` searches over plain
+  `Predict` leaves and built-in predictor pipelines when predictions are
+  plain data. It persists proposals and evaluation rows, including
+  predictions but excluding raw traces. Flex modules, custom selectors
+  and module types, custom Chats, Chats with tools, and non-empty
+  initial Chat histories are rejected. Searches with mutable components
+  require at least one validation row, using `trainset` when `valset` is
+  omitted. Metrics must return finite scores or `NA`; infinite scores
+  fail before their evaluation row is saved. A provider request
+  interrupted after it runs but before its result is committed may be
+  retried after a crash.
+
 - [`optimization_result()`](https://jameshwade.github.io/dsprrr/reference/optimization_result.md)
   provides one read-only result contract across every optimizer,
   including optimizer identity, completion or partial status, baseline
@@ -252,6 +349,13 @@ First development changelog. dsprrr is experimental; the API may change.
   [`rlm()`](https://jameshwade.github.io/dsprrr/reference/rlm.md) helper
   now creates a fresh managed `mcp-repl` sandbox factory by default,
   while still accepting an explicit runner or interpreter factory.
+
+  Recursive query slices also accept ordered JSON-native text and image
+  records. Remote images require HTTPS URLs without user info and up to
+  2,048 bytes; inline image data is limited to 524,288 base64 bytes and
+  the runner’s control-frame bound. Local paths and PDF records fail
+  explicitly, and guest records need no ellmer dependency. The managed
+  mcp-repl runner defaults to a 3,000-byte control-frame limit.
 
 - The code-runner protocol now has explicit
   [`start()`](https://rdrr.io/r/stats/start.html)/`shutdown()` lifecycle
@@ -375,7 +479,9 @@ First development changelog. dsprrr is experimental; the API may change.
   `$add_tool()` rejects a name it already has. ellmer registers tools on
   a chat by name, so a second tool with the same name silently replaced
   the first while the module still listed both.
-  `$add_tool(tool, replace = TRUE)` replaces a tool deliberately.
+  `$add_tool(tool, replace = TRUE)` replaces a tool deliberately. Its
+  initial chat request now also preserves image and PDF content objects
+  while keeping prompt traces readable.
 
 - [`metric_exact_match()`](https://jameshwade.github.io/dsprrr/reference/metric_exact_match.md)
   and
@@ -678,8 +784,8 @@ First development changelog. dsprrr is experimental; the API may change.
   preserve fingerprints, RNG state, counters, lineage, best partial
   programs, and append-only trial logs; Bootstrap and MIPRO resume
   without repeating completed paid rows. GEPA, SIMBA, and COPRO share
-  the same ledger and typed stop reasons while their fine-grained resume
-  engines remain explicitly tracked follow-ups. Sticky error-budget
+  the same ledger and typed stop reasons; fine-grained resume for SIMBA
+  and COPRO remains an explicitly tracked follow-up. Sticky error-budget
   stops survive checkpoint round-trips, and MIPRO retains its requested
   worker count when no explicit optimizer control overrides it
   (#dsprrr-krq4).

@@ -136,6 +136,7 @@ a reusable implementation.</p>
 <span>  chat <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  generate_action <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  extract <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  reasoning_mode <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"rationale"</span>, <span class="st">"native"</span>, <span class="st">"plan"</span><span class="op">)</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -215,6 +216,15 @@ the code (advanced).</p></dd>
 (advanced).</p></dd>
 
 
+<dt id="arg-reasoning-mode">reasoning_mode<a class="anchor" aria-label="anchor" href="#arg-reasoning-mode"></a></dt>
+<dd><p>How the action predictor handles reasoning:
+<code>"rationale"</code> (the default) returns a short <code>reasoning</code> field,
+<code>"native"</code> asks for code only and exposes provider-supplied thinking
+blocks in structured result metadata when available, and <code>"plan"</code> returns
+a concise explicit <code>plan</code> with the code. Native thinking is not synthesized
+when the provider does not return it.</p></dd>
+
+
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
 <dd><p>Must be empty.</p></dd>
 
@@ -239,7 +249,15 @@ vector (elements).</p></li>
 <code>llm_query_batched(queries, slices)</code> to ask a model a sub-question and
 get the answer back as a value. These count against <code>max_llm_calls</code>.</p></li>
 <li><p>The functions supplied in <code>tools</code>.</p></li>
-</ul><p>Sub-queries and tools run in the host R process, not in the runner: the
+</ul><p>A query slice may be a text string or an ordered list of records such as
+<code>list(list(type = "text", text = "..."), list(type = "image_url", url = "https://example.com/image.png", detail = "auto"))</code>. Inline images use
+<code>type = "image_base64"</code>, an image MIME type, and base64 data up to 524,288
+bytes. Image URLs must use HTTPS, omit user info, and be at most 2,048 bytes;
+local paths and PDF records are unsupported. The managed
+<code><a href="mcp_repl_runner.html">mcp_repl_runner()</a></code> control frame defaults to 3,000 bytes, so inline data
+must also fit that transport limit. These JSON-native records work without
+ellmer in the guest process.</p>
+<p>Sub-queries and tools run in the host R process, not in the runner: the
 generated code pauses, dsprrr handles the request, and the code is replayed
 with the response. Variables persist across steps within one call, so the
 runner's <code>policy()</code> must declare <code>persistent = TRUE</code>. Invalid submissions
@@ -249,6 +267,19 @@ attempt.</p>
 <p>RLM checks string, number, integer, boolean, enum, array and object
 outputs. Opaque <code>TypeJsonSchema</code> outputs are rejected when the module is
 created, because they cannot be checked in the repair loop.</p>
+<p><code>reasoning_mode</code> changes the action predictor, not the declared final
+output. <code>"rationale"</code> preserves the existing <code>reasoning</code> and <code>code</code> action
+fields. <code>"native"</code> requests code only and records provider-supplied
+<code>ContentThinking</code> blocks in <code><a href="accessors.html">get_metadata()</a></code> when they are present; the
+structured metadata also has <code>native_reasoning_action_indices</code>, aligned
+with those blocks. <code>"plan"</code> records a concise explicit <code>plan</code> with each
+action. Retrieve native metadata from structured scalar <code><a href="run.html">run()</a></code> results.
+Batch, asynchronous and streaming paths reject native RLMs before execution.
+A custom <code>generate_action</code> module must accept one required string <code>state</code>
+input and return required string fields for the selected mode. Native custom
+actions also set <code>config$reasoning_mode = "native"</code> so provider thinking is
+captured using the same current-turn contract. The constructor validates
+these contracts without rewriting the supplied module.</p>
 </div>
 
 <div class="section">
@@ -271,6 +302,26 @@ token streaming is unavailable. A direct <code><a href="run.html">run()</a></cod
 one variable, whatever its length. For several investigations, use
 <code><a href="run_dataset.html">run_dataset()</a></code> with list-columns for data frames, vectors, lists or other
 rich values.</p>
+</div>
+
+<div class="section">
+<h3 id="explicit-conversation-history">Explicit conversation history<a class="anchor" aria-label="anchor" href="#explicit-conversation-history"></a></h3>
+
+
+<p>A scalar synchronous <code><a href="run.html">run()</a></code> can continue an RLM conversation by supplying
+<code>.history = conversation_history()</code> or a history returned by <code><a href="accessors.html">get_history()</a></code>.
+Set <code>.return_format = "structured"</code> to retain the next history in result
+metadata. Every explicit-history call requires <code>interpreter_factory</code>; dsprrr
+starts and shuts down one invocation-owned runner for each call. The factory
+must return a fresh persistent interpreter. Previous task previews, observed
+code and output are rendered into both action and fallback prompts as
+bounded textual evidence. Previous variables and staged objects are not
+restored, and historical code is not replayed. Context values in the record
+are the bounded previews that were visible to the model. Histories are
+sensitive, and a call fails explicitly if appending would exceed the
+documented portable-history limits. ReAct and RLM histories cannot be mixed;
+batch, dataset, asynchronous and streaming entrypoints reject explicit
+history.</p>
 </div>
 
 <div class="section">

@@ -88,6 +88,7 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/concurrency_control.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/config_diff.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/configure_cache.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/conversation_history.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/create_search_tool.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/create_trial.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/decision_evidence.html</loc></url>
@@ -106,11 +107,13 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/get_default_chat.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/get_last_prompt.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/has_reasoning.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/history_turns.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/index.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/input.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/inspect_history.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/is_reasoning_model.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/llm_predict.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/load_history.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/load_trial_log.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/mcp_repl_runner.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/metric_contains.html</loc></url>
@@ -143,6 +146,7 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/rag_module.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/ragnar_tool.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/react.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/react_async_control.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/read_trials_jsonl.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/reasoning_effort.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/reduce_best_by_metric.html</loc></url>
@@ -160,6 +164,7 @@
 <url><loc>https://jameshwade.github.io/dsprrr/reference/run_demo.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/run_stream.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/sample_dataset.html</loc></url>
+<url><loc>https://jameshwade.github.io/dsprrr/reference/save_history.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/session_cost.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/signature.html</loc></url>
 <url><loc>https://jameshwade.github.io/dsprrr/reference/split_dataset.html</loc></url>

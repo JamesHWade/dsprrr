@@ -14,10 +14,25 @@ results.
 - `get_metadata()` returns the call metadata: a list for a single result
   and one list per row for a batch or an evaluation.
 
+- `get_history()` returns a saved
+  [`conversation_history()`](https://jameshwade.github.io/dsprrr/reference/conversation_history.md)
+  from an explicit history run, or `NULL` when conversation history was
+  not requested.
+
 - `get_tokens()` returns `input_tokens`, `output_tokens` and
   `total_tokens`.
 
 - `get_cost()` returns the estimated cost in US dollars.
+
+For `chain_of_thought(mode = "native")`,
+`get_metadata(result)$native_reasoning` is a list of ellmer
+`ContentThinking` objects from the current provider turn, or `NULL` if
+the provider did not expose thinking content. dsprrr does not synthesize
+text for this field.
+
+For `rlm_module(reasoning_mode = "native")`, the same field contains
+provider thinking blocks from action calls in order; the integer vector
+`native_reasoning_action_indices` identifies the action for each block.
 
 For
 [`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md)
@@ -29,6 +44,8 @@ results, use the `result` and `.metadata` columns instead.
 get_output(x, ...)
 
 get_metadata(x, ...)
+
+get_history(x, ...)
 
 get_tokens(x, ...)
 
@@ -56,6 +73,9 @@ get_cost(x, ...)
 
 - `get_metadata()`: a list, or a list of lists; an empty list when `x`
   has no metadata.
+
+- `get_history()`: a `dsprrr_history` object for a result that retained
+  conversation history, or `NULL` otherwise.
 
 - `get_tokens()`: a list of the three counts for a single result, or a
   tibble with columns `index`, `input_tokens`, `output_tokens` and
@@ -89,7 +109,7 @@ get_output(result)
 #> [1] "HELLO"
 #> 
 get_metadata(result)$latency_ms
-#> [1] 0.06246567
+#> [1] 0.0462532
 # Function-backed modules make no model calls, so these are NA
 get_tokens(result)
 #> $input_tokens

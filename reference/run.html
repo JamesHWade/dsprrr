@@ -101,7 +101,7 @@ batch: each element is one call, and length-1 inputs are recycled.</p>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">run</span><span class="op">(</span><span class="va">module</span>, <span class="va">...</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">run</span><span class="op">(</span><span class="va">module</span>, <span class="va">...</span>, .history <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -119,6 +119,17 @@ of the runtime arguments described below. RLM modules (<code><a href="rlm_module
 treat every value as one context object whatever its length; use
 <code><a href="run_dataset.html">run_dataset()</a></code> to run them several times.</p></dd>
 
+
+<dt id="arg--history">.history<a class="anchor" aria-label="anchor" href="#arg--history"></a></dt>
+<dd><p>A <code>dsprrr_history</code> from <code><a href="conversation_history.html">conversation_history()</a></code> or
+<code><a href="load_history.html">load_history()</a></code>. The default <code>NULL</code> keeps existing Chat behavior. A
+non-<code>NULL</code> history is supported for scalar root <code><a href="react.html">react()</a></code> and
+<code><a href="rlm_module.html">rlm_module()</a></code> calls and requires <code>.return_format = "structured"</code>; the
+result carries the new history in <code>metadata$conversation_history</code>.
+ReAct and RLM histories cannot be mixed. RLM history requires an
+<code>interpreter_factory</code> and retains bounded textual evidence, not interpreter
+variables. Dataset, asynchronous and streaming entrypoints reject history.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -130,8 +141,10 @@ list with one such result per input element.</p>
 <p>With <code>.return_format = "structured"</code>, a list of class <code>dsprrr_result</code>
 with elements <code>output</code> (as above), <code>chat</code> (the ellmer Chat used) and
 <code>metadata</code> (model, prompt, token counts, cost, latency, cache status and
-error). A batch returns a list of these with class <code>dsprrr_batch_result</code>.
-Use <code><a href="accessors.html">get_output()</a></code>, <code><a href="accessors.html">get_metadata()</a></code> or <code><a href="accessors.html">get_cost()</a></code> to read them.</p>
+error). When explicit history is supplied, the updated history is stored
+in <code>metadata$conversation_history</code>. A batch returns a list of these
+with class <code>dsprrr_batch_result</code>. Use <code><a href="accessors.html">get_output()</a></code>, <code><a href="accessors.html">get_metadata()</a></code>,
+<code><a href="accessors.html">get_history()</a></code> or <code><a href="accessors.html">get_cost()</a></code> to read them.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
@@ -142,7 +155,9 @@ failed row becomes <code>NA</code> with a warning, and with
 <p>Batches must have inputs of one common length, or length 1. If every input
 has length zero, <code>run()</code> returns an empty list without calling the model.
 Modules with their own execution loop, such as <code><a href="react.html">react()</a></code>, accept single
-inputs only; use <code><a href="run_dataset.html">run_dataset()</a></code> for them.</p>
+inputs only; use <code><a href="run_dataset.html">run_dataset()</a></code> for them when no conversation history is
+supplied. Explicit history is supported only for scalar root ReAct and RLM
+calls with <code>.return_format = "structured"</code>.</p>
 <p>An input can also be an ellmer content object, such as
 <code>ellmer::content_image_file("receipt.png")</code>; prediction modules send it to
 the model along with the text of the prompt.</p>
@@ -235,6 +250,17 @@ prompt. Default <code>FALSE</code>.</p></dd>
 <span class="r-in"><span><span class="co"># Structured results carry the Chat and call metadata</span></span></span>
 <span class="r-in"><span><span class="va">res</span> <span class="op">&lt;-</span> <span class="fu">run</span><span class="op">(</span><span class="va">classify</span>, text <span class="op">=</span> <span class="st">"Great!"</span>, .llm <span class="op">=</span> <span class="va">llm</span>, .return_format <span class="op">=</span> <span class="st">"structured"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">res</span><span class="op">$</span><span class="va">metadata</span><span class="op">$</span><span class="va">cost</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Explicit ReAct history is returned for a later scalar continuation</span></span></span>
+<span class="r-in"><span><span class="va">agent</span> <span class="op">&lt;-</span> <span class="fu"><a href="react.html">react</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">first</span> <span class="op">&lt;-</span> <span class="fu">run</span><span class="op">(</span></span></span>
+<span class="r-in"><span>  <span class="va">agent</span>,</span></span>
+<span class="r-in"><span>  question <span class="op">=</span> <span class="st">"What is 2 + 2?"</span>,</span></span>
+<span class="r-in"><span>  .llm <span class="op">=</span> <span class="va">llm</span>,</span></span>
+<span class="r-in"><span>  .history <span class="op">=</span> <span class="fu"><a href="conversation_history.html">conversation_history</a></span><span class="op">(</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  .return_format <span class="op">=</span> <span class="st">"structured"</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">next_history</span> <span class="op">&lt;-</span> <span class="fu"><a href="accessors.html">get_history</a></span><span class="op">(</span><span class="va">first</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Skip the response cache for one call</span></span></span>
 <span class="r-in"><span><span class="fu">run</span><span class="op">(</span><span class="va">classify</span>, text <span class="op">=</span> <span class="st">"Great!"</span>, .llm <span class="op">=</span> <span class="va">llm</span>, .cache <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></span>

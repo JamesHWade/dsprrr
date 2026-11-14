@@ -131,6 +131,10 @@ input columns and the expected outputs.</p></li>
 <li><p><code>valset</code>: an optional validation data frame, for teleprompters that
 use one. It may also be given as the fourth argument.</p></li>
 <li><p><code>.llm</code>: an ellmer Chat for the program's calls (see <code><a href="run.html">run()</a></code>).</p></li>
+<li><p><code>.reflection_llm</code>: for <code><a href="GEPA.html">GEPA()</a></code>, the ellmer Chat used to propose
+instruction and Flex source changes. If omitted, an explicitly
+supplied <code>.llm</code> is also used for reflection for compatibility. GEPA
+errors before evaluation when a mutable search has no reflection Chat.</p></li>
 <li><p><code>.trace_context</code>: a named, JSON-compatible list copied into the
 metadata and traces of the calls made while compiling.</p></li>
 </ul><p>Some teleprompters take further arguments; see their help pages.</p></dd>

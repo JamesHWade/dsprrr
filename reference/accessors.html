@@ -8,11 +8,20 @@ a single result, a list of them for a batch, and the predictions of an
 evaluation.
 get_metadata() returns the call metadata: a list for a single result
 and one list per row for a batch or an evaluation.
+get_history() returns a saved conversation_history() from an explicit
+history run, or NULL when conversation history was not requested.
 get_tokens() returns input_tokens, output_tokens and
 total_tokens.
 get_cost() returns the estimated cost in US dollars.
 
 
+For chain_of_thought(mode = "native"), get_metadata(result)$native_reasoning
+is a list of ellmer ContentThinking objects from the current provider
+turn, or NULL if the provider did not expose thinking content. dsprrr does
+not synthesize text for this field.
+For rlm_module(reasoning_mode = "native"), the same field contains
+provider thinking blocks from action calls in order; the integer vector
+native_reasoning_action_indices identifies the action for each block.
 For run_dataset() results, use the result and .metadata columns
 instead.'><meta property="og:description" content='These functions read the parts of a result so you do not need to know its
 structure. They work on results of run() with
@@ -23,11 +32,20 @@ a single result, a list of them for a batch, and the predictions of an
 evaluation.
 get_metadata() returns the call metadata: a list for a single result
 and one list per row for a batch or an evaluation.
+get_history() returns a saved conversation_history() from an explicit
+history run, or NULL when conversation history was not requested.
 get_tokens() returns input_tokens, output_tokens and
 total_tokens.
 get_cost() returns the estimated cost in US dollars.
 
 
+For chain_of_thought(mode = "native"), get_metadata(result)$native_reasoning
+is a list of ellmer ContentThinking objects from the current provider
+turn, or NULL if the provider did not expose thinking content. dsprrr does
+not synthesize text for this field.
+For rlm_module(reasoning_mode = "native"), the same field contains
+provider thinking blocks from action calls in order; the integer vector
+native_reasoning_action_indices identifies the action for each block.
 For run_dataset() results, use the result and .metadata columns
 instead.'><meta property="og:image" content="https://jameshwade.github.io/dsprrr/logo.svg"></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -128,10 +146,19 @@ a single result, a list of them for a batch, and the predictions of an
 evaluation.</p></li>
 <li><p><code>get_metadata()</code> returns the call metadata: a list for a single result
 and one list per row for a batch or an evaluation.</p></li>
+<li><p><code>get_history()</code> returns a saved <code><a href="conversation_history.html">conversation_history()</a></code> from an explicit
+history run, or <code>NULL</code> when conversation history was not requested.</p></li>
 <li><p><code>get_tokens()</code> returns <code>input_tokens</code>, <code>output_tokens</code> and
 <code>total_tokens</code>.</p></li>
 <li><p><code>get_cost()</code> returns the estimated cost in US dollars.</p></li>
-</ul><p>For <code><a href="run_dataset.html">run_dataset()</a></code> results, use the <code>result</code> and <code>.metadata</code> columns
+</ul><p>For <code>chain_of_thought(mode = "native")</code>, <code>get_metadata(result)$native_reasoning</code>
+is a list of ellmer <code>ContentThinking</code> objects from the current provider
+turn, or <code>NULL</code> if the provider did not expose thinking content. dsprrr does
+not synthesize text for this field.</p>
+<p>For <code>rlm_module(reasoning_mode = "native")</code>, the same field contains
+provider thinking blocks from action calls in order; the integer vector
+<code>native_reasoning_action_indices</code> identifies the action for each block.</p>
+<p>For <code><a href="run_dataset.html">run_dataset()</a></code> results, use the <code>result</code> and <code>.metadata</code> columns
 instead.</p>
     </div>
 
@@ -140,6 +167,8 @@ instead.</p>
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">get_output</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu">get_metadata</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu">get_history</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu">get_tokens</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span><span class="op">)</span></span>
 <span></span>
@@ -167,6 +196,8 @@ the other functions return empty or missing values.</p></dd>
 <ul><li><p><code>get_output()</code>: the outputs, as described above.</p></li>
 <li><p><code>get_metadata()</code>: a list, or a list of lists; an empty list when <code>x</code> has
 no metadata.</p></li>
+<li><p><code>get_history()</code>: a <code>dsprrr_history</code> object for a result that retained
+conversation history, or <code>NULL</code> otherwise.</p></li>
 <li><p><code>get_tokens()</code>: a list of the three counts for a single result, or a
 tibble with columns <code>index</code>, <code>input_tokens</code>, <code>output_tokens</code> and
 <code>total_tokens</code> for a batch or an evaluation. Unknown counts are <code>NA</code>.</p></li>
@@ -198,7 +229,7 @@ as free.</p></li>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] "HELLO"</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">get_metadata</span><span class="op">(</span><span class="va">result</span><span class="op">)</span><span class="op">$</span><span class="va">latency_ms</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 0.06246567</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 0.0462532</span>
 <span class="r-in"><span><span class="co"># Function-backed modules make no model calls, so these are NA</span></span></span>
 <span class="r-in"><span><span class="fu">get_tokens</span><span class="op">(</span><span class="va">result</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $input_tokens</span>

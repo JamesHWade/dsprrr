@@ -230,8 +230,15 @@ optimizer evaluate one row at a time, so a run overshoots a limit by at most
 one evaluation row that had already started (or one direct provider request
 made by the optimizer itself). When a cap is finite and a provider does not
 report its usage, tokens or cost, the run stops rather than guess.</p>
-<p><code><a href="BootstrapFewShot.html">BootstrapFewShot()</a></code> and <code><a href="MIPROv2.html">MIPROv2()</a></code> can resume from a checkpoint. <code><a href="GEPA.html">GEPA()</a></code>,
-<code><a href="SIMBA.html">SIMBA()</a></code> and <code><a href="COPRO.html">COPRO()</a></code> respect the budgets and return the best partial
+<p><code><a href="BootstrapFewShot.html">BootstrapFewShot()</a></code> and <code><a href="MIPROv2.html">MIPROv2()</a></code> can resume from a checkpoint.
+<code><a href="GEPA.html">GEPA()</a></code> supports resume for sequential <code>round_robin</code> searches over plain
+<code>Predict</code> leaves and built-in predictor pipelines when each prediction is
+plain data. It rejects Flex modules, other selectors, custom module types or
+Chats, Chats with tools, and Chats with existing turns. GEPA stores each
+completed proposal and evaluation row. A provider request that finishes
+after the previous checkpoint was written but before its result is committed
+can be retried after a crash; GEPA does not guarantee exactly-once provider
+effects. <code><a href="SIMBA.html">SIMBA()</a></code> and <code><a href="COPRO.html">COPRO()</a></code> respect budgets and return the best partial
 program, but reject <code>resume = TRUE</code>.</p>
     </div>
     <div class="section level2">

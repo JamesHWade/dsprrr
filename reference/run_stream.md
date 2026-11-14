@@ -12,7 +12,14 @@ fields at every step, not only the last.
 ## Usage
 
 ``` r
-run_stream(module, ..., .llm = NULL, listeners = list(), on_status = NULL)
+run_stream(
+  module,
+  ...,
+  .llm = NULL,
+  listeners = list(),
+  on_status = NULL,
+  .history = NULL
+)
 ```
 
 ## Arguments
@@ -43,6 +50,13 @@ run_stream(module, ..., .llm = NULL, listeners = list(), on_status = NULL)
   A function called with a list for each progress event (see below), or
   `NULL`.
 
+- .history:
+
+  Explicit conversation history is not supported by streaming; use
+  synchronous
+  [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md) for
+  scalar root ReAct continuation.
+
 ## Value
 
 The output, invisibly, in the same form as
@@ -67,6 +81,8 @@ or [`react()`](https://jameshwade.github.io/dsprrr/reference/react.md))
 is an error, raised before any request is made.
 
 Streaming runs do not use the response cache and record no traces.
+Native reasoning mode is rejected because this result contract does not
+return provider turns or native reasoning metadata.
 
 ### Status events
 

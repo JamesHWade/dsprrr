@@ -56,7 +56,7 @@ compiled <- compile(classifier, LabeledFewShot(k = 2L), trainset)
 
 board <- pins::board_temp()
 pin_module_config(board, "sentiment-classifier", compiled)
-#> Creating new version '20261025T224013Z-b8d77'
+#> Creating new version '20261114T135214Z-79cf6'
 #> Writing to pin 'sentiment-classifier'
 #> ✔ Pinned program artifact: "sentiment-classifier"
 #> ℹ Root module: <PredictModule>

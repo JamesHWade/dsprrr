@@ -124,6 +124,7 @@ optimization or control over the runner's lifetime, create an
 <span>  .max_iterations <span class="op">=</span> <span class="fl">20L</span>,</span>
 <span>  .max_llm_calls <span class="op">=</span> <span class="fl">50L</span>,</span>
 <span>  .max_output_chars <span class="op">=</span> <span class="fl">10000L</span>,</span>
+<span>  .reasoning_mode <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"rationale"</span>, <span class="st">"native"</span>, <span class="st">"plan"</span><span class="op">)</span>,</span>
 <span>  .sub_lm <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  .tools <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  .verbose <span class="op">=</span> <span class="cn">FALSE</span>,</span>
@@ -142,7 +143,8 @@ optimization or control over the runner's lifetime, create an
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
-<dd><p>Named inputs, plus <code><a href="run.html">run()</a></code> options such as <code>.return_format</code>.
+<dd><p>Named inputs, plus <code><a href="run.html">run()</a></code> options such as <code>.return_format</code> and
+<code>.history</code>.
 Each input is staged as one variable, including vectors, lists, matrices
 and data frames. For several investigations, create an <code><a href="rlm_module.html">rlm_module()</a></code> and
 use <code><a href="run_dataset.html">run_dataset()</a></code> with list-columns.</p></dd>
@@ -171,6 +173,12 @@ fallback extraction (default <code>20L</code>).</p></dd>
 <dt id="arg--max-output-chars">.max_output_chars<a class="anchor" aria-label="anchor" href="#arg--max-output-chars"></a></dt>
 <dd><p>Maximum number of characters of each execution
 result shown to the model (default <code>10000L</code>).</p></dd>
+
+
+<dt id="arg--reasoning-mode">.reasoning_mode<a class="anchor" aria-label="anchor" href="#arg--reasoning-mode"></a></dt>
+<dd><p>Action reasoning behavior: <code>"rationale"</code> (the
+default), <code>"native"</code> (code only, with provider thinking metadata when
+available), or <code>"plan"</code> (a concise plan and code).</p></dd>
 
 
 <dt id="arg--sub-lm">.sub_lm<a class="anchor" aria-label="anchor" href="#arg--sub-lm"></a></dt>
@@ -236,6 +244,17 @@ the signature's outputs. With <code>.return_format = "structured"</code>, a
 <span class="r-in"><span>  .max_iterations <span class="op">=</span> <span class="fl">4L</span>,</span></span>
 <span class="r-in"><span>  .max_llm_calls <span class="op">=</span> <span class="fl">0L</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Native provider thinking is available on structured scalar results</span></span></span>
+<span class="r-in"><span><span class="va">native_result</span> <span class="op">&lt;-</span> <span class="fu">rlm</span><span class="op">(</span></span></span>
+<span class="r-in"><span>  <span class="st">"document, question -&gt; answer"</span>,</span></span>
+<span class="r-in"><span>  document <span class="op">=</span> <span class="st">"Owner: team-a\nObligation: rotate keys quarterly"</span>,</span></span>
+<span class="r-in"><span>  question <span class="op">=</span> <span class="st">"What are the main themes?"</span>,</span></span>
+<span class="r-in"><span>  .llm <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-luna"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  .reasoning_mode <span class="op">=</span> <span class="st">"native"</span>,</span></span>
+<span class="r-in"><span>  .return_format <span class="op">=</span> <span class="st">"structured"</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="accessors.html">get_metadata</a></span><span class="op">(</span><span class="va">native_result</span><span class="op">)</span><span class="op">$</span><span class="va">native_reasoning</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Rich local R objects need a trusted runner that can stage them</span></span></span>
 <span class="r-in"><span><span class="va">sessions</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span></span>

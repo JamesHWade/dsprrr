@@ -32,6 +32,7 @@ rlm_module(
   chat = NULL,
   generate_action = NULL,
   extract = NULL,
+  reasoning_mode = c("rationale", "native", "plan"),
   ...
 )
 ```
@@ -108,6 +109,15 @@ rlm_module(
 
   Optional replacement for the fallback extraction predictor (advanced).
 
+- reasoning_mode:
+
+  How the action predictor handles reasoning: `"rationale"` (the
+  default) returns a short `reasoning` field, `"native"` asks for code
+  only and exposes provider-supplied thinking blocks in structured
+  result metadata when available, and `"plan"` returns a concise
+  explicit `plan` with the code. Native thinking is not synthesized when
+  the provider does not return it.
+
 - ...:
 
   Must be empty.
@@ -137,6 +147,17 @@ can call:
 
 - The functions supplied in `tools`.
 
+A query slice may be a text string or an ordered list of records such as
+`list(list(type = "text", text = "..."), list(type = "image_url", url = "https://example.com/image.png", detail = "auto"))`.
+Inline images use `type = "image_base64"`, an image MIME type, and
+base64 data up to 524,288 bytes. Image URLs must use HTTPS, omit user
+info, and be at most 2,048 bytes; local paths and PDF records are
+unsupported. The managed
+[`mcp_repl_runner()`](https://jameshwade.github.io/dsprrr/reference/mcp_repl_runner.md)
+control frame defaults to 3,000 bytes, so inline data must also fit that
+transport limit. These JSON-native records work without ellmer in the
+guest process.
+
 Sub-queries and tools run in the host R process, not in the runner: the
 generated code pauses, dsprrr handles the request, and the code is
 replayed with the response. Variables persist across steps within one
@@ -148,6 +169,24 @@ makes one final typed attempt.
 RLM checks string, number, integer, boolean, enum, array and object
 outputs. Opaque `TypeJsonSchema` outputs are rejected when the module is
 created, because they cannot be checked in the repair loop.
+
+`reasoning_mode` changes the action predictor, not the declared final
+output. `"rationale"` preserves the existing `reasoning` and `code`
+action fields. `"native"` requests code only and records
+provider-supplied `ContentThinking` blocks in
+[`get_metadata()`](https://jameshwade.github.io/dsprrr/reference/accessors.md)
+when they are present; the structured metadata also has
+`native_reasoning_action_indices`, aligned with those blocks. `"plan"`
+records a concise explicit `plan` with each action. Retrieve native
+metadata from structured scalar
+[`run()`](https://jameshwade.github.io/dsprrr/reference/run.md) results.
+Batch, asynchronous and streaming paths reject native RLMs before
+execution. A custom `generate_action` module must accept one required
+string `state` input and return required string fields for the selected
+mode. Native custom actions also set `config$reasoning_mode = "native"`
+so provider thinking is captured using the same current-turn contract.
+The constructor validates these contracts without rewriting the supplied
+module.
 
 ### Runners
 
@@ -174,6 +213,26 @@ stages each input as one variable, whatever its length. For several
 investigations, use
 [`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md)
 with list-columns for data frames, vectors, lists or other rich values.
+
+### Explicit conversation history
+
+A scalar synchronous
+[`run()`](https://jameshwade.github.io/dsprrr/reference/run.md) can
+continue an RLM conversation by supplying
+`.history = conversation_history()` or a history returned by
+[`get_history()`](https://jameshwade.github.io/dsprrr/reference/accessors.md).
+Set `.return_format = "structured"` to retain the next history in result
+metadata. Every explicit-history call requires `interpreter_factory`;
+dsprrr starts and shuts down one invocation-owned runner for each call.
+The factory must return a fresh persistent interpreter. Previous task
+previews, observed code and output are rendered into both action and
+fallback prompts as bounded textual evidence. Previous variables and
+staged objects are not restored, and historical code is not replayed.
+Context values in the record are the bounded previews that were visible
+to the model. Histories are sensitive, and a call fails explicitly if
+appending would exceed the documented portable-history limits. ReAct and
+RLM histories cannot be mixed; batch, dataset, asynchronous and
+streaming entrypoints reject explicit history.
 
 ### Optimization and traces
 

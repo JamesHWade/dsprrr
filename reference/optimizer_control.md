@@ -145,10 +145,18 @@ than guess.
 and
 [`MIPROv2()`](https://jameshwade.github.io/dsprrr/reference/MIPROv2.md)
 can resume from a checkpoint.
-[`GEPA()`](https://jameshwade.github.io/dsprrr/reference/GEPA.md),
+[`GEPA()`](https://jameshwade.github.io/dsprrr/reference/GEPA.md)
+supports resume for sequential `round_robin` searches over plain
+`Predict` leaves and built-in predictor pipelines when each prediction
+is plain data. It rejects Flex modules, other selectors, custom module
+types or Chats, Chats with tools, and Chats with existing turns. GEPA
+stores each completed proposal and evaluation row. A provider request
+that finishes after the previous checkpoint was written but before its
+result is committed can be retried after a crash; GEPA does not
+guarantee exactly-once provider effects.
 [`SIMBA()`](https://jameshwade.github.io/dsprrr/reference/SIMBA.md) and
 [`COPRO()`](https://jameshwade.github.io/dsprrr/reference/COPRO.md)
-respect the budgets and return the best partial program, but reject
+respect budgets and return the best partial program, but reject
 `resume = TRUE`.
 
 ## See also

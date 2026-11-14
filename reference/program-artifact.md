@@ -147,7 +147,7 @@ restored
 
 artifact <- program_artifact(mod)
 program_artifact_id(artifact)
-#> [1] "sha256:d2af4010a1b84a7c04c034962a7996ccb00e8eaeab2ad949933663b27b7fefd5"
+#> [1] "sha256:a68aed3648a841713bb0d7831515956563f10ce5d8afd4b9389decea542a24ba"
 identical(program_artifact_id(restored), program_artifact_id(artifact))
 #> [1] TRUE
 unlink(path)

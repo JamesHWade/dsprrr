@@ -43,6 +43,13 @@ compile(program, teleprompter, ...)
   - `.llm`: an ellmer Chat for the program's calls (see
     [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md)).
 
+  - `.reflection_llm`: for
+    [`GEPA()`](https://jameshwade.github.io/dsprrr/reference/GEPA.md),
+    the ellmer Chat used to propose instruction and Flex source changes.
+    If omitted, an explicitly supplied `.llm` is also used for
+    reflection for compatibility. GEPA errors before evaluation when a
+    mutable search has no reflection Chat.
+
   - `.trace_context`: a named, JSON-compatible list copied into the
     metadata and traces of the calls made while compiling.
 

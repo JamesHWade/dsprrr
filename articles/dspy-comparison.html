@@ -250,27 +250,32 @@ new program and leaves the original unchanged</td>
 <div class="section level2">
 <h2 id="version-baseline">Version baseline<a class="anchor" aria-label="anchor" href="#version-baseline"></a>
 </h2>
-<p>This comparison was checked against DSPy <strong>3.4.0</strong>,
-released on 2026-09-25, which DSPy calls its “LM transition
-release”:</p>
+<p>This comparison was checked against DSPy <strong>3.5.0</strong>,
+released on 2026-11-10. Its changes from 3.4.1 affect execution
+contracts as well as feature names:</p>
 <ul>
-<li>DSPy’s LM layer now runs through bundled native engines. The
-experimental 3.3 <code>LMRequest</code>/<code>LMResponse</code> types
-have been removed, and OpenAI-style <code>lm(messages = ...)</code>
-calls are deprecated until 3.5.</li>
-<li>It adds experimental decision types (<code>Noul</code>,
-<code>Score</code>, <code>Choice</code>) and the ReAnchor calibration
-optimizer.</li>
-<li>It adds a persistent <code>LocalInterpreter</code>, async
-<code>ReActV2</code>, and call-time interpreter factories for RLM.</li>
+<li>RLM, Flex, and GEPA have graduated from experimental status
+upstream.</li>
+<li>The newer ReAct implementation is now <code>dspy.ReAct</code>, using
+structured History and a typed <code>submit</code> tool.
+<code>ReActV2</code> is a deprecated alias.</li>
+<li>RLM accepts reusable conversation History and mixed text/image
+subqueries. Replaying History does not restore interpreter
+variables.</li>
+<li>ChainOfThought prefers native reasoning, which may have no visible
+summary, with a short-plan fallback. XML is the default predictor
+adapter.</li>
+<li>The lm15 provider layer makes LiteLLM and the OpenAI SDK optional.
+Legacy <code>lm(messages=...)</code> entry points, CodeAct, and
+ProgramOfThought were removed; TwoStepAdapter is deprecated.</li>
 </ul>
-<p>The 3.3.1 patch release, also covered here, deprecated
-<code>CodeAct</code> and <code>ProgramOfThought</code>, added
-objective-aware GEPA frontiers, and exposed optimizer and interpreter
-callback events. The 3.3.0 release introduced the experimental
-<code>Flex</code> and <code>ReActV2</code> modules that dsprrr’s
-<code><a href="../reference/flex.html">flex()</a></code> and <code><a href="../reference/react.html">react()</a></code> follow. See the <a href="https://github.com/stanfordnlp/dspy/releases/tag/3.4.0" class="external-link">DSPy 3.4.0
-release notes</a>.</p>
+<p>These upstream changes do not change dsprrr’s provider boundary:
+ellmer owns provider calls and structured output. dsprrr keeps its
+R-specific code modules and its own experimental labels. Re-evaluate
+optimized programs when their prompts, schemas, or execution modes
+change. See the <a href="https://github.com/stanfordnlp/dspy/releases/tag/3.5.0" class="external-link">DSPy 3.5.0
+release notes</a> and <a href="https://dspy.ai/current/community/upgrading-to-3-5/" class="external-link">upgrade
+guide</a>.</p>
 </div>
 <div class="section level2">
 <h2 id="modules">Modules<a class="anchor" aria-label="anchor" href="#modules"></a>
@@ -297,24 +302,20 @@ release notes</a>.</p>
 <td>
 <code><a href="../reference/chain_of_thought.html">chain_of_thought()</a></code>, <code><a href="../reference/with_reasoning.html">with_reasoning()</a></code>
 </td>
-<td>Implemented as signature transforms</td>
+<td>Default rationale transform; opt-in native provider reasoning or a
+short explicit plan</td>
 </tr>
 <tr class="odd">
 <td>
-<code>dspy.ReAct</code> / experimental <code>ReActV2</code>
-</td>
+<code>dspy.ReAct</code> (<code>ReActV2</code> is deprecated)</td>
 <td><code>react(sig)</code></td>
-<td>Native ellmer turn history, tool-call IDs, parallel calls per
-assistant turn, enforced iteration limit, then structured finalization;
-behaviorally aligned, not a port of the Python class. There is no
-counterpart to <code>ReActV2.acall()</code>: <code><a href="../reference/run_async.html">run_async()</a></code>
-does not accept <code><a href="../reference/react.html">react()</a></code> modules, so run them with
-<code><a href="../reference/run.html">run()</a></code>
-</td>
+<td>Native ellmer turns and tool-call IDs, ordered rich tool content, an
+enforced iteration limit, and opt-in typed <code>submit</code>
+finalization. Structured follow-up remains the default</td>
 </tr>
 <tr class="even">
 <td>
-<code>dspy.ProgramOfThought</code> (deprecated in DSPy 3.3.1)</td>
+<code>dspy.ProgramOfThought</code> (removed in DSPy 3.5)</td>
 <td><code><a href="../reference/program_of_thought.html">program_of_thought()</a></code></td>
 <td>Generates and executes <strong>R</strong> code (not Python); accepts
 either a caller-owned reused runner or a fresh per-invocation
@@ -324,7 +325,7 @@ interpreter factory. dsprrr keeps it supported; DSPy points users to
 </tr>
 <tr class="odd">
 <td>
-<code>dspy.CodeAct</code> (deprecated in DSPy 3.3.1)</td>
+<code>dspy.CodeAct</code> (removed in DSPy 3.5)</td>
 <td><code><a href="../reference/code_act.html">code_act()</a></code></td>
 <td>Hybrid tools + R code execution with an enforced inner tool-call
 limit; accepts either a caller-owned reused runner or a fresh
@@ -357,8 +358,8 @@ replayed recursive values, typed submission repair, and trajectory
 metadata</td>
 </tr>
 <tr class="even">
-<td>Experimental <code>dspy.Flex</code>
-</td>
+<td>
+<code>dspy.Flex</code> (stable upstream in 3.5)</td>
 <td><code><a href="../reference/flex.html">flex()</a></code></td>
 <td>GEPA can optimize a bounded predictor graph or an R
 <code>forward()</code> program. dsprrr requires an explicit fresh
@@ -422,10 +423,102 @@ the factory form and requires an enforced sandbox by default, while JSON
 Flex needs no interpreter; see <a href="flex-optimization.html">Flex:
 optimize a whole program</a>.</p>
 <div class="section level3">
+<h3 id="reasoning-and-typed-completion">Reasoning and typed completion<a class="anchor" aria-label="anchor" href="#reasoning-and-typed-completion"></a>
+</h3>
+<p><code><a href="../reference/chain_of_thought.html">chain_of_thought()</a></code> keeps its existing rationale field by
+default. Native mode keeps the original output schema and exposes
+provider-supplied thinking in structured metadata; an absent thinking
+block remains <code>NULL</code>. Plan mode adds a short, explicit plan
+to the requested output. Neither mode promises to recover a model’s
+private reasoning or change provider settings.</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">native_qa</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/chain_of_thought.html">chain_of_thought</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span>, mode <span class="op">=</span> <span class="st">"native"</span><span class="op">)</span></span>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
+<span>  <span class="va">native_qa</span>,</span>
+<span>  question <span class="op">=</span> <span class="st">"What is the capital of France?"</span>,</span>
+<span>  .return_format <span class="op">=</span> <span class="st">"structured"</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">result</span><span class="op">$</span><span class="va">metadata</span><span class="op">$</span><span class="va">native_reasoning</span></span>
+<span></span>
+<span><span class="va">planned_qa</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/chain_of_thought.html">chain_of_thought</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span>, mode <span class="op">=</span> <span class="st">"plan"</span><span class="op">)</span></span></code></pre></div>
+<p>For ReAct, <code>finalization = "submit"</code> makes the final
+answer a typed tool call. Invalid submissions return repair feedback
+within the iteration budget. A valid submission must be the only tool
+call in its turn; mixed submission/action turns fail before tool
+effects. This avoids the extra extraction request used by the default
+<code>finalization = "structured"</code>.</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">agent</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/react.html">react</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span>, finalization <span class="op">=</span> <span class="st">"submit"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">agent</span>, question <span class="op">=</span> <span class="st">"What is the capital of France?"</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="explicit-react-conversation-history">Explicit ReAct conversation history<a class="anchor" aria-label="anchor" href="#explicit-react-conversation-history"></a>
+</h3>
+<p>A supplied history opts into continuation on an independent Chat. The
+default <code>.history = NULL</code> keeps existing behavior. Scalar
+root ReAct calls through <code><a href="../reference/run.html">run()</a></code> or <code>Module$run()</code>
+require structured results when history is supplied:</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">first</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
+<span>  <span class="va">agent</span>,</span>
+<span>  question <span class="op">=</span> <span class="st">"What is the capital of France?"</span>,</span>
+<span>  .history <span class="op">=</span> <span class="fu"><a href="../reference/conversation_history.html">conversation_history</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  .return_format <span class="op">=</span> <span class="st">"structured"</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">history_file</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".json"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/save_history.html">save_history</a></span><span class="op">(</span><span class="fu"><a href="../reference/accessors.html">get_history</a></span><span class="op">(</span><span class="va">first</span><span class="op">)</span>, <span class="va">history_file</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">second</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
+<span>  <span class="va">agent</span>,</span>
+<span>  question <span class="op">=</span> <span class="st">"Which river runs through it?"</span>,</span>
+<span>  .history <span class="op">=</span> <span class="fu"><a href="../reference/load_history.html">load_history</a></span><span class="op">(</span><span class="va">history_file</span><span class="op">)</span>,</span>
+<span>  .return_format <span class="op">=</span> <span class="st">"structured"</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>History preserves ordered content and paired tool calls/results
+without executing old tools. It excludes executable bindings, system
+prompts, and old usage accounting. The supplied Chat and history remain
+unchanged on success or error; <code>get_history(second)</code> is the
+new value. History is returned independently of trace recording. The
+JSON codec rejects unsupported values, malformed tool pairing, and
+payloads beyond its documented size/depth limits.</p>
+<p>The public dataset, batch, async, and streaming paths reject explicit
+history before work. Other modules’ low-level custom
+<code>forward()</code> methods are outside this continuation API.
+Program artifacts and conversation history remain separate files with
+separate purposes.</p>
+</div>
+<div class="section level3">
+<h3 id="asynchronous-agents">Asynchronous agents<a class="anchor" aria-label="anchor" href="#asynchronous-agents"></a>
+</h3>
+<p>ReAct’s async path awaits the complete sequential tool loop and
+either typed submission or structured follow-up. It uses the same
+simple/structured result choice as Predict. A one-invocation control
+reports ordered progress and supports cooperative cancellation:</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">control</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/react_async_control.html">react_async_control</a></span><span class="op">(</span>on_progress <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">event</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/message.html" class="external-link">message</a></span><span class="op">(</span><span class="va">event</span><span class="op">$</span><span class="va">type</span><span class="op">)</span></span>
+<span><span class="op">}</span><span class="op">)</span></span>
+<span><span class="va">pending</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_async.html">run_async</a></span><span class="op">(</span></span>
+<span>  <span class="va">agent</span>,</span>
+<span>  question <span class="op">=</span> <span class="st">"What is the capital of France?"</span>,</span>
+<span>  .return_format <span class="op">=</span> <span class="st">"structured"</span>,</span>
+<span>  .control <span class="op">=</span> <span class="va">control</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu">promises</span><span class="fu">::</span><span class="fu"><a href="https://rstudio.github.io/promises/reference/then.html" class="external-link">then</a></span><span class="op">(</span><span class="va">pending</span>, <span class="kw">function</span><span class="op">(</span><span class="va">result</span><span class="op">)</span> <span class="fu"><a href="../reference/accessors.html">get_output</a></span><span class="op">(</span><span class="va">result</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co"># While the call is pending, request cancellation with control$cancel().</span></span></code></pre></div>
+<p>Cancellation blocks subsequent work; an active provider request or
+host tool must settle first. The Chat remains reserved during that
+interval. Progress callback errors reject the call after cleanup. A
+failed/cancelled conversation can be partial: metadata distinguishes
+requested tools from observed results, and
+<code>observed_tool_results</code> retains actual result evidence
+without inventing results for tools that did not run. Explicit portable
+history is not accepted on the async path.</p>
+</div>
+<div class="section level3">
 <h3 id="rlm">RLM<a class="anchor" aria-label="anchor" href="#rlm"></a>
 </h3>
-<p>dsprrr follows the DSPy RLM execution contract, which DSPy 3.4 leaves
-unchanged apart from interpreter binding: one interpreter per
+<p>dsprrr follows the core DSPy RLM execution model: one interpreter per
 invocation, <code>generate_action</code> and <code>extract</code> child
 predictors that graph optimizers can see, a sub-LM that inherits the
 outer LM unless you set one, <code>llm_query()</code> results replayed
@@ -474,12 +567,11 @@ writes allowed; it suits compact JSON-compatible context</td>
 </tr>
 <tr class="odd">
 <td>Returned value</td>
-<td>Prediction with trajectory and top-level
-<code>final_reasoning</code>
-</td>
-<td>
-<code><a href="../reference/run.html">run()</a></code> output plus structured metadata, including a
-bounded trajectory</td>
+<td>Prediction with reusable ordered History; native reasoning may have
+no visible summary</td>
+<td>Structured <code><a href="../reference/run.html">run()</a></code> results include the current trajectory
+and optional explicit conversation history; native thinking is optional
+metadata</td>
 </tr>
 <tr class="even">
 <td>Typed outputs</td>
@@ -494,6 +586,54 @@ types; opaque <code>TypeJsonSchema</code> nodes are rejected</td>
 </tr>
 </tbody>
 </table>
+<p>Recursive query context can contain an ordered mix of text and
+images. Generated R code passes plain records to
+<code>llm_query()</code> or aligned slices to
+<code>llm_query_batched()</code>; the guest does not need ellmer
+installed:</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">llm_query</span><span class="op">(</span></span>
+<span>  <span class="st">"What does this figure show?"</span>,</span>
+<span>  context_slice <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"text"</span>, text <span class="op">=</span> <span class="st">"Compare the two panels."</span><span class="op">)</span>,</span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"image_url"</span>, url <span class="op">=</span> <span class="st">"https://example.com/figure.png"</span><span class="op">)</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>HTTPS image URLs and bounded inline image data are supported. PDF and
+local file records are rejected. The runner’s transport cap also
+applies: a valid image record can still be too large for a managed MCP
+control frame. These queries preserve replay identity, ordering, and
+call budgets; they do not establish that every provider/model can
+interpret images.</p>
+<p>RLM action reasoning is also selectable through
+<code>rlm_module(reasoning_mode = "native")</code> or
+<code>rlm(.reasoning_mode = "native")</code>. Native actions request
+code without a prompted rationale; provider thinking remains optional
+metadata. <code>native_reasoning_action_indices</code> maps retained
+blocks to their action steps. <code>"plan"</code> requests a short plan
+plus code, and <code>"rationale"</code> preserves the default action
+schema. The final output signature is unchanged. Custom action
+predictors must satisfy the chosen contract, which is checked again
+before each invocation’s model or interpreter work.</p>
+<p>Explicit RLM continuation uses the same <code>.history</code> and
+<code><a href="../reference/accessors.html">get_history()</a></code> API as ReAct, but stores a different kind of
+record. Each exchange contains the original visible task/context
+previews, inert code and observed output, and the complete normalized
+final output. A new invocation includes every prior exchange in both its
+action prompts and fallback extraction prompt.</p>
+<p>Every explicit-history RLM call requires an
+<code>interpreter_factory</code>; the framework leases and closes one
+interpreter for that call. The factory must return a fresh interpreter.
+Prior variables are unavailable, and historical code and tools are never
+executed merely by loading or supplying history. ReAct and RLM histories
+cannot be mixed. Async, batch, dataset, streaming, and composite calls
+do not accept explicit history.</p>
+<p>RLM history is bounded to 100 exchanges, 1,000 trajectory steps, and
+128 KiB of canonical historical text, in addition to the shared codec
+limits. It never silently prunes exchanges or clips final outputs. A
+completed call can still fail its postflight history-size check after
+provider work; the supplied history remains unchanged. Saved program
+artifacts do not include this conversation history.</p>
 <p>RLM remains experimental in dsprrr: the execution and result
 contracts are tested, but the convenience API may still change. For a
 worked example, see <a href="tutorial-rlm-dsprrr.html">Investigate a
@@ -571,9 +711,11 @@ sources, with separate train/validation roles, multi-objective
 selection, lineage, and optional retained outputs. DSPy 3.3.1’s
 per-metric <code>objective_scores</code> and <code>frontier_type</code>
 map to dsprrr’s named <code>metrics</code> list with Pareto selection.
-Cached subsample merge acceptance, fine-grained resume, parallel
-candidate evaluation, and built-in experiment trackers remain
-different</td>
+Task evaluation and reflection can use separate Chats with shared budget
+accounting. Fine-grained checkpoint resume is available for a bounded
+sequential predictor graph; Flex resume, cached subsample merge
+acceptance, parallel candidate evaluation, and built-in experiment
+trackers remain different</td>
 </tr>
 <tr class="odd">
 <td><code>COPRO</code></td>
@@ -662,7 +804,7 @@ budgets, and checkpoint resume</td>
 feedback</em>. dsprrr supports the same protocol. The metric receives
 the whole data row as <code>expected</code>, so read the answer column
 from it:</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">metric</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metric_with_feedback.html">metric_with_feedback</a></span><span class="op">(</span></span>
 <span>  <span class="kw">function</span><span class="op">(</span><span class="va">prediction</span>, <span class="va">expected</span><span class="op">)</span> <span class="op">{</span></span>
 <span>    <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="va">prediction</span><span class="op">$</span><span class="va">answer</span>, <span class="va">expected</span><span class="op">$</span><span class="va">answer</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
@@ -680,10 +822,84 @@ from it:</p>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">tp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/GEPA.html">GEPA</a></span><span class="op">(</span>metric <span class="op">=</span> <span class="va">metric</span>, generations <span class="op">=</span> <span class="fl">5L</span><span class="op">)</span></span>
-<span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">qa</span>, <span class="va">tp</span>, <span class="va">trainset</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">reflection_chat</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-astra"</span><span class="op">)</span></span>
+<span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">qa</span>, <span class="va">tp</span>, <span class="va">trainset</span>, .reflection_llm <span class="op">=</span> <span class="va">reflection_chat</span><span class="op">)</span></span></code></pre></div>
 <p>The feedback for failed examples goes into GEPA’s reflection prompt,
 so the reflection model sees why each output failed as well as which
 ones did.</p>
+</div>
+<div class="section level3">
+<h3 id="choosing-a-reflection-model">Choosing a reflection model<a class="anchor" aria-label="anchor" href="#choosing-a-reflection-model"></a>
+</h3>
+<p>Pass <code>.reflection_llm</code> to <code><a href="../reference/compile.html">compile()</a></code> to
+separate GEPA proposal generation from task evaluation. Each reflection
+request starts from an independent Chat, and both stages contribute to
+the optimizer budget. An explicit <code>.llm</code> remains the legacy
+reflection fallback; an omitted task override can still resolve through
+the program’s normal runtime configuration.</p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">task_chat</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-luna"</span><span class="op">)</span></span>
+<span><span class="va">reflection_chat</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-astra"</span><span class="op">)</span></span>
+<span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span></span>
+<span>  <span class="va">qa</span>,</span>
+<span>  <span class="fu"><a href="../reference/GEPA.html">GEPA</a></span><span class="op">(</span>metric <span class="op">=</span> <span class="va">metric</span><span class="op">)</span>,</span>
+<span>  <span class="va">trainset</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="va">task_chat</span>,</span>
+<span>  .reflection_llm <span class="op">=</span> <span class="va">reflection_chat</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>Mutable search without an effective reflection Chat fails before
+evaluation. This is an adapted GEPA implementation; separate models
+alone do not establish algorithmic parity or an improvement on held-out
+data.</p>
+</div>
+<div class="section level3">
+<h3 id="durable-gepa-resume">Durable GEPA resume<a class="anchor" aria-label="anchor" href="#durable-gepa-resume"></a>
+</h3>
+<p>Use <code>optimizer_control(checkpoint_path = path)</code> to persist
+a supported GEPA search and set <code>resume = TRUE</code> to continue
+it. Completed proposals and individual evaluation rows are restored; a
+terminal checkpoint returns its result without further model or metric
+calls. An exhausted run can continue when its resource limit is
+raised.</p>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Start this resumable search with fresh, empty Chats.</span></span>
+<span><span class="va">task_chat</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-luna"</span><span class="op">)</span></span>
+<span><span class="va">reflection_chat</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-astra"</span><span class="op">)</span></span>
+<span><span class="va">control</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/optimizer_control.html">optimizer_control</a></span><span class="op">(</span></span>
+<span>  checkpoint_path <span class="op">=</span> <span class="st">"gepa-search.rds"</span>,</span>
+<span>  max_metric_calls <span class="op">=</span> <span class="fl">50</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span></span>
+<span>  <span class="va">qa</span>, <span class="fu"><a href="../reference/GEPA.html">GEPA</a></span><span class="op">(</span>metric <span class="op">=</span> <span class="va">metric</span><span class="op">)</span>, <span class="va">trainset</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="va">task_chat</span>,</span>
+<span>  .reflection_llm <span class="op">=</span> <span class="va">reflection_chat</span>,</span>
+<span>  control <span class="op">=</span> <span class="va">control</span></span>
+<span><span class="op">)</span></span>
+<span><span class="co"># Continue the same search with a larger allowance:</span></span>
+<span><span class="va">resumed</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span></span>
+<span>  <span class="va">qa</span>, <span class="fu"><a href="../reference/GEPA.html">GEPA</a></span><span class="op">(</span>metric <span class="op">=</span> <span class="va">metric</span><span class="op">)</span>, <span class="va">trainset</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="va">task_chat</span>,</span>
+<span>  .reflection_llm <span class="op">=</span> <span class="va">reflection_chat</span>,</span>
+<span>  control <span class="op">=</span> <span class="fu"><a href="../reference/optimizer_control.html">optimizer_control</a></span><span class="op">(</span></span>
+<span>    checkpoint_path <span class="op">=</span> <span class="st">"gepa-search.rds"</span>,</span>
+<span>    resume <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>    max_metric_calls <span class="op">=</span> <span class="fl">100</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>This first resume contract covers sequential <code>round_robin</code>
+component selection over plain Predict leaves and built-in predictor
+pipelines, with plain-data predictions. It rejects Flex, custom module
+types or selectors, custom Chats, and Chats containing tools or prior
+turns before provider work. Mutable searches require at least one
+validation row, using <code>trainset</code> when <code>valset</code> is
+omitted. Metrics must return finite scores or <code>NA</code>; infinite
+scores are rejected before their row is saved. Algorithm configuration
+and model/runtime identities must match the saved search; resource
+limits may change. Checkpoints retain search state, row evidence,
+lineage, and RNG state without serializing live Chats or executable
+objects. A crash after a provider response but before its checkpoint
+commit can repeat that request: this is not an exactly-once side-effect
+guarantee.</p>
 </div>
 <div class="section level3">
 <h3 id="trace-aware-metrics">Trace-aware metrics<a class="anchor" aria-label="anchor" href="#trace-aware-metrics"></a>
@@ -692,7 +908,7 @@ ones did.</p>
 reflective optimization. In dsprrr, wrap the metric with
 <code><a href="../reference/metric_with_trace.html">metric_with_trace()</a></code>; the wrapped function receives the
 prediction, the expected row, and a trace envelope:</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">metric</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metric_with_trace.html">metric_with_trace</a></span><span class="op">(</span></span>
 <span>  <span class="kw">function</span><span class="op">(</span><span class="va">prediction</span>, <span class="va">expected</span>, <span class="va">program_trace</span><span class="op">)</span> <span class="op">{</span></span>
 <span>    <span class="va">correct</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="va">prediction</span><span class="op">$</span><span class="va">answer</span>, <span class="va">expected</span><span class="op">$</span><span class="va">answer</span><span class="op">)</span></span>
@@ -723,18 +939,18 @@ responses, so handle them as potentially sensitive data.</p>
 </h3>
 <p>DSPy 3.4 declares decisions as signature annotations and keeps the
 tunable settings on the predictor:</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="kw">class</span> Match(dspy.Signature):</span>
-<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>    pair: <span class="bu">str</span> <span class="op">=</span> dspy.InputField(desc<span class="op">=</span><span class="st">"Two listings."</span>)</span>
-<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>    match: <span class="bu">bool</span> <span class="op">=</span> dspy.OutputField(desc<span class="op">=</span><span class="st">"Are they the same item?"</span>)</span>
-<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a></span>
-<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>matcher <span class="op">=</span> dspy.Predict(Match)</span>
-<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a>matcher.fields[<span class="st">"match"</span>] <span class="op">=</span> {<span class="st">"threshold"</span>: <span class="fl">0.7</span>}</span>
-<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a>tuned <span class="op">=</span> ReAnchor(metric).<span class="bu">compile</span>(matcher, trainset<span class="op">=</span>trainset, valset<span class="op">=</span>valset)</span></code></pre></div>
+<div class="sourceCode" id="cb12"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a><span class="kw">class</span> Match(dspy.Signature):</span>
+<span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a>    pair: <span class="bu">str</span> <span class="op">=</span> dspy.InputField(desc<span class="op">=</span><span class="st">"Two listings."</span>)</span>
+<span id="cb12-3"><a href="#cb12-3" tabindex="-1"></a>    match: <span class="bu">bool</span> <span class="op">=</span> dspy.OutputField(desc<span class="op">=</span><span class="st">"Are they the same item?"</span>)</span>
+<span id="cb12-4"><a href="#cb12-4" tabindex="-1"></a></span>
+<span id="cb12-5"><a href="#cb12-5" tabindex="-1"></a>matcher <span class="op">=</span> dspy.Predict(Match)</span>
+<span id="cb12-6"><a href="#cb12-6" tabindex="-1"></a>matcher.fields[<span class="st">"match"</span>] <span class="op">=</span> {<span class="st">"threshold"</span>: <span class="fl">0.7</span>}</span>
+<span id="cb12-7"><a href="#cb12-7" tabindex="-1"></a>tuned <span class="op">=</span> ReAnchor(metric).<span class="bu">compile</span>(matcher, trainset<span class="op">=</span>trainset, valset<span class="op">=</span>valset)</span></code></pre></div>
 <p>dsprrr splits the declaration the same way. The answer space stays in
 the signature, and the settings live on the module. Here
 <code>pair_train</code> and <code>pair_val</code> are data frames with a
 <code>pair</code> column and a logical <code>match</code> column:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
 <span>  inputs <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"pair"</span>, description <span class="op">=</span> <span class="st">"Two listings"</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>  output_type <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_object</a></span><span class="op">(</span></span>
@@ -808,8 +1024,10 @@ inputs</td>
 </tr>
 <tr class="even">
 <td><code>dspy.History</code></td>
-<td>Native ellmer turns preserved in ReAct metadata and traces; not a
-signature type</td>
+<td>Explicit <code><a href="../reference/conversation_history.html">conversation_history()</a></code> values,
+<code><a href="../reference/accessors.html">get_history()</a></code>, and bounded JSON save/load for scalar ReAct
+and RLM continuation. ReAct retains native turns; RLM retains inert
+task, trajectory, and output evidence with a fresh interpreter</td>
 </tr>
 <tr class="odd">
 <td>
@@ -822,8 +1040,10 @@ signature type</td>
 <tr class="even">
 <td>
 <code>dspy.Reasoning</code> (native reasoning traces)</td>
-<td>Not yet built in; <code><a href="../reference/with_reasoning.html">with_reasoning()</a></code> adds a prompted
-reasoning field</td>
+<td>Native thinking is optional current-call metadata in supported
+Predict/CoT and RLM paths. <code><a href="../reference/chain_of_thought.html">chain_of_thought()</a></code> also offers
+explicit rationale and plan modes; there is no separate typed reasoning
+output</td>
 </tr>
 <tr class="odd">
 <td>Experimental <code>Noul</code>, <code>Score[...]</code>,
@@ -841,7 +1061,7 @@ module</td>
 </h2>
 <p>DSPy composes programs as Python classes whose <code>forward()</code>
 calls several predictors. dsprrr composes pipelines of modules:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">outline</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"question -&gt; outline"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">write_up</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"notes -&gt; answer"</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
@@ -886,9 +1106,10 @@ do not match each step’s signature.</p>
 <tr class="odd">
 <td>LM client</td>
 <td>
-<code>dspy.LM</code> on bundled native engines
-(<code>engine = "auto"</code>) with a LiteLLM fallback in 3.4; the 3.3
-<code>LMRequest</code>/<code>LMResponse</code> types were removed</td>
+<code>dspy.LM</code> on bundled lm15 with canonical Request/Response
+objects; LiteLLM and OpenAI SDK optional in 3.5; API-family routing
+defaults to <code>auto</code>
+</td>
 <td>Provider-neutral ellmer <code>Chat</code>; <code><a href="../reference/run.html">run()</a></code>
 normalizes prompt and content inputs into typed requests, while a
 complete package-wide invocation record is still planned</td>
@@ -914,11 +1135,14 @@ complete package-wide invocation record is still planned</td>
 <code>acall</code>/<code>aforward</code>, <code>asyncify</code>
 </td>
 <td>
-<code><a href="../reference/run_async.html">run_async()</a></code> with promises for ordinary Predict modules
-and isolated background workflows for factory-backed ProgramOfThought,
-CodeAct, and RLM. Other module types such as <code><a href="../reference/react.html">react()</a></code> are
-rejected, as are caller-owned interpreters and specialized streaming,
-rather than shared or bypassed</td>
+<code><a href="../reference/run_async.html">run_async()</a></code> returns promises; direct Predict supports
+canonical structured results, current-call native reasoning, usage, and
+success/failure traces. ReAct supports its complete sequential tool
+loop, typed completion, progress, and cooperative cancellation. The
+simple output default is preserved, response caching is explicitly
+bypassed, and overlapping calls must use separate Chats. Factory-backed
+code modules retain simple background results; structured factory
+results are rejected</td>
 </tr>
 <tr class="odd">
 <td>Streaming</td>
@@ -966,8 +1190,9 @@ optimizer-compile and interpreter-lifecycle callback events</td>
 planned on top of ellmer</td>
 </tr>
 <tr class="even">
-<td>Adapters (Chat/JSON/XML/TwoStep/BAML)</td>
-<td>Yes</td>
+<td>Adapters</td>
+<td>XML default in 3.5, with Chat/JSON alternatives; TwoStepAdapter
+deprecated</td>
 <td>No adapter layer; ellmer’s <code>chat_structured()</code> handles
 structured output</td>
 </tr>
@@ -1046,13 +1271,15 @@ module.</li>
 <li>Package-level OpenTelemetry spans for module, optimizer, evaluation,
 cache, and tool activity, composed with ellmer’s provider
 telemetry.</li>
-<li>Native reasoning-trace capture as a typed output (analogous to
-<code>dspy.Reasoning</code>).</li>
+<li>A typed reasoning output analogous to <code>dspy.Reasoning</code>.
+Provider-native thinking is available as metadata; it is not a required
+generated field.</li>
 <li>Predictor-local RLM demo evidence so MIPROv2 can bootstrap child
 demos; its graph mode currently tunes child instructions only, while
 GEPA selects the RLM child components explicitly.</li>
-<li>Adapter-style fallbacks for models with weak structured-output
-support (analogous to <code>TwoStepAdapter</code>).</li>
+<li>Explicit, budgeted fallbacks for demonstrated structured-output
+limitations; copying DSPy’s deprecated <code>TwoStepAdapter</code> is
+not a goal.</li>
 <li>Weight and RL optimization, after provider-neutral training data,
 reproducibility, cost accounting, and artifact contracts are
 stable.</li>
