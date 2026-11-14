@@ -1622,3 +1622,199 @@ test_that("checkpointed GEPA refreshes partial summaries at record commits", {
     )]
   )
 })
+
+test_that("checkpointed GEPA rejects empty validation data before work", {
+  mocks <- gepa_resume_test_mocks()
+  write_calls <- new.env(parent = emptyenv())
+  write_calls$n <- 0L
+  original_writer <- optimizer_checkpoint_write
+  testthat::local_mocked_bindings(
+    eval_program = mocks$eval_program,
+    gepa_propose_component_instructions = mocks$propose,
+    optimizer_checkpoint_write = function(
+      context,
+      phase,
+      search_state,
+      ...
+    ) {
+      write_calls$n <- write_calls$n + 1L
+      original_writer(context, phase, search_state, ...)
+    },
+    .package = "dsprrr"
+  )
+  program <- gepa_resume_test_program()
+  trainset <- data.frame(
+    question = c("q1", "q2"),
+    answer = c("a1", "a2")
+  )
+  empty_dataset <- data.frame(
+    question = character(),
+    answer = character()
+  )
+  teleprompter <- GEPA(
+    metrics = gepa_resume_test_metrics(),
+    population_size = 2L,
+    generations = 1L,
+    mutation_rate = 1,
+    crossover_rate = 0,
+    selection = "current_best",
+    seed = 21L,
+    verbose = FALSE
+  )
+  empty_val_path <- withr::local_tempfile(fileext = ".rds")
+  fallback_path <- withr::local_tempfile(fileext = ".rds")
+  empty_train_path <- withr::local_tempfile(fileext = ".rds")
+  unlink(c(empty_val_path, fallback_path, empty_train_path))
+
+  expect_error(
+    gepa_resume_test_compile(
+      empty_val_path,
+      program = program,
+      trainset = trainset,
+      valset = empty_dataset,
+      teleprompter = teleprompter
+    ),
+    class = "dsprrr_gepa_config_error"
+  )
+  expect_identical(c(mocks$eval_calls$n, mocks$proposal_calls$n), c(0L, 0L))
+  expect_identical(write_calls$n, 0L)
+  expect_false(file.exists(empty_val_path))
+
+  fallback <- gepa_resume_test_compile(
+    fallback_path,
+    program = program,
+    trainset = trainset,
+    valset = NULL,
+    teleprompter = teleprompter
+  )
+  expect_false(gepa_test_metadata(fallback)$partial)
+  expect_identical(mocks$eval_calls$n, 4L)
+  expect_identical(mocks$proposal_calls$n, 1L)
+  expect_true(file.exists(fallback_path))
+
+  calls_before_empty_train <- c(mocks$eval_calls$n, mocks$proposal_calls$n)
+  writes_before_empty_train <- write_calls$n
+  expect_warning(
+    empty_train <- gepa_resume_test_compile(
+      empty_train_path,
+      program = program,
+      trainset = empty_dataset,
+      valset = NULL,
+      teleprompter = teleprompter
+    ),
+    "Empty trainset provided"
+  )
+  expect_identical(empty_train, program)
+  expect_identical(
+    c(mocks$eval_calls$n, mocks$proposal_calls$n),
+    calls_before_empty_train
+  )
+  expect_identical(write_calls$n, writes_before_empty_train)
+  expect_false(file.exists(empty_train_path))
+})
+
+test_that("checkpointed GEPA rejects infinite metric rows before persistence", {
+  gepa_resume_test_disable_cache()
+  mocks <- gepa_resume_test_mocks()
+  write_calls <- new.env(parent = emptyenv())
+  write_calls$n <- 0L
+  task_requests <- new.env(parent = emptyenv())
+  task_requests$n <- 0L
+  original_writer <- optimizer_checkpoint_write
+  testthat::local_mocked_bindings(
+    gepa_propose_component_instructions = mocks$propose,
+    optimizer_checkpoint_write = function(
+      context,
+      phase,
+      search_state,
+      ...
+    ) {
+      write_calls$n <- write_calls$n + 1L
+      original_writer(context, phase, search_state, ...)
+    },
+    .package = "dsprrr"
+  )
+  httr2::local_mocked_responses(function(req) {
+    task_requests$n <- task_requests$n + 1L
+    gepa_resume_test_http_response(req)
+  })
+  program <- gepa_resume_test_program()
+  dataset <- data.frame(
+    question = c("q1", "q2"),
+    answer = c("a1", "a2")
+  )
+
+  for (score in c(Inf, -Inf)) {
+    metric <- local({
+      invalid_score <- score
+      function(prediction, expected) {
+        if (identical(expected$question[[1L]], "q1")) {
+          1
+        } else {
+          invalid_score
+        }
+      }
+    })
+    teleprompter <- GEPA(
+      metric = metric,
+      population_size = 2L,
+      generations = 1L,
+      mutation_rate = 1,
+      crossover_rate = 0,
+      selection = "current_best",
+      seed = 21L,
+      verbose = FALSE
+    )
+    path <- withr::local_tempfile(fileext = ".rds")
+    unlink(path)
+    partial <- gepa_resume_test_compile(
+      path,
+      control_args = list(max_metric_calls = 1L),
+      program = program,
+      trainset = dataset,
+      teleprompter = teleprompter
+    )
+    expect_true(gepa_test_metadata(partial)$partial)
+    checkpoint_before <- optimizer_checkpoint_read(path)
+    state_before <- checkpoint_before$progress$search_state
+    expect_length(state_before$active_evaluation$rows, 1L)
+    expect_identical(state_before$active_evaluation$rows[[1L]]$row_index, 1L)
+    second_row_unit <- paste0(
+      state_before$active_evaluation$unit_id,
+      ":row:2"
+    )
+    expect_false(second_row_unit %in% checkpoint_before$budget$completed_units)
+    writes_before <- write_calls$n
+    requests_before <- task_requests$n
+
+    expect_error(
+      gepa_resume_test_compile(
+        path,
+        control_args = list(max_metric_calls = 100L),
+        program = program,
+        trainset = dataset,
+        teleprompter = teleprompter,
+        resume = TRUE
+      ),
+      class = "dsprrr_optimizer_checkpoint_unsafe_value"
+    )
+    expect_identical(task_requests$n, requests_before + 1L)
+    expect_identical(write_calls$n, writes_before)
+    expect_identical(optimizer_checkpoint_read(path), checkpoint_before)
+
+    expect_error(
+      gepa_resume_test_compile(
+        path,
+        control_args = list(max_metric_calls = 100L),
+        program = program,
+        trainset = dataset,
+        teleprompter = teleprompter,
+        resume = TRUE
+      ),
+      class = "dsprrr_optimizer_checkpoint_unsafe_value"
+    )
+    expect_identical(task_requests$n, requests_before + 2L)
+    expect_identical(write_calls$n, writes_before)
+    expect_identical(optimizer_checkpoint_read(path), checkpoint_before)
+  }
+})

@@ -215,8 +215,11 @@ First development changelog. dsprrr is experimental; the API may change.
   plain data. It persists proposals and evaluation rows, including predictions
   but excluding raw traces. Flex modules, custom selectors and module types,
   custom Chats, Chats with tools, and non-empty initial Chat histories are
-  rejected. A provider request interrupted after it runs but before its result
-  is committed may be retried after a crash.
+  rejected. Searches with mutable components require at least one validation
+  row, using `trainset` when `valset` is omitted. Metrics must return finite
+  scores or `NA`; infinite scores fail before their evaluation row is saved. A
+  provider request interrupted after it runs but before its result is committed
+  may be retried after a crash.
 
 * `optimization_result()` provides one read-only result contract across every
   optimizer, including optimizer identity, completion or partial status,
