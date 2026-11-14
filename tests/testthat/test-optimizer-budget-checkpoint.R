@@ -133,7 +133,9 @@ test_that("ledger-only optimizers stop at a metric cap and return partial best",
         metric_calls = 1L
       )
     },
-    gepa_mutate_instruction = function(instruction, ...) instruction,
+    gepa_propose_component_instructions = function(instruction, ...) {
+      instruction
+    },
     .package = "dsprrr"
   )
   program <- module(signature("question -> answer"))
@@ -154,6 +156,7 @@ test_that("ledger-only optimizers stop at a metric cap and return partial best",
     ),
     program,
     data,
+    .reflection_llm = gepa_test_reflection_chat(),
     control = control()
   )
   expect_equal(calls, 1L)
