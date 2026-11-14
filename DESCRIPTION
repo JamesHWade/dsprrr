@@ -83,6 +83,7 @@ Collate:
     'ellmer.R'
     'evaluate.R'
     'flex-code-bridge.R'
+    'history.R'
     'input.R'
     'inspect.R'
     'mcp-repl-runner.R'
@@ -140,4 +141,4 @@ Collate:
     'utils.R'
     'vitals.R'
     'zzz.R'
-Config/roxygen2/version: 8.0.0
+Config/roxygen2/version: 8.1.0

@@ -86,6 +86,14 @@ First development changelog. dsprrr is experimental; the API may change.
 
 ## New features
 
+* `conversation_history()` copies supported ellmer turns into a versioned,
+  tagged data envelope. `history_turns()` rebuilds fresh native turns, and
+  `load_history()` / `save_history()` persist the allowlisted history as
+  JSON. Assistant JSON and finish reasons are retained; usage, cost, and
+  duration metadata are reset. Unsupported and uploaded content, unresolved
+  tool requests, and unsafe data fail explicitly. Tool errors retain only
+  their message. Saved histories can contain sensitive conversation data.
+
 * Modules run through an agent runtime that follows ellmer's Chat protocol,
   such as a deputy `Agent`, are now correlated with the agent's runs. dsprrr
   passes the program ID and `.trace_context` to the agent as
