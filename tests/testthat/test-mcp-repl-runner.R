@@ -1125,7 +1125,7 @@ test_that("RLM host caps count matched frames before decoding", {
       digits = NA
     )
     paste0(
-      dsprrr:::rlm_control_prefix(),
+      rlm_control_prefix(),
       gsub(
         "[[:space:]]",
         "",
@@ -1140,13 +1140,13 @@ test_that("RLM host caps count matched frames before decoding", {
     payload = list(index = 1L, output = list(answer = "ok"))
   ))
   exact_bytes <- nchar(exact_frame, type = "bytes")
-  decoded <- dsprrr:::decode_rlm_control(
+  decoded <- decode_rlm_control(
     paste0("ordinary output ", strrep("x", exact_bytes + 20L), exact_frame),
     nonce,
     max_bytes = exact_bytes
   )
-  expect_true(dsprrr:::is_rlm_final(decoded))
-  expect_null(dsprrr:::decode_rlm_control(
+  expect_true(is_rlm_final(decoded))
+  expect_null(decode_rlm_control(
     strrep("ordinary output ", exact_bytes + 20L),
     nonce,
     max_bytes = 1L
@@ -1169,7 +1169,7 @@ test_that("RLM host caps count matched frames before decoding", {
   ))
   expect_gt(nchar(oversized_frame, type = "bytes"), 3000L)
   expect_error(
-    dsprrr:::decode_rlm_control(
+    decode_rlm_control(
       oversized_frame,
       nonce,
       max_bytes = 3000L
@@ -1195,7 +1195,7 @@ test_that("RLM host caps count matched frames before decoding", {
   )
 
   expect_true(exact_result$success)
-  expect_true(dsprrr:::is_rlm_final(exact_result$result))
+  expect_true(is_rlm_final(exact_result$result))
   expect_gt(nchar(exact_result$stdout, type = "bytes"), exact_bytes)
 
   reply_text <- strrep("ordinary stdout", exact_bytes + 20L)

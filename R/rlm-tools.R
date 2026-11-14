@@ -814,7 +814,7 @@ normalize_rlm_query_content_record <- function(record, field) {
   if (
     is.null(record_names) ||
       anyNA(record_names) ||
-      any(!nzchar(record_names)) ||
+      !all(nzchar(record_names)) ||
       anyDuplicated(record_names) ||
       !"type" %in% record_names
   ) {

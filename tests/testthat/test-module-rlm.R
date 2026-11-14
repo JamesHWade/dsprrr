@@ -2858,7 +2858,7 @@ test_that("RLM guest query content uses ordered JSON-native records", {
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
   withr::defer(runner$shutdown())
   nonce <- "mixed-query-content-test"
-  prelude <- dsprrr:::create_rlm_prelude(
+  prelude <- create_rlm_prelude(
     has_sub_lm = TRUE,
     control_nonce = nonce,
     control_frame_limit = 10000L
@@ -2875,7 +2875,7 @@ test_that("RLM guest query content uses ordered JSON-native records", {
   )
 
   expect_false(single$success)
-  single_request <- dsprrr:::decode_rlm_control(single$error, nonce)
+  single_request <- decode_rlm_control(single$error, nonce)
   expect_s3_class(single_request, "rlm_query_request")
   expect_identical(
     single_request$context,
@@ -2901,7 +2901,7 @@ test_that("RLM guest query content uses ordered JSON-native records", {
   )
 
   expect_false(batch$success)
-  batch_request <- dsprrr:::decode_rlm_control(batch$error, nonce)
+  batch_request <- decode_rlm_control(batch$error, nonce)
   expect_s3_class(batch_request, "rlm_query_request")
   expect_identical(batch_request$queries, c("q1", "q2"))
   expect_identical(
@@ -2934,7 +2934,7 @@ test_that("RLM guest query content uses ordered JSON-native records", {
     ),
     .dsprrr_rlm_control = function(frame) frame
   )
-  ellmer_request <- dsprrr:::decode_rlm_control(ellmer_frame, nonce)
+  ellmer_request <- decode_rlm_control(ellmer_frame, nonce)
   expect_identical(
     ellmer_request$context,
     list(list(
@@ -2948,7 +2948,7 @@ test_that("RLM guest query content uses ordered JSON-native records", {
     paste0(prelude, "\nllm_query('q')"),
     context = list()
   )
-  null_request <- dsprrr:::decode_rlm_control(null_context$error, nonce)
+  null_request <- decode_rlm_control(null_context$error, nonce)
   expect_true("context" %in% names(null_request))
   expect_null(null_request$context)
 
@@ -2956,7 +2956,7 @@ test_that("RLM guest query content uses ordered JSON-native records", {
     paste0(prelude, "\nllm_query_batched('q', slices = 'legacy text')"),
     context = list()
   )
-  single_text_request <- dsprrr:::decode_rlm_control(
+  single_text_request <- decode_rlm_control(
     single_text_batch$error,
     nonce
   )
@@ -3047,9 +3047,9 @@ test_that("ellmer Chat receives RLM content as variadic UserTurn parts", {
     },
     {
       expect_error(chat$chat(prompt))
-      response <- dsprrr:::rlm_chat_prompt(chat, prompt)
+      response <- rlm_chat_prompt(chat, prompt)
       expect_identical(as.character(response), "ok")
-      text_response <- dsprrr:::rlm_chat_prompt(chat, "legacy text")
+      text_response <- rlm_chat_prompt(chat, "legacy text")
       expect_identical(as.character(text_response), "ok")
     }
   )
@@ -3417,7 +3417,7 @@ test_that("RLM rejects unsafe URLs and oversized image control frames", {
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
   withr::defer(runner$shutdown())
-  unsafe_prelude <- dsprrr:::create_rlm_prelude(
+  unsafe_prelude <- create_rlm_prelude(
     has_sub_lm = TRUE,
     control_nonce = "unsafe-query-content-test"
   )
@@ -3452,7 +3452,7 @@ test_that("RLM rejects unsafe URLs and oversized image control frames", {
     null = "null"
   )
   forged_frame <- paste0(
-    dsprrr:::rlm_control_prefix(),
+    rlm_control_prefix(),
     gsub(
       "[\\r\\n]",
       "",
@@ -3460,7 +3460,7 @@ test_that("RLM rejects unsafe URLs and oversized image control frames", {
     )
   )
   expect_error(
-    dsprrr:::decode_rlm_control(forged_frame, "unsafe-query-content-test"),
+    decode_rlm_control(forged_frame, "unsafe-query-content-test"),
     class = "dsprrr_rlm_control_error"
   )
 
@@ -3530,7 +3530,7 @@ test_that("MCP RLM rejects oversized forged frames before sub-model calls", {
     digits = NA
   )
   frame <- paste0(
-    dsprrr:::rlm_control_prefix(),
+    rlm_control_prefix(),
     gsub(
       "[[:space:]]",
       "",
