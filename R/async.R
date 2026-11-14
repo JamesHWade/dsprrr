@@ -146,6 +146,35 @@ run_async <- function(
   started_at <- Sys.time()
   trace_recorded <- new.env(parent = emptyenv())
   trace_recorded$value <- FALSE
+  trace_recorded$local_only <- FALSE
+
+  commit_async_trace <- function(trace, keep_local_on_error = FALSE) {
+    module_traces_before <- module$state$traces
+    history_before <- .dsprrr_env$prompt_history
+    history_generation_before <- .dsprrr_env$prompt_history_generation
+    commit_error <- tryCatch(
+      {
+        commit_run_traces(module, list(trace))
+        NULL
+      },
+      error = function(error) error
+    )
+    if (inherits(commit_error, "condition")) {
+      # commit_run_traces() mutates both stores synchronously. Roll back the
+      # paired state if history capture fails partway through the commit.
+      module$state$traces <- module_traces_before
+      .dsprrr_env$prompt_history <- history_before
+      .dsprrr_env$prompt_history_generation <- history_generation_before
+      if (isTRUE(keep_local_on_error)) {
+        module$state$traces <- append(module$state$traces, list(trace))
+        trace_recorded$value <- TRUE
+        trace_recorded$local_only <- TRUE
+      }
+      stop(commit_error)
+    }
+    trace_recorded$value <- TRUE
+    invisible(NULL)
+  }
 
   build_metadata <- function(
     ended_at,
@@ -205,13 +234,14 @@ run_async <- function(
           error = error,
           store_chat = store_chat
         )
-        commit_run_traces(module, list(trace))
-        trace_recorded$value <- TRUE
+        commit_async_trace(trace, keep_local_on_error = TRUE)
       }),
       error = function(trace_error) {
-        cli::cli_warn(
-          "Could not record async failure trace: {conditionMessage(trace_error)}"
-        )
+        if (!isTRUE(trace_recorded$local_only)) {
+          cli::cli_warn(
+            "Could not record async failure trace: {conditionMessage(trace_error)}"
+          )
+        }
       }
     )
     invisible(NULL)
@@ -294,8 +324,7 @@ run_async <- function(
               metadata = metadata,
               store_chat = store_chat
             )
-            commit_run_traces(module, list(trace))
-            trace_recorded$value <- TRUE
+            commit_async_trace(trace)
             result
           }),
           error = function(error) {
