@@ -800,7 +800,7 @@ abort_rlm_control_frame_size <- function(frame_bytes, max_bytes) {
 normalize_rlm_query_content_record <- function(record, field) {
   malformed <- function(reason) {
     abort_rlm_control(paste0(
-      "Malformed RLM query content at ",
+      "Malformed RLM query control frame: content at ",
       field,
       ": ",
       reason
