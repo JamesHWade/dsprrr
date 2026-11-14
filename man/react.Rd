@@ -12,6 +12,7 @@ react(
   template = "",
   demos = list(),
   config = list(),
+  finalization = c("structured", "submit"),
   ...
 )
 }
@@ -30,6 +31,10 @@ error.}
 
 \item{chat, template, demos, config}{As in \code{\link[=module]{module()}}.}
 
+\item{finalization}{How to obtain the final output. \code{"structured"} (the
+default) makes a structured follow-up request. \code{"submit"} adds a reserved
+\code{submit} tool and returns a valid submission from the tool loop.}
+
 \item{...}{Must be empty.}
 }
 \value{
@@ -38,14 +43,19 @@ and \code{\link[=run_dataset]{run_dataset()}}.
 }
 \description{
 \code{react()} builds an agent that alternates between reasoning and calling
-tools until it can answer, then returns a structured answer that follows
-the signature (the ReAct pattern).
+tools until it can answer, then returns an answer that follows the signature
+(the ReAct pattern).
 }
 \details{
 ellmer runs the tool-calling loop: the model's tool requests are executed
 and their results sent back, keeping ellmer's turn history and tool-call
-IDs. After the loop, one more request asks for the final answer in the
-signature's output format. ReAct calls do not use the response cache.
+IDs. With \code{finalization = "structured"}, one more request asks for the final
+answer in the signature's output format. With \code{finalization = "submit"},
+the model calls the schema-derived \code{submit} tool to finish within the same
+loop. The submission is validated against the signature, and no additional
+provider request is made after it. Submit finalization requires an ellmer
+Chat with public request-end callbacks and tool-registry methods. ReAct calls
+do not use the response cache.
 
 \code{\link[=run]{run()}} accepts one input at a time for this module; use \code{\link[=run_dataset]{run_dataset()}}
 for several. With \code{.return_format = "structured"}, the metadata records
@@ -66,6 +76,7 @@ agent <- react(
   tools = list(lookup_population),
   max_iterations = 5L
 )
+submit_agent <- react("question -> answer", finalization = "submit")
 agent
 
 \dontrun{

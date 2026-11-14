@@ -5,7 +5,7 @@
 \alias{run_dataset.Module}
 \title{Run a module on each row of a data frame}
 \usage{
-run_dataset(module, ...)
+run_dataset(module, ..., .history = NULL)
 
 \method{run_dataset}{Module}(
   module,
@@ -16,7 +16,8 @@ run_dataset(module, ...)
   .progress = TRUE,
   .return_format = "simple",
   ...,
-  .trace_context = list()
+  .trace_context = list(),
+  .history = NULL
 )
 }
 \arguments{
@@ -25,6 +26,9 @@ run_dataset(module, ...)
 
 \item{...}{Only \code{.cache} is accepted here, with the same meaning as in
 \code{\link[=run]{run()}}. Any other dot-prefixed argument is an error.}
+
+\item{.history}{Explicit continuation history is currently not supported
+for row-wise dataset execution and is rejected before any row runs.}
 
 \item{data}{A data frame with one column per required signature input.
 Other columns (such as expected answers) are kept in the result but not

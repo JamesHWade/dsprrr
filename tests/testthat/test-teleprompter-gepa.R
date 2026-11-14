@@ -135,6 +135,199 @@ test_that("GEPA compiles with reflection-based mutation", {
   expect_true(length(gepa_test_metadata(compiled)$objective_pareto_front) >= 1)
 })
 
+test_that("GEPA routes evaluation and reflection to separate Chats", {
+  task_models <- character()
+  reflection_prompts <- character()
+  reflection_clones <- list()
+  clone_reflection_chat <- dsprrr:::gepa_clone_reflection_chat
+  task_chat <- new_test_chat(model = "gepa-task-model")
+  reflection_chat <- new_test_chat(
+    turns = list("caller reflection context"),
+    model = "gepa-reflection-model",
+    chat_structured = function(prompt, type, ...) {
+      reflection_prompts <<- c(reflection_prompts, as.character(prompt))
+      expect_identical(names(type@properties), "instructions")
+      list(instructions = "Use the observed feedback.")
+    }
+  )
+
+  testthat::local_mocked_bindings(
+    gepa_clone_reflection_chat = function(chat) {
+      clone <- clone_reflection_chat(chat)
+      reflection_clones[[length(reflection_clones) + 1L]] <<- clone
+      clone
+    },
+    eval_program = function(program, dataset, metric, .llm, ...) {
+      task_models <<- c(
+        task_models,
+        dsprrr:::ellmer_chat_model(.llm)@name
+      )
+      dsprrr:::EvalResult(
+        examples = tibble::tibble(
+          row_id = 1L,
+          score = 0,
+          error = NA_character_,
+          predicted = list("wrong"),
+          feedback = "Use the expected value."
+        ),
+        mean_score = 0,
+        n_evaluated = 1L,
+        n_errors = 0L,
+        input_tokens = 3L,
+        output_tokens = 2L,
+        total_tokens = 5L,
+        total_cost = 0.01,
+        provider_calls = 1L,
+        metric_calls = 1L
+      )
+    },
+    .package = "dsprrr"
+  )
+
+  compiled <- compile(
+    module(signature("question -> answer", instructions = "Baseline.")),
+    GEPA(
+      metric = function(...) 1,
+      population_size = 3L,
+      generations = 1L,
+      verbose = FALSE
+    ),
+    data.frame(question = "q", answer = "a"),
+    .llm = task_chat,
+    .reflection_llm = reflection_chat
+  )
+  metadata <- gepa_test_metadata(compiled)
+
+  expect_identical(task_models, rep("gepa-task-model", 3L))
+  expect_length(reflection_prompts, 2L)
+  expect_match(reflection_prompts[[1L]], "improving system instructions")
+  expect_length(reflection_clones, 2L)
+  expect_false(identical(reflection_clones[[1L]], reflection_chat))
+  expect_false(identical(reflection_clones[[1L]], reflection_clones[[2L]]))
+  expect_length(reflection_clones[[1L]]$get_turns(), 0L)
+  expect_length(reflection_clones[[2L]]$get_turns(), 0L)
+  expect_identical(
+    reflection_chat$get_turns(),
+    list("caller reflection context")
+  )
+  expect_identical(metadata$model_routing$task_model, "gepa-task-model")
+  expect_identical(metadata$model_routing$task_chat_source, "compile_llm")
+  expect_identical(
+    metadata$model_routing$reflection_model,
+    "gepa-reflection-model"
+  )
+  expect_identical(
+    metadata$model_routing$reflection_chat_source,
+    "reflection_llm"
+  )
+  expect_identical(metadata$budget_summary$provider_calls, 5L)
+  expect_true(
+    "gepa:initial_component_mutation:2" %in%
+      metadata$budget_summary$completed_units
+  )
+  expect_true(
+    "gepa:initial_component_mutation:3" %in%
+      metadata$budget_summary$completed_units
+  )
+})
+
+test_that("an explicit task Chat remains the legacy reflection fallback", {
+  task_models <- character()
+  reflection_prompts <- character()
+  legacy_chat <- new_test_chat(
+    model = "legacy-gepa-model",
+    chat_structured = function(prompt, type, ...) {
+      reflection_prompts <<- c(reflection_prompts, as.character(prompt))
+      list(instructions = "Legacy shared Chat proposal.")
+    }
+  )
+  testthat::local_mocked_bindings(
+    eval_program = function(program, dataset, metric, .llm, ...) {
+      task_models <<- c(
+        task_models,
+        dsprrr:::ellmer_chat_model(.llm)@name
+      )
+      dsprrr:::EvalResult(
+        examples = tibble::tibble(
+          row_id = 1L,
+          score = 1,
+          error = NA_character_,
+          predicted = list("answer"),
+          feedback = NA_character_
+        ),
+        mean_score = 1,
+        n_evaluated = 1L,
+        n_errors = 0L,
+        provider_calls = 1L,
+        metric_calls = 1L
+      )
+    },
+    .package = "dsprrr"
+  )
+
+  compiled <- compile(
+    module(signature("question -> answer")),
+    GEPA(
+      metric = function(...) 1,
+      population_size = 2L,
+      generations = 1L,
+      verbose = FALSE
+    ),
+    data.frame(question = "q", answer = "a"),
+    .llm = legacy_chat
+  )
+  metadata <- gepa_test_metadata(compiled)
+
+  expect_identical(task_models, rep("legacy-gepa-model", 2L))
+  expect_length(reflection_prompts, 1L)
+  expect_identical(metadata$model_routing$task_model, "legacy-gepa-model")
+  expect_identical(metadata$model_routing$task_chat_source, "compile_llm")
+  expect_identical(
+    metadata$model_routing$reflection_model,
+    "legacy-gepa-model"
+  )
+  expect_identical(
+    metadata$model_routing$reflection_chat_source,
+    "legacy_task_llm"
+  )
+  expect_identical(metadata$budget_summary$provider_calls, 3L)
+})
+
+test_that("GEPA rejects missing or invalid reflection Chats before evaluation", {
+  evaluations <- 0L
+  testthat::local_mocked_bindings(
+    eval_program = function(...) {
+      evaluations <<- evaluations + 1L
+      stop("evaluation must not start")
+    },
+    .package = "dsprrr"
+  )
+  program <- module(signature("question -> answer"))
+  teleprompter <- GEPA(
+    metric = function(...) 1,
+    population_size = 2L,
+    generations = 1L,
+    verbose = FALSE
+  )
+  dataset <- data.frame(question = "q", answer = "a")
+
+  missing_chat <- tryCatch(
+    compile(program, teleprompter, dataset),
+    error = function(error) error
+  )
+  expect_s3_class(missing_chat, "dsprrr_gepa_reflection_error")
+  expect_snapshot(conditionMessage(missing_chat))
+  expect_identical(evaluations, 0L)
+
+  invalid_chat <- tryCatch(
+    compile(program, teleprompter, dataset, .reflection_llm = list()),
+    error = function(error) error
+  )
+  expect_s3_class(invalid_chat, "dsprrr_chat_type_error")
+  expect_snapshot(conditionMessage(invalid_chat))
+  expect_identical(evaluations, 0L)
+})
+
 test_that("GEPA accounts every metric-row outcome in execution order", {
   eval_calls <- 0L
   mean_scores <- c(0.3, 0.4, 0.8, 0.7)
@@ -157,7 +350,7 @@ test_that("GEPA accounts every metric-row outcome in execution order", {
       eval_calls <<- eval_calls + 1L
       make_result(mean_scores[[eval_calls]])
     },
-    gepa_mutate_instruction = function(...) "Mutated instructions",
+    gepa_propose_component_instructions = function(...) "Mutated instructions",
     .package = "dsprrr"
   )
 
@@ -178,7 +371,8 @@ test_that("GEPA accounts every metric-row outcome in execution order", {
     data.frame(
       question = c("q1", "q2"),
       answer = c("a1", "a2")
-    )
+    ),
+    .reflection_llm = gepa_test_reflection_chat()
   )
   budget <- gepa_test_metadata(result)$budget_summary
 
@@ -219,7 +413,7 @@ test_that("GEPA preserves a complete partial generation at max_errors zero", {
       }
       make_result(NA_real_, "secondary candidate failed")
     },
-    gepa_mutate_instruction = function(...) "Mutated instructions",
+    gepa_propose_component_instructions = function(...) "Mutated instructions",
     .package = "dsprrr"
   )
 
@@ -242,7 +436,8 @@ test_that("GEPA preserves a complete partial generation at max_errors zero", {
         instructions = "Original instructions"
       )
     ),
-    data.frame(question = "q", answer = "a")
+    data.frame(question = "q", answer = "a"),
+    .reflection_llm = gepa_test_reflection_chat()
   )
   optimizer <- gepa_test_metadata(result)
 
@@ -280,10 +475,7 @@ test_that("GEPA keeps the scalar best across regressing generations", {
       eval_calls <<- eval_calls + 1L
       make_result(mean_scores[[eval_calls]])
     },
-    gepa_mutate_instruction = function(...) "Initial alternative",
-    gepa_next_generation = function(...) {
-      list("Worse generation one", "Worse generation two")
-    },
+    gepa_propose_component_instructions = function(...) "Initial alternative",
     .package = "dsprrr"
   )
 
@@ -300,7 +492,8 @@ test_that("GEPA keeps the scalar best across regressing generations", {
     module(
       signature("question -> answer", instructions = "Global best")
     ),
-    data.frame(question = "q", answer = "a")
+    data.frame(question = "q", answer = "a"),
+    .reflection_llm = gepa_test_reflection_chat()
   )
 
   expect_equal(eval_calls, 4L)
@@ -332,10 +525,7 @@ test_that("GEPA Pareto selection survives an interrupted worse generation", {
       eval_calls <<- eval_calls + 1L
       make_result(mean_scores[[eval_calls]])
     },
-    gepa_mutate_instruction = function(...) "Initial alternative",
-    gepa_next_generation = function(...) {
-      list("Worse complete", "Interrupted candidate")
-    },
+    gepa_propose_component_instructions = function(...) "Initial alternative",
     .package = "dsprrr"
   )
 
@@ -355,7 +545,8 @@ test_that("GEPA Pareto selection survives an interrupted worse generation", {
     module(
       signature("question -> answer", instructions = "Global Pareto best")
     ),
-    data.frame(question = "q", answer = "a")
+    data.frame(question = "q", answer = "a"),
+    .reflection_llm = gepa_test_reflection_chat()
   )
   optimizer <- gepa_test_metadata(result)
 
@@ -401,7 +592,9 @@ test_that("GEPA never selects or logs a biased partial metric evaluation", {
         metric_calls = 1L
       )
     },
-    gepa_mutate_instruction = function(...) "Biased partial candidate",
+    gepa_propose_component_instructions = function(...) {
+      "Biased partial candidate"
+    },
     .package = "dsprrr"
   )
 
@@ -423,6 +616,7 @@ test_that("GEPA never selects or logs a biased partial metric evaluation", {
       question = c("q1", "q2"),
       answer = c("a1", "a2")
     ),
+    .reflection_llm = gepa_test_reflection_chat("Biased partial candidate"),
     control = dsprrr:::optimizer_control(
       max_metric_calls = 7L,
       log_dir = log_dir
@@ -471,7 +665,7 @@ test_that("GEPA reports an early budget stop without a failure warning", {
         metric_calls = 1L
       )
     },
-    gepa_mutate_instruction = function(...) "Partial candidate",
+    gepa_propose_component_instructions = function(...) "Partial candidate",
     .package = "dsprrr"
   )
 
@@ -489,6 +683,7 @@ test_that("GEPA reports an early budget stop without a failure warning", {
       question = c("q1", "q2"),
       answer = c("a1", "a2")
     ),
+    .reflection_llm = gepa_test_reflection_chat("Partial candidate"),
     control = dsprrr:::optimizer_control(max_metric_calls = 1L)
   ))
   optimizer <- gepa_test_metadata(result)
@@ -516,7 +711,7 @@ test_that("GEPA restores the caller RNG state", {
         n_errors = 0L
       )
     },
-    gepa_mutate_instruction = function(...) "Candidate",
+    gepa_propose_component_instructions = function(...) "Candidate",
     .package = "dsprrr"
   )
   withr::local_seed(892L)
@@ -531,7 +726,8 @@ test_that("GEPA restores the caller RNG state", {
       verbose = FALSE
     ),
     module(signature("question -> answer")),
-    data.frame(question = "q", answer = "a")
+    data.frame(question = "q", answer = "a"),
+    .reflection_llm = gepa_test_reflection_chat()
   )
 
   expect_identical(get(".Random.seed", envir = globalenv()), before)
@@ -642,6 +838,60 @@ test_that("GEPA reflection receives feedback from bounded RLM trajectories", {
   expect_true(all(grepl("TRACE_TAIL", observed_outputs, fixed = TRUE)))
   expect_true(any(grepl(
     "BOUNDED-RLM-TRACE:",
+    chat$optimizer_state$reflection_prompts,
+    fixed = TRUE
+  )))
+})
+
+test_that("GEPA reflection accepts plan-only RLM action traces", {
+  skip_if_not_installed("callr")
+  local_reset_cache()
+
+  runner <- r_code_runner(timeout = 10, persistent = TRUE)
+  withr::defer(runner$shutdown())
+  program <- make_rlm_optimizer_program(
+    runner,
+    reasoning_mode = "plan"
+  )
+  chat <- make_rlm_optimizer_chat()
+  observed_plans <- character()
+  plan_metric <- metric_with_trace(
+    function(prediction, expected, program_trace) {
+      event <- program_trace$events[[length(program_trace$events)]]
+      action <- event$history[[1L]]
+      observed_plans <<- c(observed_plans, action$plan)
+      list(
+        score = 0,
+        feedback = paste0("PLAN-ONLY-FEEDBACK: ", action$plan)
+      )
+    },
+    field = "answer"
+  )
+
+  run <- capture_rlm_optimizer_warnings(
+    compile(
+      program,
+      GEPA(
+        metric = plan_metric,
+        population_size = 2L,
+        generations = 2L,
+        mutation_rate = 1,
+        crossover_rate = 0,
+        component_selector = "round_robin",
+        use_merge = FALSE,
+        seed = 29L,
+        verbose = FALSE
+      ),
+      data.frame(question = "inspect", answer = "yes"),
+      .llm = chat
+    )
+  )
+  expect_only_rlm_fallback_warnings(run)
+
+  expect_gt(length(observed_plans), 0L)
+  expect_true(all(nzchar(observed_plans)))
+  expect_true(any(grepl(
+    "PLAN-ONLY-FEEDBACK:",
     chat$optimizer_state$reflection_prompts,
     fixed = TRUE
   )))

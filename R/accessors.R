@@ -11,9 +11,20 @@
 #'   evaluation.
 #' - `get_metadata()` returns the call metadata: a list for a single result
 #'   and one list per row for a batch or an evaluation.
+#' - `get_history()` returns a saved [conversation_history()] from an explicit
+#'   history run, or `NULL` when conversation history was not requested.
 #' - `get_tokens()` returns `input_tokens`, `output_tokens` and
 #'   `total_tokens`.
 #' - `get_cost()` returns the estimated cost in US dollars.
+#'
+#' For `chain_of_thought(mode = "native")`, `get_metadata(result)$native_reasoning`
+#' is a list of ellmer `ContentThinking` objects from the current provider
+#' turn, or `NULL` if the provider did not expose thinking content. dsprrr does
+#' not synthesize text for this field.
+#'
+#' For `rlm_module(reasoning_mode = "native")`, the same field contains
+#' provider thinking blocks from action calls in order; the integer vector
+#' `native_reasoning_action_indices` identifies the action for each block.
 #'
 #' For [run_dataset()] results, use the `result` and `.metadata` columns
 #' instead.
@@ -28,6 +39,8 @@
 #' - `get_output()`: the outputs, as described above.
 #' - `get_metadata()`: a list, or a list of lists; an empty list when `x` has
 #'   no metadata.
+#' - `get_history()`: a `dsprrr_history` object for a result that retained
+#'   conversation history, or `NULL` otherwise.
 #' - `get_tokens()`: a list of the three counts for a single result, or a
 #'   tibble with columns `index`, `input_tokens`, `output_tokens` and
 #'   `total_tokens` for a batch or an evaluation. Unknown counts are `NA`.
@@ -110,6 +123,28 @@ get_metadata.dsprrr_batch_result <- function(x, ...) {
 #' @export
 get_metadata.dsprrr_evaluation <- function(x, ...) {
   x$metadata
+}
+
+#' @rdname accessors
+#' @export
+get_history <- function(x, ...) {
+  UseMethod("get_history")
+}
+
+#' @export
+get_history.default <- function(x, ...) {
+  metadata <- get_metadata(x)
+  if (!is.list(metadata) || !"conversation_history" %in% names(metadata)) {
+    return(NULL)
+  }
+  history <- metadata[["conversation_history"]]
+  if (is.null(history)) {
+    return(NULL)
+  }
+  structure(
+    history_validate_envelope(history),
+    class = c("dsprrr_history", "list")
+  )
 }
 
 #' @rdname accessors

@@ -14,11 +14,12 @@
 #' combined and rewritten again. GEPA can also rewrite the complete source of a
 #' [flex()] module.
 #'
-#' Reflection uses the chat passed to [compile()] as `.llm`, the same chat that
-#' runs the program; there is no separate reflection model argument. Without
-#' `.llm`, no model is asked: rewritten instructions get the fixed sentence
-#' "Focus on the failed cases and be more explicit." (or "Be more explicit and
-#' accurate.") appended, and Flex sources stay unchanged.
+#' Candidate evaluation uses the chat passed to [compile()] as `.llm`.
+#' Reflection proposals use `.reflection_llm`, also passed to [compile()]. If
+#' `.reflection_llm` is omitted, an explicitly supplied `.llm` remains the
+#' compatibility fallback for reflection. Mutable GEPA searches require one
+#' of these chats; GEPA reports a configuration error instead of silently
+#' appending a fixed instruction suffix when no reflection chat is available.
 #'
 #' @details
 #' ## Feedback metrics
@@ -51,14 +52,43 @@
 #' failures and feedback, per-row winner frontiers, component selection,
 #' lineage-aware merges and Pareto selection over several metrics, but runs a
 #' fixed number of generations instead of DSPy's budget-driven search.
-#' Checkpoint resume, cached subsample merge acceptance and inference-time
-#' candidate selection are not implemented.
+#' Checkpoint resume is available for sequential searches with the
+#' `round_robin` component selector over plain `Predict` leaves and built-in
+#' predictor pipelines. Checkpointed predictions must be plain data. Flex
+#' modules, other component selectors, custom module types, custom Chats,
+#' Chats with tools, and Chats with existing conversation turns are rejected
+#' before provider work. Checkpointed searches with mutable components require
+#' at least one validation row, using `trainset` when `valset` is omitted.
+#' Checkpointed metrics must return finite scores or `NA`; infinite scores are
+#' rejected before their evaluation row is saved. Resource limits may change
+#' when resuming; the algorithm configuration and runtime identities must match.
+#'
+#' Completed proposals and evaluation rows are restored without repeating
+#' their work. A provider request that finishes after the last checkpoint was
+#' written but before its result is committed may be retried after a crash, so
+#' checkpoint resume does not guarantee exactly-once provider effects.
 #'
 #' A Flex source is optimized as one component: its dynamically built inner
 #' predictors are not tuned separately. The source proposer sees the task and
 #' signature, field schemas, allowed tools and primitives, and the failed rows
 #' with their feedback. Proposed sources are validated before use; an invalid
 #' source is recorded with a failure score and can never be selected.
+#'
+#' `.reflection_llm` is the reflection Chat, while `.llm` remains the task Chat
+#' for candidate evaluation. When `.reflection_llm` is omitted, an explicitly
+#' supplied `.llm` is used for both roles for compatibility. The optimization
+#' result records model names and the reflection route in
+#' `extensions$gepa$model_routing`. Without checkpointing, an omitted `.llm`
+#' leaves `task_model` as `NULL`, and `task_chat_source` records
+#' `"runtime_resolution"`. Checkpointed searches additionally report the
+#' effective attached/default Chat models when they can be resolved. Both roles
+#' share the optimizer's resource budget; reflection requests are attributed to
+#' GEPA reflection stages.
+#'
+#' GEPA deep-clones the reflection Chat for each proposal and clears the
+#' clone's conversation turns. Model settings are retained, proposal calls do
+#' not share conversation history, and the supplied Chat is not mutated by
+#' reflection.
 #'
 #' @param metrics Optional named list of metric functions. The first one picks
 #'   the failed rows shown to reflection; with `selection = "pareto"`, all of
@@ -143,12 +173,13 @@
 #'   question = c("What is 2 + 2?", "What is the capital of France?"),
 #'   answer = c("4", "Paris")
 #' )
-#' # `.llm` runs the program and writes the reflections
+#' # `.llm` runs the program; `.reflection_llm` writes the reflections.
 #' optimized <- compile(
 #'   qa,
 #'   tp,
 #'   trainset,
-#'   .llm = ellmer::chat_openai(model = "gpt-6-luna")
+#'   .llm = ellmer::chat_openai(model = "gpt-6-luna"),
+#'   .reflection_llm = ellmer::chat_openai(model = "gpt-6-astra")
 #' )
 #' optimization_result(optimized)
 #' }
@@ -330,12 +361,20 @@ compile_gepa <- function(
   trainset,
   valset = NULL,
   .llm = NULL,
+  .reflection_llm = NULL,
   control = NULL,
   ...
 ) {
   if (!inherits(program, "Module")) {
     cli::cli_abort("GEPA currently only supports Module objects")
   }
+
+  assert_ellmer_chat(.llm, arg = ".llm", allow_null = TRUE)
+  assert_ellmer_chat(
+    .reflection_llm,
+    arg = ".reflection_llm",
+    allow_null = TRUE
+  )
 
   if (!is.data.frame(trainset)) {
     cli::cli_abort("{.arg trainset} must be a data frame")
@@ -356,6 +395,34 @@ compile_gepa <- function(
     )
   }
 
+  reflection_chat <- .reflection_llm %||% .llm
+  reflection_chat_source <- if (!is.null(.reflection_llm)) {
+    "reflection_llm"
+  } else if (!is.null(.llm)) {
+    "legacy_task_llm"
+  } else {
+    "unavailable"
+  }
+  task_chat_source <- if (is.null(.llm)) {
+    "runtime_resolution"
+  } else {
+    "compile_llm"
+  }
+  component_specs <- gepa_program_component_specs(program)
+  if (length(component_specs) > 0L && is.null(reflection_chat)) {
+    cli::cli_abort(
+      c(
+        "GEPA requires a reflection Chat to propose candidate changes",
+        "i" = "Supply {.arg .reflection_llm} to {.fn compile}.",
+        "i" = paste(
+          "For compatibility, an explicitly supplied {.arg .llm}",
+          "is also used for reflection."
+        )
+      ),
+      class = "dsprrr_gepa_reflection_error"
+    )
+  }
+
   metrics <- teleprompter@metrics
   if (is.null(metrics)) {
     if (!is.null(teleprompter@metric)) {
@@ -368,6 +435,27 @@ compile_gepa <- function(
   metric_names <- names(metrics)
   if (is.null(metric_names) || any(metric_names == "")) {
     metric_names <- paste0("metric_", seq_along(metrics))
+  }
+
+  control <- optimizer_control_for_teleprompter(
+    teleprompter,
+    control = control
+  )
+
+  if (optimizer_checkpoint_enabled(control)) {
+    return(compile_gepa_checkpointed(
+      teleprompter = teleprompter,
+      program = program,
+      discovery_dataset = trainset,
+      validation_dataset = valset %||% trainset,
+      metrics = metrics,
+      metric_names = metric_names,
+      .llm = .llm,
+      .reflection_llm = reflection_chat,
+      task_chat_source = task_chat_source,
+      reflection_chat_source = reflection_chat_source,
+      control = control
+    ))
   }
 
   if (!is.null(teleprompter@seed) && !is.na(teleprompter@seed)) {
@@ -391,11 +479,6 @@ compile_gepa <- function(
     )
   }
 
-  control <- optimizer_control_for_teleprompter(
-    teleprompter,
-    control = control
-  )
-  optimizer_require_ledger_only_checkpoint(control, "GEPA")
   budget <- new_optimizer_budget(control)
 
   trial_log <- if (!is.null(control@log_dir)) {
@@ -412,6 +495,9 @@ compile_gepa <- function(
     metrics = metrics,
     metric_names = metric_names,
     .llm = .llm,
+    .reflection_llm = reflection_chat,
+    task_chat_source = task_chat_source,
+    reflection_chat_source = reflection_chat_source,
     control = control,
     budget = budget,
     trial_log = trial_log
@@ -582,9 +668,20 @@ gepa_mutate_instruction <- function(
   unit_id = "gepa:reflection"
 ) {
   if (is.null(.llm)) {
-    return(gepa_fallback_mutation(instruction, failed_examples))
+    cli::cli_abort(
+      c(
+        "GEPA cannot reflect without a reflection Chat",
+        "i" = "Supply {.arg .reflection_llm} to {.fn compile}.",
+        "i" = paste(
+          "An explicitly supplied {.arg .llm} remains a compatibility",
+          "fallback."
+        )
+      ),
+      class = "dsprrr_gepa_reflection_error"
+    )
   }
   assert_ellmer_chat(.llm, arg = ".llm")
+  .llm <- gepa_clone_reflection_chat(.llm)
 
   prompt <- gepa_reflection_prompt(instruction, failed_examples)
   type <- ellmer::type_object(instructions = ellmer::type_string())
@@ -707,6 +804,21 @@ gepa_fallback_mutation <- function(instruction, failed_examples) {
   }
 
   paste(instruction, suffix)
+}
+
+gepa_chat_model_name <- function(chat) {
+  if (is.null(chat)) {
+    return(NULL)
+  }
+  model <- ellmer_chat_model(chat)
+  if (is.null(model)) {
+    return(NULL)
+  }
+  model@name
+}
+
+gepa_clone_reflection_chat <- function(chat) {
+  clone_ellmer_chat(chat, arg = ".reflection_llm", reset_turns = TRUE)
 }
 
 # Print a GEPA object through its S7 method.

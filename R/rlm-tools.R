@@ -13,6 +13,10 @@
 #' - `llm_query(query, context_slice)`: Request a recursive LLM call
 #' - `llm_query_batched(queries, slices)`: Request batched LLM calls
 #'
+#' Recursive query context accepts legacy text strings or an ordered list of
+#' typed content records. Records support text, HTTPS image URLs, and bounded
+#' inline images. The bridge never accepts local paths or arbitrary R objects.
+#'
 #' Recursive-query helpers suspend execution with a nonce-bound, schema-checked
 #' request. The main RLM process handles the request and replays the code with
 #' an immutable response, so the helpers behave like ordinary value-returning R
@@ -469,9 +473,124 @@ search <- function(var, pattern, ignore_case = FALSE) {
       '
 # Non-local recursive-query replay bridge
 
+# Convert a guest content record to plain data. The host performs the full
+# schema validation before it calls a provider.
+.rlm_encode_query_content <- function(item, field) {
+  if (base::inherits(item, "ellmer::ContentText")) {
+    item <- base::list(type = "text", text = item@text)
+  } else if (base::inherits(item, "ellmer::ContentImageRemote")) {
+    item <- base::list(
+      type = "image_url",
+      url = item@url,
+      detail = item@detail
+    )
+  } else if (base::inherits(item, "ellmer::ContentImageInline")) {
+    item <- base::list(
+      type = "image_base64",
+      mime_type = item@type,
+      data = item@data
+    )
+  } else if (base::inherits(item, "ellmer::Content")) {
+    base::stop(
+      field,
+      " does not support ellmer content class ",
+      base::class(item)[[1L]]
+    )
+  }
+
+  if (!base::is.list(item) || base::is.object(item)) {
+    base::stop(field, " must be a typed content record")
+  }
+  item_names <- base::names(item)
+  type <- item$type
+  if (
+    base::is.null(item_names) || base::anyNA(item_names) ||
+      base::any(!base::nzchar(item_names)) || base::anyDuplicated(item_names) ||
+      !base::is.character(type) || base::length(type) != 1L || base::is.na(type)
+  ) {
+    base::stop(field, " must be a typed content record")
+  }
+  fields <- switch(
+    type,
+    text = "text",
+    image_url = c("url", if ("detail" %%in%% item_names) "detail"),
+    image_base64 = c("mime_type", "data"),
+    base::stop(field, " has unsupported content type ", type)
+  )
+  if (!base::setequal(item_names, c("type", fields))) {
+    base::stop(field, " has invalid fields for content type ", type)
+  }
+
+  if (base::identical(type, "image_url")) {
+    url <- item$url
+    if (
+      !base::is.character(url) || base::length(url) != 1L || base::is.na(url) ||
+        !base::grepl(
+          "^https://[^/?#[:space:]@]+(?:[/?#].*)?$",
+          url,
+          ignore.case = TRUE,
+          perl = TRUE
+        ) ||
+        base::nchar(url, type = "bytes") > 2048L
+    ) {
+      base::stop(field, " image_url requires HTTPS without user info, up to 2048 bytes")
+    }
+    if (base::is.null(item$detail)) {
+      item$detail <- "auto"
+    }
+  }
+  if (base::identical(type, "image_base64")) {
+    data <- item$data
+    if (
+      !base::is.character(data) || base::length(data) != 1L || base::is.na(data) ||
+        base::nchar(data, type = "bytes") > 524288L
+    ) {
+      base::stop(field, " image_base64 data exceeds 524288 bytes")
+    }
+  }
+  item
+}
+
+# Text remains the legacy scalar form. Structured contexts are ordered lists
+# of JSON-native records and need no ellmer package in the guest process.
+.rlm_encode_query_context <- function(value, field) {
+  if (base::is.null(value)) {
+    return(NULL)
+  }
+  if (base::is.character(value)) {
+    if (base::length(value) != 1L || base::is.na(value)) {
+      base::stop(
+        field,
+        " must be NULL, one string, or an ordered list of content records"
+      )
+    }
+    return(value)
+  }
+  if (base::inherits(value, "ellmer::Content")) {
+    return(base::list(.rlm_encode_query_content(value, field)))
+  }
+  if (
+    !base::is.list(value) || base::is.object(value) ||
+      base::length(value) < 1L || base::length(value) > 32L ||
+      !base::is.null(base::names(value))
+  ) {
+    base::stop(field, " must be an ordered list of 1 to 32 content records")
+  }
+  base::lapply(
+    base::seq_along(value),
+    function(index) {
+      .rlm_encode_query_content(
+        value[[index]],
+        base::paste0(field, "[[", index, "]]" )
+      )
+    }
+  )
+}
+
 # llm_query: Recursive LLM query
 llm_query <- base::local({
   .call <- .rlm_control_call
+  .encode_context <- .rlm_encode_query_context
   function(query, context_slice = NULL) {
     if (
       !base::is.character(query) ||
@@ -481,21 +600,13 @@ llm_query <- base::local({
     ) {
       base::stop("query must be one non-empty character string")
     }
-    if (
-      !base::is.null(context_slice) &&
-        (
-          !base::is.character(context_slice) ||
-            base::length(context_slice) != 1L ||
-            base::is.na(context_slice)
-        )
-    ) {
-      base::stop(
-        "context_slice must be NULL or one non-missing character string"
-      )
-    }
     .call(
       "query",
-      base::list(query = query, context = context_slice, batch = FALSE)
+      base::list(
+        query = query,
+        context = .encode_context(context_slice, "context_slice"),
+        batch = FALSE
+      )
     )
   }
 })
@@ -503,6 +614,7 @@ llm_query <- base::local({
 # llm_query_batched: Batched recursive queries
 llm_query_batched <- base::local({
   .call <- .rlm_control_call
+  .encode_context <- .rlm_encode_query_context
   function(queries, slices = NULL) {
     if (
       !base::is.character(queries) ||
@@ -516,19 +628,43 @@ llm_query_batched <- base::local({
       if (base::length(slices) != base::length(queries)) {
         base::stop("slices must have same length as queries")
       }
-      valid_slices <- base::vapply(
+      if (base::is.character(slices)) {
+        if (base::anyNA(slices)) {
+          base::stop(
+            "slices must contain one non-missing character string per query"
+          )
+        }
+        slices <- base::as.list(slices)
+      } else if (!base::is.list(slices) || base::is.object(slices)) {
+        base::stop("slices must be text or a list of per-query content contexts")
+      }
+      invalid_text_slices <- base::vapply(
         slices,
         function(slice) {
           base::is.character(slice) &&
-            base::length(slice) == 1L &&
-            !base::is.na(slice)
+            (base::length(slice) != 1L || base::is.na(slice))
         },
         base::logical(1)
       )
-      if (!base::all(valid_slices)) {
+      if (base::any(invalid_text_slices)) {
         base::stop(
           "slices must contain one non-missing character string per query"
         )
+      }
+      slices <- base::lapply(
+        base::seq_along(slices),
+        function(index) {
+          .encode_context(slices[[index]], base::paste0("slices[[", index, "]]"))
+        }
+      )
+      if (base::all(base::vapply(
+        slices,
+        function(slice) {
+          base::is.character(slice) && base::length(slice) == 1L
+        },
+        base::logical(1)
+      ))) {
+        slices <- base::vapply(slices, base::identity, base::character(1))
       }
     }
 
@@ -645,6 +781,202 @@ abort_rlm_control <- function(message) {
 }
 
 
+abort_rlm_control_frame_size <- function(frame_bytes, max_bytes) {
+  cli::cli_abort(
+    c(
+      "RLM control frame exceeds the runner transport limit",
+      "x" = "The frame has {frame_bytes} bytes; the limit is {max_bytes} bytes."
+    ),
+    class = c(
+      "dsprrr_rlm_control_frame_size_error",
+      "dsprrr_rlm_control_error"
+    ),
+    frame_bytes = frame_bytes,
+    max_bytes = max_bytes
+  )
+}
+
+
+normalize_rlm_query_content_record <- function(record, field) {
+  malformed <- function(reason) {
+    abort_rlm_control(paste0(
+      "Malformed RLM query control frame: content at ",
+      field,
+      ": ",
+      reason
+    ))
+  }
+
+  if (!is.list(record) || is.object(record)) {
+    malformed("expected a plain JSON object")
+  }
+  record_names <- names(record)
+  if (
+    is.null(record_names) ||
+      anyNA(record_names) ||
+      !all(nzchar(record_names)) ||
+      anyDuplicated(record_names) ||
+      !"type" %in% record_names
+  ) {
+    malformed("expected named type-specific fields")
+  }
+  type <- record$type
+  if (
+    !is.character(type) ||
+      length(type) != 1L ||
+      is.na(type) ||
+      !nzchar(type)
+  ) {
+    malformed("type must be one non-empty string")
+  }
+
+  if (identical(type, "text")) {
+    if (!setequal(record_names, c("type", "text"))) {
+      malformed("text records require exactly type and text")
+    }
+    text <- record$text
+    if (!is.character(text) || length(text) != 1L || is.na(text)) {
+      malformed("text records require one non-missing string")
+    }
+    return(list(type = "text", text = text))
+  }
+
+  if (identical(type, "image_url")) {
+    if (
+      !setequal(record_names, c("type", "url", "detail")) &&
+        !setequal(record_names, c("type", "url"))
+    ) {
+      malformed("image_url records require type, url, and optional detail")
+    }
+    url <- record$url
+    if (
+      !is.character(url) ||
+        length(url) != 1L ||
+        is.na(url) ||
+        !grepl(
+          "^https://[^/?#[:space:]@]+(?:[/?#].*)?$",
+          url,
+          ignore.case = TRUE,
+          perl = TRUE
+        ) ||
+        nchar(url, type = "bytes") > 2048L
+    ) {
+      malformed(
+        "image_url requires HTTPS without user info, up to 2048 bytes"
+      )
+    }
+    detail <- record$detail %||% "auto"
+    if (
+      !is.character(detail) ||
+        length(detail) != 1L ||
+        is.na(detail) ||
+        !detail %in% c("auto", "low", "high")
+    ) {
+      malformed("image_url detail must be auto, low, or high")
+    }
+    return(list(type = "image_url", url = url, detail = detail))
+  }
+
+  if (identical(type, "image_base64")) {
+    if (!setequal(record_names, c("type", "mime_type", "data"))) {
+      malformed(
+        "image_base64 records require exactly type, mime_type, and data"
+      )
+    }
+    mime_type <- record$mime_type
+    data <- record$data
+    if (
+      !is.character(mime_type) ||
+        length(mime_type) != 1L ||
+        is.na(mime_type) ||
+        !mime_type %in% c("image/png", "image/jpeg", "image/gif", "image/webp")
+    ) {
+      malformed("image_base64 mime_type must be PNG, JPEG, GIF, or WebP")
+    }
+    if (
+      !is.character(data) ||
+        length(data) != 1L ||
+        is.na(data) ||
+        !nzchar(data) ||
+        nchar(data, type = "bytes") > 524288L ||
+        nchar(data, type = "bytes") %% 4L != 0L ||
+        !grepl("^[A-Za-z0-9+/]+={0,2}$", data, perl = TRUE)
+    ) {
+      malformed("image_base64 data must be valid base64 up to 524288 bytes")
+    }
+    return(list(type = "image_base64", mime_type = mime_type, data = data))
+  }
+
+  malformed(
+    paste0(
+      "unsupported content type '",
+      type,
+      "'; supported types are text, image_url, and image_base64"
+    )
+  )
+}
+
+
+normalize_rlm_query_context <- function(value, field) {
+  if (is.null(value)) {
+    return(NULL)
+  }
+  if (is.character(value)) {
+    if (length(value) != 1L || is.na(value)) {
+      abort_rlm_control(
+        paste0(
+          "Malformed RLM query context at ",
+          field,
+          ": expected one text string"
+        )
+      )
+    }
+    return(value)
+  }
+  if (
+    !is.list(value) ||
+      is.object(value) ||
+      !is.null(names(value)) ||
+      length(value) < 1L ||
+      length(value) > 32L
+  ) {
+    abort_rlm_control(
+      paste0(
+        "Malformed RLM query context at ",
+        field,
+        ": expected text or 1 to 32 ordered records"
+      )
+    )
+  }
+  lapply(
+    seq_along(value),
+    function(index) {
+      normalize_rlm_query_content_record(
+        value[[index]],
+        paste0(field, "[[", index, "]]")
+      )
+    }
+  )
+}
+
+
+rlm_query_content_to_ellmer <- function(record) {
+  switch(
+    record$type,
+    text = ellmer::ContentText(record$text),
+    image_url = ellmer::ContentImageRemote(
+      url = record$url,
+      detail = record$detail
+    ),
+    image_base64 = ellmer::ContentImageInline(
+      type = record$mime_type,
+      data = record$data
+    ),
+    abort_rlm_control("Unsupported decoded RLM query content")
+  )
+}
+
+
 rlm_control_attestation_attribute <- function() {
   ".dsprrr_rlm_control_attestation"
 }
@@ -682,8 +1014,22 @@ consume_attested_rlm_control <- function(x) {
 decode_rlm_control <- function(
   x,
   control_nonce = NULL,
-  .attest = FALSE
+  .attest = FALSE,
+  max_bytes = NULL
 ) {
+  if (
+    !is.null(max_bytes) &&
+      (!is.numeric(max_bytes) ||
+        length(max_bytes) != 1L ||
+        is.na(max_bytes) ||
+        !is.finite(max_bytes) ||
+        max_bytes < 1 ||
+        max_bytes != floor(max_bytes))
+  ) {
+    abort_rlm_control(
+      "RLM control frame byte limit must be one positive integer"
+    )
+  }
   if (
     inherits(x, "rlm_final") ||
       inherits(x, "rlm_query_request") ||
@@ -722,6 +1068,12 @@ decode_rlm_control <- function(
       !all(nzchar(matches))
   ) {
     abort_rlm_control("Malformed RLM control frame")
+  }
+  if (!is.null(max_bytes)) {
+    frame_bytes <- nchar(matches, type = "bytes")
+    if (any(frame_bytes > max_bytes)) {
+      abort_rlm_control_frame_size(max(frame_bytes), max_bytes)
+    }
   }
   envelopes <- lapply(matches, function(match) {
     token <- sub(prefix, "", match, fixed = TRUE)
@@ -838,21 +1190,25 @@ decode_rlm_control <- function(
         if (!is.list(slices) || length(slices) != length(queries)) {
           abort_rlm_control("Malformed RLM batch query control frame")
         }
-        slices <- vapply(
-          slices,
-          function(slice) {
-            if (
-              !is.character(slice) ||
-                length(slice) != 1L ||
-                is.na(slice)
-            ) {
-              abort_rlm_control("Malformed RLM batch query control frame")
-            }
-            slice
-          },
-          character(1)
+        slices <- lapply(
+          seq_along(slices),
+          function(index) {
+            normalize_rlm_query_context(
+              slices[[index]],
+              paste0("slices[[", index, "]]")
+            )
+          }
         )
-        envelope$payload$slices <- slices
+        all_text_slices <- all(vapply(
+          slices,
+          function(slice) is.character(slice) && length(slice) == 1L,
+          logical(1)
+        ))
+        envelope$payload$slices <- if (all_text_slices) {
+          vapply(slices, identity, character(1))
+        } else {
+          slices
+        }
       }
     } else {
       query <- envelope$payload$query
@@ -860,13 +1216,13 @@ decode_rlm_control <- function(
       valid_query <- is.character(query) &&
         length(query) == 1L &&
         !is.na(query)
-      valid_context <- is.null(context) ||
-        (is.character(context) &&
-          length(context) == 1L &&
-          !is.na(context))
-      if (!valid_query || !valid_context) {
+      if (!valid_query) {
         abort_rlm_control("Malformed RLM query control frame")
       }
+      envelope$payload["context"] <- list(normalize_rlm_query_context(
+        context,
+        "context"
+      ))
     }
     control <- structure(
       envelope$payload,

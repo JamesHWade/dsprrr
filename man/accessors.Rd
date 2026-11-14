@@ -4,6 +4,7 @@
 \alias{accessors}
 \alias{get_output}
 \alias{get_metadata}
+\alias{get_history}
 \alias{get_tokens}
 \alias{get_cost}
 \title{Extract outputs, metadata and costs from results}
@@ -11,6 +12,8 @@
 get_output(x, ...)
 
 get_metadata(x, ...)
+
+get_history(x, ...)
 
 get_tokens(x, ...)
 
@@ -29,6 +32,8 @@ the other functions return empty or missing values.}
 \item \code{get_output()}: the outputs, as described above.
 \item \code{get_metadata()}: a list, or a list of lists; an empty list when \code{x} has
 no metadata.
+\item \code{get_history()}: a \code{dsprrr_history} object for a result that retained
+conversation history, or \code{NULL} otherwise.
 \item \code{get_tokens()}: a list of the three counts for a single result, or a
 tibble with columns \code{index}, \code{input_tokens}, \code{output_tokens} and
 \code{total_tokens} for a batch or an evaluation. Unknown counts are \code{NA}.
@@ -50,10 +55,21 @@ a single result, a list of them for a batch, and the predictions of an
 evaluation.
 \item \code{get_metadata()} returns the call metadata: a list for a single result
 and one list per row for a batch or an evaluation.
+\item \code{get_history()} returns a saved \code{\link[=conversation_history]{conversation_history()}} from an explicit
+history run, or \code{NULL} when conversation history was not requested.
 \item \code{get_tokens()} returns \code{input_tokens}, \code{output_tokens} and
 \code{total_tokens}.
 \item \code{get_cost()} returns the estimated cost in US dollars.
 }
+
+For \code{chain_of_thought(mode = "native")}, \code{get_metadata(result)$native_reasoning}
+is a list of ellmer \code{ContentThinking} objects from the current provider
+turn, or \code{NULL} if the provider did not expose thinking content. dsprrr does
+not synthesize text for this field.
+
+For \code{rlm_module(reasoning_mode = "native")}, the same field contains
+provider thinking blocks from action calls in order; the integer vector
+\code{native_reasoning_action_indices} identifies the action for each block.
 
 For \code{\link[=run_dataset]{run_dataset()}} results, use the \code{result} and \code{.metadata} columns
 instead.

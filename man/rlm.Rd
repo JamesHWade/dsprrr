@@ -12,6 +12,7 @@ rlm(
   .max_iterations = 20L,
   .max_llm_calls = 50L,
   .max_output_chars = 10000L,
+  .reasoning_mode = c("rationale", "native", "plan"),
   .sub_lm = NULL,
   .tools = list(),
   .verbose = FALSE,
@@ -23,7 +24,8 @@ rlm(
 \item{signature}{A \code{\link[=signature]{signature()}} object or a signature string such as
 \code{"question -> answer"}.}
 
-\item{...}{Named inputs, plus \code{\link[=run]{run()}} options such as \code{.return_format}.
+\item{...}{Named inputs, plus \code{\link[=run]{run()}} options such as \code{.return_format} and
+\code{.history}.
 Each input is staged as one variable, including vectors, lists, matrices
 and data frames. For several investigations, create an \code{\link[=rlm_module]{rlm_module()}} and
 use \code{\link[=run_dataset]{run_dataset()}} with list-columns.}
@@ -42,6 +44,10 @@ fallback extraction (default \code{20L}).}
 
 \item{.max_output_chars}{Maximum number of characters of each execution
 result shown to the model (default \code{10000L}).}
+
+\item{.reasoning_mode}{Action reasoning behavior: \code{"rationale"} (the
+default), \code{"native"} (code only, with provider thinking metadata when
+available), or \code{"plan"} (a concise plan and code).}
 
 \item{.sub_lm}{Optional ellmer Chat for \code{llm_query()} sub-queries. \code{NULL}
 uses \code{.llm}; set \code{.max_llm_calls = 0L} to disable sub-queries.}
@@ -83,6 +89,17 @@ result <- rlm(
   .max_iterations = 4L,
   .max_llm_calls = 0L
 )
+
+# Native provider thinking is available on structured scalar results
+native_result <- rlm(
+  "document, question -> answer",
+  document = "Owner: team-a\nObligation: rotate keys quarterly",
+  question = "What are the main themes?",
+  .llm = ellmer::chat_openai(model = "gpt-6-luna"),
+  .reasoning_mode = "native",
+  .return_format = "structured"
+)
+get_metadata(native_result)$native_reasoning
 
 # Rich local R objects need a trusted runner that can stage them
 sessions <- data.frame(

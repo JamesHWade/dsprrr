@@ -95,8 +95,15 @@ one evaluation row that had already started (or one direct provider request
 made by the optimizer itself). When a cap is finite and a provider does not
 report its usage, tokens or cost, the run stops rather than guess.
 
-\code{\link[=BootstrapFewShot]{BootstrapFewShot()}} and \code{\link[=MIPROv2]{MIPROv2()}} can resume from a checkpoint. \code{\link[=GEPA]{GEPA()}},
-\code{\link[=SIMBA]{SIMBA()}} and \code{\link[=COPRO]{COPRO()}} respect the budgets and return the best partial
+\code{\link[=BootstrapFewShot]{BootstrapFewShot()}} and \code{\link[=MIPROv2]{MIPROv2()}} can resume from a checkpoint.
+\code{\link[=GEPA]{GEPA()}} supports resume for sequential \code{round_robin} searches over plain
+\code{Predict} leaves and built-in predictor pipelines when each prediction is
+plain data. It rejects Flex modules, other selectors, custom module types or
+Chats, Chats with tools, and Chats with existing turns. GEPA stores each
+completed proposal and evaluation row. A provider request that finishes
+after the previous checkpoint was written but before its result is committed
+can be retried after a crash; GEPA does not guarantee exactly-once provider
+effects. \code{\link[=SIMBA]{SIMBA()}} and \code{\link[=COPRO]{COPRO()}} respect budgets and return the best partial
 program, but reject \code{resume = TRUE}.
 }
 \examples{

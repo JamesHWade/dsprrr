@@ -95,38 +95,41 @@ The differences that show up in everyday code:
 
 ## Version baseline
 
-This comparison was checked against DSPy **3.4.0**, released on 2026-09-25,
-which DSPy calls its "LM transition release":
+This comparison was checked against DSPy **3.5.0**, released on 2026-11-10.
+Its changes from 3.4.1 affect execution contracts as well as feature names:
 
-- DSPy's LM layer now runs through bundled native engines. The experimental
-  3.3 `LMRequest`/`LMResponse` types have been removed, and OpenAI-style
-  `lm(messages = ...)` calls are deprecated until 3.5.
-- It adds experimental decision types (`Noul`, `Score`, `Choice`) and the
-  ReAnchor calibration optimizer.
-- It adds a persistent `LocalInterpreter`, async `ReActV2`, and call-time
-  interpreter factories for RLM.
+- RLM, Flex, and GEPA have graduated from experimental status upstream.
+- The newer ReAct implementation is now `dspy.ReAct`, using structured
+  History and a typed `submit` tool. `ReActV2` is a deprecated alias.
+- RLM accepts reusable conversation History and mixed text/image subqueries.
+  Replaying History does not restore interpreter variables.
+- ChainOfThought prefers native reasoning, which may have no visible summary,
+  with a short-plan fallback. XML is the default predictor adapter.
+- The lm15 provider layer makes LiteLLM and the OpenAI SDK optional. Legacy
+  `lm(messages=...)` entry points, CodeAct, and ProgramOfThought were removed;
+  TwoStepAdapter is deprecated.
 
-The 3.3.1 patch release, also covered here, deprecated `CodeAct` and
-`ProgramOfThought`, added objective-aware GEPA frontiers, and exposed
-optimizer and interpreter callback events. The 3.3.0 release introduced the
-experimental `Flex` and `ReActV2` modules that dsprrr's `flex()` and `react()`
-follow. See the
-[DSPy 3.4.0 release notes](https://github.com/stanfordnlp/dspy/releases/tag/3.4.0).
+These upstream changes do not change dsprrr's provider boundary: ellmer owns
+provider calls and structured output. dsprrr keeps its R-specific code
+modules and its own experimental labels. Re-evaluate optimized programs when
+their prompts, schemas, or execution modes change. See the
+[DSPy 3.5.0 release notes](https://github.com/stanfordnlp/dspy/releases/tag/3.5.0)
+and [upgrade guide](https://dspy.ai/current/community/upgrading-to-3-5/).
 
 ## Modules
 
 | DSPy | dsprrr | Notes |
 |------|--------|-------|
 | `dspy.Predict` | `module(sig)` | Core predictor |
-| `dspy.ChainOfThought` | `chain_of_thought()`, `with_reasoning()` | Implemented as signature transforms |
-| `dspy.ReAct` / experimental `ReActV2` | `react(sig)` | Native ellmer turn history, tool-call IDs, parallel calls per assistant turn, enforced iteration limit, then structured finalization; behaviorally aligned, not a port of the Python class. There is no counterpart to `ReActV2.acall()`: `run_async()` does not accept `react()` modules, so run them with `run()` |
-| `dspy.ProgramOfThought` (deprecated in DSPy 3.3.1) | `program_of_thought()` | Generates and executes **R** code (not Python); accepts either a caller-owned reused runner or a fresh per-invocation interpreter factory. dsprrr keeps it supported; DSPy points users to `RLM` and `Flex` |
-| `dspy.CodeAct` (deprecated in DSPy 3.3.1) | `code_act()` | Hybrid tools + R code execution with an enforced inner tool-call limit; accepts either a caller-owned reused runner or a fresh per-invocation interpreter factory. The built-in runner is trusted-input-only, and sandboxed backends can implement the runner protocol |
+| `dspy.ChainOfThought` | `chain_of_thought()`, `with_reasoning()` | Default rationale transform; opt-in native provider reasoning or a short explicit plan |
+| `dspy.ReAct` (`ReActV2` is deprecated) | `react(sig)` | Native ellmer turns and tool-call IDs, ordered rich tool content, an enforced iteration limit, and opt-in typed `submit` finalization. Structured follow-up remains the default |
+| `dspy.ProgramOfThought` (removed in DSPy 3.5) | `program_of_thought()` | Generates and executes **R** code (not Python); accepts either a caller-owned reused runner or a fresh per-invocation interpreter factory. dsprrr keeps it supported; DSPy points users to `RLM` and `Flex` |
+| `dspy.CodeAct` (removed in DSPy 3.5) | `code_act()` | Hybrid tools + R code execution with an enforced inner tool-call limit; accepts either a caller-owned reused runner or a fresh per-invocation interpreter factory. The built-in runner is trusted-input-only, and sandboxed backends can implement the runner protocol |
 | `dspy.BestOfN` | `best_of_n()` | Reward-function-guided retries |
 | `dspy.Refine` | `refine()` | Retries with LLM-generated feedback |
 | `dspy.MultiChainComparison` | `multi_chain_comparison()` | |
 | `dspy.RLM` | `rlm_module()` (experimental) | Inference-time adaptive exploration over an R REPL, with optimizable action and extraction predictors, inherited or separate sub-LMs, replayed recursive values, typed submission repair, and trajectory metadata |
-| Experimental `dspy.Flex` | `flex()` | GEPA can optimize a bounded predictor graph or an R `forward()` program. dsprrr requires an explicit fresh interpreter for executable source rather than choosing a default sandbox |
+| `dspy.Flex` (stable upstream in 3.5) | `flex()` | GEPA can optimize a bounded predictor graph or an R `forward()` program. dsprrr requires an explicit fresh interpreter for executable source rather than choosing a default sandbox |
 | `dspy.Parallel` / `Module.batch` | `run_dataset()`, `run(..., .concurrency = concurrency_control(...))` | Batch over a data frame; heterogeneous (module, example) fan-out is not yet a dedicated module |
 | `dspy.majority` | `ensemble()` with `reduce_majority()` | Plus `reduce_weighted_vote()`, `reduce_best_by_metric()` |
 | `dspy.KNN` | `compile()` with the `KNNFewShot` teleprompter | The compiled module picks the nearest training examples as demos for each input. Bring your own vectorizer (e.g., `ragnar::embed_openai()`) |
@@ -139,10 +142,105 @@ invocation. Executable Flex accepts only the factory form and requires an
 enforced sandbox by default, while JSON Flex needs no interpreter; see
 [Flex: optimize a whole program](flex-optimization.html).
 
+### Reasoning and typed completion
+
+`chain_of_thought()` keeps its existing rationale field by default. Native
+mode keeps the original output schema and exposes provider-supplied thinking
+in structured metadata; an absent thinking block remains `NULL`. Plan mode
+adds a short, explicit plan to the requested output. Neither mode promises
+to recover a model's private reasoning or change provider settings.
+
+```{r}
+native_qa <- chain_of_thought("question -> answer", mode = "native")
+result <- run(
+  native_qa,
+  question = "What is the capital of France?",
+  .return_format = "structured"
+)
+result$metadata$native_reasoning
+
+planned_qa <- chain_of_thought("question -> answer", mode = "plan")
+```
+
+For ReAct, `finalization = "submit"` makes the final answer a typed tool
+call. Invalid submissions return repair feedback within the iteration
+budget. A valid submission must be the only tool call in its turn; mixed
+submission/action turns fail before tool effects. This avoids the extra
+extraction request used by the default `finalization = "structured"`.
+
+```{r}
+agent <- react("question -> answer", finalization = "submit")
+run(agent, question = "What is the capital of France?")
+```
+
+### Explicit ReAct conversation history
+
+A supplied history opts into continuation on an independent Chat. The default
+`.history = NULL` keeps existing behavior. Scalar root ReAct calls through
+`run()` or `Module$run()` require structured results when history is supplied:
+
+```{r}
+first <- run(
+  agent,
+  question = "What is the capital of France?",
+  .history = conversation_history(),
+  .return_format = "structured"
+)
+history_file <- tempfile(fileext = ".json")
+save_history(get_history(first), history_file)
+
+second <- run(
+  agent,
+  question = "Which river runs through it?",
+  .history = load_history(history_file),
+  .return_format = "structured"
+)
+```
+
+History preserves ordered content and paired tool calls/results without
+executing old tools. It excludes executable bindings, system prompts, and
+old usage accounting. The supplied Chat and history remain unchanged on
+success or error; `get_history(second)` is the new value. History is returned
+independently of trace recording. The JSON codec rejects unsupported values,
+malformed tool pairing, and payloads beyond its documented size/depth limits.
+
+The public dataset, batch, async, and streaming paths reject explicit history
+before work. Other modules' low-level custom `forward()` methods are outside
+this continuation API. Program artifacts and conversation history remain
+separate files with separate purposes.
+
+### Asynchronous agents
+
+ReAct's async path awaits the complete sequential tool loop and either typed
+submission or structured follow-up. It uses the same simple/structured
+result choice as Predict. A one-invocation control reports ordered progress
+and supports cooperative cancellation:
+
+```{r}
+control <- react_async_control(on_progress = function(event) {
+  message(event$type)
+})
+pending <- run_async(
+  agent,
+  question = "What is the capital of France?",
+  .return_format = "structured",
+  .control = control
+)
+promises::then(pending, function(result) get_output(result))
+# While the call is pending, request cancellation with control$cancel().
+```
+
+Cancellation blocks subsequent work; an active provider request or host tool
+must settle first. The Chat remains reserved during that interval. Progress
+callback errors reject the call after cleanup. A failed/cancelled conversation
+can be partial: metadata distinguishes requested tools from observed results,
+and `observed_tool_results` retains actual result evidence without inventing
+results for tools that did not run. Explicit portable history is not accepted
+on the async path.
+
 ### RLM
 
-dsprrr follows the DSPy RLM execution contract, which DSPy 3.4 leaves
-unchanged apart from interpreter binding: one interpreter per invocation,
+dsprrr follows the core DSPy RLM execution model: one interpreter per invocation,
 `generate_action` and `extract` child predictors that graph optimizers can
 see, a sub-LM that inherits the outer LM unless you set one, `llm_query()`
 results replayed into the running R code, and invalid typed `SUBMIT()` calls
@@ -156,9 +254,58 @@ differences a DSPy user will notice:
 | Interpreter binding | A keyword-only `interpreter_factory` at call time (3.4), or a `dspy.settings.interpreter_factory` default | Runner or factory bound when constructing `rlm_module()`; `rlm()` creates that binding for one invocation |
 | Persistent local interpreter | `LocalInterpreter` (3.4), CPython without Deno | `r_code_runner(persistent = TRUE)`, one trusted callr R process per invocation |
 | Default local execution | DSPy interpreter configuration | The one-call `rlm()` helper creates a fresh managed `mcp-repl` OS sandbox with network disabled and workspace writes allowed; it suits compact JSON-compatible context |
-| Returned value | Prediction with trajectory and top-level `final_reasoning` | `run()` output plus structured metadata, including a bounded trajectory |
+| Returned value | Prediction with reusable ordered History; native reasoning may have no visible summary | Structured `run()` results include the current trajectory and optional explicit conversation history; native thinking is optional metadata |
 | Typed outputs | Signature adapters validate the Python/Pydantic type | ellmer string, number, integer, boolean, enum, array, and object types; opaque `TypeJsonSchema` nodes are rejected |
 | Host tools | Interpreter-defined | Run in the host R process, outside the guest sandbox |
+
+Recursive query context can contain an ordered mix of text and images.
+Generated R code passes plain records to `llm_query()` or aligned slices to
+`llm_query_batched()`; the guest does not need ellmer installed:
+
+```r
+llm_query(
+  "What does this figure show?",
+  context_slice = list(
+    list(type = "text", text = "Compare the two panels."),
+    list(type = "image_url", url = "https://example.com/figure.png")
+  )
+)
+```
+
+HTTPS image URLs and bounded inline image data are supported. PDF and local
+file records are rejected. The runner's transport cap also applies: a valid
+image record can still be too large for a managed MCP control frame. These
+queries preserve replay identity, ordering, and call budgets; they do not
+establish that every provider/model can interpret images.
+
+RLM action reasoning is also selectable through
+`rlm_module(reasoning_mode = "native")` or `rlm(.reasoning_mode = "native")`.
+Native actions request code without a prompted rationale; provider thinking
+remains optional metadata. `native_reasoning_action_indices` maps retained
+blocks to their action steps. `"plan"` requests a short plan plus code, and
+`"rationale"` preserves the default action schema. The final output signature
+is unchanged. Custom action predictors must satisfy the chosen contract,
+which is checked again before each invocation's model or interpreter work.
+
+Explicit RLM continuation uses the same `.history` and `get_history()` API
+as ReAct, but stores a different kind of record. Each exchange contains the
+original visible task/context previews, inert code and observed output, and
+the complete normalized final output. A new invocation includes every prior
+exchange in both its action prompts and fallback extraction prompt.
+
+Every explicit-history RLM call requires an `interpreter_factory`; the
+framework leases and closes one interpreter for that call. The factory must
+return a fresh interpreter. Prior variables are unavailable, and historical
+code and tools are never executed merely by loading or supplying history.
+ReAct and RLM histories cannot be mixed. Async, batch, dataset, streaming, and
+composite calls do not accept explicit history.
+
+RLM history is bounded to 100 exchanges, 1,000 trajectory steps, and 128 KiB
+of canonical historical text, in addition to the shared codec limits. It
+never silently prunes exchanges or clips final outputs. A completed call can
+still fail its postflight history-size check after provider work; the supplied
+history remains unchanged. Saved program artifacts do not include this
+conversation history.
 
 RLM remains experimental in dsprrr: the execution and result contracts are
 tested, but the convenience API may still change. For a worked example, see
@@ -182,7 +329,7 @@ declarative output contracts with automatic feedback injection.
 | `BootstrapFewShotWithRandomSearch` | `BootstrapFewShotWithRandomSearch` | Random search over ordinary labeled/bootstrap candidates; rejects programs containing Flex or RLM rather than returning a baseline-only no-op |
 | `MIPROv2` | `MIPROv2` | Root Predict modules search instruction + demo candidates; nested graphs search child instructions with `max_bootstrapped_demos = 0L`. Candidates are chosen with a UCB1 bandit rather than Bayesian optimization |
 | `SIMBA` | `SIMBA` | Adapted: hard-example mining + LLM-generated rules; simplified vs. the full introspective algorithm |
-| `GEPA` | `GEPA` | Adapted reflective optimization for instructions and complete Flex sources, with separate train/validation roles, multi-objective selection, lineage, and optional retained outputs. DSPy 3.3.1's per-metric `objective_scores` and `frontier_type` map to dsprrr's named `metrics` list with Pareto selection. Cached subsample merge acceptance, fine-grained resume, parallel candidate evaluation, and built-in experiment trackers remain different |
+| `GEPA` | `GEPA` | Adapted reflective optimization for instructions and complete Flex sources, with separate train/validation roles, multi-objective selection, lineage, and optional retained outputs. DSPy 3.3.1's per-metric `objective_scores` and `frontier_type` map to dsprrr's named `metrics` list with Pareto selection. Task evaluation and reflection can use separate Chats with shared budget accounting. Fine-grained checkpoint resume is available for a bounded sequential predictor graph; Flex resume, cached subsample merge acceptance, parallel candidate evaluation, and built-in experiment trackers remain different |
 | `COPRO` | `COPRO` | Equivalent (coordinate ascent over instructions) |
 | `KNNFewShot` | `KNNFewShot` | Equivalent |
 | Experimental `ReAnchor` (3.4) | `ReAnchor()` (experimental) | Same gap-midpoint candidates, fold check, and restore-if-not-better rule; single Predict modules only. `compile()` runs the module over the training set to record evidence (twice when outputs first have to be switched to evidence decoding) and scores any `valset`; the search over settings then re-decodes that evidence without further provider calls |
@@ -220,11 +367,84 @@ metric <- metric_with_feedback(
 )
 
 tp <- GEPA(metric = metric, generations = 5L)
-compiled <- compile(qa, tp, trainset)
+reflection_chat <- ellmer::chat_openai(model = "gpt-6-astra")
+compiled <- compile(qa, tp, trainset, .reflection_llm = reflection_chat)
 ```
 
 The feedback for failed examples goes into GEPA's reflection prompt, so the
 reflection model sees why each output failed as well as which ones did.
+
+### Choosing a reflection model
+
+Pass `.reflection_llm` to `compile()` to separate GEPA proposal generation
+from task evaluation. Each reflection request starts from an independent
+Chat, and both stages contribute to the optimizer budget. An explicit
+`.llm` remains the legacy reflection fallback; an omitted task override can
+still resolve through the program's normal runtime configuration.
+
+```{r}
+task_chat <- ellmer::chat_openai(model = "gpt-6-luna")
+reflection_chat <- ellmer::chat_openai(model = "gpt-6-astra")
+compiled <- compile(
+  qa,
+  GEPA(metric = metric),
+  trainset,
+  .llm = task_chat,
+  .reflection_llm = reflection_chat
+)
+```
+
+Mutable search without an effective reflection Chat fails before evaluation.
+This is an adapted GEPA implementation; separate models alone do not establish
+algorithmic parity or an improvement on held-out data.
+
+### Durable GEPA resume
+
+Use `optimizer_control(checkpoint_path = path)` to persist a supported GEPA
+search and set `resume = TRUE` to continue it. Completed proposals and
+individual evaluation rows are restored; a terminal checkpoint returns its
+result without further model or metric calls. An exhausted run can continue
+when its resource limit is raised.
+
+```{r}
+# Start this resumable search with fresh, empty Chats.
+task_chat <- ellmer::chat_openai(model = "gpt-6-luna")
+reflection_chat <- ellmer::chat_openai(model = "gpt-6-astra")
+control <- optimizer_control(
+  checkpoint_path = "gepa-search.rds",
+  max_metric_calls = 50
+)
+compiled <- compile(
+  qa, GEPA(metric = metric), trainset,
+  .llm = task_chat,
+  .reflection_llm = reflection_chat,
+  control = control
+)
+# Continue the same search with a larger allowance:
+resumed <- compile(
+  qa, GEPA(metric = metric), trainset,
+  .llm = task_chat,
+  .reflection_llm = reflection_chat,
+  control = optimizer_control(
+    checkpoint_path = "gepa-search.rds",
+    resume = TRUE,
+    max_metric_calls = 100
+  )
+)
+```
+
+This first resume contract covers sequential `round_robin` component
+selection over plain Predict leaves and built-in predictor pipelines, with
+plain-data predictions. It rejects Flex, custom module types or selectors,
+custom Chats, and Chats containing tools or prior turns before provider work.
+Mutable searches require at least one validation row, using `trainset` when
+`valset` is omitted. Metrics must return finite scores or `NA`; infinite scores
+are rejected before their row is saved.
+Algorithm configuration and model/runtime identities must match the saved
+search; resource limits may change. Checkpoints retain search state, row
+evidence, lineage, and RNG state without serializing live Chats or executable
+objects. A crash after a provider response but before its checkpoint commit
+can repeat that request: this is not an exactly-once side-effect guarantee.
 
 ### Trace-aware metrics
 
@@ -307,9 +527,9 @@ decisions, the evidence schema, and how ReAnchor searches.
 | `Signature.with_instructions()` / `Signature.append_instructions()` | `with_instructions()` / `append_instructions()`; both return a new signature without mutating the original |
 | Pydantic-typed outputs | ellmer type objects (`type_string()`, `type_enum()`, `type_object()`, `type_array()`) |
 | `dspy.Image`, `dspy.Audio`, `dspy.File` | ellmer `Content` objects (images, PDFs) passed as inputs |
-| `dspy.History` | Native ellmer turns preserved in ReAct metadata and traces; not a signature type |
+| `dspy.History` | Explicit `conversation_history()` values, `get_history()`, and bounded JSON save/load for scalar ReAct and RLM continuation. ReAct retains native turns; RLM retains inert task, trajectory, and output evidence with a fresh interpreter |
 | `dspy.Tool`, `dspy.ToolCalls`, `ToolCallResults` | ellmer `ToolDef`, `ContentToolRequest`, and `ContentToolResult`; IDs remain attached to native turns |
-| `dspy.Reasoning` (native reasoning traces) | Not yet built in; `with_reasoning()` adds a prompted reasoning field |
+| `dspy.Reasoning` (native reasoning traces) | Native thinking is optional current-call metadata in supported Predict/CoT and RLM paths. `chain_of_thought()` also offers explicit rationale and plan modes; there is no separate typed reasoning output |
 | Experimental `Noul`, `Score[...]`, `Choice[...]` annotations | Plain `type_boolean()` / `type_enum()` outputs plus `with_decisions()` settings on the module; the answer space stays in the signature, and the tunable settings live on the module |
 
 ## Programs and composition
@@ -347,16 +567,16 @@ pipelines, because root examples do not match each step's signature.
 
 | Capability | DSPy | dsprrr |
 |------------|------|--------|
-| LM client | `dspy.LM` on bundled native engines (`engine = "auto"`) with a LiteLLM fallback in 3.4; the 3.3 `LMRequest`/`LMResponse` types were removed | Provider-neutral ellmer `Chat`; `run()` normalizes prompt and content inputs into typed requests, while a complete package-wide invocation record is still planned |
+| LM client | `dspy.LM` on bundled lm15 with canonical Request/Response objects; LiteLLM and OpenAI SDK optional in 3.5; API-family routing defaults to `auto` | Provider-neutral ellmer `Chat`; `run()` normalizes prompt and content inputs into typed requests, while a complete package-wide invocation record is still planned |
 | Configuration | `dspy.configure()` / `dspy.context()` | `dsp_configure()`, `with_lm()`, `local_lm()` |
 | Caching | Two-tier memory + disk | Two-tier memory + disk (`configure_cache()`) |
-| Async | `acall`/`aforward`, `asyncify` | `run_async()` with promises for ordinary Predict modules and isolated background workflows for factory-backed ProgramOfThought, CodeAct, and RLM. Other module types such as `react()` are rejected, as are caller-owned interpreters and specialized streaming, rather than shared or bypassed |
+| Async | `acall`/`aforward`, `asyncify` | `run_async()` returns promises; direct Predict supports canonical structured results, current-call native reasoning, usage, and success/failure traces. ReAct supports its complete sequential tool loop, typed completion, progress, and cooperative cancellation. The simple output default is preserved, response caching is explicitly bypassed, and overlapping calls must use separate Chats. Factory-backed code modules retain simple background results; structured factory results are rejected |
 | Streaming | `streamify()` + `StreamListener` | `run_stream()` + `stream_listener()`; one-shot fallback preserves specialized `forward()` semantics, while direct token streaming is limited to ordinary Predict steps and emits status events per pipeline step |
 | Usage tracking | `track_usage` | `get_tokens()`, `get_cost()`, `session_cost()` |
 | Parallel evaluation | `Evaluate(num_threads = ...)` | `evaluate(.concurrency = concurrency_control(...))` via mirai or ellmer's native parallelism. Declarative zero/one-step Flex is supported; executable and multi-step Flex currently require sequential rows |
 | Saving programs | `save`/`load`; sanitized LM state and explicit unsafe-class opt-in in 3.3 | Versioned whole-program artifacts via `save_program()` / `load_program()` or pins, with registry-backed runtime IDs and explicit trusted opt-in |
 | Observability | MLflow autolog, OpenTelemetry callbacks; 3.3.1 adds optimizer-compile and interpreter-lifecycle callback events | Traces tibble, `inspect_history()`, `export_traces()`; package-level OpenTelemetry spans are planned on top of ellmer |
-| Adapters (Chat/JSON/XML/TwoStep/BAML) | Yes | No adapter layer; ellmer's `chat_structured()` handles structured output |
+| Adapters | XML default in 3.5, with Chat/JSON alternatives; TwoStepAdapter deprecated | No adapter layer; ellmer's `chat_structured()` handles structured output |
 | Evaluation framework | `dspy.Evaluate`, including trace-aware metrics | `evaluate()`, `eval_program()`, `metric_with_trace()`, plus **vitals** integration |
 
 ## What dsprrr has that DSPy doesn't
@@ -386,13 +606,13 @@ priority order:
    usage, cost, cache state, timing, and normalized errors across every module.
 4. Package-level OpenTelemetry spans for module, optimizer, evaluation,
    cache, and tool activity, composed with ellmer's provider telemetry.
-5. Native reasoning-trace capture as a typed output (analogous to
-   `dspy.Reasoning`).
+5. A typed reasoning output analogous to `dspy.Reasoning`. Provider-native
+   thinking is available as metadata; it is not a required generated field.
 6. Predictor-local RLM demo evidence so MIPROv2 can bootstrap child demos;
    its graph mode currently tunes child instructions only, while GEPA selects
    the RLM child components explicitly.
-7. Adapter-style fallbacks for models with weak structured-output
-   support (analogous to `TwoStepAdapter`).
+7. Explicit, budgeted fallbacks for demonstrated structured-output limitations;
+   copying DSPy's deprecated `TwoStepAdapter` is not a goal.
 8. Weight and RL optimization, after provider-neutral training data,
    reproducibility, cost accounting, and artifact contracts are stable.
 9. Whole-program decision calibration. `ReAnchor()` fits a single Predict

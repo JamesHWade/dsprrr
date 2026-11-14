@@ -2449,6 +2449,64 @@ test_that("cache hit replays semantic turns into the Chat object", {
   expect_s3_class(trace$assistant_turn, "ellmer::AssistantTurn")
 })
 
+test_that("native reasoning metadata survives cache turn replay", {
+  local_reset_cache()
+  configure_cache(enable = TRUE, enable_memory = TRUE, enable_disk = FALSE)
+
+  chat <- cache_real_chat()
+  solver <- chain_of_thought("question -> answer", mode = "native")
+  inputs <- list(question = "What is 6 times 7?")
+  request <- dsprrr:::build_module_request(solver, inputs)
+  assistant_turn <- ellmer::AssistantTurn(
+    contents = list(
+      ellmer::ContentThinking("provider thinking", list(provider = "mock")),
+      ellmer::ContentText("42")
+    )
+  )
+  turn_delta <- list(
+    mode = "turns",
+    turns = lapply(
+      list(
+        ellmer::UserTurn(
+          contents = list(
+            ellmer::ContentText(request$full_prompt)
+          )
+        ),
+        assistant_turn
+      ),
+      dsprrr:::cache_replay_turn
+    )
+  )
+  key <- cache_test_key(
+    chat,
+    request$payload,
+    solver$signature@output_type
+  )
+  dsprrr:::get_cache()$set(
+    key,
+    dsprrr:::cache_envelope(list(answer = "42"), turn_delta)
+  )
+
+  hit <- run(
+    solver,
+    question = inputs$question,
+    .llm = chat,
+    .cache = TRUE,
+    .return_format = "structured"
+  )
+  expect_identical(get_output(hit), list(answer = "42"))
+  hit_thinking <- get_metadata(hit)$native_reasoning
+  expect_identical(get_metadata(hit)$cache, "hit")
+  expect_length(hit_thinking, 1L)
+  expect_s3_class(hit_thinking[[1]], "ellmer::ContentThinking")
+  expect_identical(hit_thinking[[1]]@thinking, "provider thinking")
+  expect_identical(hit_thinking[[1]]@extra, list(provider = "mock"))
+  expect_identical(
+    dsprrr:::native_reasoning_from_turns(chat$get_turns()),
+    hit_thinking
+  )
+})
+
 test_that("different pre-existing history misses cache and is preserved", {
   local_reset_cache()
   configure_cache(enable = TRUE, enable_memory = TRUE, enable_disk = FALSE)

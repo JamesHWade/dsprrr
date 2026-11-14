@@ -47,6 +47,7 @@ Suggests:
     callr,
     coro,
     dials,
+    httr2,
     knitr,
     later,
     mcptools (>= 1.0.1),
@@ -72,6 +73,7 @@ Collate:
     'artifact.R'
     'assertion-helpers.R'
     'assertion.R'
+    'async-trace.R'
     'async.R'
     'cache.R'
     'chat-default.R'
@@ -83,6 +85,9 @@ Collate:
     'ellmer.R'
     'evaluate.R'
     'flex-code-bridge.R'
+    'history-rlm.R'
+    'history-runtime.R'
+    'history.R'
     'input.R'
     'inspect.R'
     'mcp-repl-runner.R'
@@ -110,6 +115,7 @@ Collate:
     'optimizer-checkpoint.R'
     'optimizer-core.R'
     'optimizer-discrete-bo.R'
+    'optimizer-gepa-checkpoint.R'
     'optimizer-logging.R'
     'orchestration.R'
     'pareto.R'
@@ -117,6 +123,8 @@ Collate:
     'pipeline.R'
     'r-code-runner.R'
     'ragnar.R'
+    'react-async.R'
+    'react-submit.R'
     'rlm-tools.R'
     'run.R'
     'signature-parser.R'
@@ -140,4 +148,4 @@ Collate:
     'utils.R'
     'vitals.R'
     'zzz.R'
-Config/roxygen2/version: 8.0.0
+Config/roxygen2/version: 8.1.0
