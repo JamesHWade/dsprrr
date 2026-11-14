@@ -177,13 +177,12 @@ new_react_prompt_chat <- function() {
 
   llm <- ReactTestChat$new(
     model = "mock-model",
-    chat = function(prompt, echo = "none", ...) {
-      state$prompt <- prompt
-      contents <- if (is.list(prompt)) {
-        prompt
-      } else {
-        list(ellmer::ContentText(prompt))
-      }
+    chat = function(..., echo = "none") {
+      parts <- list(...)
+      state$prompt <- if (length(parts) == 1L) parts[[1L]] else parts
+      contents <- lapply(parts, function(part) {
+        if (is.character(part)) ellmer::ContentText(part) else part
+      })
       state$turns <- c(
         state$turns,
         list(
@@ -257,6 +256,33 @@ test_that("ReactModule keeps text-only prompts as character strings", {
   expect_type(mock$state$prompt, "character")
   expect_identical(result$metadata$prompt, mock$state$prompt)
   expect_match(mock$state$prompt, "question: What is 2 \\+ 2\\?")
+})
+
+test_that("ReAct media reaches real ellmer request normalization", {
+  chat <- ellmer::chat_openai(model = "gpt-test", credentials = function() "x")
+  captured <- NULL
+  remove <- chat$on_request_start(function(turns) {
+    captured <<- turns[[length(turns)]]@contents
+    rlang::abort("Stop before transport", class = "test_request_captured")
+  })
+  on.exit(remove(), add = TRUE)
+  image <- ellmer::ContentImageInline("image/png", "YWJj")
+  pdf <- ellmer::ContentPDF("application/pdf", "ZGVm", "report.pdf")
+
+  condition <- rlang::catch_cnd(run(
+    react("question, image, report -> answer"),
+    question = "Read this evidence",
+    image = image,
+    report = pdf,
+    .llm = chat
+  ))
+
+  expect_s3_class(condition, "dsprrr_provider_error")
+  expect_s3_class(condition$parent, "test_request_captured")
+  expect_length(captured, 3L)
+  expect_s3_class(captured[[1L]], "ellmer::ContentText")
+  expect_identical(captured[[2L]], image)
+  expect_identical(captured[[3L]], pdf)
 })
 
 test_that("ReactModule forward tracks tool calls from ellmer turns", {
