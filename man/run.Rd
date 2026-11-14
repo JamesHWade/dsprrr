@@ -14,6 +14,12 @@ run(module, ..., .history = NULL)
 of the runtime arguments described below. RLM modules (\code{\link[=rlm_module]{rlm_module()}})
 treat every value as one context object whatever its length; use
 \code{\link[=run_dataset]{run_dataset()}} to run them several times.}
+
+\item{.history}{A \code{dsprrr_history} from \code{\link[=conversation_history]{conversation_history()}} or
+\code{\link[=load_history]{load_history()}}. The default \code{NULL} keeps existing Chat behavior. A
+non-\code{NULL} history is supported for scalar root \code{\link[=react]{react()}} modules and
+requires \code{.return_format = "structured"}; the result carries the new
+history in \code{metadata$conversation_history}.}
 }
 \value{
 With \code{.return_format = "simple"}, the outputs as a named list with
@@ -69,11 +75,6 @@ deputy \code{Agent}, also works; see \code{vignette("models-and-providers")}.}
 \item{\code{.cache}}{\code{NULL} (the default) follows \code{\link[=configure_cache]{configure_cache()}}.
 \code{FALSE} skips the response cache for this call. \code{TRUE} uses it when
 caching is enabled globally and has no effect otherwise.}
-\item{\code{.history}}{A \code{dsprrr_history} from \code{\link[=conversation_history]{conversation_history()}} or
-\code{\link[=load_history]{load_history()}}. The default \code{NULL} keeps existing Chat behavior. A
-non-\code{NULL} history is supported for scalar root \code{\link[=react]{react()}} modules and
-requires \code{.return_format = "structured"}; the result carries the new
-history in \code{metadata$conversation_history}.}
 \item{\code{.concurrency}}{A policy from \code{\link[=concurrency_control]{concurrency_control()}} for batch
 inputs. The default runs rows one after another.}
 \item{\code{.return_format}}{\code{"simple"} (the default) returns the outputs;

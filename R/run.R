@@ -11,6 +11,11 @@
 #'   of the runtime arguments described below. RLM modules ([rlm_module()])
 #'   treat every value as one context object whatever its length; use
 #'   [run_dataset()] to run them several times.
+#' @param .history A `dsprrr_history` from [conversation_history()] or
+#'   [load_history()]. The default `NULL` keeps existing Chat behavior. A
+#'   non-`NULL` history is supported for scalar root [react()] modules and
+#'   requires `.return_format = "structured"`; the result carries the new
+#'   history in `metadata$conversation_history`.
 #'
 #' @section Runtime arguments:
 #' These arguments start with a dot so they cannot clash with input names.
@@ -24,11 +29,6 @@
 #'   \item{`.cache`}{`NULL` (the default) follows [configure_cache()].
 #'     `FALSE` skips the response cache for this call. `TRUE` uses it when
 #'     caching is enabled globally and has no effect otherwise.}
-#'   \item{`.history`}{A `dsprrr_history` from [conversation_history()] or
-#'     [load_history()]. The default `NULL` keeps existing Chat behavior. A
-#'     non-`NULL` history is supported for scalar root [react()] modules and
-#'     requires `.return_format = "structured"`; the result carries the new
-#'     history in `metadata$conversation_history`.}
 #'   \item{`.concurrency`}{A policy from [concurrency_control()] for batch
 #'     inputs. The default runs rows one after another.}
 #'   \item{`.return_format`}{`"simple"` (the default) returns the outputs;

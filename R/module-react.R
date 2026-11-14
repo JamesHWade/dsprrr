@@ -371,10 +371,12 @@ ReactModule <- R6::R6Class(
         },
         dsprrr_react_submit_completed = function(error) {
           if (
-            !identical(
-              error$invocation_marker,
-              submit_invocation_marker
-            )
+            !identical(finalization, "submit") ||
+              is.null(submit_invocation_marker) ||
+              !identical(
+                error$invocation_marker,
+                submit_invocation_marker
+              )
           ) {
             stop(error)
           }
