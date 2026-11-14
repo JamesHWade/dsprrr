@@ -143,7 +143,7 @@ test_that("explicit ReAct history seeds an isolated current Chat", {
   original_turns <- current$chat$get_turns()
   original_tools <- current$chat$get_tools()
 
-  prepared <- dsprrr:::react_history_prepare(
+  prepared <- react_history_prepare(
     current$chat,
     fixture$history
   )
@@ -173,7 +173,7 @@ test_that("explicit ReAct history seeds an isolated current Chat", {
 test_that("completed explicit ReAct turns append to the supplied history", {
   fixture <- react_history_fixture()
   current <- react_history_test_chat()
-  prepared <- dsprrr:::react_history_prepare(current$chat, fixture$history)
+  prepared <- react_history_prepare(current$chat, fixture$history)
   added <- list(
     ellmer::UserTurn(list(ellmer::ContentText("new question"))),
     ellmer::AssistantTurn(
@@ -185,7 +185,7 @@ test_that("completed explicit ReAct turns append to the supplied history", {
   )
   prepared$set_turns(c(prepared$get_turns(), added))
 
-  completed <- dsprrr:::react_history_finish(prepared, fixture$history)
+  completed <- react_history_finish(prepared, fixture$history)
 
   expect_identical(
     completed,
@@ -202,7 +202,7 @@ test_that("completed explicit ReAct turns append to the supplied history", {
     ellmer::AssistantTurn(list(ellmer::ContentText("different answer")))
   ))
   expect_error(
-    dsprrr:::react_history_finish(prepared, other_history),
+    react_history_finish(prepared, other_history),
     class = "dsprrr_history_error"
   )
 })
@@ -211,16 +211,16 @@ test_that("empty history opts into a reset clone and rejects other kinds", {
   current <- react_history_test_chat()
   original_turns <- current$chat$get_turns()
   empty <- conversation_history()
-  prepared <- dsprrr:::react_history_prepare(current$chat, empty)
+  prepared <- react_history_prepare(current$chat, empty)
 
   expect_length(prepared$get_turns(), 0L)
   expect_identical(current$chat$get_turns(), original_turns)
-  expect_identical(dsprrr:::react_history_finish(prepared, empty), empty)
+  expect_identical(react_history_finish(prepared, empty), empty)
 
   other_kind <- conversation_history()
   other_kind$kind <- "rlm"
   expect_error(
-    dsprrr:::react_history_prepare(current$chat, other_kind),
+    react_history_prepare(current$chat, other_kind),
     class = "dsprrr_history_error"
   )
 })
