@@ -367,7 +367,8 @@ metric <- metric_with_feedback(
 )
 
 tp <- GEPA(metric = metric, generations = 5L)
-compiled <- compile(qa, tp, trainset)
+reflection_chat <- ellmer::chat_openai(model = "gpt-6-astra")
+compiled <- compile(qa, tp, trainset, .reflection_llm = reflection_chat)
 ```
 
 The feedback for failed examples goes into GEPA's reflection prompt, so the
@@ -382,6 +383,8 @@ Chat, and both stages contribute to the optimizer budget. An explicit
 still resolve through the program's normal runtime configuration.
 
 ```{r}
+task_chat <- ellmer::chat_openai(model = "gpt-6-luna")
+reflection_chat <- ellmer::chat_openai(model = "gpt-6-astra")
 compiled <- compile(
   qa,
   GEPA(metric = metric),
@@ -404,6 +407,9 @@ result without further model or metric calls. An exhausted run can continue
 when its resource limit is raised.
 
 ```{r}
+# Start this resumable search with fresh, empty Chats.
+task_chat <- ellmer::chat_openai(model = "gpt-6-luna")
+reflection_chat <- ellmer::chat_openai(model = "gpt-6-astra")
 control <- optimizer_control(
   checkpoint_path = "gepa-search.rds",
   max_metric_calls = 50
@@ -520,7 +526,7 @@ decisions, the evidence schema, and how ReAnchor searches.
 | `dspy.Image`, `dspy.Audio`, `dspy.File` | ellmer `Content` objects (images, PDFs) passed as inputs |
 | `dspy.History` | Explicit `conversation_history()` values, `get_history()`, and bounded JSON save/load for scalar ReAct and RLM continuation. ReAct retains native turns; RLM retains inert task, trajectory, and output evidence with a fresh interpreter |
 | `dspy.Tool`, `dspy.ToolCalls`, `ToolCallResults` | ellmer `ToolDef`, `ContentToolRequest`, and `ContentToolResult`; IDs remain attached to native turns |
-| `dspy.Reasoning` (native reasoning traces) | Native thinking is optional current-call metadata in supported Predict/CoT and RLM paths. `with_reasoning()` also offers explicit rationale and plan modes; there is no separate typed reasoning output |
+| `dspy.Reasoning` (native reasoning traces) | Native thinking is optional current-call metadata in supported Predict/CoT and RLM paths. `chain_of_thought()` also offers explicit rationale and plan modes; there is no separate typed reasoning output |
 | Experimental `Noul`, `Score[...]`, `Choice[...]` annotations | Plain `type_boolean()` / `type_enum()` outputs plus `with_decisions()` settings on the module; the answer space stays in the signature, and the tunable settings live on the module |
 
 ## Programs and composition
