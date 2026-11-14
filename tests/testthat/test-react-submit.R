@@ -169,6 +169,57 @@ test_that("submit finalization validates and returns nested typed output", {
   )
 })
 
+test_that("accepted submit tool results preserve numeric precision", {
+  calls <- new.env(parent = emptyenv())
+  output <- list(
+    small = 0.000012345,
+    precise = 1.2345678901234567,
+    nested = list(1e-100, 1.2345678901234567)
+  )
+  arguments <- as.character(jsonlite::toJSON(
+    output,
+    auto_unbox = TRUE,
+    null = "null",
+    digits = 17
+  ))
+  local_react_submit_backend(
+    list(list(react_submit_function_call("submit", arguments, 1L))),
+    calls
+  )
+  chat <- react_submit_chat()
+  sig <- signature(
+    inputs = list(input("question")),
+    output_type = ellmer::type_object(
+      small = ellmer::type_number(),
+      precise = ellmer::type_number(),
+      nested = ellmer::type_array(ellmer::type_number())
+    )
+  )
+
+  result <- run(
+    react(sig, finalization = "submit"),
+    question = "Return these measurements",
+    .llm = chat,
+    .return_format = "structured"
+  )
+
+  contents <- unlist(
+    lapply(chat$get_turns(), function(turn) turn@contents),
+    recursive = FALSE
+  )
+  tool_results <- Filter(
+    function(content) inherits(content, "ellmer::ContentToolResult"),
+    contents
+  )
+  expect_identical(result$output, output)
+  expect_length(tool_results, 1L)
+  expect_identical(
+    jsonlite::fromJSON(tool_results[[1L]]@value, simplifyVector = FALSE),
+    output
+  )
+  expect_identical(calls$n, 1L)
+})
+
 test_that("invalid nested submit is returned as a repairable tool error", {
   calls <- new.env(parent = emptyenv())
   invalid <- list(
