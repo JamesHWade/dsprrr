@@ -147,6 +147,13 @@ First development changelog. dsprrr is experimental; the API may change.
   validation rows drive selection, per-example winners, and optional retained
   outputs.
 
+* `GEPA()` can use a separate `.reflection_llm` Chat for instruction and Flex
+  proposals while `.llm` remains the task Chat for candidate evaluation.
+  An explicitly supplied `.llm` remains the compatibility fallback when
+  `.reflection_llm` is omitted. Mutable searches without either Chat now fail
+  with a configuration error instead of silently appending fixed instruction
+  text. Reflection calls remain part of the shared optimizer resource budget.
+
 * `optimization_result()` provides one read-only result contract across every
   optimizer, including optimizer identity, completion or partial status,
   baseline and best scores, winning parameters, trial evidence, lineage,

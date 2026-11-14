@@ -169,7 +169,7 @@ test_that("GEPA skips all work when a Flex graph has no mutable components", {
       verbose = FALSE
     ),
     data.frame(question = "q", answer = "a"),
-    .llm = chat
+    .reflection_llm = chat
   )
   metadata <- gepa_test_metadata(optimized)
 
@@ -177,6 +177,16 @@ test_that("GEPA skips all work when a Flex graph has no mutable components", {
   expect_identical(optimized$module_src, program$module_src)
   expect_identical(provider_calls, 0L)
   expect_identical(evaluation_calls, 0L)
+  expect_null(metadata$model_routing$task_model)
+  expect_identical(
+    metadata$model_routing$task_chat_source,
+    "runtime_resolution"
+  )
+  expect_identical(metadata$model_routing$reflection_model, "test-model")
+  expect_identical(
+    metadata$model_routing$reflection_chat_source,
+    "reflection_llm"
+  )
   expect_true(metadata$optimization_skipped)
   expect_identical(metadata$skip_reason, "no_mutable_components")
   expect_identical(metadata$flex_paths, "$")
@@ -188,6 +198,75 @@ test_that("GEPA skips all work when a Flex graph has no mutable components", {
   expect_identical(metadata$budget_summary$provider_calls, 0L)
   expect_identical(metadata$budget_summary$trials, 0L)
   expect_false(metadata$partial)
+})
+
+test_that("GEPA routes Flex source proposals through the reflection Chat", {
+  program <- suppressWarnings(flex("question -> answer"))
+  proposed_source <- gepa_flex_test_source()
+  task_models <- character()
+  proposal_calls <- 0L
+  task_chat <- new_test_chat(model = "flex-task-model")
+  reflection_chat <- new_test_chat(
+    model = "flex-reflection-model",
+    chat_structured = function(prompt, type, ...) {
+      expect_identical(names(type@properties), "module_src")
+      expect_match(prompt, "complete declarative Flex module source")
+      proposal_calls <<- proposal_calls + 1L
+      list(module_src = proposed_source)
+    }
+  )
+  testthat::local_mocked_bindings(
+    eval_program = function(program, dataset, metric, .llm, ...) {
+      task_models <<- c(
+        task_models,
+        dsprrr:::ellmer_chat_model(.llm)@name
+      )
+      dsprrr:::EvalResult(
+        examples = tibble::tibble(
+          row_id = 1L,
+          score = 1,
+          error = NA_character_,
+          predicted = list("answer"),
+          feedback = NA_character_
+        ),
+        mean_score = 1,
+        n_evaluated = 1L,
+        n_errors = 0L,
+        provider_calls = 1L,
+        metric_calls = 1L
+      )
+    },
+    .package = "dsprrr"
+  )
+
+  compiled <- compile(
+    program,
+    GEPA(
+      metric = function(...) 1,
+      population_size = 2L,
+      generations = 1L,
+      selection = "current_best",
+      verbose = FALSE
+    ),
+    data.frame(question = "q", answer = "a"),
+    .llm = task_chat,
+    .reflection_llm = reflection_chat
+  )
+  metadata <- gepa_test_metadata(compiled)
+
+  expect_identical(proposal_calls, 1L)
+  expect_identical(task_models, rep("flex-task-model", 2L))
+  expect_identical(metadata$model_routing$task_model, "flex-task-model")
+  expect_identical(metadata$model_routing$task_chat_source, "compile_llm")
+  expect_identical(
+    metadata$model_routing$reflection_model,
+    "flex-reflection-model"
+  )
+  expect_identical(metadata$budget_summary$provider_calls, 3L)
+  expect_true(
+    "gepa:initial_component_mutation:2" %in%
+      metadata$budget_summary$completed_units
+  )
 })
 
 test_that("GEPA materialization supports composite roots and shared aliases", {
@@ -1547,7 +1626,8 @@ test_that("ordinary programs use complete component candidates and result metada
       track_best_outputs = TRUE,
       verbose = FALSE
     ),
-    data.frame(question = "q", answer = "a")
+    data.frame(question = "q", answer = "a"),
+    .reflection_llm = gepa_test_reflection_chat()
   )
   metadata <- gepa_test_metadata(optimized)
 
@@ -1597,6 +1677,9 @@ test_that("GEPA separates discovery trainset from validation frontier data", {
       question = "validation",
       answer = "v",
       split = "validation"
+    ),
+    .reflection_llm = gepa_flex_test_chat(
+      list(module_src = program$module_src)
     )
   )
   metadata <- gepa_test_metadata(optimized)
@@ -1787,6 +1870,8 @@ test_that("mutation metadata distinguishes immediate parents from ancestors", {
     parent,
     program,
     failed_examples = list(list(feedback = "Improve it.")),
+    .llm = gepa_test_reflection_chat("Updated instructions."),
+    budget = dsprrr:::new_optimizer_budget(dsprrr:::optimizer_control()),
     component_id = names(parent$components)[[1L]]
   )
   lineage <- dsprrr:::gepa_component_candidate_lineage(child)
