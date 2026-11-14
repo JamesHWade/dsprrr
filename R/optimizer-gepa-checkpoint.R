@@ -2128,7 +2128,7 @@ gepa_checkpoint_no_mutable_result <- function(
     flex_paths = gepa_flex_paths(program, mutable_only = FALSE),
     mutable_flex_paths = character(),
     component_ids = character(),
-    component_semantics = modifyList(
+    component_semantics = utils::modifyList(
       gepa_component_semantics(isTRUE(gepa_teleprompter_property(
         teleprompter,
         "track_best_outputs",

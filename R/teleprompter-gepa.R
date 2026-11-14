@@ -75,10 +75,12 @@
 #' for candidate evaluation. When `.reflection_llm` is omitted, an explicitly
 #' supplied `.llm` is used for both roles for compatibility. The optimization
 #' result records model names and the reflection route in
-#' `extensions$gepa$model_routing`. If `.llm` is omitted, `task_model` reports
-#' the effective attached/default Chat model when it can be resolved, and
-#' `task_chat_source` records `"runtime_resolution"`. Both roles share the optimizer's resource budget;
-#' reflection requests are attributed to GEPA reflection stages.
+#' `extensions$gepa$model_routing`. Without checkpointing, an omitted `.llm`
+#' leaves `task_model` as `NULL`, and `task_chat_source` records
+#' `"runtime_resolution"`. Checkpointed searches additionally report the
+#' effective attached/default Chat models when they can be resolved. Both roles
+#' share the optimizer's resource budget; reflection requests are attributed to
+#' GEPA reflection stages.
 #'
 #' GEPA deep-clones the reflection Chat for each proposal and clears the
 #' clone's conversation turns. Model settings are retained, proposal calls do
