@@ -2119,7 +2119,7 @@ compile_gepa_components <- function(
       optimization_skipped = TRUE,
       skip_reason = "no_mutable_components",
       model_routing = list(
-        task_model = gepa_chat_model_name(.llm),
+        task_model = gepa_effective_task_models(program, .llm),
         task_chat_source = task_chat_source,
         reflection_model = gepa_chat_model_name(.reflection_llm),
         reflection_chat_source = reflection_chat_source,
@@ -2516,7 +2516,7 @@ compile_gepa_components <- function(
     successful_merge_count = lineage_merges,
     track_best_outputs = track_best_outputs,
     model_routing = list(
-      task_model = gepa_chat_model_name(.llm),
+      task_model = gepa_effective_task_models(program, .llm),
       task_chat_source = task_chat_source,
       reflection_model = gepa_chat_model_name(.reflection_llm),
       reflection_chat_source = reflection_chat_source,
