@@ -113,6 +113,136 @@ test_that("history JSON round-trips supported ellmer content as fresh turns", {
   expect_identical(tool_calls, 0L)
 })
 
+test_that("history validates tagged value arrays before calling length methods", {
+  length_called <- FALSE
+  method_name <- "length.history_values_dispatch_probe"
+  assign(
+    method_name,
+    function(x) {
+      length_called <<- TRUE
+      NextMethod("length")
+    },
+    envir = .GlobalEnv
+  )
+  on.exit(rm(list = method_name, envir = .GlobalEnv), add = TRUE)
+
+  for (data in list(list(answer = "ok"), c("one", "two"))) {
+    history <- conversation_history(list(
+      ellmer::UserTurn(list(history_test_content_json(data = data)))
+    ))
+    values <- history$turns[[1L]]$contents[[1L]]$data$values
+    history$turns[[1L]]$contents[[1L]]$data$values <- structure(
+      values,
+      class = "history_values_dispatch_probe"
+    )
+
+    expect_error(
+      history_turns(history),
+      "must be a plain list",
+      class = "dsprrr_history_error"
+    )
+    expect_false(length_called)
+  }
+})
+
+test_that("history double decimals preserve exact bits through repeated round trips", {
+  ordinary <- conversation_history(list(
+    ellmer::UserTurn(list(history_test_content_json(
+      data = list(
+        positive = 0.125,
+        negative = -0.125
+      )
+    )))
+  ))
+  expect_identical(
+    history_to_json(ordinary),
+    paste0(
+      "{\"format\":\"dsprrr_conversation_history\",\"version\":1,",
+      "\"kind\":\"react\",\"turns\":[{\"role\":\"user\",\"contents\":[",
+      "{\"type\":\"json\",\"data\":{\"tag\":\"list\",",
+      "\"names\":[\"positive\",\"negative\"],\"values\":[",
+      "{\"tag\":\"vector\",\"type\":\"double\",\"names\":null,",
+      "\"values\":[{\"tag\":\"double\",\"value\":\"             0.125\"}]},",
+      "{\"tag\":\"vector\",\"type\":\"double\",\"names\":null,",
+      "\"values\":[{\"tag\":\"double\",\"value\":\"            -0.125\"}]}]},",
+      "\"string\":{\"tag\":\"null\"}}]}]}"
+    )
+  )
+
+  negative_zero <- -0.0
+  values <- c(
+    maximum = .Machine$double.xmax,
+    minimum_normal = .Machine$double.xmin,
+    high = 1e300,
+    low = 1e-300,
+    power = 1e100,
+    negative_zero = negative_zero,
+    minimum_subnormal = .Machine$double.xmin * .Machine$double.eps,
+    missing = NA_real_
+  )
+  generated <- withr::with_seed(7314, {
+    signs <- sample(c(-1, 1), 512L, replace = TRUE)
+    exponents <- sample(-1073:1023, 512L, replace = TRUE)
+    signs * runif(512L, min = 0.5, max = 1) * 2^exponents
+  })
+  names(generated) <- paste0("generated_", seq_along(generated))
+  values <- c(values, generated)
+  history <- conversation_history(list(
+    ellmer::UserTurn(list(history_test_content_json(data = values)))
+  ))
+  wire <- history_to_json(history)
+  negative_zero_node <- history$turns[[1L]]$contents[[1L]]$data$values[[
+    which(names(values) == "negative_zero")
+  ]]
+
+  expect_identical(trimws(negative_zero_node$value), "-0")
+  expect_false(identical(
+    writeBin(values[["negative_zero"]], raw()),
+    writeBin(0.0, raw())
+  ))
+
+  for (cycle in seq_len(3L)) {
+    path <- withr::local_tempfile(fileext = ".json")
+    save_history(history, path)
+    restored <- load_history(path)
+    actual <- history_turns(restored)[[1L]]@contents[[1L]]@data
+
+    expect_identical(history_to_json(restored), wire)
+    expect_identical(writeBin(actual, raw()), writeBin(values, raw()))
+    expect_false(identical(
+      writeBin(actual[["negative_zero"]], raw()),
+      writeBin(0.0, raw())
+    ))
+    history <- restored
+  }
+})
+
+test_that("history double parsing rejects nonnumeric JSON values", {
+  history <- conversation_history(list(
+    ellmer::UserTurn(list(history_test_content_json(data = c(value = 1.25))))
+  ))
+  invalid <- list(
+    "true",
+    "false",
+    "null",
+    "\"1.25\"",
+    "[]",
+    "{}",
+    "1e999",
+    "https://example.com/value"
+  )
+
+  for (value in invalid) {
+    mutated <- history
+    mutated$turns[[1L]]$contents[[1L]]$data$values[[1L]]$value <- value
+    expect_error(
+      history_turns(mutated),
+      "History double value is invalid",
+      class = "dsprrr_history_error"
+    )
+  }
+})
+
 test_that("history values are copied on construction and reconstruction", {
   original <- list(items = c(1L, 2L))
   turn <- ellmer::UserTurn(list(history_test_content_json(data = original)))
