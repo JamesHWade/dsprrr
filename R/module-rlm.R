@@ -39,6 +39,16 @@ NULL
 #'   get the answer back as a value. These count against `max_llm_calls`.
 #' * The functions supplied in `tools`.
 #'
+#' A query slice may be a text string or an ordered list of records such as
+#' `list(list(type = "text", text = "..."), list(type = "image_url",
+#' url = "https://example.com/image.png", detail = "auto"))`. Inline images use
+#' `type = "image_base64"`, an image MIME type, and base64 data up to 524,288
+#' bytes. Image URLs must use HTTPS, omit user info, and be at most 2,048 bytes;
+#' local paths and PDF records are unsupported. The managed
+#' `mcp_repl_runner()` control frame defaults to 3,000 bytes, so inline data
+#' must also fit that transport limit. These JSON-native records work without
+#' ellmer in the guest process.
+#'
 #' Sub-queries and tools run in the host R process, not in the runner: the
 #' generated code pauses, dsprrr handles the request, and the code is replayed
 #' with the response. Variables persist across steps within one call, so the
@@ -283,6 +293,12 @@ validate_rlm_output_type <- function(type) {
 
 clone_rlm_chat <- function(chat) {
   clone_ellmer_chat(chat, arg = "sub_lm", reset_turns = TRUE)
+}
+
+
+rlm_chat_prompt <- function(chat, prompt) {
+  content <- if (is.list(prompt)) prompt else list(prompt)
+  do.call(chat$chat, content)
 }
 
 
@@ -739,7 +755,7 @@ normalize_rlm_sub_lm_text <- function(response) {
       class = "dsprrr_rlm_sub_lm_response_error"
     )
   }
-  text
+  as.character(text)
 }
 
 
@@ -1643,7 +1659,23 @@ RLMModule <- R6::R6Class(
         tool_desc <- c(
           tool_desc,
           "- `llm_query(query, context_slice = NULL)`: Ask a sub-question to another LLM",
-          "- `llm_query_batched(queries, slices = NULL)`: Batch multiple sub-questions"
+          "- `llm_query_batched(queries, slices = NULL)`: Batch multiple sub-questions",
+          paste0(
+            "  A slice may be text or an ordered list of records: ",
+            "list(list(type = 'text', text = '...'), ",
+            "list(type = 'image_url', url = 'https://...', detail = 'auto'))."
+          ),
+          paste0(
+            "  Inline images use ",
+            "list(type = 'image_base64', mime_type = 'image/png', data = '...') ",
+            "with at most 524288 base64 bytes. Image URLs must use HTTPS, omit ",
+            "user info, and be no more than 2048 bytes; ",
+            "local paths and PDF records are unsupported."
+          ),
+          paste0(
+            "  The managed mcp-repl runner defaults to a 3000-byte control-frame ",
+            "limit and rejects larger requests."
+          )
         )
       }
 
@@ -2059,6 +2091,27 @@ Code:
     #' Process an rlm_query request (single or batch)
     #'
     #' @return List with success, formatted_output, error fields
+    build_rlm_query_prompt = function(query, context_slice) {
+      if (is.null(context_slice)) {
+        return(query)
+      }
+      if (is.character(context_slice)) {
+        return(paste0(
+          "Context:\n",
+          context_slice,
+          "\n\nQuestion: ",
+          query
+        ))
+      }
+
+      content <- lapply(context_slice, rlm_query_content_to_ellmer)
+      c(
+        list(ellmer::ContentText("Context:\n")),
+        content,
+        list(ellmer::ContentText(paste0("\n\nQuestion: ", query)))
+      )
+    },
+
     process_rlm_query = function(request, call_counter, sub_lm) {
       call_counter$provider_calls <- call_counter$provider_calls %||% 0L
       call_counter$provider_calls_known <-
@@ -2090,18 +2143,13 @@ Code:
 
       query <- request$query
       context_slice <- request$context
-
-      prompt <- if (!is.null(context_slice)) {
-        paste0("Context:\n", context_slice, "\n\nQuestion: ", query)
-      } else {
-        query
-      }
+      prompt <- private$build_rlm_query_prompt(query, context_slice)
 
       query_llm <- clone_rlm_chat(sub_lm)
       turns_before <- batch_chat_turns(query_llm)
       result <- tryCatch(
         {
-          response <- query_llm$chat(prompt)
+          response <- rlm_chat_prompt(query_llm, prompt)
           text <- normalize_rlm_sub_lm_text(response)
           list(
             success = TRUE,
@@ -2190,18 +2238,13 @@ Code:
       # Reserve call budget up-front to ensure consistent accounting
       call_counter$count <- call_counter$count + n_queries
 
-      prompts <- vapply(
+      prompts <- lapply(
         seq_len(n_queries),
         function(i) {
           query <- queries[[i]]
           context_slice <- if (!is.null(slices)) slices[[i]] else NULL
-          if (!is.null(context_slice)) {
-            paste0("Context:\n", context_slice, "\n\nQuestion: ", query)
-          } else {
-            query
-          }
-        },
-        character(1)
+          private$build_rlm_query_prompt(query, context_slice)
+        }
       )
 
       batch_result <- private$run_batched_sub_lm_queries(prompts, sub_lm)
@@ -2359,7 +2402,9 @@ Code:
         query_failed <- FALSE
         results[[i]] <- tryCatch(
           {
-            normalize_rlm_sub_lm_text(query_llm$chat(prompts[[i]]))
+            normalize_rlm_sub_lm_text(
+              rlm_chat_prompt(query_llm, prompts[[i]])
+            )
           },
           error = function(e) {
             if (inherits(e, "dsprrr_rlm_sub_lm_response_error")) {
