@@ -209,6 +209,35 @@ before work. Other modules' low-level custom `forward()` methods are outside
 this continuation API. Program artifacts and conversation history remain
 separate files with separate purposes.
 
+### Asynchronous agents
+
+ReAct's async path awaits the complete sequential tool loop and either typed
+submission or structured follow-up. It uses the same simple/structured
+result choice as Predict. A one-invocation control reports ordered progress
+and supports cooperative cancellation:
+
+```{r}
+control <- react_async_control(on_progress = function(event) {
+  message(event$type)
+})
+pending <- run_async(
+  agent,
+  question = "What is the capital of France?",
+  .return_format = "structured",
+  .control = control
+)
+promises::then(pending, function(result) get_output(result))
+# While the call is pending, request cancellation with control$cancel().
+```
+
+Cancellation blocks subsequent work; an active provider request or host tool
+must settle first. The Chat remains reserved during that interval. Progress
+callback errors reject the call after cleanup. A failed/cancelled conversation
+can be partial: metadata distinguishes requested tools from observed results,
+and `observed_tool_results` retains actual result evidence without inventing
+results for tools that did not run. Explicit portable history is not accepted
+on the async path.
+
 ### RLM
 
 dsprrr follows the core DSPy RLM execution model: one interpreter per invocation,
@@ -248,6 +277,15 @@ file records are rejected. The runner's transport cap also applies: a valid
 image record can still be too large for a managed MCP control frame. These
 queries preserve replay identity, ordering, and call budgets; they do not
 establish that every provider/model can interpret images.
+
+RLM action reasoning is also selectable through
+`rlm_module(reasoning_mode = "native")` or `rlm(.reasoning_mode = "native")`.
+Native actions request code without a prompted rationale; provider thinking
+remains optional metadata. `native_reasoning_action_indices` maps retained
+blocks to their action steps. `"plan"` requests a short plan plus code, and
+`"rationale"` preserves the default action schema. The final output signature
+is unchanged. Custom action predictors must satisfy the chosen contract,
+which is checked again before each invocation's model or interpreter work.
 
 RLM remains experimental in dsprrr: the execution and result contracts are
 tested, but the convenience API may still change. For a worked example, see
@@ -461,7 +499,7 @@ pipelines, because root examples do not match each step's signature.
 | LM client | `dspy.LM` on bundled lm15 with canonical Request/Response objects; LiteLLM and OpenAI SDK optional in 3.5; API-family routing defaults to `auto` | Provider-neutral ellmer `Chat`; `run()` normalizes prompt and content inputs into typed requests, while a complete package-wide invocation record is still planned |
 | Configuration | `dspy.configure()` / `dspy.context()` | `dsp_configure()`, `with_lm()`, `local_lm()` |
 | Caching | Two-tier memory + disk | Two-tier memory + disk (`configure_cache()`) |
-| Async | `acall`/`aforward`, `asyncify` | `run_async()` returns promises; direct Predict supports canonical structured results, current-call native reasoning, usage, and success/failure traces. The simple output default is preserved, response caching is explicitly bypassed, and overlapping calls must use separate Chats. Factory-backed code modules retain simple background results; structured factory results are rejected |
+| Async | `acall`/`aforward`, `asyncify` | `run_async()` returns promises; direct Predict supports canonical structured results, current-call native reasoning, usage, and success/failure traces. ReAct supports its complete sequential tool loop, typed completion, progress, and cooperative cancellation. The simple output default is preserved, response caching is explicitly bypassed, and overlapping calls must use separate Chats. Factory-backed code modules retain simple background results; structured factory results are rejected |
 | Streaming | `streamify()` + `StreamListener` | `run_stream()` + `stream_listener()`; one-shot fallback preserves specialized `forward()` semantics, while direct token streaming is limited to ordinary Predict steps and emits status events per pipeline step |
 | Usage tracking | `track_usage` | `get_tokens()`, `get_cost()`, `session_cost()` |
 | Parallel evaluation | `Evaluate(num_threads = ...)` | `evaluate(.concurrency = concurrency_control(...))` via mirai or ellmer's native parallelism. Declarative zero/one-step Flex is supported; executable and multi-step Flex currently require sequential rows |
