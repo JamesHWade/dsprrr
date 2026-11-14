@@ -146,7 +146,23 @@ ReactModule <- R6::R6Class(
     #' @param trace Logical whether to record trace information
     #' @param ... Additional arguments
     #' @return Tibble with result, .chat, .metadata columns
-    forward = function(batch, .llm = NULL, trace = TRUE, ...) {
+    forward = function(batch, .llm = NULL, trace = TRUE, ..., .history = NULL) {
+      assert_explicit_react_history(
+        self,
+        .history,
+        entrypoint = "ReactModule$forward()"
+      )
+      if (
+        !is.null(.history) &&
+          is.data.frame(batch) &&
+          nrow(batch) != 1L
+      ) {
+        assert_explicit_history_scalar(
+          .history,
+          list(kind = "batch"),
+          "ReactModule$forward()"
+        )
+      }
       # Handle both list and data frame inputs
       if (is.data.frame(batch)) {
         inputs <- as.list(batch[1, , drop = FALSE])
@@ -154,8 +170,19 @@ ReactModule <- R6::R6Class(
         inputs <- batch
       }
 
+      if (!is.null(.history)) {
+        assert_explicit_history_scalar(
+          .history,
+          module_input_contract(self, inputs),
+          "ReactModule$forward()"
+        )
+      }
+
       request <- build_module_request(self, inputs)
       llm <- resolve_module_llm(self, .llm = .llm)
+      if (!is.null(.history)) {
+        llm <- react_history_prepare(llm, .history)
+      }
       finalization <- validate_react_finalization(
         self$config$.react_finalization %||% "structured"
       )
@@ -550,6 +577,12 @@ ReactModule <- R6::R6Class(
 
       model <- tryCatch(llm$get_model(), error = function(e) NA_character_)
 
+      conversation_history <- if (!is.null(.history)) {
+        react_history_finish(llm, .history)
+      } else {
+        NULL
+      }
+
       # Create metadata
       metadata <- list(
         timestamp = end_time,
@@ -582,6 +615,9 @@ ReactModule <- R6::R6Class(
           character(1)
         ))
       )
+      if (!is.null(.history)) {
+        metadata$conversation_history <- conversation_history
+      }
 
       # Record trace if requested
       if (trace) {

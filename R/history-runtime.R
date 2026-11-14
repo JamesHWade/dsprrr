@@ -6,6 +6,94 @@ react_history_validate <- function(history) {
   structure(history, class = c("dsprrr_history", "list"))
 }
 
+assert_explicit_react_history <- function(
+  module,
+  history,
+  entrypoint = "run()"
+) {
+  if (is.null(history)) {
+    return(invisible(FALSE))
+  }
+  if (
+    !inherits(module, "Module") ||
+      !identical(class(module)[[1L]], "ReactModule")
+  ) {
+    cli::cli_abort(
+      c(
+        "Explicit conversation history is supported only for a root ReAct module",
+        "x" = "{.fn {entrypoint}} received {.cls {class(module)[[1L]]}}.",
+        "i" = "Use a scalar {.fn react} call, or omit {.arg .history}."
+      ),
+      class = c(
+        "dsprrr_history_unsupported_module",
+        "dsprrr_history_error"
+      )
+    )
+  }
+  react_history_validate(history)
+  invisible(TRUE)
+}
+
+assert_explicit_history_structured <- function(history, return_format) {
+  if (
+    !is.null(history) &&
+      !identical(return_format, "structured")
+  ) {
+    cli::cli_abort(
+      c(
+        "Explicit conversation history requires structured results",
+        "x" = "The simple result format would discard continuation state.",
+        "i" = "Set {.arg .return_format} to {.val structured}."
+      ),
+      class = c(
+        "dsprrr_history_result_format_error",
+        "dsprrr_history_error"
+      )
+    )
+  }
+  invisible(NULL)
+}
+
+assert_explicit_history_scalar <- function(
+  history,
+  input_contract,
+  entrypoint
+) {
+  if (
+    !is.null(history) &&
+      !identical(input_contract$kind, "scalar")
+  ) {
+    cli::cli_abort(
+      c(
+        "Explicit conversation history requires one scalar input",
+        "x" = "{.fn {entrypoint}} received {.val {input_contract$kind}} inputs.",
+        "i" = "Use {.fn run_dataset} only when no history is supplied."
+      ),
+      class = c(
+        "dsprrr_history_batch_error",
+        "dsprrr_history_error"
+      )
+    )
+  }
+  invisible(NULL)
+}
+
+reject_explicit_history_entrypoint <- function(history, entrypoint) {
+  if (!is.null(history)) {
+    cli::cli_abort(
+      c(
+        "Explicit conversation history is not supported by {.fn {entrypoint}}",
+        "i" = "Use synchronous {.fn run} with a scalar root {.fn react} module and {.arg .return_format = \"structured\"}."
+      ),
+      class = c(
+        "dsprrr_history_unsupported_entrypoint",
+        "dsprrr_history_error"
+      )
+    )
+  }
+  invisible(NULL)
+}
+
 # Prepare an independent current Chat for one explicit-history ReAct call.
 # The codec reconstructs only data; setting those turns never dispatches tools.
 react_history_prepare <- function(chat, history) {

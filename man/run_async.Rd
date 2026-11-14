@@ -9,7 +9,8 @@ run_async(
   ...,
   .llm = NULL,
   .return_format = c("simple", "structured"),
-  .trace_context = list()
+  .trace_context = list(),
+  .history = NULL
 )
 }
 \arguments{
@@ -31,6 +32,9 @@ output value, or \code{"structured"}, which resolves to a \code{dsprrr_result} w
 \item{.trace_context}{A named, JSON-compatible list, as in \code{\link[=run]{run()}}. The
 promise carries it in its \code{dsprrr_trace_context} attribute. Direct Predict
 calls also record it in the module's traces.}
+
+\item{.history}{Explicit conversation history is not supported by async
+execution; use synchronous \code{\link[=run]{run()}} for scalar root ReAct continuation.}
 }
 \value{
 A promise that resolves to the module's output, matching

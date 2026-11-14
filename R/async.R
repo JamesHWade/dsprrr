@@ -29,6 +29,8 @@ NULL
 #' @param .trace_context A named, JSON-compatible list, as in [run()]. The
 #'   promise carries it in its `dsprrr_trace_context` attribute. Direct Predict
 #'   calls also record it in the module's traces.
+#' @param .history Explicit conversation history is not supported by async
+#'   execution; use synchronous [run()] for scalar root ReAct continuation.
 #'
 #' @details
 #' Prediction modules call ellmer's `chat_structured_async()` directly. These
@@ -71,8 +73,10 @@ run_async <- function(
   ...,
   .llm = NULL,
   .return_format = c("simple", "structured"),
-  .trace_context = list()
+  .trace_context = list(),
+  .history = NULL
 ) {
+  reject_explicit_history_entrypoint(.history, "run_async()")
   if (!inherits(module, "Module")) {
     cli::cli_abort("{.arg module} must be a dsprrr Module object")
   }
@@ -584,6 +588,8 @@ run_factory_interpreter_async <- function(module, inputs, .llm = NULL) {
 #' @param ... Inputs named after the signature's input fields.
 #' @param .llm An ellmer Chat; see [run()] for how it is chosen when
 #'   omitted.
+#' @param .history Explicit conversation history is not supported by async
+#'   streaming; use synchronous [run()] for scalar root ReAct continuation.
 #'
 #' @details
 #' The generator comes from ellmer's `Chat$stream_async()`. The call does not
@@ -611,7 +617,8 @@ run_factory_interpreter_async <- function(module, inputs, .llm = NULL) {
 #' })
 #' print_chunks(chunks)
 #' }
-stream_async <- function(module, ..., .llm = NULL) {
+stream_async <- function(module, ..., .llm = NULL, .history = NULL) {
+  reject_explicit_history_entrypoint(.history, "stream_async()")
   if (!inherits(module, "Module")) {
     cli::cli_abort("{.arg module} must be a dsprrr Module object")
   }
@@ -691,6 +698,8 @@ stream_listener <- function(field, callback) {
 #' @param listeners A [stream_listener()], or a list of them.
 #' @param on_status A function called with a list for each progress event
 #'   (see below), or `NULL`.
+#' @param .history Explicit conversation history is not supported by streaming;
+#'   use synchronous [run()] for scalar root ReAct continuation.
 #'
 #' @details
 #' ## Streaming
@@ -738,8 +747,10 @@ run_stream <- function(
   ...,
   .llm = NULL,
   listeners = list(),
-  on_status = NULL
+  on_status = NULL,
+  .history = NULL
 ) {
+  reject_explicit_history_entrypoint(.history, "run_stream()")
   if (!inherits(module, "Module")) {
     cli::cli_abort("{.arg module} must be a dsprrr Module object")
   }
