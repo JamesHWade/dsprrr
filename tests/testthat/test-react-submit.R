@@ -605,6 +605,330 @@ test_that("bare array submit checks object item keys before stripping", {
   )))
 })
 
+test_that("bare array submit repairs JSON scalars before accepting arrays", {
+  calls <- new.env(parent = emptyenv())
+  sig <- signature(
+    inputs = list(input("question")),
+    output_type = ellmer::type_array(ellmer::type_string())
+  )
+  local_react_submit_backend(
+    list(
+      list(react_submit_function_call(
+        "submit",
+        '{"value":"answer"}',
+        1L
+      )),
+      list(react_submit_function_call(
+        "submit",
+        '{"value":["answer"]}',
+        2L
+      ))
+    ),
+    calls
+  )
+  chat <- react_submit_chat()
+  mod <- react(sig, finalization = "submit", max_iterations = 2L)
+
+  result <- suppressWarnings(run(
+    mod,
+    question = "Return an array",
+    .llm = chat,
+    .return_format = "structured"
+  ))
+
+  expect_identical(result$output, list("answer"))
+  expect_identical(calls$n, 2L)
+  requests <- unlist(
+    lapply(result$metadata$history, function(turn) {
+      Filter(
+        function(content) inherits(content, "ellmer::ContentToolRequest"),
+        turn@contents
+      )
+    }),
+    recursive = FALSE
+  )
+  expect_length(requests, 2L)
+  expect_identical(requests[[1L]]@arguments$value, "answer")
+  expect_identical(requests[[2L]]@arguments$value, list("answer"))
+  tool_outputs <- Filter(
+    function(item) identical(item$type, "function_call_output"),
+    calls$bodies[[2L]]$input
+  )
+  expect_true(any(vapply(
+    tool_outputs,
+    function(item) grepl("must be a JSON array", item$output),
+    logical(1)
+  )))
+})
+
+test_that("bare array submit distinguishes empty arrays from objects", {
+  calls <- new.env(parent = emptyenv())
+  sig <- signature(
+    inputs = list(input("question")),
+    output_type = ellmer::type_array(ellmer::type_string())
+  )
+  local_react_submit_backend(
+    list(
+      list(react_submit_function_call("submit", '{"value":{}}', 1L)),
+      list(react_submit_function_call("submit", '{"value":[]}', 2L))
+    ),
+    calls
+  )
+  chat <- react_submit_chat()
+  mod <- react(sig, finalization = "submit", max_iterations = 2L)
+
+  result <- suppressWarnings(run(
+    mod,
+    question = "Return an empty array",
+    .llm = chat,
+    .return_format = "structured"
+  ))
+
+  expect_identical(result$output, list())
+  expect_identical(calls$n, 2L)
+  requests <- unlist(
+    lapply(result$metadata$history, function(turn) {
+      Filter(
+        function(content) inherits(content, "ellmer::ContentToolRequest"),
+        turn@contents
+      )
+    }),
+    recursive = FALSE
+  )
+  expect_length(requests, 2L)
+  expect_identical(
+    names(requests[[1L]]@arguments$value),
+    character()
+  )
+  expect_null(names(requests[[2L]]@arguments$value))
+  repair <- Filter(
+    function(item) identical(item$type, "function_call_output"),
+    calls$bodies[[2L]]$input
+  )
+  expect_true(any(vapply(
+    repair,
+    function(item) grepl("must be a JSON array", item$output),
+    logical(1)
+  )))
+})
+
+test_that("optional array submit still requires an object argument envelope", {
+  calls <- new.env(parent = emptyenv())
+  sig <- signature(
+    inputs = list(input("question")),
+    output_type = ellmer::type_array(
+      ellmer::type_string(),
+      required = FALSE
+    )
+  )
+  local_react_submit_backend(
+    list(
+      list(react_submit_function_call("submit", "[]", 1L)),
+      list(react_submit_function_call("submit", "{}", 2L))
+    ),
+    calls
+  )
+  chat <- react_submit_chat()
+  mod <- react(sig, finalization = "submit", max_iterations = 3L)
+
+  result <- suppressWarnings(run(
+    mod,
+    question = "Omit the optional array output",
+    .llm = chat,
+    .return_format = "structured"
+  ))
+
+  expect_null(result$output)
+  expect_identical(calls$n, 2L)
+  repair <- Filter(
+    function(item) identical(item$type, "function_call_output"),
+    calls$bodies[[2L]]$input
+  )
+  expect_true(any(vapply(
+    repair,
+    function(item) grepl("arguments must be a JSON object", item$output),
+    logical(1)
+  )))
+})
+
+test_that("ellmer rejects null tool arguments before ReAct submit callbacks", {
+  calls <- new.env(parent = emptyenv())
+  local_react_submit_backend(
+    list(list(react_submit_function_call("submit", "null", 1L))),
+    calls
+  )
+  chat <- react_submit_chat()
+  mod <- react(
+    signature(
+      inputs = list(input("question")),
+      output_type = ellmer::type_array(
+        ellmer::type_string(),
+        required = FALSE
+      )
+    ),
+    finalization = "submit"
+  )
+
+  condition <- expect_error(
+    run(
+      mod,
+      question = "Omit the optional array output",
+      .llm = chat,
+      .return_format = "structured"
+    ),
+    class = "dsprrr_provider_error"
+  )
+
+  expect_match(conditionMessage(condition), "@arguments must be <list>")
+  expect_identical(calls$n, 1L)
+})
+
+test_that("nested array properties repair scalar JSON values", {
+  calls <- new.env(parent = emptyenv())
+  sig <- signature(
+    inputs = list(input("question")),
+    output_type = ellmer::type_object(
+      items = ellmer::type_array(ellmer::type_string())
+    )
+  )
+  local_react_submit_backend(
+    list(
+      list(react_submit_function_call(
+        "submit",
+        '{"items":"one"}',
+        1L
+      )),
+      list(react_submit_function_call(
+        "submit",
+        '{"items":["one","two"]}',
+        2L
+      ))
+    ),
+    calls
+  )
+  chat <- react_submit_chat()
+  mod <- react(sig, finalization = "submit", max_iterations = 2L)
+
+  result <- suppressWarnings(run(
+    mod,
+    question = "Return nested array data",
+    .llm = chat,
+    .return_format = "structured"
+  ))
+
+  expect_identical(result$output, list(items = list("one", "two")))
+  expect_identical(calls$n, 2L)
+  repair <- Filter(
+    function(item) identical(item$type, "function_call_output"),
+    calls$bodies[[2L]]$input
+  )
+  expect_true(any(vapply(
+    repair,
+    function(item) grepl("items must be a JSON array", item$output),
+    logical(1)
+  )))
+})
+
+test_that("empty object and only-ignored output schemas still submit", {
+  output_types <- list(
+    ellmer::type_object(),
+    ellmer::type_object(ignored = ellmer::type_ignore())
+  )
+  for (output_type in output_types) {
+    calls <- new.env(parent = emptyenv())
+    local_react_submit_backend(
+      list(list(react_submit_function_call("submit", "{}", 1L))),
+      calls,
+      .env = environment()
+    )
+    chat <- react_submit_chat()
+    mod <- react(
+      signature(
+        inputs = list(input("question")),
+        output_type = output_type
+      ),
+      finalization = "submit"
+    )
+
+    result <- suppressWarnings(run(
+      mod,
+      question = "Return an empty object",
+      .llm = chat,
+      .return_format = "structured"
+    ))
+
+    expect_identical(result$output, stats::setNames(list(), character()))
+    expect_identical(calls$n, 1L)
+  }
+  expect_identical(
+    react_submit_tool(ellmer::type_object())(),
+    "Submission accepted."
+  )
+  expect_identical(
+    react_submit_tool(ellmer::type_object(ignored = ellmer::type_ignore()))(),
+    "Submission accepted."
+  )
+})
+
+test_that("nested empty objects and arrays keep their JSON shapes", {
+  calls <- new.env(parent = emptyenv())
+  sig <- signature(
+    inputs = list(input("question")),
+    output_type = ellmer::type_object(
+      payload = ellmer::type_object(
+        items = ellmer::type_array(ellmer::type_string())
+      )
+    )
+  )
+  local_react_submit_backend(
+    list(
+      list(react_submit_function_call("submit", '{"payload":[]}', 1L)),
+      list(react_submit_function_call(
+        "submit",
+        '{"payload":{"items":{}}}',
+        2L
+      )),
+      list(react_submit_function_call(
+        "submit",
+        '{"payload":{"items":[]}}',
+        3L
+      ))
+    ),
+    calls
+  )
+  chat <- react_submit_chat()
+  mod <- react(sig, finalization = "submit", max_iterations = 3L)
+
+  result <- suppressWarnings(run(
+    mod,
+    question = "Return nested empty data",
+    .llm = chat,
+    .return_format = "structured"
+  ))
+
+  expect_identical(
+    result$output,
+    list(payload = list(items = list()))
+  )
+  expect_identical(calls$n, 3L)
+  repairs <- lapply(calls$bodies[-1L], function(body) {
+    Filter(
+      function(item) identical(item$type, "function_call_output"),
+      body$input
+    )
+  })
+  expect_true(any(vapply(
+    repairs[[1L]],
+    function(item) grepl("payload must be a JSON object", item$output),
+    logical(1)
+  )))
+  expect_true(any(vapply(
+    repairs[[2L]],
+    function(item) grepl("payload\\$items must be a JSON array", item$output),
+    logical(1)
+  )))
+})
+
 test_that("duplicate checks preserve null, empty, and ignored field handling", {
   optional_type <- ellmer::type_object(
     maybe = ellmer::type_string(required = FALSE)
@@ -628,7 +952,7 @@ test_that("duplicate checks preserve null, empty, and ignored field handling", {
   )
   expect_identical(
     react_submit_validate(
-      list(),
+      stats::setNames(list(), character()),
       ellmer::type_object(),
       bare_output = FALSE
     ),
@@ -674,6 +998,19 @@ test_that("duplicate checks preserve null, empty, and ignored field handling", {
   expect_match(
     conditionMessage(ignored_array_condition),
     "ignored and must be NULL"
+  )
+  null_array_wrapper <- rlang::catch_cnd(react_submit_validate(
+    NULL,
+    ellmer::type_array(ellmer::type_string(), required = FALSE),
+    bare_output = TRUE
+  ))
+  expect_s3_class(
+    null_array_wrapper,
+    "dsprrr_react_submit_validation_error"
+  )
+  expect_match(
+    conditionMessage(null_array_wrapper),
+    "arguments must be a JSON object"
   )
 })
 
