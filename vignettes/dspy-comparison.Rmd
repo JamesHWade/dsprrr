@@ -95,23 +95,26 @@ The differences that show up in everyday code:
 
 ## Version baseline
 
-This comparison was checked against DSPy **3.4.0**, released on 2026-09-25,
-which DSPy calls its "LM transition release":
+This comparison was checked against DSPy **3.5.0**, released on 2026-11-10.
+Its changes from 3.4.1 affect execution contracts as well as feature names:
 
-- DSPy's LM layer now runs through bundled native engines. The experimental
-  3.3 `LMRequest`/`LMResponse` types have been removed, and OpenAI-style
-  `lm(messages = ...)` calls are deprecated until 3.5.
-- It adds experimental decision types (`Noul`, `Score`, `Choice`) and the
-  ReAnchor calibration optimizer.
-- It adds a persistent `LocalInterpreter`, async `ReActV2`, and call-time
-  interpreter factories for RLM.
+- RLM, Flex, and GEPA have graduated from experimental status upstream.
+- The newer ReAct implementation is now `dspy.ReAct`, using structured
+  History and a typed `submit` tool. `ReActV2` is a deprecated alias.
+- RLM accepts reusable conversation History and mixed text/image subqueries.
+  Replaying History does not restore interpreter variables.
+- ChainOfThought prefers native reasoning, which may have no visible summary,
+  with a short-plan fallback. XML is the default predictor adapter.
+- The lm15 provider layer makes LiteLLM and the OpenAI SDK optional. Legacy
+  `lm(messages=...)` entry points, CodeAct, and ProgramOfThought were removed;
+  TwoStepAdapter is deprecated.
 
-The 3.3.1 patch release, also covered here, deprecated `CodeAct` and
-`ProgramOfThought`, added objective-aware GEPA frontiers, and exposed
-optimizer and interpreter callback events. The 3.3.0 release introduced the
-experimental `Flex` and `ReActV2` modules that dsprrr's `flex()` and `react()`
-follow. See the
-[DSPy 3.4.0 release notes](https://github.com/stanfordnlp/dspy/releases/tag/3.4.0).
+These upstream changes do not change dsprrr's provider boundary: ellmer owns
+provider calls and structured output. dsprrr keeps its R-specific code
+modules and its own experimental labels. Re-evaluate optimized programs when
+their prompts, schemas, or execution modes change. See the
+[DSPy 3.5.0 release notes](https://github.com/stanfordnlp/dspy/releases/tag/3.5.0)
+and [upgrade guide](https://dspy.ai/current/community/upgrading-to-3-5/).
 
 ## Modules
 
@@ -119,14 +122,14 @@ follow. See the
 |------|--------|-------|
 | `dspy.Predict` | `module(sig)` | Core predictor |
 | `dspy.ChainOfThought` | `chain_of_thought()`, `with_reasoning()` | Implemented as signature transforms |
-| `dspy.ReAct` / experimental `ReActV2` | `react(sig)` | Native ellmer turn history, tool-call IDs, parallel calls per assistant turn, enforced iteration limit, then structured finalization; behaviorally aligned, not a port of the Python class. There is no counterpart to `ReActV2.acall()`: `run_async()` does not accept `react()` modules, so run them with `run()` |
-| `dspy.ProgramOfThought` (deprecated in DSPy 3.3.1) | `program_of_thought()` | Generates and executes **R** code (not Python); accepts either a caller-owned reused runner or a fresh per-invocation interpreter factory. dsprrr keeps it supported; DSPy points users to `RLM` and `Flex` |
-| `dspy.CodeAct` (deprecated in DSPy 3.3.1) | `code_act()` | Hybrid tools + R code execution with an enforced inner tool-call limit; accepts either a caller-owned reused runner or a fresh per-invocation interpreter factory. The built-in runner is trusted-input-only, and sandboxed backends can implement the runner protocol |
+| `dspy.ReAct` (`ReActV2` is deprecated) | `react(sig)` | Native ellmer turn history, tool-call IDs, multiple calls per assistant turn, enforced iteration limit, then structured finalization. DSPy's typed `submit` completion is a separate contract; `run_async()` does not yet accept `react()` modules, so run them with `run()` |
+| `dspy.ProgramOfThought` (removed in DSPy 3.5) | `program_of_thought()` | Generates and executes **R** code (not Python); accepts either a caller-owned reused runner or a fresh per-invocation interpreter factory. dsprrr keeps it supported; DSPy points users to `RLM` and `Flex` |
+| `dspy.CodeAct` (removed in DSPy 3.5) | `code_act()` | Hybrid tools + R code execution with an enforced inner tool-call limit; accepts either a caller-owned reused runner or a fresh per-invocation interpreter factory. The built-in runner is trusted-input-only, and sandboxed backends can implement the runner protocol |
 | `dspy.BestOfN` | `best_of_n()` | Reward-function-guided retries |
 | `dspy.Refine` | `refine()` | Retries with LLM-generated feedback |
 | `dspy.MultiChainComparison` | `multi_chain_comparison()` | |
 | `dspy.RLM` | `rlm_module()` (experimental) | Inference-time adaptive exploration over an R REPL, with optimizable action and extraction predictors, inherited or separate sub-LMs, replayed recursive values, typed submission repair, and trajectory metadata |
-| Experimental `dspy.Flex` | `flex()` | GEPA can optimize a bounded predictor graph or an R `forward()` program. dsprrr requires an explicit fresh interpreter for executable source rather than choosing a default sandbox |
+| `dspy.Flex` (stable upstream in 3.5) | `flex()` | GEPA can optimize a bounded predictor graph or an R `forward()` program. dsprrr requires an explicit fresh interpreter for executable source rather than choosing a default sandbox |
 | `dspy.Parallel` / `Module.batch` | `run_dataset()`, `run(..., .concurrency = concurrency_control(...))` | Batch over a data frame; heterogeneous (module, example) fan-out is not yet a dedicated module |
 | `dspy.majority` | `ensemble()` with `reduce_majority()` | Plus `reduce_weighted_vote()`, `reduce_best_by_metric()` |
 | `dspy.KNN` | `compile()` with the `KNNFewShot` teleprompter | The compiled module picks the nearest training examples as demos for each input. Bring your own vectorizer (e.g., `ragnar::embed_openai()`) |
@@ -141,8 +144,7 @@ enforced sandbox by default, while JSON Flex needs no interpreter; see
 
 ### RLM
 
-dsprrr follows the DSPy RLM execution contract, which DSPy 3.4 leaves
-unchanged apart from interpreter binding: one interpreter per invocation,
+dsprrr follows the core DSPy RLM execution model: one interpreter per invocation,
 `generate_action` and `extract` child predictors that graph optimizers can
 see, a sub-LM that inherits the outer LM unless you set one, `llm_query()`
 results replayed into the running R code, and invalid typed `SUBMIT()` calls
@@ -156,7 +158,7 @@ differences a DSPy user will notice:
 | Interpreter binding | A keyword-only `interpreter_factory` at call time (3.4), or a `dspy.settings.interpreter_factory` default | Runner or factory bound when constructing `rlm_module()`; `rlm()` creates that binding for one invocation |
 | Persistent local interpreter | `LocalInterpreter` (3.4), CPython without Deno | `r_code_runner(persistent = TRUE)`, one trusted callr R process per invocation |
 | Default local execution | DSPy interpreter configuration | The one-call `rlm()` helper creates a fresh managed `mcp-repl` OS sandbox with network disabled and workspace writes allowed; it suits compact JSON-compatible context |
-| Returned value | Prediction with trajectory and top-level `final_reasoning` | `run()` output plus structured metadata, including a bounded trajectory |
+| Returned value | Prediction with reusable ordered History; native reasoning may have no visible summary | `run()` output plus structured metadata, including a bounded trajectory |
 | Typed outputs | Signature adapters validate the Python/Pydantic type | ellmer string, number, integer, boolean, enum, array, and object types; opaque `TypeJsonSchema` nodes are rejected |
 | Host tools | Interpreter-defined | Run in the host R process, outside the guest sandbox |
 
@@ -307,7 +309,7 @@ decisions, the evidence schema, and how ReAnchor searches.
 | `Signature.with_instructions()` / `Signature.append_instructions()` | `with_instructions()` / `append_instructions()`; both return a new signature without mutating the original |
 | Pydantic-typed outputs | ellmer type objects (`type_string()`, `type_enum()`, `type_object()`, `type_array()`) |
 | `dspy.Image`, `dspy.Audio`, `dspy.File` | ellmer `Content` objects (images, PDFs) passed as inputs |
-| `dspy.History` | Native ellmer turns preserved in ReAct metadata and traces; not a signature type |
+| `dspy.History` | Native ellmer turns preserved in ReAct metadata and traces; reusing its Chat provides implicit continuity, while portable explicit continuation remains a separate contract |
 | `dspy.Tool`, `dspy.ToolCalls`, `ToolCallResults` | ellmer `ToolDef`, `ContentToolRequest`, and `ContentToolResult`; IDs remain attached to native turns |
 | `dspy.Reasoning` (native reasoning traces) | Not yet built in; `with_reasoning()` adds a prompted reasoning field |
 | Experimental `Noul`, `Score[...]`, `Choice[...]` annotations | Plain `type_boolean()` / `type_enum()` outputs plus `with_decisions()` settings on the module; the answer space stays in the signature, and the tunable settings live on the module |
@@ -347,7 +349,7 @@ pipelines, because root examples do not match each step's signature.
 
 | Capability | DSPy | dsprrr |
 |------------|------|--------|
-| LM client | `dspy.LM` on bundled native engines (`engine = "auto"`) with a LiteLLM fallback in 3.4; the 3.3 `LMRequest`/`LMResponse` types were removed | Provider-neutral ellmer `Chat`; `run()` normalizes prompt and content inputs into typed requests, while a complete package-wide invocation record is still planned |
+| LM client | `dspy.LM` on bundled lm15 with canonical Request/Response objects; LiteLLM and OpenAI SDK optional in 3.5; API-family routing defaults to `auto` | Provider-neutral ellmer `Chat`; `run()` normalizes prompt and content inputs into typed requests, while a complete package-wide invocation record is still planned |
 | Configuration | `dspy.configure()` / `dspy.context()` | `dsp_configure()`, `with_lm()`, `local_lm()` |
 | Caching | Two-tier memory + disk | Two-tier memory + disk (`configure_cache()`) |
 | Async | `acall`/`aforward`, `asyncify` | `run_async()` with promises for ordinary Predict modules and isolated background workflows for factory-backed ProgramOfThought, CodeAct, and RLM. Other module types such as `react()` are rejected, as are caller-owned interpreters and specialized streaming, rather than shared or bypassed |
@@ -356,7 +358,7 @@ pipelines, because root examples do not match each step's signature.
 | Parallel evaluation | `Evaluate(num_threads = ...)` | `evaluate(.concurrency = concurrency_control(...))` via mirai or ellmer's native parallelism. Declarative zero/one-step Flex is supported; executable and multi-step Flex currently require sequential rows |
 | Saving programs | `save`/`load`; sanitized LM state and explicit unsafe-class opt-in in 3.3 | Versioned whole-program artifacts via `save_program()` / `load_program()` or pins, with registry-backed runtime IDs and explicit trusted opt-in |
 | Observability | MLflow autolog, OpenTelemetry callbacks; 3.3.1 adds optimizer-compile and interpreter-lifecycle callback events | Traces tibble, `inspect_history()`, `export_traces()`; package-level OpenTelemetry spans are planned on top of ellmer |
-| Adapters (Chat/JSON/XML/TwoStep/BAML) | Yes | No adapter layer; ellmer's `chat_structured()` handles structured output |
+| Adapters | XML default in 3.5, with Chat/JSON alternatives; TwoStepAdapter deprecated | No adapter layer; ellmer's `chat_structured()` handles structured output |
 | Evaluation framework | `dspy.Evaluate`, including trace-aware metrics | `evaluate()`, `eval_program()`, `metric_with_trace()`, plus **vitals** integration |
 
 ## What dsprrr has that DSPy doesn't
@@ -391,8 +393,8 @@ priority order:
 6. Predictor-local RLM demo evidence so MIPROv2 can bootstrap child demos;
    its graph mode currently tunes child instructions only, while GEPA selects
    the RLM child components explicitly.
-7. Adapter-style fallbacks for models with weak structured-output
-   support (analogous to `TwoStepAdapter`).
+7. Explicit, budgeted fallbacks for demonstrated structured-output limitations;
+   copying DSPy's deprecated `TwoStepAdapter` is not a goal.
 8. Weight and RL optimization, after provider-neutral training data,
    reproducibility, cost accounting, and artifact contracts are stable.
 9. Whole-program decision calibration. `ReAnchor()` fits a single Predict
