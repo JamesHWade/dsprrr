@@ -42,7 +42,9 @@ single string field of a module that is not a prediction module (such as
 \code{\link[=module_fn]{module_fn()}} or \code{\link[=react]{react()}}) is an error, raised before any request is
 made.
 
-Streaming runs do not use the response cache and record no traces.
+Streaming runs do not use the response cache and record no traces. Native
+reasoning mode is rejected because this result contract does not return
+provider turns or native reasoning metadata.
 }
 
 \subsection{Status events}{

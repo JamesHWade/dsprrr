@@ -298,6 +298,9 @@ run.Module <- function(
 
   inputs <- list(...)
   input_contract <- module_input_contract(module, inputs)
+  if (identical(input_contract$kind, "batch")) {
+    assert_native_reasoning_batch_supported(module)
+  }
   concurrency_runtime <- NULL
   if (identical(input_contract$kind, "batch")) {
     # This branch dispatches interpreter workflows directly to the isolated
@@ -498,6 +501,10 @@ run.PredictModule <- function(
   )
 
   input_contract <- module_input_contract(module, inputs)
+
+  if (identical(input_contract$kind, "batch")) {
+    assert_native_reasoning_batch_supported(module)
+  }
 
   if (identical(input_contract$kind, "empty")) {
     return(empty_batch_result(.return_format))
@@ -1266,6 +1273,7 @@ process_batch_item <- function(
   backend = "sequential",
   .capture_trace = FALSE
 ) {
+  reasoning_mode <- module_reasoning_mode(module)
   request <- build_module_request(module, input_set)
   prompt <- request$prompt
 
@@ -1318,6 +1326,17 @@ process_batch_item <- function(
   )
   if (is.null(error) && !is.null(decoded$decisions)) {
     metadata$decisions <- decoded$decisions
+  }
+  if (
+    is.null(error) &&
+      !is.null(reasoning_mode) &&
+      !identical(reasoning_mode, "rationale")
+  ) {
+    metadata$reasoning_mode <- reasoning_mode
+  }
+  if (is.null(error) && identical(reasoning_mode, "native")) {
+    turn_delta <- verified_chat_turn_delta(llm, turns_before)
+    metadata$native_reasoning <- native_reasoning_from_turns(turn_delta)
   }
   # A chat that records runs, such as a deputy Agent, made this call as one of
   # its runs, including a run that ended in an error.
@@ -3952,6 +3971,9 @@ run_dataset.Module <- function(
       "x" = "Got {.cls {class(data)[1]}}",
       "i" = "Use {.code data.frame()} or {.code tibble::tibble()} to create one"
     ))
+  }
+  if (nrow(data) > 0L) {
+    assert_native_reasoning_batch_supported(module)
   }
 
   # Get declared and required input names from signature
