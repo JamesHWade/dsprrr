@@ -83,8 +83,8 @@ Module <- R6::R6Class(
     #' @param .progress Logical for progress bar (currently unused, for API consistency)
     #' @param .return_format Either "simple" or "structured"
     #' @param .trace_context A named JSON-compatible correlation context
-    #' @param .history A portable history for scalar root ReAct calls. A
-    #'   non-`NULL` history requires structured output.
+    #' @param .history A portable history for scalar root ReAct or RLM calls.
+    #'   A non-`NULL` history requires structured output.
     #' @return Module outputs. For .return_format="simple", returns the output value directly.
     #'   For "structured", returns a tibble with output, chat, and metadata columns.
     run = function(
@@ -100,7 +100,7 @@ Module <- R6::R6Class(
       .history = NULL
     ) {
       if (!is.null(.history)) {
-        assert_explicit_react_history(
+        assert_explicit_history_module(
           self,
           .history,
           entrypoint = "module$run()"

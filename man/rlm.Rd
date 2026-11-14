@@ -24,7 +24,8 @@ rlm(
 \item{signature}{A \code{\link[=signature]{signature()}} object or a signature string such as
 \code{"question -> answer"}.}
 
-\item{...}{Named inputs, plus \code{\link[=run]{run()}} options such as \code{.return_format}.
+\item{...}{Named inputs, plus \code{\link[=run]{run()}} options such as \code{.return_format} and
+\code{.history}.
 Each input is staged as one variable, including vectors, lists, matrices
 and data frames. For several investigations, create an \code{\link[=rlm_module]{rlm_module()}} and
 use \code{\link[=run_dataset]{run_dataset()}} with list-columns.}

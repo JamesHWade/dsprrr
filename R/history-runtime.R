@@ -6,6 +6,55 @@ react_history_validate <- function(history) {
   structure(history, class = c("dsprrr_history", "list"))
 }
 
+assert_explicit_history_module <- function(
+  module,
+  history,
+  entrypoint = "run()"
+) {
+  if (is.null(history)) {
+    return(invisible(FALSE))
+  }
+
+  module_kind <- if (
+    inherits(module, "Module") &&
+      identical(class(module)[[1L]], "ReactModule")
+  ) {
+    "react"
+  } else if (
+    inherits(module, "Module") &&
+      identical(class(module)[[1L]], "RLMModule")
+  ) {
+    "rlm"
+  } else {
+    cli::cli_abort(
+      c(
+        "Explicit conversation history is supported only for root ReAct and RLM modules",
+        "x" = "{.fn {entrypoint}} received {.cls {class(module)[[1L]]}}.",
+        "i" = "Use a scalar {.fn react} or {.fn rlm_module} call, or omit {.arg .history}."
+      ),
+      class = c(
+        "dsprrr_history_unsupported_module",
+        "dsprrr_history_error"
+      )
+    )
+  }
+
+  validated <- history_validate_envelope(history)
+  if (!is.null(validated$kind) && !identical(validated$kind, module_kind)) {
+    cli::cli_abort(
+      c(
+        "Conversation history kind does not match the module",
+        "x" = "This {.cls {class(module)[[1L]]}} requires {.val {module_kind}} history, but received {.val {validated$kind}}.",
+        "i" = "ReAct and RLM histories cannot be mixed."
+      ),
+      class = c("dsprrr_history_kind_error", "dsprrr_history_error")
+    )
+  }
+  invisible(TRUE)
+}
+
+
+# Backward-compatible internal guard for ReAct-specific call sites.
 assert_explicit_react_history <- function(
   module,
   history,
@@ -14,24 +63,23 @@ assert_explicit_react_history <- function(
   if (is.null(history)) {
     return(invisible(FALSE))
   }
-  if (
-    !inherits(module, "Module") ||
-      !identical(class(module)[[1L]], "ReactModule")
-  ) {
+  assert_explicit_history_module(module, history, entrypoint)
+  if (!identical(class(module)[[1L]], "ReactModule")) {
     cli::cli_abort(
-      c(
-        "Explicit conversation history is supported only for a root ReAct module",
-        "x" = "{.fn {entrypoint}} received {.cls {class(module)[[1L]]}}.",
-        "i" = "Use a scalar {.fn react} call, or omit {.arg .history}."
-      ),
-      class = c(
-        "dsprrr_history_unsupported_module",
-        "dsprrr_history_error"
-      )
+      "Explicit ReAct history requires a root ReAct module",
+      class = c("dsprrr_history_unsupported_module", "dsprrr_history_error")
     )
   }
-  react_history_validate(history)
   invisible(TRUE)
+}
+
+
+rlm_history_validate <- function(history) {
+  history <- history_validate_envelope(history)
+  if (!is.null(history$kind) && !identical(history$kind, "rlm")) {
+    history_abort("Explicit history for RLM must contain RLM exchanges")
+  }
+  structure(history, class = c("dsprrr_history", "list"))
 }
 
 assert_explicit_history_structured <- function(history, return_format) {
@@ -83,7 +131,7 @@ reject_explicit_history_entrypoint <- function(history, entrypoint) {
     cli::cli_abort(
       c(
         "Explicit conversation history is not supported by {.fn {entrypoint}}",
-        "i" = "Use synchronous {.fn run} with a scalar root {.fn react} module and {.arg .return_format = \"structured\"}."
+        "i" = "Use synchronous {.fn run} with a scalar root {.fn react} or {.fn rlm_module} module and {.arg .return_format = \"structured\"}."
       ),
       class = c(
         "dsprrr_history_unsupported_entrypoint",

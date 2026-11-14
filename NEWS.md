@@ -93,14 +93,19 @@ First development changelog. dsprrr is experimental; the API may change.
   duration metadata are reset. Unsupported and uploaded content, unresolved
   tool requests, and unsafe data fail explicitly. Tool errors retain only
   their message. Saved histories can contain sensitive conversation data.
+  RLM results now carry a version-2 conversation history of bounded, textual
+  invocation records and complete tagged final outputs. ReAct turns and RLM
+  exchanges are distinct history kinds and cannot be mixed.
 
 * `get_history()` returns the portable conversation history retained in a
   structured result, or `NULL` when history was not requested.
 
-* `run()` accepts explicit `.history` for scalar root ReAct calls when
-  `.return_format = "structured"`. The call clones the current Chat, seeds
-  portable turns without executing prior tools, and returns the updated state
-  through `get_history()`.
+* `run()` accepts explicit `.history` for scalar root ReAct and RLM calls when
+  `.return_format = "structured"`. ReAct seeds portable turns without
+  executing prior tools. RLM renders bounded prior evidence into action and
+  fallback prompts, requires an invocation-owned interpreter factory, and
+  starts each call with fresh variables. Both return updated history through
+  `get_history()`; dataset, asynchronous and streaming entrypoints reject it.
 
 * `chain_of_thought()` now supports opt-in native provider thinking metadata
   and a concise plan field, while retaining rationale output as the default.
