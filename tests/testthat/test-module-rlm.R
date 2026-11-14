@@ -1930,6 +1930,66 @@ with_mock_parallel_chat <- function(mock_fn, code) {
   force(code)
 }
 
+
+with_mock_ellmer_chat_impl <- function(chat, mock_fn, code) {
+  private <- chat$.__enclos_env__$private
+  old_fn <- private$chat_impl
+  unlockBinding("chat_impl", private)
+  assign("chat_impl", mock_fn, envir = private)
+  lockBinding("chat_impl", private)
+
+  on.exit(
+    {
+      unlockBinding("chat_impl", private)
+      assign("chat_impl", old_fn, envir = private)
+      lockBinding("chat_impl", private)
+    },
+    add = TRUE
+  )
+
+  force(code)
+}
+
+
+with_mock_ellmer_parallel_turns <- function(mock_fn, code) {
+  ns <- asNamespace("ellmer")
+  old_fn <- get("parallel_turns", envir = ns, inherits = FALSE)
+  unlockBinding("parallel_turns", ns)
+  assign("parallel_turns", mock_fn, envir = ns)
+  lockBinding("parallel_turns", ns)
+
+  on.exit(
+    {
+      unlockBinding("parallel_turns", ns)
+      assign("parallel_turns", old_fn, envir = ns)
+      lockBinding("parallel_turns", ns)
+    },
+    add = TRUE
+  )
+
+  force(code)
+}
+
+
+with_mock_dsprrr_function <- function(name, mock_fn, code) {
+  ns <- asNamespace("dsprrr")
+  old_fn <- get(name, envir = ns, inherits = FALSE)
+  unlockBinding(name, ns)
+  assign(name, mock_fn, envir = ns)
+  lockBinding(name, ns)
+
+  on.exit(
+    {
+      unlockBinding(name, ns)
+      assign(name, old_fn, envir = ns)
+      lockBinding(name, ns)
+    },
+    add = TRUE
+  )
+
+  force(code)
+}
+
 test_that("is_rlm_query_request detects query requests", {
   regular <- 42
   expect_false(dsprrr:::is_rlm_query_request(regular))
@@ -2253,6 +2313,81 @@ test_that("MCP-backed RLM tools execute on the host through replay", {
 
   expect_identical(result$output[[1L]]$answer, 43L)
   expect_identical(state$calls, 2L)
+})
+
+
+test_that("MCP RLM image queries reach a real ellmer Chat", {
+  eval_repl <- function(input, timeout_ms) {
+    env <- new.env(parent = baseenv())
+    output <- capture.output({
+      value <- eval(parse(text = input), envir = env)
+      print(value)
+    })
+    list(
+      result = list(
+        content = list(list(
+          type = "text",
+          text = paste(output, collapse = "\n")
+        ))
+      )
+    )
+  }
+  chat <- ellmer::chat_openai(
+    model = "gpt-test",
+    credentials = function() "x"
+  )
+  captured <- new.env(parent = emptyenv())
+  module <- rlm_module(
+    "question -> answer",
+    runner = mcp_repl_runner(repl = eval_repl),
+    max_iterations = 1L,
+    max_llm_calls = 1L,
+    sub_lm = chat
+  )
+  code <- paste(
+    "answer <- llm_query('Describe the image', context_slice = list(",
+    "list(type = 'text', text = 'caption'),",
+    "list(type = 'image_url', url = 'https://example.org/photo.png'))) ",
+    "SUBMIT(answer)",
+    sep = "\n"
+  )
+  outer_llm <- create_mock_rlm_llm(list(list(
+    reasoning = "Send the image to the sub-model",
+    code = code
+  )))
+
+  result <- with_mock_dsprrr_function(
+    "clone_rlm_chat",
+    identity,
+    with_mock_ellmer_chat_impl(
+      chat,
+      function(turn, ...) {
+        captured$turn <- turn
+        chat$set_turns(list(
+          turn,
+          ellmer::AssistantTurn(
+            contents = list(ellmer::ContentText("image summary")),
+            tokens = c(0, 0, 0),
+            cost = 0
+          )
+        ))
+        invisible(NULL)
+      },
+      module$forward(list(question = "Describe this image"), .llm = outer_llm)
+    )
+  )
+
+  expect_identical(result$output[[1L]]$answer, "image summary")
+  expect_equal(result$metadata[[1L]]$recursive_calls, 1L)
+  expect_s3_class(captured$turn, "ellmer::UserTurn")
+  expect_length(captured$turn@contents, 4L)
+  expect_identical(captured$turn@contents[[2L]]@text, "caption")
+  expect_s3_class(captured$turn@contents[[3L]], "ellmer::ContentImageRemote")
+  expect_identical(
+    captured$turn@contents[[3L]]@url,
+    "https://example.org/photo.png"
+  )
+  expect_identical(captured$turn@contents[[3L]]@detail, "auto")
 })
 
 test_that("RLM invokes an actual ellmer ToolDef through replay", {
@@ -2714,4 +2849,730 @@ test_that("RLM sub-LM responses must contain one non-empty text value", {
       class = "dsprrr_rlm_sub_lm_response_error"
     )
   }
+})
+
+
+test_that("RLM guest query content uses ordered JSON-native records", {
+  skip_if_not_installed("callr")
+
+  runner <- r_code_runner(timeout = 10, persistent = TRUE)
+  withr::defer(runner$shutdown())
+  nonce <- "mixed-query-content-test"
+  prelude <- create_rlm_prelude(
+    has_sub_lm = TRUE,
+    control_nonce = nonce,
+    control_frame_limit = 10000L
+  )
+  single <- runner$execute(
+    paste0(
+      prelude,
+      "\nllm_query('Describe the image', context_slice = list(",
+      "list(type = 'text', text = 'caption'), ",
+      "list(type = 'image_url', url = 'https://example.org/photo.png', ",
+      "detail = 'high')))"
+    ),
+    context = list()
+  )
+
+  expect_false(single$success)
+  single_request <- decode_rlm_control(single$error, nonce)
+  expect_s3_class(single_request, "rlm_query_request")
+  expect_identical(
+    single_request$context,
+    list(
+      list(type = "text", text = "caption"),
+      list(
+        type = "image_url",
+        url = "https://example.org/photo.png",
+        detail = "high"
+      )
+    )
+  )
+
+  batch <- runner$execute(
+    paste0(
+      prelude,
+      "\nllm_query_batched(c('q1', 'q2'), slices = list(",
+      "list(list(type = 'text', text = 'first'), ",
+      "list(type = 'image_url', url = 'https://example.org/first.png')), ",
+      "'legacy text'))"
+    ),
+    context = list()
+  )
+
+  expect_false(batch$success)
+  batch_request <- decode_rlm_control(batch$error, nonce)
+  expect_s3_class(batch_request, "rlm_query_request")
+  expect_identical(batch_request$queries, c("q1", "q2"))
+  expect_identical(
+    batch_request$slices,
+    list(
+      list(
+        list(type = "text", text = "first"),
+        list(
+          type = "image_url",
+          url = "https://example.org/first.png",
+          detail = "auto"
+        )
+      ),
+      "legacy text"
+    )
+  )
+
+  guest <- new.env(parent = baseenv())
+  guest$.context <- list()
+  eval(parse(text = prelude), envir = guest)
+  ellmer_frame <- withRestarts(
+    eval(
+      parse(
+        text = paste0(
+          "llm_query('q', context_slice = ",
+          "ellmer::content_image_url('https://example.org/object.png'))"
+        )
+      ),
+      envir = guest
+    ),
+    .dsprrr_rlm_control = function(frame) frame
+  )
+  ellmer_request <- decode_rlm_control(ellmer_frame, nonce)
+  expect_identical(
+    ellmer_request$context,
+    list(list(
+      type = "image_url",
+      url = "https://example.org/object.png",
+      detail = "auto"
+    ))
+  )
+
+  null_context <- runner$execute(
+    paste0(prelude, "\nllm_query('q')"),
+    context = list()
+  )
+  null_request <- decode_rlm_control(null_context$error, nonce)
+  expect_true("context" %in% names(null_request))
+  expect_null(null_request$context)
+
+  single_text_batch <- runner$execute(
+    paste0(prelude, "\nllm_query_batched('q', slices = 'legacy text')"),
+    context = list()
+  )
+  single_text_request <- decode_rlm_control(
+    single_text_batch$error,
+    nonce
+  )
+  expect_identical(single_text_request$slices, "legacy text")
+})
+
+
+test_that("single RLM content queries reach ellmer as typed content", {
+  runner <- r_code_runner(timeout = 10, persistent = TRUE)
+  withr::defer(runner$shutdown())
+  captured <- new.env(parent = emptyenv())
+  sub_lm <- as_test_rlm_chat(list(chat = function(...) {
+    captured$prompt <- list(...)
+    "image summary"
+  }))
+  rlm <- rlm_module(
+    "question -> answer",
+    runner = runner,
+    sub_lm = sub_lm
+  )
+  call_counter <- new.env(parent = emptyenv())
+  call_counter$count <- 0L
+  request <- list(
+    query = "Describe the image",
+    context = list(
+      list(type = "text", text = "caption"),
+      list(
+        type = "image_url",
+        url = "https://example.org/photo.png",
+        detail = "high"
+      ),
+      list(
+        type = "image_base64",
+        mime_type = "image/png",
+        data = "YWJj"
+      )
+    ),
+    batch = FALSE
+  )
+
+  result <- rlm$.__enclos_env__$private$process_rlm_query(
+    request,
+    call_counter,
+    sub_lm
+  )
+
+  expect_true(result$success)
+  expect_identical(result$value, "image summary")
+  expect_identical(call_counter$count, 1L)
+  expect_length(captured$prompt, 5L)
+  expect_s3_class(captured$prompt[[1]], "ellmer::ContentText")
+  expect_identical(captured$prompt[[1]]@text, "Context:\n")
+  expect_identical(captured$prompt[[2]]@text, "caption")
+  expect_s3_class(captured$prompt[[3]], "ellmer::ContentImageRemote")
+  expect_identical(captured$prompt[[3]]@url, "https://example.org/photo.png")
+  expect_identical(captured$prompt[[3]]@detail, "high")
+  expect_s3_class(captured$prompt[[4]], "ellmer::ContentImageInline")
+  expect_identical(captured$prompt[[4]]@type, "image/png")
+  expect_identical(captured$prompt[[4]]@data, "YWJj")
+  expect_identical(
+    captured$prompt[[5]]@text,
+    "\n\nQuestion: Describe the image"
+  )
+})
+
+
+test_that("ellmer Chat receives RLM content as variadic UserTurn parts", {
+  chat <- ellmer::chat_openai(
+    model = "gpt-test",
+    credentials = function() "x"
+  )
+  captured <- new.env(parent = emptyenv())
+  prompt <- list(
+    ellmer::ContentText("Context:\n"),
+    ellmer::ContentImageRemote("https://example.org/photo.png", "high"),
+    ellmer::ContentText("\n\nQuestion: describe it")
+  )
+
+  with_mock_ellmer_chat_impl(
+    chat,
+    function(turn, ...) {
+      captured$turn <- turn
+      chat$set_turns(list(
+        turn,
+        ellmer::AssistantTurn(contents = list(ellmer::ContentText("ok")))
+      ))
+      invisible(NULL)
+    },
+    {
+      expect_error(chat$chat(prompt))
+      response <- rlm_chat_prompt(chat, prompt)
+      expect_identical(as.character(response), "ok")
+      text_response <- rlm_chat_prompt(chat, "legacy text")
+      expect_identical(as.character(text_response), "ok")
+    }
+  )
+
+  expect_s3_class(captured$turn, "ellmer::UserTurn")
+  expect_length(captured$turn@contents, 1L)
+  expect_s3_class(captured$turn@contents[[1]], "ellmer::ContentText")
+  expect_identical(captured$turn@contents[[1]]@text, "legacy text")
+})
+
+
+test_that("sequential RLM batches send content as separate Chat arguments", {
+  runner <- r_code_runner(timeout = 10, persistent = TRUE)
+  withr::defer(runner$shutdown())
+  captured <- list()
+  sub_lm <- new_test_chat(chat = function(...) {
+    captured[[length(captured) + 1L]] <<- list(...)
+    "summary"
+  })
+  rlm <- rlm_module("question -> answer", runner = runner, sub_lm = sub_lm)
+  prompts <- list(list(
+    ellmer::ContentText("Context:\ncaption"),
+    ellmer::ContentImageRemote("https://example.org/photo.png", "high"),
+    ellmer::ContentText("\n\nQuestion: describe it")
+  ))
+
+  result <- rlm$.__enclos_env__$private$run_batched_sub_lm_queries_sequential(
+    prompts,
+    sub_lm
+  )
+
+  expect_identical(result$results, list("summary"))
+  expect_length(captured, 1L)
+  expect_length(captured[[1]], 3L)
+  expect_s3_class(captured[[1]][[1]], "ellmer::ContentText")
+  expect_s3_class(captured[[1]][[2]], "ellmer::ContentImageRemote")
+  expect_identical(captured[[1]][[2]]@url, "https://example.org/photo.png")
+})
+
+
+test_that("RLM replay preserves mixed query content identity", {
+  skip_if_not_installed("callr")
+
+  runner <- r_code_runner(timeout = 10, persistent = TRUE)
+  withr::defer(runner$shutdown())
+  captured <- new.env(parent = emptyenv())
+  sub_lm <- as_test_rlm_chat(list(chat = function(...) {
+    captured$prompt <- list(...)
+    "replayed summary"
+  }))
+  rlm <- rlm_module(
+    "question -> answer",
+    runner = runner,
+    sub_lm = sub_lm
+  )
+  call_counter <- new.env(parent = emptyenv())
+  call_counter$count <- 0L
+  code <- paste0(
+    "answer <- llm_query('Describe the image', context_slice = list(",
+    "list(text = 'caption', type = 'text'), ",
+    "list(url = 'https://example.org/photo.png', type = 'image_url')))\n",
+    "SUBMIT(answer)"
+  )
+
+  result <- rlm$.__enclos_env__$private$execute_with_rlm_tools(
+    code = code,
+    inputs = list(),
+    call_counter = call_counter,
+    runner = runner,
+    runner_policy = list(rlm_control_frame_limit = 10000L),
+    sub_lm = sub_lm,
+    session_state_id = ".rlm_content_replay_test"
+  )
+
+  expect_true(result$success)
+  expect_true(result$is_final)
+  expect_identical(result$final_value$answer, "replayed summary")
+  expect_identical(call_counter$count, 1L)
+  expect_s3_class(captured$prompt[[2]], "ellmer::ContentText")
+  expect_identical(captured$prompt[[2]]@text, "caption")
+  expect_s3_class(captured$prompt[[3]], "ellmer::ContentImageRemote")
+  expect_identical(captured$prompt[[3]]@url, "https://example.org/photo.png")
+  expect_identical(captured$prompt[[3]]@detail, "auto")
+})
+
+
+test_that("RLM replay preserves null, legacy, and mixed batch query shapes", {
+  skip_if_not_installed("callr")
+
+  runner <- r_code_runner(timeout = 10, persistent = TRUE)
+  withr::defer(runner$shutdown())
+  captured <- new.env(parent = emptyenv())
+  captured$sequential <- list()
+  captured$parallel <- NULL
+  sub_lm <- new_test_chat(chat = function(...) {
+    captured$sequential[[length(captured$sequential) + 1L]] <<- list(...)
+    "query summary"
+  })
+  rlm <- rlm_module(
+    "question -> answer",
+    runner = runner,
+    max_llm_calls = 4L,
+    sub_lm = sub_lm
+  )
+
+  execute <- function(code, state_id, expected, calls = 1L) {
+    call_counter <- new.env(parent = emptyenv())
+    call_counter$count <- 0L
+    result <- rlm$.__enclos_env__$private$execute_with_rlm_tools(
+      code = code,
+      inputs = list(),
+      call_counter = call_counter,
+      runner = runner,
+      runner_policy = list(rlm_control_frame_limit = 10000L),
+      sub_lm = sub_lm,
+      session_state_id = state_id
+    )
+    expect_true(result$success)
+    expect_true(result$is_final)
+    expect_identical(result$final_value$answer, expected)
+    expect_identical(call_counter$count, calls)
+  }
+
+  parallel_chat <- function(chat, prompts, ...) {
+    captured$parallel <- prompts
+    lapply(seq_along(prompts), function(index) {
+      list(last_turn = function() list(text = paste("batch summary", index)))
+    })
+  }
+
+  with_mock_parallel_chat(parallel_chat, {
+    execute(
+      "answer <- llm_query('q')\nSUBMIT(answer)",
+      ".rlm_null_context_replay",
+      "query summary"
+    )
+    execute(
+      "answer <- llm_query_batched('q', slices = NULL)\nSUBMIT(answer[[1]])",
+      ".rlm_null_batch_slices_replay",
+      "query summary"
+    )
+    execute(
+      paste(
+        "answer <- llm_query_batched('q', slices = 'legacy text')",
+        "SUBMIT(answer[[1]])",
+        sep = "\n"
+      ),
+      ".rlm_singleton_character_slice_replay",
+      "query summary"
+    )
+    execute(
+      paste(
+        "answer <- llm_query_batched('q', slices = list('legacy text'))",
+        "SUBMIT(answer[[1]])",
+        sep = "\n"
+      ),
+      ".rlm_singleton_list_slice_replay",
+      "query summary"
+    )
+    execute(
+      paste(
+        "answer <- llm_query_batched('q', slices = list(list(",
+        "list(text = 'caption', type = 'text'),",
+        "list(url = 'https://example.org/one.png', type = 'image_url'))))",
+        "SUBMIT(answer[[1]])",
+        sep = "\n"
+      ),
+      ".rlm_singleton_mixed_batch_replay",
+      "query summary"
+    )
+    execute(
+      paste(
+        "answer <- llm_query_batched(c('q1', 'q2'), slices = list(",
+        "list(list(text = 'first', type = 'text'),",
+        "list(url = 'https://example.org/first.png', type = 'image_url')),",
+        "list(list(url = 'https://example.org/second.png', type = 'image_url', detail = NULL),",
+        "list(type = 'text', text = 'second'))))",
+        "SUBMIT(paste(answer, collapse = ','))",
+        sep = "\n"
+      ),
+      ".rlm_two_mixed_batch_replay",
+      "batch summary 1,batch summary 2",
+      calls = 2L
+    )
+  })
+
+  expect_identical(captured$sequential[[1L]], list("q"))
+  expect_identical(captured$sequential[[2L]], list("q"))
+  expect_identical(
+    captured$sequential[[3L]],
+    list("Context:\nlegacy text\n\nQuestion: q")
+  )
+  expect_identical(captured$sequential[[4L]], captured$sequential[[3L]])
+  expect_length(captured$sequential[[5L]], 4L)
+  expect_s3_class(captured$sequential[[5L]][[3L]], "ellmer::ContentImageRemote")
+  expect_identical(captured$sequential[[5L]][[3L]]@detail, "auto")
+  expect_length(captured$parallel, 2L)
+  expect_s3_class(captured$parallel[[1L]][[3L]], "ellmer::ContentImageRemote")
+  expect_identical(captured$parallel[[1L]][[3L]]@detail, "auto")
+  expect_s3_class(captured$parallel[[2L]][[2L]], "ellmer::ContentImageRemote")
+  expect_identical(captured$parallel[[2L]][[2L]]@detail, "auto")
+})
+
+
+test_that("batched RLM content queries preserve order and call budgets", {
+  skip_if_not_installed("ellmer")
+  if (
+    !exists("parallel_chat", envir = asNamespace("ellmer"), inherits = FALSE)
+  ) {
+    skip("ellmer::parallel_chat not available")
+  }
+
+  runner <- r_code_runner(timeout = 10, persistent = TRUE)
+  withr::defer(runner$shutdown())
+  rlm <- rlm_module(
+    "question -> answer",
+    runner = runner,
+    max_llm_calls = 2L,
+    sub_lm = as_test_rlm_chat(list(chat = function(...) "unused"))
+  )
+  call_counter <- new.env(parent = emptyenv())
+  call_counter$count <- 0L
+  captured <- new.env(parent = emptyenv())
+  make_fake_chat <- function(text) {
+    list(last_turn = function() list(text = text))
+  }
+  request <- list(
+    queries = c("q1", "q2"),
+    slices = list(
+      list(
+        list(type = "text", text = "first"),
+        list(
+          type = "image_url",
+          url = "https://example.org/first.png",
+          detail = "auto"
+        )
+      ),
+      "legacy text"
+    ),
+    batch = TRUE
+  )
+
+  result <- with_mock_parallel_chat(
+    function(chat, prompts, max_active = 10, on_error = "continue", ...) {
+      captured$prompts <- prompts
+      list(make_fake_chat("first result"), make_fake_chat("second result"))
+    },
+    rlm$.__enclos_env__$private$process_rlm_query_batch(
+      request,
+      call_counter,
+      rlm$sub_lm
+    )
+  )
+
+  expect_true(result$success)
+  expect_identical(result$value, c("first result", "second result"))
+  expect_identical(call_counter$count, 2L)
+  expect_length(captured$prompts, 2L)
+  expect_s3_class(captured$prompts[[1]][[2]], "ellmer::ContentText")
+  expect_identical(captured$prompts[[1]][[2]]@text, "first")
+  expect_s3_class(captured$prompts[[1]][[3]], "ellmer::ContentImageRemote")
+  expect_identical(
+    captured$prompts[[1]][[3]]@url,
+    "https://example.org/first.png"
+  )
+  expect_identical(
+    captured$prompts[[2]],
+    "Context:\nlegacy text\n\nQuestion: q2"
+  )
+
+  limited_rlm <- rlm_module(
+    "question -> answer",
+    runner = runner,
+    max_llm_calls = 1L,
+    sub_lm = rlm$sub_lm
+  )
+  limited_counter <- new.env(parent = emptyenv())
+  limited_counter$count <- 0L
+  parallel_calls <- 0L
+  budget_warning <- NULL
+  budget_result <- withCallingHandlers(
+    with_mock_parallel_chat(
+      function(...) {
+        parallel_calls <<- parallel_calls + 1L
+        stop("should not call the provider")
+      },
+      limited_rlm$.__enclos_env__$private$process_rlm_query_batch(
+        request,
+        limited_counter,
+        limited_rlm$sub_lm
+      )
+    ),
+    warning = function(condition) {
+      budget_warning <<- conditionMessage(condition)
+      invokeRestart("muffleWarning")
+    }
+  )
+
+  expect_false(budget_result$success)
+  expect_identical(limited_counter$count, 0L)
+  expect_identical(parallel_calls, 0L)
+  expect_match(budget_warning, "would exceed limit")
+  expect_match(budget_result$error, "would exceed limit")
+})
+
+
+test_that("ellmer parallel RLM requests keep nested content turns", {
+  skip_if_not_installed("ellmer")
+  if (
+    !exists("parallel_turns", envir = asNamespace("ellmer"), inherits = FALSE)
+  ) {
+    skip("ellmer parallel transport is unavailable")
+  }
+
+  chat <- ellmer::chat_openai(
+    model = "gpt-test",
+    credentials = function() "x"
+  )
+  runner <- r_code_runner(timeout = 10, persistent = TRUE)
+  withr::defer(runner$shutdown())
+  rlm <- rlm_module("question -> answer", runner = runner, sub_lm = chat)
+  captured <- new.env(parent = emptyenv())
+  prompts <- list(
+    list(
+      ellmer::ContentText("Context:\ncaption"),
+      ellmer::ContentImageRemote("https://example.org/photo.png", "high"),
+      ellmer::ContentText("\n\nQuestion: describe it")
+    ),
+    "legacy text"
+  )
+
+  result <- with_mock_ellmer_parallel_turns(
+    function(provider, model, conversations, tools, max_active, rpm, on_error) {
+      captured$conversations <- conversations
+      lapply(
+        conversations,
+        function(conversation) {
+          ellmer::AssistantTurn(
+            contents = list(ellmer::ContentText("ok")),
+            tokens = c(0, 0, 0),
+            cost = 0
+          )
+        }
+      )
+    },
+    rlm$.__enclos_env__$private$run_batched_sub_lm_queries(prompts, chat)
+  )
+
+  expect_identical(result$results, list("ok", "ok"))
+  first_user_turn <- captured$conversations[[1]][[1]]
+  expect_s3_class(first_user_turn, "ellmer::UserTurn")
+  expect_length(first_user_turn@contents, 3L)
+  expect_s3_class(first_user_turn@contents[[1]], "ellmer::ContentText")
+  expect_s3_class(first_user_turn@contents[[2]], "ellmer::ContentImageRemote")
+  expect_identical(
+    first_user_turn@contents[[2]]@url,
+    "https://example.org/photo.png"
+  )
+  expect_identical(first_user_turn@contents[[2]]@detail, "high")
+})
+
+
+test_that("RLM rejects unsafe URLs and oversized image control frames", {
+  skip_if_not_installed("callr")
+
+  runner <- r_code_runner(timeout = 10, persistent = TRUE)
+  withr::defer(runner$shutdown())
+  unsafe_prelude <- create_rlm_prelude(
+    has_sub_lm = TRUE,
+    control_nonce = "unsafe-query-content-test"
+  )
+  unsafe <- runner$execute(
+    paste0(
+      unsafe_prelude,
+      "\nllm_query('read', context_slice = list(",
+      "list(type = 'image_url', url = 'file:///etc/passwd')))"
+    ),
+    context = list()
+  )
+  expect_false(unsafe$success)
+  expect_match(unsafe$error, "HTTPS without user info", fixed = TRUE)
+
+  forged_json <- jsonlite::toJSON(
+    list(
+      version = 1L,
+      nonce = "unsafe-query-content-test",
+      kind = "query",
+      payload = list(
+        index = 1L,
+        query = "read",
+        context = list(list(
+          type = "image_url",
+          url = "file:///etc/passwd",
+          detail = "auto"
+        )),
+        batch = FALSE
+      )
+    ),
+    auto_unbox = TRUE,
+    null = "null"
+  )
+  forged_frame <- paste0(
+    rlm_control_prefix(),
+    gsub(
+      "[\\r\\n]",
+      "",
+      jsonlite::base64_enc(charToRaw(as.character(forged_json)))
+    )
+  )
+  expect_error(
+    decode_rlm_control(forged_frame, "unsafe-query-content-test"),
+    class = "dsprrr_rlm_control_error"
+  )
+
+  unsupported <- runner$execute(
+    paste0(
+      unsafe_prelude,
+      "\nllm_query('inspect', context_slice = list(",
+      "list(type = 'pdf', mime_type = 'application/pdf', data = 'YWJj')))"
+    ),
+    context = list()
+  )
+  expect_false(unsupported$success)
+  expect_match(unsupported$error, "unsupported content type pdf", fixed = TRUE)
+
+  rlm <- rlm_module(
+    "question -> answer",
+    runner = runner,
+    max_llm_calls = 1L,
+    sub_lm = as_test_rlm_chat(list(chat = function(...) "unexpected"))
+  )
+  call_counter <- new.env(parent = emptyenv())
+  call_counter$count <- 0L
+  oversized <- rlm$.__enclos_env__$private$execute_with_rlm_tools(
+    code = paste0(
+      "llm_query('q', context_slice = list(list(type = 'image_base64', ",
+      "mime_type = 'image/png', data = paste(rep('A', 800), collapse = ''))))"
+    ),
+    inputs = list(),
+    call_counter = call_counter,
+    runner = runner,
+    runner_policy = list(rlm_control_frame_limit = 512L),
+    sub_lm = rlm$sub_lm,
+    session_state_id = ".rlm_content_cap_test"
+  )
+
+  expect_false(oversized$success)
+  expect_match(
+    oversized$error,
+    "control frame exceeds the runner transport limit"
+  )
+  expect_identical(call_counter$count, 0L)
+})
+
+
+test_that("MCP RLM rejects oversized forged frames before sub-model calls", {
+  nonce <- "oversized-provider-check"
+  json <- jsonlite::toJSON(
+    list(
+      version = 1L,
+      nonce = nonce,
+      kind = "query",
+      payload = list(
+        index = 1L,
+        query = "inspect",
+        context = list(list(
+          type = "image_base64",
+          mime_type = "image/png",
+          data = strrep("A", 3000L)
+        )),
+        batch = FALSE
+      )
+    ),
+    auto_unbox = TRUE,
+    null = "null",
+    na = "null",
+    dataframe = "rows",
+    digits = NA
+  )
+  frame <- paste0(
+    rlm_control_prefix(),
+    gsub(
+      "[[:space:]]",
+      "",
+      jsonlite::base64_enc(charToRaw(as.character(json)))
+    )
+  )
+  state <- new.env(parent = emptyenv())
+  state$provider_calls <- 0L
+  repl <- function(input, timeout_ms) {
+    list(result = list(content = list(list(type = "text", text = frame))))
+  }
+  runner <- mcp_repl_runner(repl = repl)
+  sub_lm <- new_test_chat(chat = function(...) {
+    state$provider_calls <- state$provider_calls + 1L
+    "unexpected"
+  })
+  rlm <- rlm_module(
+    "question -> answer",
+    runner = runner,
+    max_llm_calls = 1L,
+    sub_lm = sub_lm
+  )
+  call_counter <- new.env(parent = emptyenv())
+  call_counter$count <- 0L
+
+  result <- with_mock_dsprrr_function(
+    "rlm_control_nonce",
+    function() nonce,
+    rlm$.__enclos_env__$private$execute_with_rlm_tools(
+      code = "answer <- llm_query('q')\nSUBMIT(answer)",
+      inputs = list(),
+      call_counter = call_counter,
+      runner = runner,
+      runner_policy = runner$policy(),
+      sub_lm = sub_lm,
+      session_state_id = ".rlm_oversized_control_test"
+    )
+  )
+
+  expect_false(result$success)
+  expect_match(result$error, "control frame exceeds the runner transport limit")
+  expect_identical(call_counter$count, 0L)
+  expect_identical(state$provider_calls, 0L)
+  expect_null(result$raw_result$result)
 })

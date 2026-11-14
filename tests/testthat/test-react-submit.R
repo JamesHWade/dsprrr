@@ -540,7 +540,7 @@ test_that("duplicate submit object keys are repairable at every depth", {
       body$input
     )
   })
-  expect_true(all(vapply(repair_results, length, integer(1)) >= 1L))
+  expect_true(all(lengths(repair_results) >= 1L))
   expect_true(all(vapply(
     repair_results,
     function(items) {
@@ -661,7 +661,7 @@ test_that("duplicate checks preserve null, empty, and ignored field handling", {
     list(
       value = list(list(
         answer = "ready",
-        ignored = list(key = "first", key = "second")
+        ignored = stats::setNames(list("first", "second"), c("key", "key"))
       ))
     ),
     array_ignore_type,

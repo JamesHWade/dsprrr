@@ -102,6 +102,15 @@ get the answer back as a value. These count against \code{max_llm_calls}.
 \item The functions supplied in \code{tools}.
 }
 
+A query slice may be a text string or an ordered list of records such as
+\code{list(list(type = "text", text = "..."), list(type = "image_url", url = "https://example.com/image.png", detail = "auto"))}. Inline images use
+\code{type = "image_base64"}, an image MIME type, and base64 data up to 524,288
+bytes. Image URLs must use HTTPS, omit user info, and be at most 2,048 bytes;
+local paths and PDF records are unsupported. The managed
+\code{mcp_repl_runner()} control frame defaults to 3,000 bytes, so inline data
+must also fit that transport limit. These JSON-native records work without
+ellmer in the guest process.
+
 Sub-queries and tools run in the host R process, not in the runner: the
 generated code pauses, dsprrr handles the request, and the code is replayed
 with the response. Variables persist across steps within one call, so the

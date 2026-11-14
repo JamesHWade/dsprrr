@@ -3453,10 +3453,8 @@ artifact_validate_field_domains <- function(node, malformed) {
   fields <- node$fields
   react_finalization <- node$config$.react_finalization
   valid_react_finalization <- is.null(react_finalization) ||
-    (
-      artifact_is_character_scalar(react_finalization, nonempty = TRUE) &&
-        react_finalization %in% c("structured", "submit")
-    )
+    (artifact_is_character_scalar(react_finalization, nonempty = TRUE) &&
+      react_finalization %in% c("structured", "submit"))
   valid_template <- function(value) artifact_is_character_scalar(value)
   valid_demos <- function(value) artifact_is_plain_list(value)
   positive_integer <- function(value) {

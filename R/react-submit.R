@@ -72,7 +72,7 @@ react_submit_tool <- function(output_type, validation_state = NULL) {
 
   argument_names <- names(arguments) %||% character()
   if (
-    any(!nzchar(argument_names)) ||
+    !all(nzchar(argument_names)) ||
       anyDuplicated(argument_names) ||
       "..." %in% argument_names
   ) {
@@ -197,7 +197,9 @@ react_submit_cleanup <- function(chat, prepared, remove_callback = NULL) {
   if (is.function(remove_callback)) {
     tryCatch(
       remove_callback(),
-      error = function(error) callback_error <<- error
+      error = function(error) {
+        callback_error <<- error
+      }
     )
   }
   registry_error <- tryCatch(
@@ -253,7 +255,7 @@ react_submit_validate_object_names <- function(
   }
 
   validate_names <- function(fields, object_context) {
-    if (anyNA(fields) || any(!nzchar(fields)) || anyDuplicated(fields)) {
+    if (anyNA(fields) || !all(nzchar(fields)) || anyDuplicated(fields)) {
       cli::cli_abort(
         "{object_context} must have unique, non-empty field names",
         class = class
@@ -342,7 +344,7 @@ react_submit_validate <- function(arguments, output_type, bare_output) {
       !is.list(arguments) ||
         is.data.frame(arguments) ||
         (length(arguments) > 0L && is.null(names(arguments))) ||
-        any(!nzchar(argument_names)) ||
+        !all(nzchar(argument_names)) ||
         anyDuplicated(argument_names) ||
         length(setdiff(argument_names, "value")) > 0L
     ) {

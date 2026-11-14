@@ -407,6 +407,100 @@ test_that("provider rejection records one error trace and releases the Chat", {
 })
 
 
+test_that("history sink errors roll back the success trace and keep one failure trace", {
+  local_reset_cache()
+  mock <- async_contract_real_chat()
+  solver <- module(signature("question -> answer"))
+  context <- list(call = "history-sink")
+  history_before <- dsprrr:::.dsprrr_env$prompt_history
+  generation_before <- dsprrr:::prompt_history_generation()
+  testthat::local_mocked_bindings(
+    add_to_global_history = function(...) {
+      stop("history sink failed", call. = FALSE)
+    },
+    .package = "dsprrr"
+  )
+
+  pending <- run_async(
+    solver,
+    question = "history failure",
+    .llm = mock$chat,
+    .trace_context = context
+  )
+  mock$state$complete(response = list(answer = "completed"))
+  outcome <- async_contract_settle(pending)
+
+  expect_match(conditionMessage(outcome$error), "history sink failed")
+  expect_length(solver$state$traces, 1L)
+  trace <- solver$state$traces[[1L]]
+  expect_identical(trace$output, NA)
+  expect_identical(trace$metadata$error_stage, "completion")
+  expect_match(trace$metadata$error, "history sink failed")
+  expect_identical(trace$trace_context, context)
+  expect_identical(dsprrr:::.dsprrr_env$prompt_history, history_before)
+  expect_identical(
+    dsprrr:::prompt_history_generation(),
+    generation_before
+  )
+  expect_no_error(dsprrr:::assert_async_chat_available(mock$chat))
+})
+
+
+test_that("partial global history appends roll back on warning errors", {
+  local_reset_cache()
+  withr::local_options(
+    dsprrr.prompt_history_max = NA_real_,
+    warn = 2
+  )
+  real_history_sink <- dsprrr:::add_to_global_history
+  testthat::local_mocked_bindings(
+    add_to_global_history = function(trace, source) {
+      withCallingHandlers(
+        real_history_sink(trace, source),
+        dsprrr_history_capture_warning = function(warning) {
+          stop(conditionMessage(warning), call. = FALSE)
+        }
+      )
+    },
+    .package = "dsprrr"
+  )
+  mock <- async_contract_real_chat()
+  solver <- module(signature("question -> answer"))
+  context <- list(call = "partial-history")
+  history_before <- dsprrr:::.dsprrr_env$prompt_history
+  generation_before <- dsprrr:::prompt_history_generation()
+
+  pending <- run_async(
+    solver,
+    question = "partial history failure",
+    .llm = mock$chat,
+    .trace_context = context
+  )
+  mock$state$complete(response = list(answer = "completed"))
+  outcome <- async_contract_settle(pending)
+
+  expect_s3_class(outcome$error, "error")
+  expect_match(conditionMessage(outcome$error), "history")
+  expect_length(solver$state$traces, 1L)
+  trace <- solver$state$traces[[1L]]
+  expect_identical(trace$output, NA)
+  expect_identical(trace$metadata$error_stage, "completion")
+  expect_identical(trace$trace_context, context)
+  history_after <- dsprrr:::.dsprrr_env$prompt_history
+  expect_gte(length(history_after), length(history_before))
+  expect_lte(length(history_after) - length(history_before), 1L)
+  if (length(history_after) > length(history_before)) {
+    new_history <- utils::tail(history_after, 1L)[[1L]]
+    expect_identical(new_history$metadata$error_stage, "completion")
+  }
+  expect_equal(
+    dsprrr:::prompt_history_generation() - generation_before,
+    length(history_after) - length(history_before)
+  )
+  expect_no_error(dsprrr:::assert_async_chat_available(mock$chat))
+})
+
+
 test_that("launch, decode, and completion errors record once and release Chat", {
   launch_chat <- async_contract_real_chat()
   launch_solver <- module(signature("question -> answer"))

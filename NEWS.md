@@ -223,6 +223,13 @@ First development changelog. dsprrr is experimental; the API may change.
   managed `mcp-repl` sandbox factory by default, while still accepting an
   explicit runner or interpreter factory.
 
+  Recursive query slices also accept ordered JSON-native text and image records.
+  Remote images require HTTPS URLs without user info and up to 2,048 bytes;
+  inline image data is limited to 524,288 base64 bytes and the runner's
+  control-frame bound. Local paths and PDF records fail explicitly, and guest
+  records need no ellmer dependency. The managed mcp-repl runner defaults to a
+  3,000-byte control-frame limit.
+
 * The code-runner protocol now has explicit `start()`/`shutdown()` lifecycle
   hooks, typed repairable execution versus terminal interpreter failures, and
   terminal-session invalidation. Code modules do not retry or reuse a runner
