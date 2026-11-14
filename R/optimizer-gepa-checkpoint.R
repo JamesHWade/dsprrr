@@ -300,6 +300,21 @@ gepa_checkpoint_project_rows <- function(records) {
         class = "dsprrr_optimizer_checkpoint_malformed"
       )
     }
+    if (
+      is.numeric(record$score) &&
+        length(record$score) == 1L &&
+        !is.na(record$score) &&
+        is.infinite(record$score)
+    ) {
+      cli::cli_abort(
+        c(
+          "GEPA checkpoint cannot store an infinite metric score",
+          "x" = "Evaluation row {record$row_index} returned {.val {record$score}}.",
+          "i" = "Checkpointed GEPA metrics must return finite scores or NA."
+        ),
+        class = "dsprrr_optimizer_checkpoint_unsafe_value"
+      )
+    }
     sanitized_prediction <- tryCatch(
       optimizer_checkpoint_sanitize(
         record$predicted,
@@ -2522,6 +2537,12 @@ compile_gepa_checkpointed <- function(
   if (!is.data.frame(discovery_dataset) || !is.data.frame(validation_dataset)) {
     cli::cli_abort(
       "GEPA checkpoint datasets must be data frames",
+      class = "dsprrr_gepa_config_error"
+    )
+  }
+  if (length(component_specs) > 0L && nrow(validation_dataset) == 0L) {
+    cli::cli_abort(
+      "Checkpointed GEPA requires at least one validation row",
       class = "dsprrr_gepa_config_error"
     )
   }

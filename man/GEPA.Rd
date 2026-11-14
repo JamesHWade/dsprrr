@@ -137,8 +137,11 @@ Checkpoint resume is available for sequential searches with the
 predictor pipelines. Checkpointed predictions must be plain data. Flex
 modules, other component selectors, custom module types, custom Chats,
 Chats with tools, and Chats with existing conversation turns are rejected
-before provider work. Resource limits may change when resuming; the
-algorithm configuration and runtime identities must match.
+before provider work. Checkpointed searches with mutable components require
+at least one validation row, using \code{trainset} when \code{valset} is omitted.
+Checkpointed metrics must return finite scores or \code{NA}; infinite scores are
+rejected before their evaluation row is saved. Resource limits may change
+when resuming; the algorithm configuration and runtime identities must match.
 
 Completed proposals and evaluation rows are restored without repeating
 their work. A provider request that finishes after the last checkpoint was
