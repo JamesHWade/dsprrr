@@ -94,6 +94,9 @@ First development changelog. dsprrr is experimental; the API may change.
   tool requests, and unsafe data fail explicitly. Tool errors retain only
   their message. Saved histories can contain sensitive conversation data.
 
+* `get_history()` returns the portable conversation history retained in a
+  structured result, or `NULL` when history was not requested.
+
 * `chain_of_thought()` now supports opt-in native provider thinking metadata
   and a concise plan field, while retaining rationale output as the default.
   Native thinking is available through `get_metadata()` when the provider
