@@ -27,7 +27,11 @@ structured results, use \code{\link[=run_stream]{run_stream()}}.
 }
 \details{
 The generator comes from ellmer's \code{Chat$stream_async()}. The call does not
-use the response cache and records no trace.
+use the response cache and records no trace. It returns unstructured text,
+so \code{chain_of_thought(mode = "plan")} and \code{mode = "native"} are rejected
+rather than dropping the plan field or native metadata. Use \code{\link[=run_async]{run_async()}}
+for a structured plan, or synchronous structured \code{\link[=run]{run()}} for native
+metadata.
 }
 \examples{
 \dontrun{

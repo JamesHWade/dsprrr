@@ -31,6 +31,7 @@ PredictModule <- R6::R6Class(
       chat = NULL
     ) {
       super$initialize(signature, config, chat)
+      module_reasoning_mode(self)
 
       if (!is.character(template) || length(template) != 1) {
         cli::cli_abort("template must be a single character string")
@@ -65,6 +66,8 @@ PredictModule <- R6::R6Class(
       rollout_id = NULL,
       ...
     ) {
+      reasoning_mode <- module_reasoning_mode(self)
+
       # Handle both list and data frame inputs
       if (is.data.frame(batch)) {
         inputs <- as.list(batch[1, , drop = FALSE])
@@ -76,10 +79,6 @@ PredictModule <- R6::R6Class(
       prompt <- request$prompt
       llm <- resolve_module_llm(self, .llm = .llm)
       turns_before <- batch_chat_turns(llm)
-      start_turn_count <- tryCatch(
-        length(llm$get_turns()),
-        error = function(e) 0L
-      )
       cache_state <- new.env(parent = emptyenv())
       cache_state$status <- "unknown"
       cache_observer <- function(status, ...) {
@@ -136,18 +135,8 @@ PredictModule <- R6::R6Class(
         llm$last_turn(role = "user"),
         error = function(e) NULL
       )
-      turns <- tryCatch(
-        {
-          current_turns <- llm$get_turns()
-          new_start <- start_turn_count + 1L
-          if (new_start <= length(current_turns)) {
-            current_turns[seq.int(new_start, length(current_turns))]
-          } else {
-            list()
-          }
-        },
-        error = function(e) list(user_turn, assistant_turn)
-      )
+      turn_delta <- verified_chat_turn_delta(llm, turns_before)
+      turns <- turn_delta %||% list(user_turn, assistant_turn)
 
       verified_usage <- chat_usage_metadata(llm, turns_before)
       token_info <- if (!is.na(verified_usage$provider_calls)) {
@@ -225,6 +214,12 @@ PredictModule <- R6::R6Class(
         cache = cache_state$status,
         provider_calls = provider_calls
       )
+      if (!is.null(reasoning_mode) && !identical(reasoning_mode, "rationale")) {
+        metadata$reasoning_mode <- reasoning_mode
+      }
+      if (identical(reasoning_mode, "native")) {
+        metadata$native_reasoning <- native_reasoning_from_turns(turn_delta)
+      }
       if (!is.null(decoded$decisions)) {
         metadata$decisions <- decoded$decisions
       }
@@ -253,6 +248,11 @@ PredictModule <- R6::R6Class(
           cache = cache_state$status,
           provider_calls = provider_calls
         )
+        if (
+          !is.null(reasoning_mode) && !identical(reasoning_mode, "rationale")
+        ) {
+          trace_entry$reasoning_mode <- reasoning_mode
+        }
         if (!is.null(agent_run)) {
           trace_entry$agent_run <- agent_run
         }

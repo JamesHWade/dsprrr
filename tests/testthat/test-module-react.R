@@ -158,6 +158,133 @@ ReactTestChat <- R6::R6Class(
   )
 )
 
+new_react_prompt_chat <- function() {
+  state <- new.env(parent = emptyenv())
+  state$prompt <- NULL
+  state$turns <- list()
+
+  last_turn <- function(role = c("assistant", "user"), ...) {
+    role <- match.arg(role)
+    role_turns <- Filter(
+      function(turn) identical(turn@role, role),
+      state$turns
+    )
+    if (length(role_turns) == 0L) {
+      stop("no turns")
+    }
+    role_turns[[length(role_turns)]]
+  }
+
+  llm <- ReactTestChat$new(
+    model = "mock-model",
+    chat = function(..., echo = "none") {
+      parts <- list(...)
+      state$prompt <- if (length(parts) == 1L) parts[[1L]] else parts
+      contents <- lapply(parts, function(part) {
+        if (is.character(part)) ellmer::ContentText(part) else part
+      })
+      state$turns <- c(
+        state$turns,
+        list(
+          ellmer::UserTurn(contents = contents),
+          ellmer::AssistantTurn(
+            contents = list(ellmer::ContentText("reasoning"))
+          )
+        )
+      )
+      invisible(NULL)
+    },
+    chat_structured = function(prompt, type, echo = "none", ...) {
+      state$turns <- c(
+        state$turns,
+        list(ellmer::AssistantTurn(
+          contents = list(ellmer::ContentText("{\"answer\":\"done\"}"))
+        ))
+      )
+      list(answer = "done")
+    }
+  )
+  override_test_chat_method(llm, "get_turns", function(...) state$turns)
+  override_test_chat_method(llm, "last_turn", last_turn)
+
+  list(llm = llm, state = state)
+}
+
+test_that("ReactModule sends image and PDF content through public run", {
+  mock <- new_react_prompt_chat()
+
+  image <- ellmer::ContentImageInline("image/png", "YWJj")
+  pdf <- ellmer::ContentPDF("application/pdf", "ZGVm", "report.pdf")
+  mod <- react(signature(
+    "question, image, report -> answer",
+    instructions = "Review the supplied evidence."
+  ))
+
+  result <- run(
+    mod,
+    question = "What is shown?",
+    image = image,
+    report = pdf,
+    .llm = mock$llm,
+    .return_format = "structured"
+  )
+
+  expect_type(mock$state$prompt, "list")
+  expect_length(mock$state$prompt, 3L)
+  expect_s3_class(mock$state$prompt[[1]], "ellmer::ContentText")
+  expect_identical(mock$state$prompt[[2]], image)
+  expect_identical(mock$state$prompt[[3]], pdf)
+  expect_match(mock$state$prompt[[1]]@text, "Review the supplied evidence")
+  expect_match(mock$state$prompt[[1]]@text, "question: What is shown\\?")
+  expect_type(result$metadata$prompt, "character")
+  expect_match(result$metadata$prompt, "image: <ellmer::ContentImageInline>")
+  expect_match(result$metadata$prompt, "report: <ellmer::ContentPDF>")
+  expect_identical(mod$state$traces[[1]]$prompt, result$metadata$prompt)
+})
+
+test_that("ReactModule keeps text-only prompts as character strings", {
+  mock <- new_react_prompt_chat()
+
+  mod <- react("question -> answer")
+  result <- run(
+    mod,
+    question = "What is 2 + 2?",
+    .llm = mock$llm,
+    .return_format = "structured"
+  )
+
+  expect_type(mock$state$prompt, "character")
+  expect_identical(result$metadata$prompt, mock$state$prompt)
+  expect_match(mock$state$prompt, "question: What is 2 \\+ 2\\?")
+})
+
+test_that("ReAct media reaches real ellmer request normalization", {
+  chat <- ellmer::chat_openai(model = "gpt-test", credentials = function() "x")
+  captured <- NULL
+  remove <- chat$on_request_start(function(turns) {
+    captured <<- turns[[length(turns)]]@contents
+    rlang::abort("Stop before transport", class = "test_request_captured")
+  })
+  on.exit(remove(), add = TRUE)
+  image <- ellmer::ContentImageInline("image/png", "YWJj")
+  pdf <- ellmer::ContentPDF("application/pdf", "ZGVm", "report.pdf")
+
+  condition <- rlang::catch_cnd(run(
+    react("question, image, report -> answer"),
+    question = "Read this evidence",
+    image = image,
+    report = pdf,
+    .llm = chat
+  ))
+
+  expect_s3_class(condition, "dsprrr_provider_error")
+  expect_s3_class(condition$parent, "test_request_captured")
+  expect_length(captured, 3L)
+  expect_s3_class(captured[[1L]], "ellmer::ContentText")
+  expect_identical(captured[[2L]], image)
+  expect_identical(captured[[3L]], pdf)
+})
+
 test_that("ReactModule forward tracks tool calls from ellmer turns", {
   turns <- list()
 
@@ -232,6 +359,7 @@ test_that("ReactModule forward tracks tool calls from ellmer turns", {
     "ellmer::Turn"
   )))
   expect_identical(metadata$finalization, "structured-followup")
+  expect_identical(metadata$termination_reason, "structured")
   expect_true(is.na(metadata$cost))
   expect_equal(mod$state$traces[[1]]$iterations, 2L)
 })

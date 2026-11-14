@@ -11,6 +11,7 @@ chain_of_thought(
   template = "",
   demos = list(),
   config = list(),
+  mode = c("rationale", "native", "plan"),
   ...
 )
 }
@@ -18,25 +19,48 @@ chain_of_thought(
 \item{x}{A signature from \code{\link[=signature]{signature()}}, or a signature string.}
 
 \item{prefix}{Start of the reasoning field's description; see
-\code{\link[=with_reasoning]{with_reasoning()}}.}
+\code{\link[=with_reasoning]{with_reasoning()}}. Used only when \code{mode = "rationale"}.}
 
 \item{chat, template, demos, config}{As in \code{\link[=module]{module()}}.}
+
+\item{mode}{The reasoning behavior: \code{"rationale"} (the default), \code{"native"}
+or \code{"plan"}. \code{"native"} does not select a model or enable provider
+reasoning by itself. Configure provider parameters such as
+\code{reasoning_effort} through \code{chat} or \code{config}, using ellmer's supported
+parameters.}
 
 \item{...}{Must be empty.}
 }
 \value{
-A prediction module, as from \code{\link[=module]{module()}}. \code{\link[=run]{run()}} returns the
-reasoning along with the other outputs, for example
-\code{list(reasoning = "...", answer = "...")}.
+A prediction module, as from \code{\link[=module]{module()}}. The \code{"rationale"} and
+\code{"plan"} modes include their field in the output. With \code{"native"}, the
+output keeps the signature's fields; on a structured result,
+\code{get_metadata()} exposes \code{native_reasoning} as a list of ellmer
+\code{ContentThinking} objects from the current call, or \code{NULL} when the
+provider did not expose any. It never synthesizes a reasoning string.
+
+Native metadata is currently supported for synchronous scalar \code{\link[=run]{run()}}
+calls. Native mode errors before provider work for batch, asynchronous or
+streaming execution, whose current result contracts do not preserve these
+turns.
 }
 \description{
-\code{chain_of_thought()} is \code{module(with_reasoning(x))}: a prediction module
-whose output starts with a \code{reasoning} field, so the model reasons step by
-step before it gives the other outputs.
+\code{chain_of_thought()} creates a prediction module with one of three
+reasoning modes. The default, \code{"rationale"}, keeps the existing behavior:
+it adds a \code{reasoning} output field before the requested fields. \code{"plan"}
+adds a short, explicit \code{plan} field before the requested fields. \code{"native"}
+keeps the signature unchanged and exposes provider-supplied reasoning
+metadata when the provider records it in ellmer turns.
 }
 \examples{
 solver <- chain_of_thought("question -> answer: float")
 solver
+
+native_solver <- chain_of_thought(
+  "question -> answer: float",
+  mode = "native",
+  config = list(reasoning_effort = "low")
+)
 
 \dontrun{
 result <- run(
@@ -46,6 +70,14 @@ result <- run(
 )
 result$reasoning
 result$answer
+
+native_result <- run(
+  native_solver,
+  question = "What is 15 * 24?",
+  .llm = ellmer::chat_openai(model = "gpt-6-luna"),
+  .return_format = "structured"
+)
+get_metadata(native_result)$native_reasoning
 }
 }
 \seealso{

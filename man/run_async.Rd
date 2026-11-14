@@ -37,7 +37,9 @@ call does not use the response cache and records no trace or prompt
 history. Code-running modules run their whole workflow in a separate mirai
 process with a fresh interpreter; modules bound to a caller-owned \code{runner}
 are rejected, because one runner cannot serve concurrent calls. Other
-modules, such as \code{\link[=react]{react()}} or pipelines, are rejected; use \code{\link[=run]{run()}}.
+modules, such as \code{\link[=react]{react()}} or pipelines, are rejected; use \code{\link[=run]{run()}}. Native
+reasoning mode is also rejected because this path does not return provider
+turns or native reasoning metadata.
 }
 \examples{
 \dontrun{
