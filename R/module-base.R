@@ -912,13 +912,16 @@ Module <- R6::R6Class(
     #' @param .trace_context A named JSON-compatible correlation context
     #' @param .history Explicit conversation history is not supported by async
     #'   execution.
+    #' @param .control Optional ReAct control from [react_async_control()] for
+    #'   progress reporting and cooperative cancellation.
     #' @return A promise that resolves to the result
     run_async = function(
       ...,
       .llm = NULL,
       .return_format = c("simple", "structured"),
       .trace_context = list(),
-      .history = NULL
+      .history = NULL,
+      .control = NULL
     ) {
       reject_explicit_history_entrypoint(.history, "module$run_async()")
       if (missing(.trace_context)) {
@@ -926,7 +929,8 @@ Module <- R6::R6Class(
           self,
           ...,
           .llm = .llm,
-          .return_format = .return_format
+          .return_format = .return_format,
+          .control = .control
         ))
       }
       dsprrr::run_async(
@@ -934,7 +938,8 @@ Module <- R6::R6Class(
         ...,
         .llm = .llm,
         .return_format = .return_format,
-        .trace_context = .trace_context
+        .trace_context = .trace_context,
+        .control = .control
       )
     },
 

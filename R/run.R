@@ -1267,7 +1267,7 @@ strip_run_trace <- function(result) {
 
 #' Commit worker traces once, in deterministic input order
 #' @noRd
-commit_run_traces <- function(module, traces) {
+commit_run_traces <- function(module, traces, source = "PredictModule") {
   if (length(traces) == 0L) {
     return(invisible(module))
   }
@@ -1286,7 +1286,7 @@ commit_run_traces <- function(module, traces) {
   traces <- lapply(traces, trace_context_annotate_event)
   module$state$traces <- append(module$state$traces, traces)
   for (trace in traces) {
-    add_to_global_history(trace, source = "PredictModule")
+    add_to_global_history(trace, source = source)
   }
   invisible(module)
 }

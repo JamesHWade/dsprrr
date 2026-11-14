@@ -129,6 +129,13 @@ First development changelog. dsprrr is experimental; the API may change.
   in the tool loop without a separate structured-output request. The default
   `finalization = "structured"` retains the existing follow-up behavior.
 
+* ReAct modules now support `run_async()` with sequential tool execution and
+  an awaited structured follow-up. `react_async_control()` adds ordered
+  progress events and cooperative cancellation between provider requests and
+  tools; it does not interrupt an active request or tool. Failure traces keep
+  partial Chat history, pending tool requests, and observed native tool results
+  distinct so unrun tools are never represented as completed.
+
 * Experimental calibrated decision outputs, following DSPy 3.4's decision
   types. `with_decisions()` attaches `decision_bool()`, `decision_score()`, or
   `decision_choice()` to described boolean and enum outputs of a Predict

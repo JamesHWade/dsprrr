@@ -29,6 +29,8 @@ NULL
 #' @param .trace_context A named, JSON-compatible list, as in [run()]. The
 #'   promise carries it in its `dsprrr_trace_context` attribute. Direct Predict
 #'   calls also record it in the module's traces.
+#' @param .control An optional [react_async_control()] for cooperative
+#'   cancellation and progress reporting. Supported only for [react()] modules.
 #' @param .history Explicit conversation history is not supported by async
 #'   execution; use synchronous [run()] for scalar root ReAct continuation.
 #'
@@ -38,15 +40,24 @@ NULL
 #' failure. Structured results include canonical usage, decisions, and any
 #' provider-supplied native reasoning blocks recorded for the current call;
 #' unavailable usage remains `NA` and absent native reasoning remains `NULL`.
+#' ReAct failures and cancellations preserve the partial native Chat history,
+#' observed tool results, and requested-versus-result status in the trace. That
+#' partial history is not a portable continuation or an instruction to replay
+#' tools.
 #' Factory-backed code-running modules keep their simple result behavior;
 #' structured results are rejected because that worker path does not yet
 #' preserve the same trace contract. Modules bound to a caller-owned `runner`
 #' are rejected, because one runner cannot serve concurrent calls. Other
-#' modules, such as [react()] or pipelines, are rejected; use [run()].
+#' specialized modules, such as pipelines, are rejected; use [run()].
 #'
 #' Each direct provider call reserves its resolved Chat until the promise
 #' settles. A concurrent call using that same Chat is rejected before provider
 #' work; use separate Chats for overlapping calls.
+#'
+#' ReAct modules use ellmer's sequential async tool loop and await their
+#' structured follow-up when configured. Their optional `.control` reports
+#' progress and supports cooperative cancellation between requests and tools;
+#' it does not interrupt a request or tool already in progress.
 #'
 #' @return A promise that resolves to the module's output, matching
 #'   [run()]'s default result, or to a `dsprrr_result` when
@@ -74,7 +85,8 @@ run_async <- function(
   .llm = NULL,
   .return_format = c("simple", "structured"),
   .trace_context = list(),
-  .history = NULL
+  .history = NULL,
+  .control = NULL
 ) {
   reject_explicit_history_entrypoint(.history, "run_async()")
   if (!inherits(module, "Module")) {
@@ -87,6 +99,43 @@ run_async <- function(
     .trace_context,
     supplied = trace_context_supplied
   )
+  if (inherits(module, "ReactModule")) {
+    inputs <- list(...)
+    validate_signature_inputs(
+      module$signature,
+      inputs,
+      missing = "error",
+      extra = "warn",
+      type = "warn",
+      context = "inputs",
+      supplied = module$supplied_inputs()
+    )
+    input_contract <- module_input_contract(module, inputs)
+    if (!identical(input_contract$kind, "scalar")) {
+      cli::cli_abort(
+        c(
+          "Async ReAct execution requires scalar inputs",
+          "x" = "The supplied inputs describe {.val {input_contract$kind}} values.",
+          "i" = "Call the module once per scalar input set with {.fn run_async}."
+        ),
+        class = "dsprrr_react_async_batch_unsupported"
+      )
+    }
+    return(react_run_async(
+      module = module,
+      inputs = inputs,
+      llm = .llm,
+      return_format = .return_format,
+      trace_fields = invocation_trace_fields,
+      control = .control
+    ))
+  }
+  if (!is.null(.control)) {
+    cli::cli_abort(
+      "{.arg .control} is supported only for ReAct modules",
+      class = "dsprrr_async_control_unsupported"
+    )
+  }
   if (interpreter_workflow_module(module)) {
     assert_factory_interpreter_async_supported(module, "run_async")
     if (identical(.return_format, "structured")) {
@@ -149,31 +198,16 @@ run_async <- function(
   trace_recorded$local_only <- FALSE
 
   commit_async_trace <- function(trace, keep_local_on_error = FALSE) {
-    module_traces_before <- module$state$traces
-    history_before <- .dsprrr_env$prompt_history
-    history_generation_before <- .dsprrr_env$prompt_history_generation
-    commit_error <- tryCatch(
-      {
-        commit_run_traces(module, list(trace))
-        NULL
-      },
-      error = function(error) error
+    trace_result <- commit_async_trace_transaction(
+      module,
+      trace,
+      keep_local_on_error = keep_local_on_error
     )
-    if (inherits(commit_error, "condition")) {
-      # commit_run_traces() mutates both stores synchronously. Roll back the
-      # paired state if history capture fails partway through the commit.
-      module$state$traces <- module_traces_before
-      .dsprrr_env$prompt_history <- history_before
-      .dsprrr_env$prompt_history_generation <- history_generation_before
-      if (isTRUE(keep_local_on_error)) {
-        module$state$traces <- append(module$state$traces, list(trace))
-        trace_recorded$value <- TRUE
-        trace_recorded$local_only <- TRUE
-      }
-      stop(commit_error)
+    if (isTRUE(trace_result$committed) || isTRUE(trace_result$local_only)) {
+      trace_recorded$value <- TRUE
+      trace_recorded$local_only <- isTRUE(trace_result$local_only)
     }
-    trace_recorded$value <- TRUE
-    invisible(NULL)
+    trace_result
   }
 
   build_metadata <- function(

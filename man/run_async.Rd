@@ -10,7 +10,8 @@ run_async(
   .llm = NULL,
   .return_format = c("simple", "structured"),
   .trace_context = list(),
-  .history = NULL
+  .history = NULL,
+  .control = NULL
 )
 }
 \arguments{
@@ -35,6 +36,9 @@ calls also record it in the module's traces.}
 
 \item{.history}{Explicit conversation history is not supported by async
 execution; use synchronous \code{\link[=run]{run()}} for scalar root ReAct continuation.}
+
+\item{.control}{An optional \code{\link[=react_async_control]{react_async_control()}} for cooperative
+cancellation and progress reporting. Supported only for \code{\link[=react]{react()}} modules.}
 }
 \value{
 A promise that resolves to the module's output, matching
@@ -54,15 +58,24 @@ calls bypass the response cache and record one trace on either success or
 failure. Structured results include canonical usage, decisions, and any
 provider-supplied native reasoning blocks recorded for the current call;
 unavailable usage remains \code{NA} and absent native reasoning remains \code{NULL}.
+ReAct failures and cancellations preserve the partial native Chat history,
+observed tool results, and requested-versus-result status in the trace. That
+partial history is not a portable continuation or an instruction to replay
+tools.
 Factory-backed code-running modules keep their simple result behavior;
 structured results are rejected because that worker path does not yet
 preserve the same trace contract. Modules bound to a caller-owned \code{runner}
 are rejected, because one runner cannot serve concurrent calls. Other
-modules, such as \code{\link[=react]{react()}} or pipelines, are rejected; use \code{\link[=run]{run()}}.
+specialized modules, such as pipelines, are rejected; use \code{\link[=run]{run()}}.
 
 Each direct provider call reserves its resolved Chat until the promise
 settles. A concurrent call using that same Chat is rejected before provider
 work; use separate Chats for overlapping calls.
+
+ReAct modules use ellmer's sequential async tool loop and await their
+structured follow-up when configured. Their optional \code{.control} reports
+progress and supports cooperative cancellation between requests and tools;
+it does not interrupt a request or tool already in progress.
 }
 \examples{
 \dontrun{
