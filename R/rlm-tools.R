@@ -535,6 +535,9 @@ search <- function(var, pattern, ignore_case = FALSE) {
     ) {
       base::stop(field, " image_url requires HTTPS without user info, up to 2048 bytes")
     }
+    if (base::is.null(item$detail)) {
+      item$detail <- "auto"
+    }
   }
   if (base::identical(type, "image_base64")) {
     data <- item$data
@@ -654,6 +657,15 @@ llm_query_batched <- base::local({
           .encode_context(slices[[index]], base::paste0("slices[[", index, "]]"))
         }
       )
+      if (base::all(base::vapply(
+        slices,
+        function(slice) {
+          base::is.character(slice) && base::length(slice) == 1L
+        },
+        base::logical(1)
+      ))) {
+        slices <- base::vapply(slices, base::identity, base::character(1))
+      }
     }
 
     .call(
@@ -1171,10 +1183,10 @@ decode_rlm_control <- function(
       if (!valid_query) {
         abort_rlm_control("Malformed RLM query control frame")
       }
-      envelope$payload$context <- normalize_rlm_query_context(
+      envelope$payload["context"] <- list(normalize_rlm_query_context(
         context,
         "context"
-      )
+      ))
     }
     control <- structure(
       envelope$payload,

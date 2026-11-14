@@ -2347,8 +2347,7 @@ test_that("MCP RLM image queries reach a real ellmer Chat", {
   code <- paste(
     "answer <- llm_query('Describe the image', context_slice = list(",
     "list(type = 'text', text = 'caption'),",
-    "list(type = 'image_url', url = 'https://example.org/photo.png',",
-    "detail = 'high'))) ",
+    "list(type = 'image_url', url = 'https://example.org/photo.png'))) ",
     "SUBMIT(answer)",
     sep = "\n"
   )
@@ -2388,7 +2387,7 @@ test_that("MCP RLM image queries reach a real ellmer Chat", {
     captured$turn@contents[[3L]]@url,
     "https://example.org/photo.png"
   )
-  expect_identical(captured$turn@contents[[3L]]@detail, "high")
+  expect_identical(captured$turn@contents[[3L]]@detail, "auto")
 })
 
 test_that("RLM invokes an actual ellmer ToolDef through replay", {
@@ -2944,6 +2943,24 @@ test_that("RLM guest query content uses ordered JSON-native records", {
       detail = "auto"
     ))
   )
+
+  null_context <- runner$execute(
+    paste0(prelude, "\nllm_query('q')"),
+    context = list()
+  )
+  null_request <- dsprrr:::decode_rlm_control(null_context$error, nonce)
+  expect_true("context" %in% names(null_request))
+  expect_null(null_request$context)
+
+  single_text_batch <- runner$execute(
+    paste0(prelude, "\nllm_query_batched('q', slices = 'legacy text')"),
+    context = list()
+  )
+  single_text_request <- dsprrr:::decode_rlm_control(
+    single_text_batch$error,
+    nonce
+  )
+  expect_identical(single_text_request$slices, "legacy text")
 })
 
 
@@ -3092,9 +3109,8 @@ test_that("RLM replay preserves mixed query content identity", {
   call_counter$count <- 0L
   code <- paste0(
     "answer <- llm_query('Describe the image', context_slice = list(",
-    "list(type = 'text', text = 'caption'), ",
-    "list(type = 'image_url', url = 'https://example.org/photo.png', ",
-    "detail = 'high')))\n",
+    "list(text = 'caption', type = 'text'), ",
+    "list(url = 'https://example.org/photo.png', type = 'image_url')))\n",
     "SUBMIT(answer)"
   )
 
@@ -3116,6 +3132,125 @@ test_that("RLM replay preserves mixed query content identity", {
   expect_identical(captured$prompt[[2]]@text, "caption")
   expect_s3_class(captured$prompt[[3]], "ellmer::ContentImageRemote")
   expect_identical(captured$prompt[[3]]@url, "https://example.org/photo.png")
+  expect_identical(captured$prompt[[3]]@detail, "auto")
+})
+
+
+test_that("RLM replay preserves null, legacy, and mixed batch query shapes", {
+  skip_if_not_installed("callr")
+
+  runner <- r_code_runner(timeout = 10, persistent = TRUE)
+  withr::defer(runner$shutdown())
+  captured <- new.env(parent = emptyenv())
+  captured$sequential <- list()
+  captured$parallel <- NULL
+  sub_lm <- new_test_chat(chat = function(...) {
+    captured$sequential[[length(captured$sequential) + 1L]] <<- list(...)
+    "query summary"
+  })
+  rlm <- rlm_module(
+    "question -> answer",
+    runner = runner,
+    max_llm_calls = 4L,
+    sub_lm = sub_lm
+  )
+
+  execute <- function(code, state_id, expected, calls = 1L) {
+    call_counter <- new.env(parent = emptyenv())
+    call_counter$count <- 0L
+    result <- rlm$.__enclos_env__$private$execute_with_rlm_tools(
+      code = code,
+      inputs = list(),
+      call_counter = call_counter,
+      runner = runner,
+      runner_policy = list(rlm_control_frame_limit = 10000L),
+      sub_lm = sub_lm,
+      session_state_id = state_id
+    )
+    expect_true(result$success)
+    expect_true(result$is_final)
+    expect_identical(result$final_value$answer, expected)
+    expect_identical(call_counter$count, calls)
+  }
+
+  parallel_chat <- function(chat, prompts, ...) {
+    captured$parallel <- prompts
+    lapply(seq_along(prompts), function(index) {
+      list(last_turn = function() list(text = paste("batch summary", index)))
+    })
+  }
+
+  with_mock_parallel_chat(parallel_chat, {
+    execute(
+      "answer <- llm_query('q')\nSUBMIT(answer)",
+      ".rlm_null_context_replay",
+      "query summary"
+    )
+    execute(
+      "answer <- llm_query_batched('q', slices = NULL)\nSUBMIT(answer[[1]])",
+      ".rlm_null_batch_slices_replay",
+      "query summary"
+    )
+    execute(
+      paste(
+        "answer <- llm_query_batched('q', slices = 'legacy text')",
+        "SUBMIT(answer[[1]])",
+        sep = "\n"
+      ),
+      ".rlm_singleton_character_slice_replay",
+      "query summary"
+    )
+    execute(
+      paste(
+        "answer <- llm_query_batched('q', slices = list('legacy text'))",
+        "SUBMIT(answer[[1]])",
+        sep = "\n"
+      ),
+      ".rlm_singleton_list_slice_replay",
+      "query summary"
+    )
+    execute(
+      paste(
+        "answer <- llm_query_batched('q', slices = list(list(",
+        "list(text = 'caption', type = 'text'),",
+        "list(url = 'https://example.org/one.png', type = 'image_url'))))",
+        "SUBMIT(answer[[1]])",
+        sep = "\n"
+      ),
+      ".rlm_singleton_mixed_batch_replay",
+      "query summary"
+    )
+    execute(
+      paste(
+        "answer <- llm_query_batched(c('q1', 'q2'), slices = list(",
+        "list(list(text = 'first', type = 'text'),",
+        "list(url = 'https://example.org/first.png', type = 'image_url')),",
+        "list(list(url = 'https://example.org/second.png', type = 'image_url', detail = NULL),",
+        "list(type = 'text', text = 'second'))))",
+        "SUBMIT(paste(answer, collapse = ','))",
+        sep = "\n"
+      ),
+      ".rlm_two_mixed_batch_replay",
+      "batch summary 1,batch summary 2",
+      calls = 2L
+    )
+  })
+
+  expect_identical(captured$sequential[[1L]], list("q"))
+  expect_identical(captured$sequential[[2L]], list("q"))
+  expect_identical(
+    captured$sequential[[3L]],
+    list("Context:\nlegacy text\n\nQuestion: q")
+  )
+  expect_identical(captured$sequential[[4L]], captured$sequential[[3L]])
+  expect_length(captured$sequential[[5L]], 4L)
+  expect_s3_class(captured$sequential[[5L]][[3L]], "ellmer::ContentImageRemote")
+  expect_identical(captured$sequential[[5L]][[3L]]@detail, "auto")
+  expect_length(captured$parallel, 2L)
+  expect_s3_class(captured$parallel[[1L]][[3L]], "ellmer::ContentImageRemote")
+  expect_identical(captured$parallel[[1L]][[3L]]@detail, "auto")
+  expect_s3_class(captured$parallel[[2L]][[2L]], "ellmer::ContentImageRemote")
+  expect_identical(captured$parallel[[2L]][[2L]]@detail, "auto")
 })
 
 
