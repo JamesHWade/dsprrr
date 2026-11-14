@@ -30,7 +30,7 @@ async_contract_real_chat <- function(turns = list()) {
         tokens = c(NA_real_, NA_real_, NA_real_)
       ) {
         user_contents <- lapply(prompt_parts, function(part) {
-          if (dsprrr:::is_content_input(part)) {
+          if (is_content_input(part)) {
             part
           } else {
             ellmer::ContentText(as.character(part))
@@ -162,7 +162,7 @@ test_that("Module$run_async forwards structured format and decision evidence", {
   expect_null(outcome$error)
   expect_s3_class(outcome$value, "dsprrr_result")
   expect_identical(outcome$value$output, list(flagged = TRUE))
-  expect_true(dsprrr:::is_ellmer_chat(outcome$value$chat))
+  expect_true(is_ellmer_chat(outcome$value$chat))
   expect_true(is.list(outcome$value$metadata$decisions$flagged))
   expect_identical(
     outcome$value$metadata$trace_context,
@@ -325,7 +325,7 @@ test_that("separate async Chats keep trace contexts isolated", {
     .trace_context = list(call = "right")
   )
 
-  expect_identical(dsprrr:::current_trace_context(), list())
+  expect_identical(current_trace_context(), list())
   expect_identical(
     left_chat$state$run_context$dsprrr$trace_context,
     list(call = "left")
@@ -375,7 +375,7 @@ test_that("async Chat reservation blocks overlapping async and sync calls", {
 
   mock$state$complete(response = list(answer = "first result"))
   expect_null(async_contract_settle(pending)$error)
-  expect_no_error(dsprrr:::assert_async_chat_available(mock$chat))
+  expect_no_error(assert_async_chat_available(mock$chat))
 })
 
 
@@ -403,7 +403,7 @@ test_that("provider rejection records one error trace and releases the Chat", {
   expect_identical(trace$metadata$input_tokens, 11L)
   expect_identical(trace$metadata$output_tokens, 7L)
   expect_identical(trace$trace_context, list(call = "failure"))
-  expect_no_error(dsprrr:::assert_async_chat_available(mock$chat))
+  expect_no_error(assert_async_chat_available(mock$chat))
 })
 
 
@@ -412,8 +412,8 @@ test_that("history sink errors roll back the success trace and keep one failure 
   mock <- async_contract_real_chat()
   solver <- module(signature("question -> answer"))
   context <- list(call = "history-sink")
-  history_before <- dsprrr:::.dsprrr_env$prompt_history
-  generation_before <- dsprrr:::prompt_history_generation()
+  history_before <- .dsprrr_env$prompt_history
+  generation_before <- prompt_history_generation()
   testthat::local_mocked_bindings(
     add_to_global_history = function(...) {
       stop("history sink failed", call. = FALSE)
@@ -437,12 +437,12 @@ test_that("history sink errors roll back the success trace and keep one failure 
   expect_identical(trace$metadata$error_stage, "completion")
   expect_match(trace$metadata$error, "history sink failed")
   expect_identical(trace$trace_context, context)
-  expect_identical(dsprrr:::.dsprrr_env$prompt_history, history_before)
+  expect_identical(.dsprrr_env$prompt_history, history_before)
   expect_identical(
-    dsprrr:::prompt_history_generation(),
+    prompt_history_generation(),
     generation_before
   )
-  expect_no_error(dsprrr:::assert_async_chat_available(mock$chat))
+  expect_no_error(assert_async_chat_available(mock$chat))
 })
 
 
@@ -452,7 +452,7 @@ test_that("partial global history appends roll back on warning errors", {
     dsprrr.prompt_history_max = NA_real_,
     warn = 2
   )
-  real_history_sink <- dsprrr:::add_to_global_history
+  real_history_sink <- add_to_global_history
   testthat::local_mocked_bindings(
     add_to_global_history = function(trace, source) {
       withCallingHandlers(
@@ -467,8 +467,8 @@ test_that("partial global history appends roll back on warning errors", {
   mock <- async_contract_real_chat()
   solver <- module(signature("question -> answer"))
   context <- list(call = "partial-history")
-  history_before <- dsprrr:::.dsprrr_env$prompt_history
-  generation_before <- dsprrr:::prompt_history_generation()
+  history_before <- .dsprrr_env$prompt_history
+  generation_before <- prompt_history_generation()
 
   pending <- run_async(
     solver,
@@ -486,7 +486,7 @@ test_that("partial global history appends roll back on warning errors", {
   expect_identical(trace$output, NA)
   expect_identical(trace$metadata$error_stage, "completion")
   expect_identical(trace$trace_context, context)
-  history_after <- dsprrr:::.dsprrr_env$prompt_history
+  history_after <- .dsprrr_env$prompt_history
   expect_gte(length(history_after), length(history_before))
   expect_lte(length(history_after) - length(history_before), 1L)
   if (length(history_after) > length(history_before)) {
@@ -494,10 +494,10 @@ test_that("partial global history appends roll back on warning errors", {
     expect_identical(new_history$metadata$error_stage, "completion")
   }
   expect_equal(
-    dsprrr:::prompt_history_generation() - generation_before,
+    prompt_history_generation() - generation_before,
     length(history_after) - length(history_before)
   )
-  expect_no_error(dsprrr:::assert_async_chat_available(mock$chat))
+  expect_no_error(assert_async_chat_available(mock$chat))
 })
 
 
@@ -520,7 +520,7 @@ test_that("launch, decode, and completion errors record once and release Chat", 
     launch_solver$state$traces[[1L]]$metadata$error_stage,
     "provider"
   )
-  expect_no_error(dsprrr:::assert_async_chat_available(launch_chat$chat))
+  expect_no_error(assert_async_chat_available(launch_chat$chat))
 
   decode_chat <- async_contract_real_chat()
   decode_solver <- with_decisions(
@@ -542,7 +542,7 @@ test_that("launch, decode, and completion errors record once and release Chat", 
     decode_solver$state$traces[[1L]]$metadata$error_stage,
     "decode"
   )
-  expect_no_error(dsprrr:::assert_async_chat_available(decode_chat$chat))
+  expect_no_error(assert_async_chat_available(decode_chat$chat))
 
   completion_chat <- async_contract_real_chat()
   completion_solver <- module(signature("question -> answer"))
@@ -567,7 +567,7 @@ test_that("launch, decode, and completion errors record once and release Chat", 
     completion_solver$state$traces[[1L]]$metadata$error_stage,
     "completion"
   )
-  expect_no_error(dsprrr:::assert_async_chat_available(completion_chat$chat))
+  expect_no_error(assert_async_chat_available(completion_chat$chat))
 })
 
 
