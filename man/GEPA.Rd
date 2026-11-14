@@ -92,11 +92,12 @@ the instructions. Over several generations the best candidates are kept,
 combined and rewritten again. GEPA can also rewrite the complete source of a
 \code{\link[=flex]{flex()}} module.
 
-Reflection uses the chat passed to \code{\link[=compile]{compile()}} as \code{.llm}, the same chat that
-runs the program; there is no separate reflection model argument. Without
-\code{.llm}, no model is asked: rewritten instructions get the fixed sentence
-"Focus on the failed cases and be more explicit." (or "Be more explicit and
-accurate.") appended, and Flex sources stay unchanged.
+Candidate evaluation uses the chat passed to \code{\link[=compile]{compile()}} as \code{.llm}.
+Reflection proposals use \code{.reflection_llm}, also passed to \code{\link[=compile]{compile()}}. If
+\code{.reflection_llm} is omitted, an explicitly supplied \code{.llm} remains the
+compatibility fallback for reflection. Mutable GEPA searches require one
+of these chats; GEPA reports a configuration error instead of silently
+appending a fixed instruction suffix when no reflection chat is available.
 }
 \details{
 \subsection{Feedback metrics}{
@@ -139,6 +140,21 @@ predictors are not tuned separately. The source proposer sees the task and
 signature, field schemas, allowed tools and primitives, and the failed rows
 with their feedback. Proposed sources are validated before use; an invalid
 source is recorded with a failure score and can never be selected.
+
+\code{.reflection_llm} is the reflection Chat, while \code{.llm} remains the task Chat
+for candidate evaluation. When \code{.reflection_llm} is omitted, an explicitly
+supplied \code{.llm} is used for both roles for compatibility. The optimization
+result records supplied model names and the reflection route in
+\code{extensions$gepa$model_routing}. If \code{.llm} is omitted, \code{task_model} is
+\code{NULL} because the regular module/default Chat resolver chooses the task
+Chat at evaluation time, and \code{task_chat_source} records
+\code{"runtime_resolution"}. Both roles share the optimizer's resource budget;
+reflection requests are attributed to GEPA reflection stages.
+
+GEPA deep-clones the reflection Chat for each proposal and clears the
+clone's conversation turns. Model settings are retained, proposal calls do
+not share conversation history, and the supplied Chat is not mutated by
+reflection.
 }
 }
 \examples{
@@ -182,12 +198,13 @@ trainset <- data.frame(
   question = c("What is 2 + 2?", "What is the capital of France?"),
   answer = c("4", "Paris")
 )
-# `.llm` runs the program and writes the reflections
+# `.llm` runs the program; `.reflection_llm` writes the reflections.
 optimized <- compile(
   qa,
   tp,
   trainset,
-  .llm = ellmer::chat_openai(model = "gpt-6-luna")
+  .llm = ellmer::chat_openai(model = "gpt-6-luna"),
+  .reflection_llm = ellmer::chat_openai(model = "gpt-6-astra")
 )
 optimization_result(optimized)
 }

@@ -154,6 +154,13 @@ First development changelog. dsprrr is experimental; the API may change.
   validation rows drive selection, per-example winners, and optional retained
   outputs.
 
+* `GEPA()` can use a separate `.reflection_llm` Chat for instruction and Flex
+  proposals while `.llm` remains the task Chat for candidate evaluation.
+  An explicitly supplied `.llm` remains the compatibility fallback when
+  `.reflection_llm` is omitted. Mutable searches without either Chat now fail
+  with a configuration error instead of silently appending fixed instruction
+  text. Reflection calls remain part of the shared optimizer resource budget.
+
 * `optimization_result()` provides one read-only result contract across every
   optimizer, including optimizer identity, completion or partial status,
   baseline and best scores, winning parameters, trial evidence, lineage,
@@ -286,7 +293,8 @@ First development changelog. dsprrr is experimental; the API may change.
   `$add_tool()` rejects a name it already has. ellmer registers tools on a
   chat by name, so a second tool with the same name silently replaced the
   first while the module still listed both. `$add_tool(tool, replace = TRUE)`
-  replaces a tool deliberately.
+  replaces a tool deliberately. Its initial chat request now also preserves
+  image and PDF content objects while keeping prompt traces readable.
 
 * `metric_exact_match()` and `metric_f1()` now work without `field` in
   `evaluate()`, `optimize_grid()`, and `compile()`. Those functions pass the

@@ -1103,6 +1103,7 @@ gepa_propose_flex_source <- function(
     ))
   }
   assert_ellmer_chat(.llm, arg = ".llm")
+  .llm <- gepa_clone_reflection_chat(.llm)
 
   prompt <- gepa_flex_reflection_prompt(
     module,
@@ -1227,9 +1228,20 @@ gepa_propose_component_instructions <- function(
   unit_id = "gepa:component_reflection"
 ) {
   if (is.null(.llm)) {
-    return(gepa_fallback_mutation(instruction, failed_examples))
+    cli::cli_abort(
+      c(
+        "GEPA cannot reflect without a reflection Chat",
+        "i" = "Supply {.arg .reflection_llm} to {.fn compile}.",
+        "i" = paste(
+          "An explicitly supplied {.arg .llm} remains a compatibility",
+          "fallback."
+        )
+      ),
+      class = "dsprrr_gepa_reflection_error"
+    )
   }
   assert_ellmer_chat(.llm, arg = ".llm")
+  .llm <- gepa_clone_reflection_chat(.llm)
 
   prompt <- gepa_reflection_prompt(instruction, failed_examples)
   type <- ellmer::type_object(instructions = ellmer::type_string())
@@ -2028,6 +2040,9 @@ compile_gepa_components <- function(
   metrics,
   metric_names,
   .llm,
+  .reflection_llm,
+  task_chat_source,
+  reflection_chat_source,
   control,
   budget,
   trial_log = NULL
@@ -2103,6 +2118,16 @@ compile_gepa_components <- function(
       track_best_outputs = track_best_outputs,
       optimization_skipped = TRUE,
       skip_reason = "no_mutable_components",
+      model_routing = list(
+        task_model = gepa_chat_model_name(.llm),
+        task_chat_source = task_chat_source,
+        reflection_model = gepa_chat_model_name(.reflection_llm),
+        reflection_chat_source = reflection_chat_source,
+        reflection_budget_stages = c(
+          "gepa_reflection",
+          "gepa_flex_reflection"
+        )
+      ),
       flex_paths = gepa_flex_paths(program, mutable_only = FALSE),
       mutable_flex_paths = character(),
       component_ids = character(),
@@ -2152,7 +2177,7 @@ compile_gepa_components <- function(
   population <- gepa_initial_component_population(
     program,
     population_size = teleprompter@population_size,
-    .llm = .llm,
+    .llm = .reflection_llm,
     verbose = teleprompter@verbose,
     budget = budget,
     failure_score = failure_score,
@@ -2400,7 +2425,7 @@ compile_gepa_components <- function(
       mutation_rate = teleprompter@mutation_rate,
       crossover_rate = teleprompter@crossover_rate,
       selection = teleprompter@selection,
-      .llm = .llm,
+      .llm = .reflection_llm,
       verbose = teleprompter@verbose,
       budget = budget,
       generation = generation + 1L,
@@ -2490,6 +2515,16 @@ compile_gepa_components <- function(
     merge_invocations = merge_invocations,
     successful_merge_count = lineage_merges,
     track_best_outputs = track_best_outputs,
+    model_routing = list(
+      task_model = gepa_chat_model_name(.llm),
+      task_chat_source = task_chat_source,
+      reflection_model = gepa_chat_model_name(.reflection_llm),
+      reflection_chat_source = reflection_chat_source,
+      reflection_budget_stages = c(
+        "gepa_reflection",
+        "gepa_flex_reflection"
+      )
+    ),
     flex_paths = gepa_flex_paths(program, mutable_only = FALSE),
     mutable_flex_paths = gepa_flex_paths(program),
     component_ids = names(gepa_program_component_specs(program)),

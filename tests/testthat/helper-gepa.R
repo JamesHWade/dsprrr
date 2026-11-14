@@ -10,3 +10,17 @@ gepa_test_metadata <- function(program) {
     )
   )
 }
+
+gepa_test_reflection_chat <- function(
+  instructions = "Test reflection proposal"
+) {
+  new_test_chat(
+    model = "gepa-test-reflection",
+    chat_structured = function(prompt, type, ...) {
+      if (!identical(names(type@properties), "instructions")) {
+        stop("unexpected GEPA test reflection schema")
+      }
+      list(instructions = instructions)
+    }
+  )
+}
