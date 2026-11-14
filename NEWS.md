@@ -111,6 +111,11 @@ First development changelog. dsprrr is experimental; the API may change.
   `session_id` and `stop_reason`) as `agent_run` in each call's metadata and
   trace. Plain ellmer Chats are called as before.
 
+* `react()` accepts `finalization = "submit"` to let the model return its
+  schema-validated answer through a reserved `submit` tool call. This completes
+  in the tool loop without a separate structured-output request. The default
+  `finalization = "structured"` retains the existing follow-up behavior.
+
 * Experimental calibrated decision outputs, following DSPy 3.4's decision
   types. `with_decisions()` attaches `decision_bool()`, `decision_score()`, or
   `decision_choice()` to described boolean and enum outputs of a Predict

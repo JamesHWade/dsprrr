@@ -37,6 +37,10 @@ ellmer Chat objects, functions, environments, external pointers, credentials
 attached to runtime tools, or usage, cost, or duration metadata. Conversation
 text, reasoning, media, and tool data may still be sensitive; protect saved
 history files accordingly.
+
+Saved JSON is limited to 16 MiB; retained string and media data are limited
+to 12 MiB. Histories also have limits on turns, nesting depth, and values.
+Oversized histories fail explicitly rather than silently truncating evidence.
 }
 \examples{
 turns <- list(

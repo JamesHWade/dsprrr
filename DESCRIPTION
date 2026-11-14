@@ -119,6 +119,7 @@ Collate:
     'pipeline.R'
     'r-code-runner.R'
     'ragnar.R'
+    'react-submit.R'
     'rlm-tools.R'
     'run.R'
     'signature-parser.R'
