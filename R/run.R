@@ -677,10 +677,13 @@ resolve_module_llm <- function(
 
   params <- module_runtime_params(module, extra_params = extra_params)
   if (length(params) == 0) {
+    assert_async_chat_available(llm)
     return(llm)
   }
 
-  apply_chat_params(llm, params)
+  resolved <- apply_chat_params(llm, params)
+  assert_async_chat_available(resolved)
+  resolved
 }
 
 #' Collect runtime params from module config

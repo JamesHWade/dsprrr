@@ -333,6 +333,8 @@ test_that("direct R6 runs intercept trace context before prompt assembly", {
 })
 
 test_that("async run handles carry context without adding it to prompts", {
+  skip_if_not_installed("promises")
+  skip_if_not_installed("later")
   context <- trace_context_fixture()
   program <- module(signature("text -> answer"))
   program_id <- program_artifact_id(program)
@@ -344,10 +346,34 @@ test_that("async run handles carry context without adding it to prompts", {
     .trace_context = context
   )
   fields <- attr(handle, "dsprrr_trace_context", exact = TRUE)
+  state <- new.env(parent = emptyenv())
+  state$done <- FALSE
+  observer <- promises::then(
+    handle,
+    function(value) {
+      state$value <- value
+      state$done <- TRUE
+      NULL
+    },
+    function(error) {
+      state$error <- error
+      state$done <- TRUE
+      NULL
+    }
+  )
+  deadline <- Sys.time() + 10
+  while (!state$done && Sys.time() < deadline) {
+    later::run_now(0.05)
+  }
+  invisible(observer)
 
   expect_identical(fields$trace_context, context)
   expect_identical(fields$program_artifact_id, program_id)
   expect_false(any(grepl("tempest", chat$prompts(), fixed = TRUE)))
+  expect_true(state$done)
+  expect_null(state$error)
+  expect_length(program$state$traces, 1L)
+  expect_identical(program$state$traces[[1L]]$trace_context, context)
 })
 
 test_that("nested runs inherit context but retain their own program identity", {

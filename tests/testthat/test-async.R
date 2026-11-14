@@ -171,6 +171,7 @@ test_that("build_simple_prompt handles missing inputs", {
 test_that("run_async returns a promise", {
   skip_if_not_installed("ellmer")
   skip_if_not_installed("promises")
+  skip_if_not_installed("later")
 
   # Check if chat_structured_async exists
   chat <- tryCatch(
@@ -183,6 +184,13 @@ test_that("run_async returns a promise", {
     !("chat_structured_async" %in% names(chat)),
     "chat_structured_async not available"
   )
+  override_test_chat_method(
+    chat,
+    "chat_structured_async",
+    function(..., type) {
+      promises::promise_resolve(list(result = "Hello"))
+    }
+  )
 
   sig <- signature("text -> result")
   mod <- module(sig, chat = chat)
@@ -190,6 +198,29 @@ test_that("run_async returns a promise", {
   # run_async should return a promise
   result <- mod$run_async(text = "Hello")
   expect_s3_class(result, "promise")
+  state <- new.env(parent = emptyenv())
+  state$done <- FALSE
+  observer <- promises::then(
+    result,
+    function(value) {
+      state$value <- value
+      state$done <- TRUE
+      NULL
+    },
+    function(error) {
+      state$error <- error
+      state$done <- TRUE
+      NULL
+    }
+  )
+  deadline <- Sys.time() + 10
+  while (!state$done && Sys.time() < deadline) {
+    later::run_now(0.05)
+  }
+  invisible(observer)
+  expect_true(state$done)
+  expect_null(state$error)
+  expect_identical(state$value, list(result = "Hello"))
 })
 
 test_that("run, run_async, and stream_async share prompt assembly", {
@@ -217,7 +248,29 @@ test_that("run, run_async, and stream_async share prompt assembly", {
   )
 
   run(mod, text = "hello")
-  run_async(mod, text = "hello")
+  async <- run_async(mod, text = "hello")
+  expect_s3_class(async, "promise")
+  async_state <- new.env(parent = emptyenv())
+  async_state$done <- FALSE
+  observer <- promises::then(
+    async,
+    function(value) {
+      async_state$done <- TRUE
+      NULL
+    },
+    function(error) {
+      async_state$error <- error
+      async_state$done <- TRUE
+      NULL
+    }
+  )
+  deadline <- Sys.time() + 10
+  while (!async_state$done && Sys.time() < deadline) {
+    later::run_now(0.05)
+  }
+  invisible(observer)
+  expect_true(async_state$done)
+  expect_null(async_state$error)
   stream_async(mod, text = "hello")
 
   expect_identical(captured$run, captured$async)
