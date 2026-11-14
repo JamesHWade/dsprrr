@@ -781,6 +781,22 @@ abort_rlm_control <- function(message) {
 }
 
 
+abort_rlm_control_frame_size <- function(frame_bytes, max_bytes) {
+  cli::cli_abort(
+    c(
+      "RLM control frame exceeds the runner transport limit",
+      "x" = "The frame has {frame_bytes} bytes; the limit is {max_bytes} bytes."
+    ),
+    class = c(
+      "dsprrr_rlm_control_frame_size_error",
+      "dsprrr_rlm_control_error"
+    ),
+    frame_bytes = frame_bytes,
+    max_bytes = max_bytes
+  )
+}
+
+
 normalize_rlm_query_content_record <- function(record, field) {
   malformed <- function(reason) {
     abort_rlm_control(paste0(
@@ -998,8 +1014,22 @@ consume_attested_rlm_control <- function(x) {
 decode_rlm_control <- function(
   x,
   control_nonce = NULL,
-  .attest = FALSE
+  .attest = FALSE,
+  max_bytes = NULL
 ) {
+  if (
+    !is.null(max_bytes) &&
+      (!is.numeric(max_bytes) ||
+        length(max_bytes) != 1L ||
+        is.na(max_bytes) ||
+        !is.finite(max_bytes) ||
+        max_bytes < 1 ||
+        max_bytes != floor(max_bytes))
+  ) {
+    abort_rlm_control(
+      "RLM control frame byte limit must be one positive integer"
+    )
+  }
   if (
     inherits(x, "rlm_final") ||
       inherits(x, "rlm_query_request") ||
@@ -1038,6 +1068,12 @@ decode_rlm_control <- function(
       !all(nzchar(matches))
   ) {
     abort_rlm_control("Malformed RLM control frame")
+  }
+  if (!is.null(max_bytes)) {
+    frame_bytes <- nchar(matches, type = "bytes")
+    if (any(frame_bytes > max_bytes)) {
+      abort_rlm_control_frame_size(max(frame_bytes), max_bytes)
+    }
   }
   envelopes <- lapply(matches, function(match) {
     token <- sub(prefix, "", match, fixed = TRUE)

@@ -1922,6 +1922,7 @@ Code:
 
       # Execute with inputs as context
       control_replay <- list()
+      control_max_bytes <- runner_policy$rlm_control_frame_limit %||% NULL
       repeat {
         execution_context <- if (isTRUE(context_prepared)) list() else inputs
         execution_context[[rlm_control_replay_field()]] <- control_replay
@@ -1929,10 +1930,12 @@ Code:
           runner,
           combined_code,
           context = execution_context,
-          .control_nonce = control_nonce
+          .control_nonce = control_nonce,
+          .control_max_bytes = control_max_bytes
         )
 
         control_value <- NULL
+        control_size_error <- NULL
         for (candidate in list(
           result$result,
           result$stdout,
@@ -1942,11 +1945,33 @@ Code:
           if (!isTRUE(result$success) && !is.character(candidate)) {
             next
           }
-          decoded <- decode_rlm_control(candidate, control_nonce)
+          decoded <- tryCatch(
+            decode_rlm_control(
+              candidate,
+              control_nonce,
+              max_bytes = control_max_bytes
+            ),
+            dsprrr_rlm_control_frame_size_error = identity
+          )
+          if (inherits(decoded, "dsprrr_rlm_control_frame_size_error")) {
+            control_size_error <- decoded
+            break
+          }
           if (!is.null(decoded)) {
             control_value <- decoded
             break
           }
+        }
+        if (!is.null(control_size_error)) {
+          message <- conditionMessage(control_size_error)
+          return(list(
+            success = FALSE,
+            is_final = FALSE,
+            final_value = NULL,
+            formatted_output = paste0("Error: ", message),
+            error = message,
+            raw_result = result
+          ))
         }
         if (
           !is_rlm_host_tool_request(control_value) &&

@@ -1112,6 +1112,116 @@ test_that("mcp-repl predecoded RLM controls carry process-local attestation", {
   ))
 })
 
+
+test_that("RLM host caps count matched frames before decoding", {
+  nonce <- "bounded-host-frame"
+  encode <- function(envelope) {
+    json <- jsonlite::toJSON(
+      envelope,
+      auto_unbox = TRUE,
+      null = "null",
+      na = "null",
+      dataframe = "rows",
+      digits = NA
+    )
+    paste0(
+      dsprrr:::rlm_control_prefix(),
+      gsub(
+        "[[:space:]]",
+        "",
+        jsonlite::base64_enc(charToRaw(as.character(json)))
+      )
+    )
+  }
+  exact_frame <- encode(list(
+    version = 1L,
+    nonce = nonce,
+    kind = "final",
+    payload = list(index = 1L, output = list(answer = "ok"))
+  ))
+  exact_bytes <- nchar(exact_frame, type = "bytes")
+  decoded <- dsprrr:::decode_rlm_control(
+    paste0("ordinary output ", strrep("x", exact_bytes + 20L), exact_frame),
+    nonce,
+    max_bytes = exact_bytes
+  )
+  expect_true(dsprrr:::is_rlm_final(decoded))
+  expect_null(dsprrr:::decode_rlm_control(
+    strrep("ordinary output ", exact_bytes + 20L),
+    nonce,
+    max_bytes = 1L
+  ))
+
+  oversized_frame <- encode(list(
+    version = 1L,
+    nonce = nonce,
+    kind = "query",
+    payload = list(
+      index = 1L,
+      query = "inspect",
+      context = list(list(
+        type = "image_base64",
+        mime_type = "image/png",
+        data = strrep("A", 3000L)
+      )),
+      batch = FALSE
+    )
+  ))
+  expect_gt(nchar(oversized_frame, type = "bytes"), 3000L)
+  expect_error(
+    dsprrr:::decode_rlm_control(
+      oversized_frame,
+      nonce,
+      max_bytes = 3000L
+    ),
+    class = "dsprrr_rlm_control_frame_size_error"
+  )
+
+  reply_text <- paste(
+    "unrelated stdout",
+    strrep("x", exact_bytes + 20L),
+    exact_frame,
+    sep = "\n"
+  )
+  repl <- function(input, timeout_ms) {
+    list(result = list(content = list(list(type = "text", text = reply_text))))
+  }
+  runner <- mcp_repl_runner(repl = repl)
+  exact_result <- runner$execute(
+    "invisible(NULL)",
+    .control_nonce = nonce,
+    .control_protocol = "rlm",
+    .control_max_bytes = exact_bytes
+  )
+
+  expect_true(exact_result$success)
+  expect_true(dsprrr:::is_rlm_final(exact_result$result))
+  expect_gt(nchar(exact_result$stdout, type = "bytes"), exact_bytes)
+
+  reply_text <- strrep("ordinary stdout", exact_bytes + 20L)
+  ordinary_result <- runner$execute(
+    "invisible(NULL)",
+    .control_nonce = nonce,
+    .control_protocol = "rlm",
+    .control_max_bytes = 1L
+  )
+  expect_true(ordinary_result$success)
+  expect_identical(ordinary_result$result, reply_text)
+  expect_identical(ordinary_result$stdout, reply_text)
+
+  reply_text <- oversized_frame
+  oversized_result <- runner$execute(
+    "invisible(NULL)",
+    .control_nonce = nonce,
+    .control_protocol = "rlm",
+    .control_max_bytes = 3000L
+  )
+  expect_false(oversized_result$success)
+  expect_null(oversized_result$result)
+  expect_s3_class(oversized_result, "dsprrr_mcp_repl_transport_error")
+  expect_match(oversized_result$error, "safe inline transport limit")
+})
+
 test_that("authenticated RLM traffic fails closed on file previews", {
   previews <- c(
     paste0(
