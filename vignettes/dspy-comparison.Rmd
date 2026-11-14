@@ -173,6 +173,42 @@ agent <- react("question -> answer", finalization = "submit")
 run(agent, question = "What is the capital of France?")
 ```
 
+### Explicit ReAct conversation history
+
+A supplied history opts into continuation on an independent Chat. The default
+`.history = NULL` keeps existing behavior. Scalar root ReAct calls through
+`run()` or `Module$run()` require structured results when history is supplied:
+
+```{r}
+first <- run(
+  agent,
+  question = "What is the capital of France?",
+  .history = conversation_history(),
+  .return_format = "structured"
+)
+history_file <- tempfile(fileext = ".json")
+save_history(get_history(first), history_file)
+
+second <- run(
+  agent,
+  question = "Which river runs through it?",
+  .history = load_history(history_file),
+  .return_format = "structured"
+)
+```
+
+History preserves ordered content and paired tool calls/results without
+executing old tools. It excludes executable bindings, system prompts, and
+old usage accounting. The supplied Chat and history remain unchanged on
+success or error; `get_history(second)` is the new value. History is returned
+independently of trace recording. The JSON codec rejects unsupported values,
+malformed tool pairing, and payloads beyond its documented size/depth limits.
+
+The public dataset, batch, async, and streaming paths reject explicit history
+before work. Other modules' low-level custom `forward()` methods are outside
+this continuation API. Program artifacts and conversation history remain
+separate files with separate purposes.
+
 ### RLM
 
 dsprrr follows the core DSPy RLM execution model: one interpreter per invocation,
@@ -425,7 +461,7 @@ pipelines, because root examples do not match each step's signature.
 | LM client | `dspy.LM` on bundled lm15 with canonical Request/Response objects; LiteLLM and OpenAI SDK optional in 3.5; API-family routing defaults to `auto` | Provider-neutral ellmer `Chat`; `run()` normalizes prompt and content inputs into typed requests, while a complete package-wide invocation record is still planned |
 | Configuration | `dspy.configure()` / `dspy.context()` | `dsp_configure()`, `with_lm()`, `local_lm()` |
 | Caching | Two-tier memory + disk | Two-tier memory + disk (`configure_cache()`) |
-| Async | `acall`/`aforward`, `asyncify` | `run_async()` with promises for ordinary Predict modules and isolated background workflows for factory-backed ProgramOfThought, CodeAct, and RLM. Other module types such as `react()` are rejected, as are caller-owned interpreters and specialized streaming, rather than shared or bypassed |
+| Async | `acall`/`aforward`, `asyncify` | `run_async()` returns promises; direct Predict supports canonical structured results, current-call native reasoning, usage, and success/failure traces. The simple output default is preserved, response caching is explicitly bypassed, and overlapping calls must use separate Chats. Factory-backed code modules retain simple background results; structured factory results are rejected |
 | Streaming | `streamify()` + `StreamListener` | `run_stream()` + `stream_listener()`; one-shot fallback preserves specialized `forward()` semantics, while direct token streaming is limited to ordinary Predict steps and emits status events per pipeline step |
 | Usage tracking | `track_usage` | `get_tokens()`, `get_cost()`, `session_cost()` |
 | Parallel evaluation | `Evaluate(num_threads = ...)` | `evaluate(.concurrency = concurrency_control(...))` via mirai or ellmer's native parallelism. Declarative zero/one-step Flex is supported; executable and multi-step Flex currently require sequential rows |
