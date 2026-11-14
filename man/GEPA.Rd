@@ -155,10 +155,12 @@ source is recorded with a failure score and can never be selected.
 for candidate evaluation. When \code{.reflection_llm} is omitted, an explicitly
 supplied \code{.llm} is used for both roles for compatibility. The optimization
 result records model names and the reflection route in
-\code{extensions$gepa$model_routing}. If \code{.llm} is omitted, \code{task_model} reports
-the effective attached/default Chat model when it can be resolved, and
-\code{task_chat_source} records \code{"runtime_resolution"}. Both roles share the optimizer's resource budget;
-reflection requests are attributed to GEPA reflection stages.
+\code{extensions$gepa$model_routing}. Without checkpointing, an omitted \code{.llm}
+leaves \code{task_model} as \code{NULL}, and \code{task_chat_source} records
+\code{"runtime_resolution"}. Checkpointed searches additionally report the
+effective attached/default Chat models when they can be resolved. Both roles
+share the optimizer's resource budget; reflection requests are attributed to
+GEPA reflection stages.
 
 GEPA deep-clones the reflection Chat for each proposal and clears the
 clone's conversation turns. Model settings are retained, proposal calls do
