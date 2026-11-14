@@ -866,7 +866,8 @@ Module <- R6::R6Class(
     #' @description
     #' Run the module asynchronously
     #'
-    #' Returns a promise that resolves to the structured output.
+    #' Returns a promise that resolves to the module output by default, or a
+    #' structured result when `.return_format = "structured"`.
     #' Useful for running multiple modules in parallel.
     #' Ordinary Predict modules use the provider's native async path.
     #' ProgramOfThought, CodeAct, and RLM use an isolated mirai process when
@@ -874,16 +875,28 @@ Module <- R6::R6Class(
     #'
     #' @param ... Named inputs matching the signature
     #' @param .llm Optional ellmer chat object
+    #' @param .return_format Either "simple" or "structured"
     #' @param .trace_context A named JSON-compatible correlation context
     #' @return A promise that resolves to the result
-    run_async = function(..., .llm = NULL, .trace_context = list()) {
+    run_async = function(
+      ...,
+      .llm = NULL,
+      .return_format = c("simple", "structured"),
+      .trace_context = list()
+    ) {
       if (missing(.trace_context)) {
-        return(dsprrr::run_async(self, ..., .llm = .llm))
+        return(dsprrr::run_async(
+          self,
+          ...,
+          .llm = .llm,
+          .return_format = .return_format
+        ))
       }
       dsprrr::run_async(
         self,
         ...,
         .llm = .llm,
+        .return_format = .return_format,
         .trace_context = .trace_context
       )
     },

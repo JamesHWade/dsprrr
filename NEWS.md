@@ -101,8 +101,16 @@ First development changelog. dsprrr is experimental; the API may change.
   and a concise plan field, while retaining rationale output as the default.
   Native thinking is available through `get_metadata()` when the provider
   returns ellmer `ContentThinking`; it remains `NULL` when no current-call
-  thinking block is present. Native mode is limited to scalar synchronous runs,
-  and plan mode requires structured output.
+  thinking block is present. Native mode supports scalar synchronous and
+  asynchronous calls, and plan mode requires structured output.
+
+* `run_async()` keeps simple output as its default and now supports
+  `.return_format = "structured"` for Predict modules. It records canonical
+  success and failure traces, including decision and provider reasoning
+  metadata when available. Each resolved Chat stays reserved until its promise
+  settles; use separate Chats for overlapping calls. Factory-backed modules
+  retain simple results and reject structured results until they can preserve
+  the same trace contract.
 
 * Modules run through an agent runtime that follows ellmer's Chat protocol,
   such as a deputy `Agent`, are now correlated with the agent's runs. dsprrr

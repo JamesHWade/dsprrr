@@ -245,6 +245,8 @@ test_that("plan and native outputs remain consumable by wrappers", {
 })
 
 test_that("plan mode keeps its field in batch and async structured calls", {
+  skip_if_not_installed("promises")
+  skip_if_not_installed("later")
   local_reset_cache()
   plan_mock <- reasoning_test_chat(
     response = list(plan = "Multiply 6 by 7.", answer = "42")
@@ -273,14 +275,43 @@ test_that("plan mode keeps its field in batch and async structured calls", {
 
   plan_mock$chat$chat_structured_async <- function(prompt, type, ...) {
     plan_mock$state$output_type <- type
-    list(plan = "Multiply 6 by 7.", answer = "42")
+    promises::promise_resolve(list(
+      plan = "Multiply 6 by 7.",
+      answer = "42"
+    ))
   }
   async <- run_async(
     solver,
     question = "What is 6 times 7?",
-    .llm = plan_mock$chat
+    .llm = plan_mock$chat,
+    .return_format = "structured"
   )
-  expect_identical(names(async), c("plan", "answer"))
+  async_state <- new.env(parent = emptyenv())
+  async_state$done <- FALSE
+  observer <- promises::then(
+    async,
+    function(value) {
+      async_state$value <- value
+      async_state$done <- TRUE
+      NULL
+    },
+    function(error) {
+      async_state$error <- error
+      async_state$done <- TRUE
+      NULL
+    }
+  )
+  deadline <- Sys.time() + 10
+  while (!async_state$done && Sys.time() < deadline) {
+    later::run_now(0.05)
+  }
+  invisible(observer)
+
+  expect_true(async_state$done)
+  expect_null(async_state$error)
+  expect_s3_class(async_state$value, "dsprrr_result")
+  expect_identical(names(async_state$value$output), c("plan", "answer"))
+  expect_identical(async_state$value$metadata$reasoning_mode, "plan")
   expect_identical(
     names(plan_mock$state$output_type@properties),
     c("plan", "answer")
@@ -309,11 +340,6 @@ test_that("native and plan modes fail closed on unsupported routes", {
     .llm = mock$chat,
     .cache = FALSE
   ))
-  async_error <- rlang::catch_cnd(run_async(
-    native,
-    question = "first",
-    .llm = mock$chat
-  ))
   stream_error <- rlang::catch_cnd(stream_async(
     native,
     question = "first",
@@ -333,7 +359,6 @@ test_that("native and plan modes fail closed on unsupported routes", {
   expect_s3_class(batch_error, "dsprrr_reasoning_batch_unsupported")
   expect_s3_class(dataset_error, "dsprrr_reasoning_batch_unsupported")
   expect_s3_class(direct_batch_error, "dsprrr_reasoning_batch_unsupported")
-  expect_s3_class(async_error, "dsprrr_reasoning_metadata_unsupported")
   expect_s3_class(stream_error, "dsprrr_reasoning_metadata_unsupported")
   expect_s3_class(run_stream_error, "dsprrr_reasoning_metadata_unsupported")
   expect_s3_class(plan_stream_error, "dsprrr_reasoning_metadata_unsupported")
