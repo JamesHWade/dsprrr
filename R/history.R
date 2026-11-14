@@ -890,8 +890,8 @@ history_validate_data <- function(value, state, depth = 1L) {
       c("tag", "names", "values"),
       "History list value"
     )
-    names <- history_validate_names(fields$names, fields$values, state)
     values <- history_plain_array(fields$values, "History list values")
+    names <- history_validate_names(fields$names, values, state)
     values <- lapply(
       values,
       history_validate_data,
@@ -910,8 +910,8 @@ history_validate_data <- function(value, state, depth = 1L) {
     if (!type %in% c("logical", "integer", "double", "character")) {
       history_abort("History vector has an unsupported atomic type")
     }
-    names <- history_validate_names(fields$names, fields$values, state)
     values <- history_plain_array(fields$values, "History vector values")
+    names <- history_validate_names(fields$names, values, state)
     values <- lapply(values, function(item) {
       history_budget_node(state, depth + 1L)
       item_fields <- history_object_fields(
@@ -959,10 +959,10 @@ history_validate_data <- function(value, state, depth = 1L) {
           }
           item_value <- as.character(as.integer(numeric_value))
         } else {
-          numeric_value <- suppressWarnings(as.numeric(item_value))
-          if (is.na(numeric_value) || !is.finite(numeric_value)) {
-            history_abort("History double value is invalid")
-          }
+          numeric_value <- history_parse_double(
+            item_value,
+            "History double value"
+          )
           item_value <- formatC(
             numeric_value,
             digits = 17L,
@@ -996,6 +996,37 @@ history_validate_names <- function(names, values, state) {
   }
   history_budget_text(state, value_names)
   unname(as.list(value_names))
+}
+
+history_parse_double <- function(value, label) {
+  if (
+    !is.null(attributes(value)) ||
+      !is.character(value) ||
+      length(value) != 1L ||
+      is.na(value)
+  ) {
+    history_abort(paste0(label, " is invalid"))
+  }
+  parsed <- tryCatch(
+    jsonlite::parse_json(value, simplifyVector = FALSE),
+    error = function(error) NULL
+  )
+  if (
+    is.null(parsed) ||
+      !is.numeric(parsed) ||
+      length(parsed) != 1L ||
+      !is.null(attributes(parsed)) ||
+      is.na(parsed) ||
+      !is.finite(parsed)
+  ) {
+    history_abort(paste0(label, " is invalid"))
+  }
+
+  # JSON parses the integer token -0 as integer zero, losing its sign bit.
+  if (identical(trimws(value), "-0")) {
+    return(-0.0)
+  }
+  as.double(parsed)
 }
 
 history_data_string <- function(value, label, nonempty, state) {
@@ -1114,7 +1145,7 @@ history_value_from_node <- function(node) {
       node$type,
       logical = item$value,
       integer = as.integer(item$value),
-      double = as.numeric(item$value),
+      double = history_parse_double(item$value, "History double value"),
       character = item$value
     )
   })
