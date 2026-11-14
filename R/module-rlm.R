@@ -95,6 +95,23 @@ NULL
 #' [run_dataset()] with list-columns for data frames, vectors, lists or other
 #' rich values.
 #'
+#' ## Explicit conversation history
+#'
+#' A scalar synchronous [run()] can continue an RLM conversation by supplying
+#' `.history = conversation_history()` or a history returned by [get_history()].
+#' Set `.return_format = "structured"` to retain the next history in result
+#' metadata. Every explicit-history call requires `interpreter_factory`; dsprrr
+#' starts and shuts down one invocation-owned runner for each call. The factory
+#' must return a fresh persistent interpreter. Previous task previews, observed
+#' code and output are rendered into both action and fallback prompts as
+#' bounded textual evidence. Previous variables and staged objects are not
+#' restored, and historical code is not replayed. Context values in the record
+#' are the bounded previews that were visible to the model. Histories are
+#' sensitive, and a call fails explicitly if appending would exceed the
+#' documented portable-history limits. ReAct and RLM histories cannot be mixed;
+#' batch, dataset, asynchronous and streaming entrypoints reject explicit
+#' history.
+#'
 #' ## Optimization and traces
 #'
 #' The `generate_action` and `extract` predictors appear in [named_modules()],
@@ -1114,9 +1131,30 @@ RLMModule <- R6::R6Class(
       .llm = NULL,
       trace = TRUE,
       .cache = NULL,
+      .history = NULL,
       ...
     ) {
       validate_cache_arg(.cache)
+      supplied_history <- NULL
+      prior_context <- ""
+      task_text <- NULL
+      if (!is.null(.history)) {
+        supplied_history <- rlm_history_validate(.history)
+        if (is.null(self$interpreter_factory) || !is.null(self$runner)) {
+          cli::cli_abort(
+            c(
+              "Explicit RLM history requires an invocation-owned interpreter factory",
+              "x" = "This module has a caller-owned runner or no factory.",
+              "i" = "Create the module with {.arg interpreter_factory}; each call must start in a fresh interpreter."
+            ),
+            class = c(
+              "dsprrr_rlm_history_factory_error",
+              "dsprrr_history_error"
+            )
+          )
+        }
+        prior_context <- history_render_rlm(supplied_history)
+      }
       reasoning_mode <- module_reasoning_mode(self)
       validate_rlm_predictor_children(
         list(
@@ -1239,11 +1277,18 @@ RLMModule <- R6::R6Class(
 
           # Build context description for system prompt
           context_desc <- private$describe_context(inputs)
+          if (!is.null(supplied_history)) {
+            task_text <- history_rlm_task_text(
+              self$signature@instructions,
+              context_desc
+            )
+          }
 
           # Build system prompt
           system_prompt <- private$build_system_prompt(
             context_desc,
-            has_sub_lm = self$max_llm_calls > 0L
+            has_sub_lm = self$max_llm_calls > 0L,
+            prior_context = prior_context
           )
 
           # REPL iteration loop
@@ -1353,7 +1398,13 @@ RLMModule <- R6::R6Class(
               history,
               base_llm,
               trace = trace,
-              .cache = .cache
+              .cache = .cache,
+              prior_context = prior_context,
+              context_desc = if (!is.null(supplied_history)) {
+                context_desc
+              } else {
+                NULL
+              }
             )
             final_answer <- fallback_result$value
             fallback_metadata <- fallback_result$metadata
@@ -1361,6 +1412,26 @@ RLMModule <- R6::R6Class(
           }
 
           output <- private$build_output(final_answer, source = final_source)
+          next_history <- if (is.null(supplied_history)) {
+            NULL
+          } else {
+            portable_trajectory <- lapply(history, function(step) {
+              list(
+                iteration = as.integer(step$iteration),
+                code = step$code,
+                output = step$output,
+                success = isTRUE(step$success),
+                is_final = isTRUE(step$is_final)
+              )
+            })
+            history_append_rlm(
+              supplied_history,
+              task_text = task_text,
+              trajectory = portable_trajectory,
+              output = output,
+              output_source = final_source
+            )
+          }
           usage <- private$summarize_action_usage(
             history,
             fallback_metadata = fallback_metadata,
@@ -1474,6 +1545,9 @@ RLMModule <- R6::R6Class(
               "caller-owned"
             }
           )
+          if (!is.null(next_history)) {
+            metadata$conversation_history <- next_history
+          }
           if (!identical(reasoning_mode, "rationale")) {
             metadata$reasoning_mode <- reasoning_mode
           }
@@ -1823,7 +1897,11 @@ RLMModule <- R6::R6Class(
     },
 
     #' Build the system prompt for RLM
-    build_system_prompt = function(context_desc, has_sub_lm = TRUE) {
+    build_system_prompt = function(
+      context_desc,
+      has_sub_lm = TRUE,
+      prior_context = ""
+    ) {
       output_fields <- private$get_output_field_names()
       output_specs <- private$get_output_specs()
       required_fields <- private$get_required_output_field_names()
@@ -1904,6 +1982,15 @@ RLMModule <- R6::R6Class(
       if (!nzchar(task_instructions)) {
         task_instructions <- "Answer the declared task using only supported evidence."
       }
+      prior_section <- if (nzchar(prior_context)) {
+        paste0(
+          "## Prior RLM Invocation History\n",
+          prior_context,
+          "\n\n"
+        )
+      } else {
+        ""
+      }
 
       response_format <- switch(
         module_reasoning_mode(self),
@@ -1928,7 +2015,7 @@ writing R code to explore and analyze the provided context.
 ## Task
 {task_instructions}
 
-## Available Variables
+{prior_section}## Available Variables
 {context_desc}
 
 ## Declared Output
@@ -2898,7 +2985,9 @@ Code:
       history,
       llm,
       trace = TRUE,
-      .cache = NULL
+      .cache = NULL,
+      prior_context = "",
+      context_desc = NULL
     ) {
       # Build trajectory summary
       trajectory <- vapply(
@@ -2916,14 +3005,27 @@ Output: {private$format_excerpt(h$output, max_chars = self$max_output_chars)}"
       )
 
       input_context <- private$format_inputs_for_prompt(inputs)
-      variable_info <- private$describe_context(inputs)
+      variable_info <- if (is.null(context_desc)) {
+        private$describe_context(inputs)
+      } else {
+        context_desc
+      }
+      prior_section <- if (nzchar(prior_context)) {
+        paste0(
+          "## Prior RLM Invocation History\n",
+          prior_context,
+          "\n\n"
+        )
+      } else {
+        ""
+      }
 
       prompt <- glue::glue(
         "
 The RLM agent ran out of iterations before calling SUBMIT().
 Based on the exploration trajectory below, extract the best possible answer.
 
-## Original Task Instructions
+{prior_section}## Original Task Instructions
 {self$signature@instructions}
 
 ## Original Query
@@ -3499,7 +3601,8 @@ answer possible with what was discovered.
 #'
 #' @param signature A [signature()] object or a signature string such as
 #'   `"question -> answer"`.
-#' @param ... Named inputs, plus [run()] options such as `.return_format`.
+#' @param ... Named inputs, plus [run()] options such as `.return_format` and
+#'   `.history`.
 #'   Each input is staged as one variable, including vectors, lists, matrices
 #'   and data frames. For several investigations, create an [rlm_module()] and
 #'   use [run_dataset()] with list-columns.

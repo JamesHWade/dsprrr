@@ -13,9 +13,12 @@
 #'   [run_dataset()] to run them several times.
 #' @param .history A `dsprrr_history` from [conversation_history()] or
 #'   [load_history()]. The default `NULL` keeps existing Chat behavior. A
-#'   non-`NULL` history is supported for scalar root [react()] modules and
-#'   requires `.return_format = "structured"`; the result carries the new
-#'   history in `metadata$conversation_history`.
+#'   non-`NULL` history is supported for scalar root [react()] and
+#'   [rlm_module()] calls and requires `.return_format = "structured"`; the
+#'   result carries the new history in `metadata$conversation_history`.
+#'   ReAct and RLM histories cannot be mixed. RLM history requires an
+#'   `interpreter_factory` and retains bounded textual evidence, not interpreter
+#'   variables. Dataset, asynchronous and streaming entrypoints reject history.
 #'
 #' @section Runtime arguments:
 #' These arguments start with a dot so they cannot clash with input names.
@@ -57,7 +60,7 @@
 #' has length zero, `run()` returns an empty list without calling the model.
 #' Modules with their own execution loop, such as [react()], accept single
 #' inputs only; use [run_dataset()] for them when no conversation history is
-#' supplied. Explicit ReAct history is supported only for scalar root ReAct
+#' supplied. Explicit history is supported only for scalar root ReAct and RLM
 #' calls with `.return_format = "structured"`.
 #'
 #' An input can also be an ellmer content object, such as
@@ -77,8 +80,8 @@
 #'   With `.return_format = "structured"`, a list of class `dsprrr_result`
 #'   with elements `output` (as above), `chat` (the ellmer Chat used) and
 #'   `metadata` (model, prompt, token counts, cost, latency, cache status and
-#'   error). When explicit ReAct history is supplied, the updated history is
-#'   stored in `metadata$conversation_history`. A batch returns a list of these
+#'   error). When explicit history is supplied, the updated history is stored
+#'   in `metadata$conversation_history`. A batch returns a list of these
 #'   with class `dsprrr_batch_result`. Use [get_output()], [get_metadata()],
 #'   [get_history()] or [get_cost()] to read them.
 #' @export
@@ -121,7 +124,7 @@
 #' }
 run <- function(module, ..., .history = NULL) {
   if (!is.null(.history)) {
-    assert_explicit_react_history(module, .history, entrypoint = "run()")
+    assert_explicit_history_module(module, .history, entrypoint = "run()")
   }
   UseMethod("run")
 }
@@ -287,7 +290,7 @@ run.Module <- function(
   .trace_context = list(),
   .history = NULL
 ) {
-  assert_explicit_react_history(module, .history, entrypoint = "run()")
+  assert_explicit_history_module(module, .history, entrypoint = "run()")
   if (!is.null(.history)) {
     .return_format <- match.arg(.return_format, c("simple", "structured"))
     assert_explicit_history_structured(.history, .return_format)
@@ -483,7 +486,7 @@ run.PredictModule <- function(
   .trace_context = list(),
   .history = NULL
 ) {
-  assert_explicit_react_history(module, .history, entrypoint = "run()")
+  assert_explicit_history_module(module, .history, entrypoint = "run()")
   assert_explicit_history_structured(.history, .return_format)
   trace_context_supplied <- !missing(.trace_context)
   trace_context <- trace_context_resolve(

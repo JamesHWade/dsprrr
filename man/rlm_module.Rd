@@ -167,6 +167,24 @@ one variable, whatever its length. For several investigations, use
 rich values.
 }
 
+\subsection{Explicit conversation history}{
+
+A scalar synchronous \code{\link[=run]{run()}} can continue an RLM conversation by supplying
+\code{.history = conversation_history()} or a history returned by \code{\link[=get_history]{get_history()}}.
+Set \code{.return_format = "structured"} to retain the next history in result
+metadata. Every explicit-history call requires \code{interpreter_factory}; dsprrr
+starts and shuts down one invocation-owned runner for each call. The factory
+must return a fresh persistent interpreter. Previous task previews, observed
+code and output are rendered into both action and fallback prompts as
+bounded textual evidence. Previous variables and staged objects are not
+restored, and historical code is not replayed. Context values in the record
+are the bounded previews that were visible to the model. Histories are
+sensitive, and a call fails explicitly if appending would exceed the
+documented portable-history limits. ReAct and RLM histories cannot be mixed;
+batch, dataset, asynchronous and streaming entrypoints reject explicit
+history.
+}
+
 \subsection{Optimization and traces}{
 
 The \code{generate_action} and \code{extract} predictors appear in \code{\link[=named_modules]{named_modules()}},

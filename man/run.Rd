@@ -17,9 +17,12 @@ treat every value as one context object whatever its length; use
 
 \item{.history}{A \code{dsprrr_history} from \code{\link[=conversation_history]{conversation_history()}} or
 \code{\link[=load_history]{load_history()}}. The default \code{NULL} keeps existing Chat behavior. A
-non-\code{NULL} history is supported for scalar root \code{\link[=react]{react()}} modules and
-requires \code{.return_format = "structured"}; the result carries the new
-history in \code{metadata$conversation_history}.}
+non-\code{NULL} history is supported for scalar root \code{\link[=react]{react()}} and
+\code{\link[=rlm_module]{rlm_module()}} calls and requires \code{.return_format = "structured"}; the
+result carries the new history in \code{metadata$conversation_history}.
+ReAct and RLM histories cannot be mixed. RLM history requires an
+\code{interpreter_factory} and retains bounded textual evidence, not interpreter
+variables. Dataset, asynchronous and streaming entrypoints reject history.}
 }
 \value{
 With \code{.return_format = "simple"}, the outputs as a named list with
@@ -31,8 +34,8 @@ list with one such result per input element.
 With \code{.return_format = "structured"}, a list of class \code{dsprrr_result}
 with elements \code{output} (as above), \code{chat} (the ellmer Chat used) and
 \code{metadata} (model, prompt, token counts, cost, latency, cache status and
-error). When explicit ReAct history is supplied, the updated history is
-stored in \code{metadata$conversation_history}. A batch returns a list of these
+error). When explicit history is supplied, the updated history is stored
+in \code{metadata$conversation_history}. A batch returns a list of these
 with class \code{dsprrr_batch_result}. Use \code{\link[=get_output]{get_output()}}, \code{\link[=get_metadata]{get_metadata()}},
 \code{\link[=get_history]{get_history()}} or \code{\link[=get_cost]{get_cost()}} to read them.
 }
@@ -51,7 +54,7 @@ Batches must have inputs of one common length, or length 1. If every input
 has length zero, \code{run()} returns an empty list without calling the model.
 Modules with their own execution loop, such as \code{\link[=react]{react()}}, accept single
 inputs only; use \code{\link[=run_dataset]{run_dataset()}} for them when no conversation history is
-supplied. Explicit ReAct history is supported only for scalar root ReAct
+supplied. Explicit history is supported only for scalar root ReAct and RLM
 calls with \code{.return_format = "structured"}.
 
 An input can also be an ellmer content object, such as
