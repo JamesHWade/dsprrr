@@ -524,8 +524,18 @@ A cost or token cap also stops the run when usage cannot be measured.
 [`optimizer_control()`](https://jameshwade.github.io/dsprrr/reference/optimizer_control.md)
 a `checkpoint_path`, then compile again with `resume = TRUE` and the
 same module, data, metric and settings.
-`BootstrapFewShotWithRandomSearch`, `COPRO`, `SIMBA` and `GEPA` refuse
+`BootstrapFewShotWithRandomSearch`, `COPRO` and `SIMBA` refuse
 `resume = TRUE`.
+
+`GEPA` also supports checkpoint resume for sequential `round_robin`
+searches over plain `Predict` leaves and built-in predictor pipelines
+with plain-data predictions. Flex modules, other selectors, custom
+module types, custom Chats, Chats with tools, and non-empty initial Chat
+histories are not supported by this resume path. Completed proposals and
+evaluation rows are retained, but a provider request interrupted before
+its result is committed may run again after a crash. See
+[`GEPA()`](https://jameshwade.github.io/dsprrr/reference/GEPA.md) for
+the full checkpoint contract.
 
 The same six teleprompters take `log_dir` and append one record per
 trial to `trials.jsonl` in that directory.
