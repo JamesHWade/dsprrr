@@ -37,6 +37,43 @@ checkpoint_test_chat <- function(
   })
 }
 
+test_that("subprocess readiness propagates failures and stays bounded", {
+  skip_if_not_installed("callr")
+
+  failed_process <- callr::r_bg(
+    function() stop("child readiness failure"),
+    supervise = TRUE
+  )
+  withr::defer(if (failed_process$is_alive()) failed_process$kill())
+  expect_error(
+    callr_wait_for_files(
+      list(failed_process),
+      tempfile()
+    ),
+    regexp = "child readiness failure",
+    class = "callr_status_error"
+  )
+
+  waiting_process <- callr::r_bg(
+    function() {
+      while (TRUE) {
+        Sys.sleep(1)
+      }
+    },
+    supervise = TRUE
+  )
+  withr::defer(if (waiting_process$is_alive()) waiting_process$kill())
+  expect_error(
+    callr_wait_for_files(
+      list(waiting_process),
+      tempfile(),
+      timeout = 0.1
+    ),
+    regexp = "Timed out after 0.1 seconds",
+    class = "simpleError"
+  )
+})
+
 test_that("optimizer controls validate resource and checkpoint limits", {
   control <- optimizer_control(
     max_metric_calls = 4L,
@@ -1280,7 +1317,8 @@ test_that("concurrent checkpoint writers reject a stale predecessor", {
     path,
     gate,
     ready,
-    writer
+    writer,
+    gate_timeout
   ) {
     namespace <- package_loader(package_context)
     module <- get("module", envir = namespace, inherits = FALSE)
@@ -1316,8 +1354,10 @@ test_that("concurrent checkpoint writers reject a stale predecessor", {
       config = list(search = "same"),
       control = optimizer_control(checkpoint_path = path)
     )
-    file.create(ready)
-    deadline <- Sys.time() + 20
+    if (!file.create(ready)) {
+      stop("could not signal checkpoint writer readiness")
+    }
+    deadline <- Sys.time() + gate_timeout
     while (!file.exists(gate) && Sys.time() < deadline) {
       Sys.sleep(0.01)
     }
@@ -1349,7 +1389,8 @@ test_that("concurrent checkpoint writers reject a stale predecessor", {
         path,
         gate,
         ready[[i]],
-        paste0("writer-", i)
+        paste0("writer-", i),
+        callr_readiness_timeout + 30
       ),
       supervise = TRUE
     )
@@ -1359,11 +1400,7 @@ test_that("concurrent checkpoint writers reject a stale predecessor", {
       process$kill()
     }
   }))
-  deadline <- Sys.time() + 20
-  while (!all(file.exists(ready)) && Sys.time() < deadline) {
-    Sys.sleep(0.01)
-  }
-  expect_identical(all(file.exists(ready)), TRUE)
+  callr_wait_for_files(processes, ready)
   file.create(gate)
   lapply(processes, function(process) process$wait(timeout = 20000))
   results <- lapply(processes, function(process) process$get_result())
@@ -1411,7 +1448,9 @@ test_that("checkpoint locks are released when a writer process dies", {
         inherits = FALSE
       )
       options(dsprrr.optimizer_checkpoint_lock_hook = function() {
-        file.create(ready)
+        if (!file.create(ready)) {
+          stop("could not signal checkpoint lock readiness")
+        }
         Sys.sleep(60)
       })
       optimizer_checkpoint_snapshot(path)
@@ -1420,11 +1459,7 @@ test_that("checkpoint locks are released when a writer process dies", {
     supervise = TRUE
   )
   withr::defer(if (holder$is_alive()) holder$kill())
-  deadline <- Sys.time() + 20
-  while (!file.exists(ready) && Sys.time() < deadline) {
-    Sys.sleep(0.01)
-  }
-  expect_identical(file.exists(ready), TRUE)
+  callr_wait_for_files(list(holder), ready)
   holder$kill()
   holder$wait(timeout = 10000)
   withr::local_options(dsprrr.optimizer_checkpoint_lock_timeout = 2)
