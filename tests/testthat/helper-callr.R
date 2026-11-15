@@ -27,3 +27,44 @@ callr_load_dsprrr <- function(context) {
   }
   asNamespace("dsprrr")
 }
+
+callr_readiness_timeout <- 60
+
+callr_wait_for_files <- function(
+  processes,
+  files,
+  timeout = callr_readiness_timeout
+) {
+  deadline <- Sys.time() + timeout
+  repeat {
+    ready <- file.exists(files)
+    if (all(ready)) {
+      return(invisible(NULL))
+    }
+
+    for (i in which(!ready)) {
+      process <- processes[[i]]
+      if (!process$is_alive()) {
+        process$get_result()
+        stop(
+          "Subprocess exited before signaling readiness for ",
+          files[[i]],
+          call. = FALSE
+        )
+      }
+    }
+
+    remaining <- as.numeric(difftime(deadline, Sys.time(), units = "secs"))
+    if (remaining <= 0) {
+      stop(
+        "Timed out after ",
+        timeout,
+        " seconds waiting for subprocess readiness: ",
+        paste(files[!ready], collapse = ", "),
+        call. = FALSE
+      )
+    }
+
+    Sys.sleep(min(0.01, remaining))
+  }
+}
