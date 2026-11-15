@@ -65,6 +65,8 @@ navbar:
           href: articles/compilation-optimization.html
         - text: "Choose an optimizer"
           href: articles/advanced-optimization.html
+        - text: "A GEPA learning journey"
+          href: articles/gepa-learning-journey.html
         - text: "Evaluate with vitals"
           href: articles/vitals-recipes.html
         - text: "---"
@@ -150,6 +152,7 @@ articles:
     contents:
     - compilation-optimization
     - advanced-optimization
+    - articles/gepa-learning-journey
     - vitals-recipes
 
   - title: Run
