@@ -44,18 +44,22 @@ test_that("subprocess readiness propagates failures and stays bounded", {
     function() stop("child readiness failure"),
     supervise = TRUE
   )
+  withr::defer(if (failed_process$is_alive()) failed_process$kill())
   expect_error(
     callr_wait_for_files(
       list(failed_process),
-      tempfile(),
-      timeout = 5
+      tempfile()
     ),
     regexp = "child readiness failure",
     class = "callr_status_error"
   )
 
   waiting_process <- callr::r_bg(
-    function() Sys.sleep(1),
+    function() {
+      while (TRUE) {
+        Sys.sleep(1)
+      }
+    },
     supervise = TRUE
   )
   withr::defer(if (waiting_process$is_alive()) waiting_process$kill())
