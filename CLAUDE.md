@@ -59,7 +59,8 @@ GitHub Actions runs R CMD check across multiple R versions and OS platforms, wit
 # 1. Format ALL code with air (entire project)
 air format .
 
-# 2. Check R source and tests with jarl (non-mutating)
+# 2. Check R source and tests with Jarl >= 0.6.0 (non-mutating)
+# Jarl 0.5.0 cannot parse this repository's per-file ignore configuration.
 jarl check R tests/testthat
 
 # 3. Run R CMD check (catches codoc mismatches, missing docs, etc.)
@@ -83,9 +84,9 @@ agree with the values being changed. Raise
 
 Cache adapters must check canonical `Chat` methods before invoking getters.
 Cache identity must include model `params`, `extra_args`, and the account
-partition as distinct inputs, while keeping cached content in a safe artifact
-descriptor. Prefer exported ellmer functions; any namespace fallback belongs
-only in the compatibility adapter.
+partition as distinct inputs. Artifact descriptors remain credential-free and
+separate from cache identity. Prefer exported ellmer functions; any namespace
+fallback belongs only in the compatibility adapter.
 
 Validate the minimum supported ellmer version and the current release with the
 focused compatibility, cache, artifact, history, and run test suites. Record

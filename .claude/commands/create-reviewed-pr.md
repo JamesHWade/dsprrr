@@ -28,6 +28,7 @@ Automatically detect and run project-specific quality gates:
 # Format code
 air format .
 
+# Requires Jarl >= 0.6.0; Jarl 0.5.0 cannot parse per-file ignores
 # Lint R source and tests without modifying files
 jarl check R tests/testthat
 
