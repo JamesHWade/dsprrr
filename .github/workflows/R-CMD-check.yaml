@@ -26,8 +26,8 @@ jobs:
         config:
           # Keep the existing check name while ARM runner capacity is limited.
           # This lane runs on Intel; local release qualification also covers ARM.
-          # Intel needs extra time: the 30-minute limit cut off progressing tests.
-          - {os: macos-latest, runner: macos-26-intel, r: 'release', timeout: 45}
+          # Observed Intel runs take 35–44 minutes; allow bounded startup headroom.
+          - {os: macos-latest, runner: macos-26-intel, r: 'release', timeout: 60}
           - {os: windows-latest, r: 'release', timeout: 30}
           - {os: ubuntu-latest,  r: 'release', timeout: 30}
           - {os: ubuntu-latest,  r: 'oldrel-1', timeout: 30}

@@ -1176,7 +1176,8 @@ test_that("parallel execution works with mock factory", {
     .concurrency = concurrency_control(
       backend = "mirai",
       max_active = 3L,
-      total_timeout = 5
+      # Allow cold worker startup on slow CI; deadlines have dedicated tests.
+      total_timeout = 30
     ),
     .progress = FALSE
   )

@@ -1514,7 +1514,8 @@ test_that("mirai workers return records committed by the parent in row order", {
     .concurrency = concurrency_control(
       backend = "mirai",
       max_active = 2L,
-      total_timeout = 5
+      # Allow cold worker startup on slow CI; deadlines have dedicated tests.
+      total_timeout = 30
     ),
     .return_format = "structured",
     .progress = FALSE,
