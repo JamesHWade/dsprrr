@@ -1,0 +1,1631 @@
+{
+  "schema_version": 1,
+  "build": {
+    "command": "npm run build",
+    "entry_point": "srcts/main.tsx",
+    "node": "v24.16.0",
+    "platform": "darwin/arm64",
+    "esbuild": "0.28.1",
+    "package_lock_sha256": "03e7fc473a290e1d9204b614ec203f95c029f69d2aa664b1bea55243f7a50205",
+    "bundle": true,
+    "format": "esm",
+    "minify": true,
+    "legal_comments": "none",
+    "third_party_notices": "../../../THIRD-PARTY-NOTICES.md",
+    "banners": {
+      "js": "/*! Full third-party notices: ../../../THIRD-PARTY-NOTICES.md */",
+      "css": "/*! Tailwind CSS v4.1.18 (MIT); full text: ../../../THIRD-PARTY-NOTICES.md */"
+    }
+  },
+  "outputs": {
+    "r/www/main.css": {
+      "bytes": 62849,
+      "sha256": "1170b41ffd4ee35f964651feb766600eb7ea5b9c9ed5227915c25901abea154e"
+    },
+    "r/www/main.js": {
+      "bytes": 377346,
+      "sha256": "a75d3fb86e993330f5b2659fea0e879f5ac531b936829bb9b36889ffc0e46148"
+    }
+  },
+  "runtime_packages": [
+    {
+      "name": "@floating-ui/core",
+      "version": "1.7.4",
+      "license": "MIT",
+      "package_path": "node_modules/@floating-ui/core",
+      "files": [
+        "node_modules/@floating-ui/core/dist/floating-ui.core.mjs"
+      ]
+    },
+    {
+      "name": "@floating-ui/dom",
+      "version": "1.7.5",
+      "license": "MIT",
+      "package_path": "node_modules/@floating-ui/dom",
+      "files": [
+        "node_modules/@floating-ui/dom/dist/floating-ui.dom.mjs"
+      ]
+    },
+    {
+      "name": "@floating-ui/react-dom",
+      "version": "2.1.7",
+      "license": "MIT",
+      "package_path": "node_modules/@floating-ui/react-dom",
+      "files": [
+        "node_modules/@floating-ui/react-dom/dist/floating-ui.react-dom.mjs"
+      ]
+    },
+    {
+      "name": "@floating-ui/utils",
+      "version": "0.2.10",
+      "license": "MIT",
+      "package_path": "node_modules/@floating-ui/utils",
+      "files": [
+        "node_modules/@floating-ui/utils/dist/floating-ui.utils.dom.mjs",
+        "node_modules/@floating-ui/utils/dist/floating-ui.utils.mjs"
+      ]
+    },
+    {
+      "name": "@posit/shiny-react",
+      "version": "0.0.16",
+      "license": "MIT",
+      "package_path": "node_modules/@posit/shiny-react",
+      "files": [
+        "node_modules/@posit/shiny-react/dist/ImageOutput.js",
+        "node_modules/@posit/shiny-react/dist/input-registry.js",
+        "node_modules/@posit/shiny-react/dist/message-registry.js",
+        "node_modules/@posit/shiny-react/dist/output-registry.js",
+        "node_modules/@posit/shiny-react/dist/react-registry.js",
+        "node_modules/@posit/shiny-react/dist/use-shiny.js",
+        "node_modules/@posit/shiny-react/dist/utils.js"
+      ]
+    },
+    {
+      "name": "@radix-ui/number",
+      "version": "1.1.1",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/number",
+      "files": [
+        "node_modules/@radix-ui/number/dist/index.mjs"
+      ]
+    },
+    {
+      "name": "@radix-ui/primitive",
+      "version": "1.1.3",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/primitive",
+      "files": [
+        "node_modules/@radix-ui/primitive/dist/index.mjs"
+      ]
+    },
+    {
+      "name": "@radix-ui/react-arrow",
+      "version": "1.1.7",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/react-arrow",
+      "files": [
+        "node_modules/@radix-ui/react-arrow/dist/index.mjs"
+      ]
+    },
+    {
+      "name": "@radix-ui/react-collapsible",
+      "version": "1.1.12",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/react-collapsible",
+      "files": [
+        "node_modules/@radix-ui/react-collapsible/dist/index.mjs"
+      ]
+    },
+    {
+      "name": "@radix-ui/react-collection",
+      "version": "1.1.7",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/react-collection",
+      "files": [
+        "node_modules/@radix-ui/react-collection/dist/index.mjs"
+      ]
+    },
+    {
+      "name": "@radix-ui/react-compose-refs",
+      "version": "1.1.2",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/react-compose-refs",
+      "files": [
+        "node_modules/@radix-ui/react-compose-refs/dist/index.mjs"
+      ]
+    },
+    {
+      "name": "@radix-ui/react-context",
+      "version": "1.1.2",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/react-context",
+      "files": [
+        "node_modules/@radix-ui/react-context/dist/index.mjs"
+      ]
+    },
+    {
+      "name": "@radix-ui/react-direction",
+      "version": "1.1.1",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/react-direction",
+      "files": [
+        "node_modules/@radix-ui/react-direction/dist/index.mjs"
+      ]
+    },
+    {
+      "name": "@radix-ui/react-dismissable-layer",
+      "version": "1.1.11",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/react-dismissable-layer",
+      "files": [
+        "node_modules/@radix-ui/react-dismissable-layer/dist/index.mjs"
+      ]
+    },
+    {
+      "name": "@radix-ui/react-focus-guards",
+      "version": "1.1.3",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/react-focus-guards",
+      "files": [
+        "node_modules/@radix-ui/react-focus-guards/dist/index.mjs"
+      ]
+    },
+    {
+      "name": "@radix-ui/react-focus-scope",
+      "version": "1.1.7",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/react-focus-scope",
+      "files": [
+        "node_modules/@radix-ui/react-focus-scope/dist/index.mjs"
+      ]
+    },
+    {
+      "name": "@radix-ui/react-id",
+      "version": "1.1.1",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/react-id",
+      "files": [
+        "node_modules/@radix-ui/react-id/dist/index.mjs"
+      ]
+    },
+    {
+      "name": "@radix-ui/react-popper",
+      "version": "1.2.8",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/react-popper",
+      "files": [
+        "node_modules/@radix-ui/react-popper/dist/index.mjs"
+      ]
+    },
+    {
+      "name": "@radix-ui/react-portal",
+      "version": "1.1.9",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/react-portal",
+      "files": [
+        "node_modules/@radix-ui/react-portal/dist/index.mjs"
+      ]
+    },
+    {
+      "name": "@radix-ui/react-presence",
+      "version": "1.1.5",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/react-presence",
+      "files": [
+        "node_modules/@radix-ui/react-presence/dist/index.mjs"
+      ]
+    },
+    {
+      "name": "@radix-ui/react-primitive",
+      "version": "2.1.3",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/react-primitive",
+      "files": [
+        "node_modules/@radix-ui/react-primitive/dist/index.mjs"
+      ]
+    },
+    {
+      "name": "@radix-ui/react-roving-focus",
+      "version": "1.1.11",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/react-roving-focus",
+      "files": [
+        "node_modules/@radix-ui/react-roving-focus/dist/index.mjs"
+      ]
+    },
+    {
+      "name": "@radix-ui/react-select",
+      "version": "2.2.6",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/react-select",
+      "files": [
+        "node_modules/@radix-ui/react-select/dist/index.mjs"
+      ]
+    },
+    {
+      "name": "@radix-ui/react-slot",
+      "version": "1.2.3",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/react-collection/node_modules/@radix-ui/react-slot",
+      "files": [
+        "node_modules/@radix-ui/react-collection/node_modules/@radix-ui/react-slot/dist/index.mjs"
+      ]
+    },
+    {
+      "name": "@radix-ui/react-slot",
+      "version": "1.2.3",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/react-primitive/node_modules/@radix-ui/react-slot",
+      "files": [
+        "node_modules/@radix-ui/react-primitive/node_modules/@radix-ui/react-slot/dist/index.mjs"
+      ]
+    },
+    {
+      "name": "@radix-ui/react-slot",
+      "version": "1.2.3",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/react-select/node_modules/@radix-ui/react-slot",
+      "files": [
+        "node_modules/@radix-ui/react-select/node_modules/@radix-ui/react-slot/dist/index.mjs"
+      ]
+    },
+    {
+      "name": "@radix-ui/react-slot",
+      "version": "1.2.3",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/react-tooltip/node_modules/@radix-ui/react-slot",
+      "files": [
+        "node_modules/@radix-ui/react-tooltip/node_modules/@radix-ui/react-slot/dist/index.mjs"
+      ]
+    },
+    {
+      "name": "@radix-ui/react-slot",
+      "version": "1.2.3",
+      "license": "MIT",
+      "package_path": "node_modules/radix-ui/node_modules/@radix-ui/react-slot",
+      "files": [
+        "node_modules/radix-ui/node_modules/@radix-ui/react-slot/dist/index.mjs"
+      ]
+    },
+    {
+      "name": "@radix-ui/react-tabs",
+      "version": "1.1.13",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/react-tabs",
+      "files": [
+        "node_modules/@radix-ui/react-tabs/dist/index.mjs"
+      ]
+    },
+    {
+      "name": "@radix-ui/react-tooltip",
+      "version": "1.2.8",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/react-tooltip",
+      "files": [
+        "node_modules/@radix-ui/react-tooltip/dist/index.mjs"
+      ]
+    },
+    {
+      "name": "@radix-ui/react-use-callback-ref",
+      "version": "1.1.1",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/react-use-callback-ref",
+      "files": [
+        "node_modules/@radix-ui/react-use-callback-ref/dist/index.mjs"
+      ]
+    },
+    {
+      "name": "@radix-ui/react-use-controllable-state",
+      "version": "1.2.2",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/react-use-controllable-state",
+      "files": [
+        "node_modules/@radix-ui/react-use-controllable-state/dist/index.mjs"
+      ]
+    },
+    {
+      "name": "@radix-ui/react-use-escape-keydown",
+      "version": "1.1.1",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/react-use-escape-keydown",
+      "files": [
+        "node_modules/@radix-ui/react-use-escape-keydown/dist/index.mjs"
+      ]
+    },
+    {
+      "name": "@radix-ui/react-use-layout-effect",
+      "version": "1.1.1",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/react-use-layout-effect",
+      "files": [
+        "node_modules/@radix-ui/react-use-layout-effect/dist/index.mjs"
+      ]
+    },
+    {
+      "name": "@radix-ui/react-use-previous",
+      "version": "1.1.1",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/react-use-previous",
+      "files": [
+        "node_modules/@radix-ui/react-use-previous/dist/index.mjs"
+      ]
+    },
+    {
+      "name": "@radix-ui/react-use-size",
+      "version": "1.1.1",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/react-use-size",
+      "files": [
+        "node_modules/@radix-ui/react-use-size/dist/index.mjs"
+      ]
+    },
+    {
+      "name": "@radix-ui/react-visually-hidden",
+      "version": "1.2.3",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/react-visually-hidden",
+      "files": [
+        "node_modules/@radix-ui/react-visually-hidden/dist/index.mjs"
+      ]
+    },
+    {
+      "name": "aria-hidden",
+      "version": "1.2.6",
+      "license": "MIT",
+      "package_path": "node_modules/aria-hidden",
+      "files": [
+        "node_modules/aria-hidden/dist/es2015/index.js"
+      ]
+    },
+    {
+      "name": "class-variance-authority",
+      "version": "0.7.1",
+      "license": "Apache-2.0",
+      "package_path": "node_modules/class-variance-authority",
+      "files": [
+        "node_modules/class-variance-authority/dist/index.mjs"
+      ]
+    },
+    {
+      "name": "clsx",
+      "version": "2.1.1",
+      "license": "MIT",
+      "package_path": "node_modules/clsx",
+      "files": [
+        "node_modules/clsx/dist/clsx.mjs"
+      ]
+    },
+    {
+      "name": "get-nonce",
+      "version": "1.0.1",
+      "license": "MIT",
+      "package_path": "node_modules/get-nonce",
+      "files": [
+        "node_modules/get-nonce/dist/es2015/index.js"
+      ]
+    },
+    {
+      "name": "lucide-react",
+      "version": "0.462.0",
+      "license": "ISC",
+      "package_path": "node_modules/lucide-react",
+      "files": [
+        "node_modules/lucide-react/dist/esm/Icon.js",
+        "node_modules/lucide-react/dist/esm/createLucideIcon.js",
+        "node_modules/lucide-react/dist/esm/defaultAttributes.js",
+        "node_modules/lucide-react/dist/esm/icons/check.js",
+        "node_modules/lucide-react/dist/esm/icons/chevron-down.js",
+        "node_modules/lucide-react/dist/esm/icons/chevron-up.js",
+        "node_modules/lucide-react/dist/esm/icons/circle-check.js",
+        "node_modules/lucide-react/dist/esm/icons/eye.js",
+        "node_modules/lucide-react/dist/esm/icons/message-circle.js",
+        "node_modules/lucide-react/dist/esm/icons/search.js",
+        "node_modules/lucide-react/dist/esm/shared/src/utils.js"
+      ]
+    },
+    {
+      "name": "react-dom",
+      "version": "19.2.4",
+      "license": "MIT",
+      "package_path": "node_modules/react-dom",
+      "files": [
+        "node_modules/react-dom/cjs/react-dom-client.production.js",
+        "node_modules/react-dom/cjs/react-dom.production.js",
+        "node_modules/react-dom/client.js",
+        "node_modules/react-dom/index.js"
+      ]
+    },
+    {
+      "name": "react-remove-scroll-bar",
+      "version": "2.3.8",
+      "license": "MIT",
+      "package_path": "node_modules/react-remove-scroll-bar",
+      "files": [
+        "node_modules/react-remove-scroll-bar/dist/es2015/component.js",
+        "node_modules/react-remove-scroll-bar/dist/es2015/constants.js",
+        "node_modules/react-remove-scroll-bar/dist/es2015/utils.js"
+      ]
+    },
+    {
+      "name": "react-remove-scroll",
+      "version": "2.7.2",
+      "license": "MIT",
+      "package_path": "node_modules/react-remove-scroll",
+      "files": [
+        "node_modules/react-remove-scroll/dist/es2015/Combination.js",
+        "node_modules/react-remove-scroll/dist/es2015/SideEffect.js",
+        "node_modules/react-remove-scroll/dist/es2015/UI.js",
+        "node_modules/react-remove-scroll/dist/es2015/aggresiveCapture.js",
+        "node_modules/react-remove-scroll/dist/es2015/handleScroll.js",
+        "node_modules/react-remove-scroll/dist/es2015/medium.js",
+        "node_modules/react-remove-scroll/dist/es2015/sidecar.js"
+      ]
+    },
+    {
+      "name": "react-style-singleton",
+      "version": "2.2.3",
+      "license": "MIT",
+      "package_path": "node_modules/react-style-singleton",
+      "files": [
+        "node_modules/react-style-singleton/dist/es2015/component.js",
+        "node_modules/react-style-singleton/dist/es2015/hook.js",
+        "node_modules/react-style-singleton/dist/es2015/singleton.js"
+      ]
+    },
+    {
+      "name": "react",
+      "version": "19.2.4",
+      "license": "MIT",
+      "package_path": "node_modules/react",
+      "files": [
+        "node_modules/react/cjs/react-jsx-runtime.production.js",
+        "node_modules/react/cjs/react.production.js",
+        "node_modules/react/index.js",
+        "node_modules/react/jsx-runtime.js"
+      ]
+    },
+    {
+      "name": "scheduler",
+      "version": "0.27.0",
+      "license": "MIT",
+      "package_path": "node_modules/scheduler",
+      "files": [
+        "node_modules/scheduler/cjs/scheduler.production.js",
+        "node_modules/scheduler/index.js"
+      ]
+    },
+    {
+      "name": "tailwind-merge",
+      "version": "2.6.1",
+      "license": "MIT",
+      "package_path": "node_modules/tailwind-merge",
+      "files": [
+        "node_modules/tailwind-merge/dist/bundle-mjs.mjs"
+      ]
+    },
+    {
+      "name": "tslib",
+      "version": "2.8.1",
+      "license": "0BSD",
+      "package_path": "node_modules/tslib",
+      "files": [
+        "node_modules/tslib/tslib.es6.mjs"
+      ]
+    },
+    {
+      "name": "use-callback-ref",
+      "version": "1.3.3",
+      "license": "MIT",
+      "package_path": "node_modules/use-callback-ref",
+      "files": [
+        "node_modules/use-callback-ref/dist/es2015/assignRef.js",
+        "node_modules/use-callback-ref/dist/es2015/useMergeRef.js",
+        "node_modules/use-callback-ref/dist/es2015/useRef.js"
+      ]
+    },
+    {
+      "name": "use-sidecar",
+      "version": "1.1.3",
+      "license": "MIT",
+      "package_path": "node_modules/use-sidecar",
+      "files": [
+        "node_modules/use-sidecar/dist/es2015/exports.js",
+        "node_modules/use-sidecar/dist/es2015/medium.js"
+      ]
+    }
+  ],
+  "runtime_inputs": [
+    {
+      "path": "node_modules/@floating-ui/core/dist/floating-ui.core.mjs",
+      "bytes_in_output": 8214,
+      "sha256": "d94d2ed31b3a42e4fe50647aa1c7697ff416f7f5face8ff5575f06fac9e55aa8",
+      "package": "@floating-ui/core",
+      "version": "1.7.4",
+      "license": "MIT",
+      "package_path": "node_modules/@floating-ui/core"
+    },
+    {
+      "path": "node_modules/@floating-ui/dom/dist/floating-ui.dom.mjs",
+      "bytes_in_output": 7157,
+      "sha256": "e4c64845dde188836675d7abe1a16cc9953a9231fbceece854cbebe565070457",
+      "package": "@floating-ui/dom",
+      "version": "1.7.5",
+      "license": "MIT",
+      "package_path": "node_modules/@floating-ui/dom"
+    },
+    {
+      "path": "node_modules/@floating-ui/react-dom/dist/floating-ui.react-dom.mjs",
+      "bytes_in_output": 3058,
+      "sha256": "f4db4ddaeb24a67eee6889a08c30212c2bec6a240a5540c49a9b160283191c52",
+      "package": "@floating-ui/react-dom",
+      "version": "2.1.7",
+      "license": "MIT",
+      "package_path": "node_modules/@floating-ui/react-dom"
+    },
+    {
+      "path": "node_modules/@floating-ui/utils/dist/floating-ui.utils.dom.mjs",
+      "bytes_in_output": 2509,
+      "sha256": "6a91556ea29f5b3c3a5ea66e59d7b258d1887704e7b1250b9d01a0c1413a9738",
+      "package": "@floating-ui/utils",
+      "version": "0.2.10",
+      "license": "MIT",
+      "package_path": "node_modules/@floating-ui/utils"
+    },
+    {
+      "path": "node_modules/@floating-ui/utils/dist/floating-ui.utils.mjs",
+      "bytes_in_output": 1517,
+      "sha256": "da29fb657914a8502c54de945c22da3f3cf06fb50652b4e8f9533deddefdac69",
+      "package": "@floating-ui/utils",
+      "version": "0.2.10",
+      "license": "MIT",
+      "package_path": "node_modules/@floating-ui/utils"
+    },
+    {
+      "path": "node_modules/@posit/shiny-react/dist/ImageOutput.js",
+      "bytes_in_output": 28,
+      "sha256": "32d79d36a0fcb95779de4548c1492057c9358c45398a363c42db3303f6077367",
+      "package": "@posit/shiny-react",
+      "version": "0.0.16",
+      "license": "MIT",
+      "package_path": "node_modules/@posit/shiny-react"
+    },
+    {
+      "path": "node_modules/@posit/shiny-react/dist/input-registry.js",
+      "bytes_in_output": 1124,
+      "sha256": "5618682a6e07b776400383059d72631569954e17d030b14e6a3ae94d3f6896d0",
+      "package": "@posit/shiny-react",
+      "version": "0.0.16",
+      "license": "MIT",
+      "package_path": "node_modules/@posit/shiny-react"
+    },
+    {
+      "path": "node_modules/@posit/shiny-react/dist/message-registry.js",
+      "bytes_in_output": 702,
+      "sha256": "c8397f10f190441ececbec6d4699c07bfed227b9dc7fc31162a0d597c77e4f07",
+      "package": "@posit/shiny-react",
+      "version": "0.0.16",
+      "license": "MIT",
+      "package_path": "node_modules/@posit/shiny-react"
+    },
+    {
+      "path": "node_modules/@posit/shiny-react/dist/output-registry.js",
+      "bytes_in_output": 2005,
+      "sha256": "b34920eec511f73d6690936602fbbea6bf0a39cb1b3fe5e0fadcd763d572437d",
+      "package": "@posit/shiny-react",
+      "version": "0.0.16",
+      "license": "MIT",
+      "package_path": "node_modules/@posit/shiny-react"
+    },
+    {
+      "path": "node_modules/@posit/shiny-react/dist/react-registry.js",
+      "bytes_in_output": 58,
+      "sha256": "5c8650d5e6d5476dcb41bb6be9f4f0612746bb6dd250e53a606703498f519da4",
+      "package": "@posit/shiny-react",
+      "version": "0.0.16",
+      "license": "MIT",
+      "package_path": "node_modules/@posit/shiny-react"
+    },
+    {
+      "path": "node_modules/@posit/shiny-react/dist/use-shiny.js",
+      "bytes_in_output": 1155,
+      "sha256": "1d2a1ab2e3b054a09c15c1f2c6d012d5d61859894136633588b8c19cdbc3292e",
+      "package": "@posit/shiny-react",
+      "version": "0.0.16",
+      "license": "MIT",
+      "package_path": "node_modules/@posit/shiny-react"
+    },
+    {
+      "path": "node_modules/@posit/shiny-react/dist/utils.js",
+      "bytes_in_output": 213,
+      "sha256": "e36416643aeaca28154e5e9745a3e46521c7e0b2e1eebd4debbcd127aa9cdc6d",
+      "package": "@posit/shiny-react",
+      "version": "0.0.16",
+      "license": "MIT",
+      "package_path": "node_modules/@posit/shiny-react"
+    },
+    {
+      "path": "node_modules/@radix-ui/number/dist/index.mjs",
+      "bytes_in_output": 54,
+      "sha256": "3010b237139e0172f6387d2b58fb3400d71e7f6fe185ae7b36d9ba26779e0c46",
+      "package": "@radix-ui/number",
+      "version": "1.1.1",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/number"
+    },
+    {
+      "path": "node_modules/@radix-ui/primitive/dist/index.mjs",
+      "bytes_in_output": 200,
+      "sha256": "33dda6db4968f7b663776e8c645ae78704fdefc283a13b506b6e4af417692d03",
+      "package": "@radix-ui/primitive",
+      "version": "1.1.3",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/primitive"
+    },
+    {
+      "path": "node_modules/@radix-ui/react-arrow/dist/index.mjs",
+      "bytes_in_output": 313,
+      "sha256": "894c80c5fb31764d096d973e0aa2c961d3148d6601536e3f19793af5165b35cd",
+      "package": "@radix-ui/react-arrow",
+      "version": "1.1.7",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/react-arrow"
+    },
+    {
+      "path": "node_modules/@radix-ui/react-collapsible/dist/index.mjs",
+      "bytes_in_output": 2271,
+      "sha256": "6e36558ead4245fa44f5e4fc798a357a13b0be3c0006cd55d8ed9fd1d70ff9a7",
+      "package": "@radix-ui/react-collapsible",
+      "version": "1.1.12",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/react-collapsible"
+    },
+    {
+      "path": "node_modules/@radix-ui/react-collection/dist/index.mjs",
+      "bytes_in_output": 1208,
+      "sha256": "2843e851aea94115a9a237b960ad64206fcb27fc98d49405771e2f2c3d5fef9f",
+      "package": "@radix-ui/react-collection",
+      "version": "1.1.7",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/react-collection"
+    },
+    {
+      "path": "node_modules/@radix-ui/react-collection/node_modules/@radix-ui/react-slot/dist/index.mjs",
+      "bytes_in_output": 1404,
+      "sha256": "003bed55226494b15b4fb708ab4b50d3b6dda69d8b8c2e04efb88d22a8274662",
+      "package": "@radix-ui/react-slot",
+      "version": "1.2.3",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/react-collection/node_modules/@radix-ui/react-slot"
+    },
+    {
+      "path": "node_modules/@radix-ui/react-compose-refs/dist/index.mjs",
+      "bytes_in_output": 348,
+      "sha256": "dc0dc6528057301bc5f1226f863918252308fb6286655bcccd9f4cd66e34ff48",
+      "package": "@radix-ui/react-compose-refs",
+      "version": "1.1.2",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/react-compose-refs"
+    },
+    {
+      "path": "node_modules/@radix-ui/react-context/dist/index.mjs",
+      "bytes_in_output": 966,
+      "sha256": "ed77646c94c41c9623f1b17ef94fc012dc35ef21ed2f50a2798dcb8df9b6b21a",
+      "package": "@radix-ui/react-context",
+      "version": "1.1.2",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/react-context"
+    },
+    {
+      "path": "node_modules/@radix-ui/react-direction/dist/index.mjs",
+      "bytes_in_output": 114,
+      "sha256": "253b501a586f7da39aa4f970e2192e6e824debe5920ad841234a772b55f0a44b",
+      "package": "@radix-ui/react-direction",
+      "version": "1.1.1",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/react-direction"
+    },
+    {
+      "path": "node_modules/@radix-ui/react-dismissable-layer/dist/index.mjs",
+      "bytes_in_output": 3357,
+      "sha256": "d2d3dd4b6aa52fa4c72e8ba1eecc01f098e312faf3590ad4660d6a5909e1e92d",
+      "package": "@radix-ui/react-dismissable-layer",
+      "version": "1.1.11",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/react-dismissable-layer"
+    },
+    {
+      "path": "node_modules/@radix-ui/react-focus-guards/dist/index.mjs",
+      "bytes_in_output": 561,
+      "sha256": "3b7bfbc1f2c3110001cc77e02a23210b92db6802f352302ba42a31b5c9f54d8f",
+      "package": "@radix-ui/react-focus-guards",
+      "version": "1.1.3",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/react-focus-guards"
+    },
+    {
+      "path": "node_modules/@radix-ui/react-focus-scope/dist/index.mjs",
+      "bytes_in_output": 3178,
+      "sha256": "3e87d061fc6435e15e2809f8efc412dbb66172e4e0666c82d16368af17136438",
+      "package": "@radix-ui/react-focus-scope",
+      "version": "1.1.7",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/react-focus-scope"
+    },
+    {
+      "path": "node_modules/@radix-ui/react-id/dist/index.mjs",
+      "bytes_in_output": 181,
+      "sha256": "a580710854bc9461a46e20eedb2d9fa9a2347adb52bc6889a1aa4cbb28bdeeeb",
+      "package": "@radix-ui/react-id",
+      "version": "1.1.1",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/react-id"
+    },
+    {
+      "path": "node_modules/@radix-ui/react-popper/dist/index.mjs",
+      "bytes_in_output": 4041,
+      "sha256": "b86b51ce349ac0ca89fbfdb6f5febd892edb3d336fc986c9e7ad560c2ee0e066",
+      "package": "@radix-ui/react-popper",
+      "version": "1.2.8",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/react-popper"
+    },
+    {
+      "path": "node_modules/@radix-ui/react-portal/dist/index.mjs",
+      "bytes_in_output": 276,
+      "sha256": "4b82ec896df12b224e0ad0f0144a64c94ba87fb08fdd88eec82e9c3f45ecc5fe",
+      "package": "@radix-ui/react-portal",
+      "version": "1.1.9",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/react-portal"
+    },
+    {
+      "path": "node_modules/@radix-ui/react-presence/dist/index.mjs",
+      "bytes_in_output": 1998,
+      "sha256": "29223c633b9591e249e0cac62ad7991c959ab9aaee62fa64dc85895a27dc9c93",
+      "package": "@radix-ui/react-presence",
+      "version": "1.1.5",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/react-presence"
+    },
+    {
+      "path": "node_modules/@radix-ui/react-primitive/dist/index.mjs",
+      "bytes_in_output": 460,
+      "sha256": "a6609db0fef55199ec16d76ca60add2a359697a7db57d193685f1fc9e79023b0",
+      "package": "@radix-ui/react-primitive",
+      "version": "2.1.3",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/react-primitive"
+    },
+    {
+      "path": "node_modules/@radix-ui/react-primitive/node_modules/@radix-ui/react-slot/dist/index.mjs",
+      "bytes_in_output": 1404,
+      "sha256": "003bed55226494b15b4fb708ab4b50d3b6dda69d8b8c2e04efb88d22a8274662",
+      "package": "@radix-ui/react-slot",
+      "version": "1.2.3",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/react-primitive/node_modules/@radix-ui/react-slot"
+    },
+    {
+      "path": "node_modules/@radix-ui/react-roving-focus/dist/index.mjs",
+      "bytes_in_output": 3410,
+      "sha256": "8679afc2395b423c925817e855fe1456425492413c328a3ddd15585eda9802b9",
+      "package": "@radix-ui/react-roving-focus",
+      "version": "1.1.11",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/react-roving-focus"
+    },
+    {
+      "path": "node_modules/@radix-ui/react-select/dist/index.mjs",
+      "bytes_in_output": 18436,
+      "sha256": "c3f74d6f4820c1b108c2db061a87de2f16002c8adbfc2f8f5c49643e79adcd39",
+      "package": "@radix-ui/react-select",
+      "version": "2.2.6",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/react-select"
+    },
+    {
+      "path": "node_modules/@radix-ui/react-select/node_modules/@radix-ui/react-slot/dist/index.mjs",
+      "bytes_in_output": 1404,
+      "sha256": "003bed55226494b15b4fb708ab4b50d3b6dda69d8b8c2e04efb88d22a8274662",
+      "package": "@radix-ui/react-slot",
+      "version": "1.2.3",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/react-select/node_modules/@radix-ui/react-slot"
+    },
+    {
+      "path": "node_modules/@radix-ui/react-tabs/dist/index.mjs",
+      "bytes_in_output": 2355,
+      "sha256": "11bdb3996ac29b4215f7b438e9305577f5d90b0450591cc9dc32636a1a2709b8",
+      "package": "@radix-ui/react-tabs",
+      "version": "1.1.13",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/react-tabs"
+    },
+    {
+      "path": "node_modules/@radix-ui/react-tooltip/dist/index.mjs",
+      "bytes_in_output": 7710,
+      "sha256": "b6d956a2bbac6b7f42d37dbc6b2193d6aa96c0ae32f45a9af054c5dfdf26edd7",
+      "package": "@radix-ui/react-tooltip",
+      "version": "1.2.8",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/react-tooltip"
+    },
+    {
+      "path": "node_modules/@radix-ui/react-tooltip/node_modules/@radix-ui/react-slot/dist/index.mjs",
+      "bytes_in_output": 194,
+      "sha256": "003bed55226494b15b4fb708ab4b50d3b6dda69d8b8c2e04efb88d22a8274662",
+      "package": "@radix-ui/react-slot",
+      "version": "1.2.3",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/react-tooltip/node_modules/@radix-ui/react-slot"
+    },
+    {
+      "path": "node_modules/@radix-ui/react-use-callback-ref/dist/index.mjs",
+      "bytes_in_output": 134,
+      "sha256": "eddebebf6c618ade6278d16d6a7690803697ade3191a4a289a1344df435746e1",
+      "package": "@radix-ui/react-use-callback-ref",
+      "version": "1.1.1",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/react-use-callback-ref"
+    },
+    {
+      "path": "node_modules/@radix-ui/react-use-controllable-state/dist/index.mjs",
+      "bytes_in_output": 935,
+      "sha256": "20b974293509b4d0f11c542f4a9985714b5146de8ff9fb5a7ea281d869078ca5",
+      "package": "@radix-ui/react-use-controllable-state",
+      "version": "1.2.2",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/react-use-controllable-state"
+    },
+    {
+      "path": "node_modules/@radix-ui/react-use-escape-keydown/dist/index.mjs",
+      "bytes_in_output": 230,
+      "sha256": "e5d57f547daef18a27f811b3950224dddd296f3f9ecc9cec43927402a7afcf16",
+      "package": "@radix-ui/react-use-escape-keydown",
+      "version": "1.1.1",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/react-use-escape-keydown"
+    },
+    {
+      "path": "node_modules/@radix-ui/react-use-layout-effect/dist/index.mjs",
+      "bytes_in_output": 66,
+      "sha256": "d035366390f938e57f0601f8b551c1da2510364c1d7cb7628596cc3b253895c0",
+      "package": "@radix-ui/react-use-layout-effect",
+      "version": "1.1.1",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/react-use-layout-effect"
+    },
+    {
+      "path": "node_modules/@radix-ui/react-use-previous/dist/index.mjs",
+      "bytes_in_output": 193,
+      "sha256": "0fdf25338b86ce48cdd648a170b2d3267ff52773b0719c54a10ceb7c0f1bff16",
+      "package": "@radix-ui/react-use-previous",
+      "version": "1.1.1",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/react-use-previous"
+    },
+    {
+      "path": "node_modules/@radix-ui/react-use-size/dist/index.mjs",
+      "bytes_in_output": 455,
+      "sha256": "cdd12856107463184f8d14011d761e55b0d959f256de5a8b0cbd3f665ea3993a",
+      "package": "@radix-ui/react-use-size",
+      "version": "1.1.1",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/react-use-size"
+    },
+    {
+      "path": "node_modules/@radix-ui/react-visually-hidden/dist/index.mjs",
+      "bytes_in_output": 328,
+      "sha256": "5ebe1c41e6ca05d4bd46d323d20b61449828ab06530dceceeae84370c1d06874",
+      "package": "@radix-ui/react-visually-hidden",
+      "version": "1.2.3",
+      "license": "MIT",
+      "package_path": "node_modules/@radix-ui/react-visually-hidden"
+    },
+    {
+      "path": "node_modules/aria-hidden/dist/es2015/index.js",
+      "bytes_in_output": 1490,
+      "sha256": "6a644a5eb6f1a5a59948f72f0a5c8dd08ae882420d520a63609b1ce9e13a4c22",
+      "package": "aria-hidden",
+      "version": "1.2.6",
+      "license": "MIT",
+      "package_path": "node_modules/aria-hidden"
+    },
+    {
+      "path": "node_modules/class-variance-authority/dist/index.mjs",
+      "bytes_in_output": 643,
+      "sha256": "3e9deb809896235089fd6719c56631f25bd67878100d5fa771a4864bfbd0e299",
+      "package": "class-variance-authority",
+      "version": "0.7.1",
+      "license": "Apache-2.0",
+      "package_path": "node_modules/class-variance-authority"
+    },
+    {
+      "path": "node_modules/clsx/dist/clsx.mjs",
+      "bytes_in_output": 362,
+      "sha256": "d949e5cdbfebc76a6642b1901095e900fc3f2262d8dc0373aa44850a9bc75522",
+      "package": "clsx",
+      "version": "2.1.1",
+      "license": "MIT",
+      "package_path": "node_modules/clsx"
+    },
+    {
+      "path": "node_modules/get-nonce/dist/es2015/index.js",
+      "bytes_in_output": 99,
+      "sha256": "d5cb2be55660881877c04ab543e44c5fc6d099d244073e00f6277888954a943d",
+      "package": "get-nonce",
+      "version": "1.0.1",
+      "license": "MIT",
+      "package_path": "node_modules/get-nonce"
+    },
+    {
+      "path": "node_modules/lucide-react/dist/esm/createLucideIcon.js",
+      "bytes_in_output": 192,
+      "sha256": "25e138377719bad4c458e5b8a1a0b2b35c62e251cbd420d6fed4d9b78a6bfe5e",
+      "package": "lucide-react",
+      "version": "0.462.0",
+      "license": "ISC",
+      "package_path": "node_modules/lucide-react"
+    },
+    {
+      "path": "node_modules/lucide-react/dist/esm/defaultAttributes.js",
+      "bytes_in_output": 176,
+      "sha256": "43f2024f224e6f159c894751fc8df36de7a62dfe2e85f65e1374142a3a2dc5a6",
+      "package": "lucide-react",
+      "version": "0.462.0",
+      "license": "ISC",
+      "package_path": "node_modules/lucide-react"
+    },
+    {
+      "path": "node_modules/lucide-react/dist/esm/Icon.js",
+      "bytes_in_output": 370,
+      "sha256": "74b176e331da170fbf5f63ac936961845328ec5a695d6d1125c7b6ac34a27084",
+      "package": "lucide-react",
+      "version": "0.462.0",
+      "license": "ISC",
+      "package_path": "node_modules/lucide-react"
+    },
+    {
+      "path": "node_modules/lucide-react/dist/esm/icons/check.js",
+      "bytes_in_output": 65,
+      "sha256": "52fd49b19d701411f908e365c332fa6361f89424d0a9eb30cc28ef0f49af73f3",
+      "package": "lucide-react",
+      "version": "0.462.0",
+      "license": "ISC",
+      "package_path": "node_modules/lucide-react"
+    },
+    {
+      "path": "node_modules/lucide-react/dist/esm/icons/chevron-down.js",
+      "bytes_in_output": 68,
+      "sha256": "da183e3055d6569242291988dbc5bdd8a3c2e4de7f42457e467fc95413c6b8cb",
+      "package": "lucide-react",
+      "version": "0.462.0",
+      "license": "ISC",
+      "package_path": "node_modules/lucide-react"
+    },
+    {
+      "path": "node_modules/lucide-react/dist/esm/icons/chevron-up.js",
+      "bytes_in_output": 68,
+      "sha256": "f9ee643da9c6316d9049e39b7df9589d819f205c0d6b0f6648b7530d6a135b6a",
+      "package": "lucide-react",
+      "version": "0.462.0",
+      "license": "ISC",
+      "package_path": "node_modules/lucide-react"
+    },
+    {
+      "path": "node_modules/lucide-react/dist/esm/icons/circle-check.js",
+      "bytes_in_output": 118,
+      "sha256": "d3e845da078b9d0554675abef9b70e36d53b32e6b343f81876ad544aac5cd646",
+      "package": "lucide-react",
+      "version": "0.462.0",
+      "license": "ISC",
+      "package_path": "node_modules/lucide-react"
+    },
+    {
+      "path": "node_modules/lucide-react/dist/esm/icons/eye.js",
+      "bytes_in_output": 197,
+      "sha256": "7fbb19eabbf5e9d7ddbb3b2bad252a531b950c43b874cc1e1bcd6dca0a42a1cf",
+      "package": "lucide-react",
+      "version": "0.462.0",
+      "license": "ISC",
+      "package_path": "node_modules/lucide-react"
+    },
+    {
+      "path": "node_modules/lucide-react/dist/esm/icons/message-circle.js",
+      "bytes_in_output": 88,
+      "sha256": "65e9d8f06f2d0977bb1a4f74026f183f6de7d45f767c794a2c3f2867f967902b",
+      "package": "lucide-react",
+      "version": "0.462.0",
+      "license": "ISC",
+      "package_path": "node_modules/lucide-react"
+    },
+    {
+      "path": "node_modules/lucide-react/dist/esm/icons/search.js",
+      "bytes_in_output": 113,
+      "sha256": "42b870baf392b447c41a4643e97c6de4154412b0a03833a242fb968a7040549c",
+      "package": "lucide-react",
+      "version": "0.462.0",
+      "license": "ISC",
+      "package_path": "node_modules/lucide-react"
+    },
+    {
+      "path": "node_modules/lucide-react/dist/esm/shared/src/utils.js",
+      "bytes_in_output": 148,
+      "sha256": "5ead613f763752fd679173e12e5941464d421f869e39b4051a025134772519ff",
+      "package": "lucide-react",
+      "version": "0.462.0",
+      "license": "ISC",
+      "package_path": "node_modules/lucide-react"
+    },
+    {
+      "path": "node_modules/radix-ui/node_modules/@radix-ui/react-slot/dist/index.mjs",
+      "bytes_in_output": 1675,
+      "sha256": "003bed55226494b15b4fb708ab4b50d3b6dda69d8b8c2e04efb88d22a8274662",
+      "package": "@radix-ui/react-slot",
+      "version": "1.2.3",
+      "license": "MIT",
+      "package_path": "node_modules/radix-ui/node_modules/@radix-ui/react-slot"
+    },
+    {
+      "path": "node_modules/react-dom/cjs/react-dom-client.production.js",
+      "bytes_in_output": 176750,
+      "sha256": "764ffa6adc2c9b02b4dc00f4a58ef13d050e7825898bd9e5dc808d3a3f9d4bb9",
+      "package": "react-dom",
+      "version": "19.2.4",
+      "license": "MIT",
+      "package_path": "node_modules/react-dom"
+    },
+    {
+      "path": "node_modules/react-dom/cjs/react-dom.production.js",
+      "bytes_in_output": 3342,
+      "sha256": "7a5e56724be242e34ddc14f9d0dc7fc6a32f1367ae994f02d3699b00c085eff4",
+      "package": "react-dom",
+      "version": "19.2.4",
+      "license": "MIT",
+      "package_path": "node_modules/react-dom"
+    },
+    {
+      "path": "node_modules/react-dom/client.js",
+      "bytes_in_output": 253,
+      "sha256": "00e348ab3d6bc2eef908345d0bc4e008c95bcfecec060dfda5c4967953761396",
+      "package": "react-dom",
+      "version": "19.2.4",
+      "license": "MIT",
+      "package_path": "node_modules/react-dom"
+    },
+    {
+      "path": "node_modules/react-dom/index.js",
+      "bytes_in_output": 253,
+      "sha256": "ba1a3e33489f868371561777607e3ee5091df0f7ea3f1a10f789d6b86e4c1505",
+      "package": "react-dom",
+      "version": "19.2.4",
+      "license": "MIT",
+      "package_path": "node_modules/react-dom"
+    },
+    {
+      "path": "node_modules/react-remove-scroll-bar/dist/es2015/component.js",
+      "bytes_in_output": 1583,
+      "sha256": "3baec61523006aedf14321423427b0c50aa17bfe48faf344bebff9d883149f29",
+      "package": "react-remove-scroll-bar",
+      "version": "2.3.8",
+      "license": "MIT",
+      "package_path": "node_modules/react-remove-scroll-bar"
+    },
+    {
+      "path": "node_modules/react-remove-scroll-bar/dist/es2015/constants.js",
+      "bytes_in_output": 129,
+      "sha256": "1c73582ef730bbca1d536a6995c7eea438dcd0632fee2856337627e44b5872e2",
+      "package": "react-remove-scroll-bar",
+      "version": "2.3.8",
+      "license": "MIT",
+      "package_path": "node_modules/react-remove-scroll-bar"
+    },
+    {
+      "path": "node_modules/react-remove-scroll-bar/dist/es2015/utils.js",
+      "bytes_in_output": 517,
+      "sha256": "2c4105ab772a5cbf4b3d1e54f49e94d03fde867d20767b46bb3e5c27f4d82f00",
+      "package": "react-remove-scroll-bar",
+      "version": "2.3.8",
+      "license": "MIT",
+      "package_path": "node_modules/react-remove-scroll-bar"
+    },
+    {
+      "path": "node_modules/react-remove-scroll/dist/es2015/aggresiveCapture.js",
+      "bytes_in_output": 228,
+      "sha256": "5563523a66337f256c031a78799d75c76c2b806aeab77c95a1d1eac867e414ba",
+      "package": "react-remove-scroll",
+      "version": "2.7.2",
+      "license": "MIT",
+      "package_path": "node_modules/react-remove-scroll"
+    },
+    {
+      "path": "node_modules/react-remove-scroll/dist/es2015/Combination.js",
+      "bytes_in_output": 145,
+      "sha256": "1e77baa7c90a3d778f966ea437224d1db9e9563f7706ce89b78d5fd3e8c11dcf",
+      "package": "react-remove-scroll",
+      "version": "2.7.2",
+      "license": "MIT",
+      "package_path": "node_modules/react-remove-scroll"
+    },
+    {
+      "path": "node_modules/react-remove-scroll/dist/es2015/handleScroll.js",
+      "bytes_in_output": 1242,
+      "sha256": "8a6f2349eedb298b4751ce806291c7b9a4f8ecb9f50d5d69a1a0f2dfa47cae0f",
+      "package": "react-remove-scroll",
+      "version": "2.7.2",
+      "license": "MIT",
+      "package_path": "node_modules/react-remove-scroll"
+    },
+    {
+      "path": "node_modules/react-remove-scroll/dist/es2015/medium.js",
+      "bytes_in_output": 12,
+      "sha256": "59a1090d4a50eabff072d99bf5aad24894c21bfc337c717075458c7b0b9f9a87",
+      "package": "react-remove-scroll",
+      "version": "2.7.2",
+      "license": "MIT",
+      "package_path": "node_modules/react-remove-scroll"
+    },
+    {
+      "path": "node_modules/react-remove-scroll/dist/es2015/sidecar.js",
+      "bytes_in_output": 17,
+      "sha256": "88f0930aaced0dfc35ac1aa6d3b29eca5f80f4344c27df7d244d0e645b26e8f0",
+      "package": "react-remove-scroll",
+      "version": "2.7.2",
+      "license": "MIT",
+      "package_path": "node_modules/react-remove-scroll"
+    },
+    {
+      "path": "node_modules/react-remove-scroll/dist/es2015/SideEffect.js",
+      "bytes_in_output": 3330,
+      "sha256": "fafe1422512c0a1a3e16ebccce79adb65c8bde0528fc3edeb6b812dfc1e9f67e",
+      "package": "react-remove-scroll",
+      "version": "2.7.2",
+      "license": "MIT",
+      "package_path": "node_modules/react-remove-scroll"
+    },
+    {
+      "path": "node_modules/react-remove-scroll/dist/es2015/UI.js",
+      "bytes_in_output": 977,
+      "sha256": "1c8fa6e52fe34cf310aeafa0f350cbb5a688f71c0f1f03d2bd0407bfe32a2500",
+      "package": "react-remove-scroll",
+      "version": "2.7.2",
+      "license": "MIT",
+      "package_path": "node_modules/react-remove-scroll"
+    },
+    {
+      "path": "node_modules/react-style-singleton/dist/es2015/component.js",
+      "bytes_in_output": 100,
+      "sha256": "c1598f96587abdbc79c3b78e9c1217e295488572c6a293877bbbe93d71e643ee",
+      "package": "react-style-singleton",
+      "version": "2.2.3",
+      "license": "MIT",
+      "package_path": "node_modules/react-style-singleton"
+    },
+    {
+      "path": "node_modules/react-style-singleton/dist/es2015/hook.js",
+      "bytes_in_output": 138,
+      "sha256": "c5a6c5f2ccc72b3361b32b1c85ccb9e148a696a5f48962e7af8373344a87f297",
+      "package": "react-style-singleton",
+      "version": "2.2.3",
+      "license": "MIT",
+      "package_path": "node_modules/react-style-singleton"
+    },
+    {
+      "path": "node_modules/react-style-singleton/dist/es2015/singleton.js",
+      "bytes_in_output": 509,
+      "sha256": "95c7ffcbdac6ebf19e85ea723995e153b90182b34843ed6b1bfc3d896081e51d",
+      "package": "react-style-singleton",
+      "version": "2.2.3",
+      "license": "MIT",
+      "package_path": "node_modules/react-style-singleton"
+    },
+    {
+      "path": "node_modules/react/cjs/react-jsx-runtime.production.js",
+      "bytes_in_output": 364,
+      "sha256": "1e46f15002696985e80c61d47aaa30dabb03c954270a690f5f7dfbbacfa9002b",
+      "package": "react",
+      "version": "19.2.4",
+      "license": "MIT",
+      "package_path": "node_modules/react"
+    },
+    {
+      "path": "node_modules/react/cjs/react.production.js",
+      "bytes_in_output": 7616,
+      "sha256": "6a3554a5287116df819640334924348287618dcdcd7124a05eb126dcbbecd5f9",
+      "package": "react",
+      "version": "19.2.4",
+      "license": "MIT",
+      "package_path": "node_modules/react"
+    },
+    {
+      "path": "node_modules/react/index.js",
+      "bytes_in_output": 50,
+      "sha256": "60caffdecbdc5db3bc4ec4e83df9488345ccb271d07533b9210bf5750918d97e",
+      "package": "react",
+      "version": "19.2.4",
+      "license": "MIT",
+      "package_path": "node_modules/react"
+    },
+    {
+      "path": "node_modules/react/jsx-runtime.js",
+      "bytes_in_output": 50,
+      "sha256": "b392951a77d0a2e6a6bd017e49d768481ae5b63c4109c6c31f622cf7b2433edc",
+      "package": "react",
+      "version": "19.2.4",
+      "license": "MIT",
+      "package_path": "node_modules/react"
+    },
+    {
+      "path": "node_modules/scheduler/cjs/scheduler.production.js",
+      "bytes_in_output": 3662,
+      "sha256": "679adff761d31e9426604f80c0e99be44a3e6f4c6834b0218ecf0312a67c171f",
+      "package": "scheduler",
+      "version": "0.27.0",
+      "license": "MIT",
+      "package_path": "node_modules/scheduler"
+    },
+    {
+      "path": "node_modules/scheduler/index.js",
+      "bytes_in_output": 51,
+      "sha256": "145965504d60007bc25486ab930b0367867dcd5d579ccd343c148d69349a7cfb",
+      "package": "scheduler",
+      "version": "0.27.0",
+      "license": "MIT",
+      "package_path": "node_modules/scheduler"
+    },
+    {
+      "path": "node_modules/tailwind-merge/dist/bundle-mjs.mjs",
+      "bytes_in_output": 19925,
+      "sha256": "4e396b1d94e2476f0e7d052f077e6522cff3f643055d2c537c57994867fbdfe0",
+      "package": "tailwind-merge",
+      "version": "2.6.1",
+      "license": "MIT",
+      "package_path": "node_modules/tailwind-merge"
+    },
+    {
+      "path": "node_modules/tslib/tslib.es6.mjs",
+      "bytes_in_output": 747,
+      "sha256": "0929993220938091ede542d688b0fdb87dad99a7e77678e1983c32d18a503339",
+      "package": "tslib",
+      "version": "2.8.1",
+      "license": "0BSD",
+      "package_path": "node_modules/tslib"
+    },
+    {
+      "path": "node_modules/use-callback-ref/dist/es2015/assignRef.js",
+      "bytes_in_output": 69,
+      "sha256": "ac1344fd33c84d6761c8b3c51f67987ae272444bcdf7a3e885ffb7a0171f62f2",
+      "package": "use-callback-ref",
+      "version": "1.3.3",
+      "license": "MIT",
+      "package_path": "node_modules/use-callback-ref"
+    },
+    {
+      "path": "node_modules/use-callback-ref/dist/es2015/useMergeRef.js",
+      "bytes_in_output": 372,
+      "sha256": "b757ddc05f723a98101a9b1418c8f5859d6d5c27113fb4d7a641a2b7375a79b7",
+      "package": "use-callback-ref",
+      "version": "1.3.3",
+      "license": "MIT",
+      "package_path": "node_modules/use-callback-ref"
+    },
+    {
+      "path": "node_modules/use-callback-ref/dist/es2015/useRef.js",
+      "bytes_in_output": 229,
+      "sha256": "120f5ed0fc43ae85c2bb96e3ee97b32aab810477d2fcf9446f67ecbd95344164",
+      "package": "use-callback-ref",
+      "version": "1.3.3",
+      "license": "MIT",
+      "package_path": "node_modules/use-callback-ref"
+    },
+    {
+      "path": "node_modules/use-sidecar/dist/es2015/exports.js",
+      "bytes_in_output": 323,
+      "sha256": "002eda36f3c946855797e598429da198b73156718975ebc7d2a5bebad7397d10",
+      "package": "use-sidecar",
+      "version": "1.1.3",
+      "license": "MIT",
+      "package_path": "node_modules/use-sidecar"
+    },
+    {
+      "path": "node_modules/use-sidecar/dist/es2015/medium.js",
+      "bytes_in_output": 847,
+      "sha256": "3243bdc31511a7dcee873538d5970126ea57390070303c0bea5797cf0e6260c6",
+      "package": "use-sidecar",
+      "version": "1.1.3",
+      "license": "MIT",
+      "package_path": "node_modules/use-sidecar"
+    },
+    {
+      "path": "srcts/components/App.tsx",
+      "bytes_in_output": 4576,
+      "sha256": "1922a9f4e8ab9bf507343e165ed1c55a5de609c35fd91c444936bdb670077a27"
+    },
+    {
+      "path": "srcts/components/CodeBlock.tsx",
+      "bytes_in_output": 617,
+      "sha256": "3c3f461e30f0e20489c30224172fff88b00ee2516587481ac0e126a24cf683d4"
+    },
+    {
+      "path": "srcts/components/ConceptCallout.tsx",
+      "bytes_in_output": 1027,
+      "sha256": "c8dc6eb86ed3dd67dd699f15539c3269162b8255d7aea3b3e7d2e0a563f3a5a5"
+    },
+    {
+      "path": "srcts/components/ContextPanel.tsx",
+      "bytes_in_output": 2113,
+      "sha256": "d53d8f84b6787af4c40bbc9e0ab66a63f566d641a1ba56624a6cb935360af15e"
+    },
+    {
+      "path": "srcts/components/Header.tsx",
+      "bytes_in_output": 3203,
+      "sha256": "c4707972fc5667f7d89e0eec6e54ceaf87243cf95506ec7294dfc3663545a481"
+    },
+    {
+      "path": "srcts/components/IntroPanel.tsx",
+      "bytes_in_output": 5791,
+      "sha256": "62ce2f433f7fd2ff91dea0c296f00b3577b0f6ef609cdea697d99a349fcbb7e0"
+    },
+    {
+      "path": "srcts/components/IterationCard.tsx",
+      "bytes_in_output": 3873,
+      "sha256": "09ea9e8bc3ca48043c9fb431e97ebd602669643b810ed4e8f1362d0d57f09cee"
+    },
+    {
+      "path": "srcts/components/LiveModePanel.tsx",
+      "bytes_in_output": 4135,
+      "sha256": "b6e01ccf953be8348cdfa483bf75852b868c8d6697dc258fa1f6e14a5002b153"
+    },
+    {
+      "path": "srcts/components/OutputBlock.tsx",
+      "bytes_in_output": 872,
+      "sha256": "889d46f4047bce9a0418154fad0ed9454f086176ad83ad907027c0580537cb8b"
+    },
+    {
+      "path": "srcts/components/PhaseTimeline.tsx",
+      "bytes_in_output": 1391,
+      "sha256": "9b0b9bc8e94c5813cfba239af916361af8a452423eb9c0005e75188b3de92373"
+    },
+    {
+      "path": "srcts/components/PlaybackControls.tsx",
+      "bytes_in_output": 4541,
+      "sha256": "29de493f7f0564cde3bf9f718c239797e51dded86a537f6697f540f4dcbe3c0a"
+    },
+    {
+      "path": "srcts/components/REPLTimeline.tsx",
+      "bytes_in_output": 1748,
+      "sha256": "59e20f53bce4d950c4f67a11ce1687c4cd49b94f65a4b773e52699d160e43d44"
+    },
+    {
+      "path": "srcts/components/RunComparison.tsx",
+      "bytes_in_output": 2592,
+      "sha256": "6459c0e0d1a89637b54210e9df12a8e83beb400116a95dd5b7433e6c0e30622c"
+    },
+    {
+      "path": "srcts/components/TokenBudget.tsx",
+      "bytes_in_output": 3589,
+      "sha256": "e002e53687f570b36e8393ac5ab229471f5b3b41d40e8985abde7069b9eab2a9"
+    },
+    {
+      "path": "srcts/components/ToolkitPanel.tsx",
+      "bytes_in_output": 5746,
+      "sha256": "4921528c8345fb42680e0b6dcc5c301b5ba4b74a61fc455302140860d1d3f1fa"
+    },
+    {
+      "path": "srcts/components/ui/badge.tsx",
+      "bytes_in_output": 1216,
+      "sha256": "6dbd83d8aa66b16389225ca9fbce387c03c5b8196a34e0f7bab97a2d18480f6c"
+    },
+    {
+      "path": "srcts/components/ui/collapsible.tsx",
+      "bytes_in_output": 295,
+      "sha256": "eb4ee2a9ddb3c566c509753a79e4f4c9425d9f8474d55f61f8c8694928b6a509"
+    },
+    {
+      "path": "srcts/components/ui/select.tsx",
+      "bytes_in_output": 4047,
+      "sha256": "9b8551781236b51cc744419501208b1846407e4d6973b31180d97613206a20d0"
+    },
+    {
+      "path": "srcts/components/ui/tabs.tsx",
+      "bytes_in_output": 2757,
+      "sha256": "87d9e9fbc18d985156978d3e83bfc538c61e76362f4efd0e0956005c9f9bbede"
+    },
+    {
+      "path": "srcts/components/ui/tooltip.tsx",
+      "bytes_in_output": 1050,
+      "sha256": "11e112c3ba188531071851b3d70be21d2191e08b03098c1f3d2a4ed32423b6a5"
+    },
+    {
+      "path": "srcts/hooks/usePhaseDetection.ts",
+      "bytes_in_output": 453,
+      "sha256": "0bd0ce24ae12c1c264127634641a25604a3ebaa0acb8fc506f41861d3af54c68"
+    },
+    {
+      "path": "srcts/hooks/usePlayback.ts",
+      "bytes_in_output": 1214,
+      "sha256": "02d262369789e03b8a44608b8b1f3a62512ea8add0e75657b1fcdfd8cfd0964e"
+    },
+    {
+      "path": "srcts/lib/phases.ts",
+      "bytes_in_output": 677,
+      "sha256": "cde544b7353ffdcd313b50ba484b48a6852ff2ce1b4b005f664cf452691851e0"
+    },
+    {
+      "path": "srcts/lib/types.ts",
+      "bytes_in_output": 3166,
+      "sha256": "b4164d38b5d59b4039feac96b252eff2d8338780e620183aebf5decf02c03acc"
+    },
+    {
+      "path": "srcts/lib/utils.ts",
+      "bytes_in_output": 223,
+      "sha256": "bdca7e7d0cf32ffd94f1e441dc305caf7d160221b2b75cc1a906567b29b89fa6"
+    },
+    {
+      "path": "srcts/main.tsx",
+      "bytes_in_output": 116,
+      "sha256": "abce40d2b79fbf208598c5f46e91923eb5d842cd2a76fc37bc97fd17377a6471"
+    }
+  ],
+  "local_source_attributions": [
+    {
+      "name": "shadcn/ui",
+      "repository": "https://github.com/shadcn-ui/ui",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2023 shadcn",
+      "license_file": "https://github.com/shadcn-ui/ui/blob/main/LICENSE.md",
+      "configuration": "components.json",
+      "style": "new-york",
+      "source_revision": "not recorded; local components may be modified",
+      "files": [
+        {
+          "path": "srcts/components/ui/badge.tsx",
+          "scope": "shadcn/ui component source; locally adapted",
+          "sha256": "6dbd83d8aa66b16389225ca9fbce387c03c5b8196a34e0f7bab97a2d18480f6c",
+          "included_in_javascript_bundle": true,
+          "javascript_bytes_in_output": 1216,
+          "included_in_css_bundle": false,
+          "css_bytes_in_output": 0
+        },
+        {
+          "path": "srcts/components/ui/button.tsx",
+          "scope": "shadcn/ui component source; locally adapted",
+          "sha256": "cd98acc71988e234da58315ba3d98b9592dfc91e646cebaafc1d205609ce5eae",
+          "included_in_javascript_bundle": false,
+          "javascript_bytes_in_output": 0,
+          "included_in_css_bundle": false,
+          "css_bytes_in_output": 0
+        },
+        {
+          "path": "srcts/components/ui/card.tsx",
+          "scope": "shadcn/ui component source; locally adapted",
+          "sha256": "2040cdff27cd1ed771e0ebbd15abcd73d31f2f1e4be6664bd6816fffd2a87476",
+          "included_in_javascript_bundle": false,
+          "javascript_bytes_in_output": 0,
+          "included_in_css_bundle": false,
+          "css_bytes_in_output": 0
+        },
+        {
+          "path": "srcts/components/ui/collapsible.tsx",
+          "scope": "shadcn/ui component source; locally adapted",
+          "sha256": "eb4ee2a9ddb3c566c509753a79e4f4c9425d9f8474d55f61f8c8694928b6a509",
+          "included_in_javascript_bundle": true,
+          "javascript_bytes_in_output": 295,
+          "included_in_css_bundle": false,
+          "css_bytes_in_output": 0
+        },
+        {
+          "path": "srcts/components/ui/progress.tsx",
+          "scope": "shadcn/ui component source; locally adapted",
+          "sha256": "623186ddc7daaf6b0a868b62c02a826a1fe8a793f531b9b071711e357bb32a4d",
+          "included_in_javascript_bundle": false,
+          "javascript_bytes_in_output": 0,
+          "included_in_css_bundle": false,
+          "css_bytes_in_output": 0
+        },
+        {
+          "path": "srcts/components/ui/scroll-area.tsx",
+          "scope": "shadcn/ui component source; locally adapted",
+          "sha256": "daec83907471cd23ccf5ebfdc1084dfa5e0f89c84cc58fd73ce673c49acb6798",
+          "included_in_javascript_bundle": false,
+          "javascript_bytes_in_output": 0,
+          "included_in_css_bundle": false,
+          "css_bytes_in_output": 0
+        },
+        {
+          "path": "srcts/components/ui/select.tsx",
+          "scope": "shadcn/ui component source; locally adapted",
+          "sha256": "9b8551781236b51cc744419501208b1846407e4d6973b31180d97613206a20d0",
+          "included_in_javascript_bundle": true,
+          "javascript_bytes_in_output": 4047,
+          "included_in_css_bundle": false,
+          "css_bytes_in_output": 0
+        },
+        {
+          "path": "srcts/components/ui/separator.tsx",
+          "scope": "shadcn/ui component source; locally adapted",
+          "sha256": "a0fabdb146d42345e5f3396e786f4f003344798de45f3bf33cbda70176028c95",
+          "included_in_javascript_bundle": false,
+          "javascript_bytes_in_output": 0,
+          "included_in_css_bundle": false,
+          "css_bytes_in_output": 0
+        },
+        {
+          "path": "srcts/components/ui/tabs.tsx",
+          "scope": "shadcn/ui component source; locally adapted",
+          "sha256": "87d9e9fbc18d985156978d3e83bfc538c61e76362f4efd0e0956005c9f9bbede",
+          "included_in_javascript_bundle": true,
+          "javascript_bytes_in_output": 2757,
+          "included_in_css_bundle": false,
+          "css_bytes_in_output": 0
+        },
+        {
+          "path": "srcts/components/ui/tooltip.tsx",
+          "scope": "shadcn/ui component source; locally adapted",
+          "sha256": "11e112c3ba188531071851b3d70be21d2191e08b03098c1f3d2a4ed32423b6a5",
+          "included_in_javascript_bundle": true,
+          "javascript_bytes_in_output": 1050,
+          "included_in_css_bundle": false,
+          "css_bytes_in_output": 0
+        },
+        {
+          "path": "srcts/globals.css",
+          "scope": "shadcn/ui Tailwind theme scaffold with local tokens and app-specific rules",
+          "sha256": "d12552210c9f0667201c08972f76a5b84ca0539d9bc7cfd0853acd7b05c855b7",
+          "included_in_javascript_bundle": false,
+          "javascript_bytes_in_output": 0,
+          "included_in_css_bundle": true,
+          "css_bytes_in_output": 62770
+        },
+        {
+          "path": "srcts/lib/utils.ts",
+          "scope": "shadcn/ui cn() helper only; other helpers in this file are application-authored",
+          "sha256": "bdca7e7d0cf32ffd94f1e441dc305caf7d160221b2b75cc1a906567b29b89fa6",
+          "included_in_javascript_bundle": true,
+          "javascript_bytes_in_output": 223,
+          "included_in_css_bundle": false,
+          "css_bytes_in_output": 0
+        }
+      ]
+    }
+  ],
+  "css": {
+    "source_files": [
+      {
+        "path": "srcts/globals.css",
+        "bytes_in_output": 62770,
+        "sha256": "d12552210c9f0667201c08972f76a5b84ca0539d9bc7cfd0853acd7b05c855b7"
+      }
+    ],
+    "imports": [
+      "tailwindcss"
+    ],
+    "generation_tools": [
+      {
+        "name": "esbuild-plugin-tailwindcss",
+        "version": "2.1.0",
+        "license": "MIT"
+      },
+      {
+        "name": "@tailwindcss/postcss",
+        "version": "4.1.18",
+        "license": "MIT"
+      },
+      {
+        "name": "tailwindcss",
+        "version": "4.1.18",
+        "license": "MIT"
+      },
+      {
+        "name": "postcss",
+        "version": "8.5.26",
+        "license": "MIT"
+      },
+      {
+        "name": "autoprefixer",
+        "version": "10.4.24",
+        "license": "MIT"
+      }
+    ]
+  }
+}

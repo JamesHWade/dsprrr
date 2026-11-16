@@ -548,66 +548,6 @@ copy_module <- function(module) {
   artifact_copy_runtime(module, module$deepcopy())
 }
 
-#' Copy a signature
-#' @noRd
-copy_signature <- function(sig) {
-  Signature(
-    inputs = sig@inputs, # Lists are copied by value
-    output_type = sig@output_type, # These are typically immutable
-    instructions = sig@instructions
-  )
-}
-
-#' Extract output value from a trainset row
-#'
-#' Searches for a field in a data frame row. If `field` is provided, it:
-#' 1. First checks if field is a direct column name
-#' 2. If not, searches within list columns for that field as a nested key
-#'
-#' @param row A single-row data frame
-#' @param field The field name to search for (can be column name or nested key)
-#' @param input_names Names of input columns to exclude from search
-#' @return The extracted value, or NULL if not found
-#' @noRd
-extract_output_from_row <- function(row, field, input_names = character()) {
-  # If field is provided, search for it specifically
-
-  if (!is.null(field)) {
-    # First: check if it's a direct column name
-    if (field %in% names(row)) {
-      return(row[[field]])
-    }
-
-    # Second: search within list columns for nested field
-    for (col_name in names(row)) {
-      col_value <- row[[col_name]]
-      # Check if this column contains a list with our field
-      if (is.list(col_value) && !is.data.frame(col_value)) {
-        # Handle list columns (tibble stores as list of length 1 per row)
-        val <- if (length(col_value) == 1 && is.list(col_value[[1]])) {
-          col_value[[1]]
-        } else {
-          col_value
-        }
-        if (field %in% names(val)) {
-          return(val[[field]])
-        }
-      }
-    }
-
-    # Field not found anywhere
-    return(NULL)
-  }
-
-  # No field specified: fall back to finding any non-input column
-  remaining_cols <- setdiff(names(row), input_names)
-  if (length(remaining_cols) > 0) {
-    return(row[[remaining_cols[1]]])
-  }
-
-  NULL
-}
-
 #' Unwrap tibble list column value
 #'
 #' Tibbles store list columns as list-of-lists. This helper unwraps
@@ -811,17 +751,4 @@ format_trainset_as_demos <- function(trainset, signature, output_col = NULL) {
   }
 
   demos
-}
-
-#' Evaluate a module on data
-#' @noRd
-evaluate_module <- function(module, data, metric, .llm = NULL, ...) {
-  evaluate(
-    module,
-    data,
-    metric,
-    .llm = .llm,
-    .progress = FALSE,
-    ...
-  )
 }

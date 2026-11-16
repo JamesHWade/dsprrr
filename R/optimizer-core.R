@@ -2199,42 +2199,6 @@ optimizer_budget_restore_state <- function(budget, state) {
   invisible(budget)
 }
 
-optimizer_budget_clear_resumable_stop <- function(budget) {
-  reason <- budget$stop_reason
-  if (is.null(reason)) {
-    return(invisible(budget))
-  }
-  code <- reason$code %||% ""
-  clear <- FALSE
-  if (identical(code, "max_errors")) {
-    clear <- budget$consecutive_errors < max(1L, budget$max_errors)
-  } else if (code %in% names(budget$limits)) {
-    limit <- budget$limits[[code]]
-    resource <- optimizer_budget_limit_map()[[code]]
-    observed <- if (resource == "elapsed_seconds") {
-      budget$elapsed_offset
-    } else {
-      budget[[resource]]
-    }
-    clear <- is.null(limit) || observed < limit
-  } else {
-    unknown_limits <- c(
-      unknown_cost = "max_cost",
-      unknown_provider = "max_provider_calls",
-      unknown_metric = "max_metric_calls",
-      unknown_input_tokens = "max_input_tokens",
-      unknown_output_tokens = "max_output_tokens",
-      unknown_total_tokens = "max_total_tokens"
-    )
-    limit_name <- unknown_limits[[code]] %||% NULL
-    clear <- !is.null(limit_name) && is.null(budget$limits[[limit_name]])
-  }
-  if (clear) {
-    budget$stop_reason <- NULL
-  }
-  invisible(budget)
-}
-
 # Reconcile restored counters against the *current* control before any new
 # work can start. This permits raised/removed caps while failing closed for
 # stricter caps and for unknown restored usage under a newly finite cap.

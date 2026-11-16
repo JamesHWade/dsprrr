@@ -2688,11 +2688,7 @@ Code:
         return(private$run_batched_sub_lm_queries_sequential(prompts, sub_lm))
       }
 
-      has_parallel_chat <- exists(
-        "parallel_chat",
-        envir = asNamespace("ellmer"),
-        inherits = FALSE
-      )
+      has_parallel_chat <- ellmer_function_available("parallel_chat")
 
       if (!has_parallel_chat) {
         cli::cli_inform(c(

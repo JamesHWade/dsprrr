@@ -733,43 +733,6 @@ normalize_simba_output <- function(output) {
   )
 }
 
-simba_safe_metric <- function(metric, prediction, row) {
-  tryCatch(
-    {
-      score <- metric(prediction, row)
-      if (is.list(score) && "score" %in% names(score)) {
-        score <- score$score
-      }
-      if (is.logical(score)) {
-        as.numeric(score)
-      } else if (is.numeric(score)) {
-        score
-      } else {
-        cli::cli_warn(
-          c(
-            "Metric returned unexpected type",
-            "i" = "Expected numeric or logical, got {.cls {class(score)}}",
-            "i" = "Treating as NA"
-          ),
-          class = "dsprrr_simba_metric_type_warning"
-        )
-        NA_real_
-      }
-    },
-    error = function(e) {
-      cli::cli_warn(
-        c(
-          "Metric evaluation failed in SIMBA variability calculation",
-          "x" = conditionMessage(e),
-          "i" = "This score will be treated as NA"
-        ),
-        class = "dsprrr_simba_metric_warning"
-      )
-      NA_real_
-    }
-  )
-}
-
 # Print a SIMBA object through its S7 method.
 print_simba <- function(x, ...) {
   cli::cli_h3("SIMBA Teleprompter")

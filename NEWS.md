@@ -1,8 +1,14 @@
-# dsprrr 0.0.0.9000
+# dsprrr 0.1.0
 
-First development changelog. dsprrr is experimental; the API may change.
+First release. dsprrr is experimental; the API may change.
 
 * The GEPA learning journey adds an executable offline workflow with separate training, validation and holdout data, feedback, candidate lineage and budget accounting (#134).
+
+* Flex optimization and agentic harness tutorials now execute offline end-to-end, including compilation, candidate comparisons, separate holdout evaluation, and budget accounting (#135, #136).
+
+* ellmer compatibility access is centralized and tested against the minimum and current supported releases. Unsupported layouts produce actionable compatibility errors; untrusted accessors are rejected before invocation (#132).
+
+* Persistence guards preserve exact filesystem IDs, preventing distinct files from being mistaken for aliases on Windows while retaining hard-link and replacement detection. Installing from source now requires a C compiler.
 
 ## Breaking changes
 
@@ -174,10 +180,10 @@ First development changelog. dsprrr is experimental; the API may change.
   provider calls beyond one baseline pass and one evidence pass. The new
   "Calibrated Decisions" article walks through both features.
 
-* The DSPy comparison article now uses DSPy 3.4.0 as its baseline. It covers
-  the LM transition, call-time RLM interpreter factories, the persistent
-  `LocalInterpreter`, the deprecation of `CodeAct` and `ProgramOfThought` in
-  DSPy 3.3.1, and objective-aware GEPA frontiers.
+* The DSPy comparison article uses DSPy 3.5.0 as its baseline. It covers
+  structured ReAct history and submission, native reasoning, RLM conversation
+  reuse, the lm15 provider transition, and the removal of upstream `CodeAct`
+  and `ProgramOfThought`. dsprrr retains its R-specific code modules.
 
 * `flex()` lets GEPA optimize how a module executes—not only its instructions—
   with two source modes. The safe default is a bounded versioned JSON graph with

@@ -20,3 +20,12 @@ defaults.
 \description{
 Reconstruct native ellmer turns from conversation history
 }
+\examples{
+history <- conversation_history(list(
+  ellmer::UserTurn(list(ellmer::ContentText("Hello"))),
+  ellmer::AssistantTurn(list(ellmer::ContentText("Hi!")))
+))
+turns <- history_turns(history)
+length(turns)
+
+}

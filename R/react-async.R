@@ -14,6 +14,12 @@
 #' @return A one-invocation control object. Call `$cancel(reason)` to request
 #'   cancellation while a `run_async()` promise is pending. Repeated cancel
 #'   requests after the first are ignored.
+#' @examples
+#' control <- react_async_control()
+#' control$is_cancelled()
+#' control$cancel("User requested a stop")
+#' control$is_cancelled()
+#' control$cancel_reason()
 #' @export
 react_async_control <- function(on_progress = NULL) {
   if (!is.null(on_progress) && !is.function(on_progress)) {

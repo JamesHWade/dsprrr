@@ -344,31 +344,8 @@ trial_log_path_info <- function(path) {
   )
 }
 
-trial_log_stable_device_inode <- function(info) {
-  if (
-    is.null(info) ||
-      nrow(info) != 1L ||
-      !all(c("device_id", "inode") %in% names(info))
-  ) {
-    return(NULL)
-  }
-  device_id <- tryCatch(
-    suppressWarnings(as.numeric(info$device_id[[1L]])),
-    error = function(e) NULL
-  )
-  inode <- tryCatch(
-    suppressWarnings(as.numeric(info$inode[[1L]])),
-    error = function(e) NULL
-  )
-  if (
-    length(device_id) != 1L ||
-      length(inode) != 1L ||
-      !is.finite(device_id) ||
-      !is.finite(inode)
-  ) {
-    return(NULL)
-  }
-  list(device_id = device_id, inode = inode)
+trial_log_stable_device_inode <- function(path) {
+  file_identity_exact(path)
 }
 
 trial_log_audit_parent_capability <- function(target) {
@@ -456,7 +433,7 @@ trial_log_directory_identity <- function(path) {
     error = function(e) NULL
   )
   info <- trial_log_path_info(path)
-  stable <- trial_log_stable_device_inode(info)
+  stable <- trial_log_stable_device_inode(path)
   if (
     is.null(canonical) ||
       is.null(info) ||
@@ -734,7 +711,7 @@ trial_log_file_identity <- function(path, guard) {
   }
 
   info <- trial_log_path_info(path)
-  stable <- trial_log_stable_device_inode(info)
+  stable <- trial_log_stable_device_inode(path)
   if (is.null(info) || nrow(info) != 1L || is.null(stable)) {
     return(list(ok = FALSE, reason = "the file identity is unavailable"))
   }
@@ -1844,6 +1821,8 @@ trial_log_sync_locked <- function(
 #' where base R cannot verify owner-only access, the account's filesystem ACLs
 #' apply, and logging fails if stable file identifiers are unavailable.
 #'
+#' @return An R6 class generator. `TrialLog$new()` creates a trial log with
+#'   methods for recording trials, inspecting results, and saving progress.
 #' @family optimizer building blocks
 #' @examples
 #' log <- TrialLog$new("my-search")

@@ -996,19 +996,21 @@ optimizer_checkpoint_file_identity <- function(path, guard) {
     suppressWarnings(fs::file_info(path, follow = FALSE, fail = FALSE)),
     error = function(e) NULL
   )
+  file_identity <- file_identity_exact(path)
   if (
     is.null(parent) ||
       !identical(parent, guard$parent$path) ||
       is.null(info) ||
-      nrow(info) != 1L
+      nrow(info) != 1L ||
+      is.null(file_identity)
   ) {
     return(list(ok = FALSE, reason = "the checkpoint identity is unavailable"))
   }
   list(
     ok = TRUE,
     identity = list(
-      device_id = as.numeric(info$device_id[[1L]]),
-      inode = as.numeric(info$inode[[1L]]),
+      device_id = file_identity$device_id,
+      inode = file_identity$inode,
       size = as.numeric(info$size[[1L]]),
       modification_time = as.numeric(info$modification_time[[1L]]),
       change_time = as.numeric(info$change_time[[1L]])

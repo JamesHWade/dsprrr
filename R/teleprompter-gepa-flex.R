@@ -82,11 +82,6 @@ gepa_component_candidate <- function(program) {
   )
 }
 
-gepa_component_candidate_ids <- function(candidate) {
-  gepa_validate_component_candidate(candidate)
-  names(candidate$components)
-}
-
 gepa_component_candidate_id <- function(candidate) {
   gepa_validate_component_candidate(candidate)
   values <- lapply(candidate$components, function(component) {

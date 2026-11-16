@@ -2038,6 +2038,66 @@ test_that("atomic replacement rejects cross-directory publication", {
   expect_identical(readLines(source), "new")
 })
 
+test_that("atomic identities retain distinct full-width file tokens", {
+  directory <- withr::local_tempdir()
+  source <- file.path(directory, "staged.txt")
+  destination <- file.path(directory, "published.txt")
+  writeLines("staged", source)
+  writeLines("old", destination)
+  original_identity <- file_identity_exact
+
+  testthat::local_mocked_bindings(
+    file_identity_exact = function(path) {
+      identity <- original_identity(path)
+      identity$device_id <- "4294967296"
+      identity$inode <- if (identical(readLines(path, n = 1L), "staged")) {
+        "9007199254740992"
+      } else {
+        "9007199254740993"
+      }
+      identity
+    },
+    .package = "dsprrr"
+  )
+
+  source_identity <- dsprrr:::artifact_atomic_identity(source)
+  destination_identity <- dsprrr:::artifact_atomic_identity(destination)
+  expect_identical(source_identity$inode, "9007199254740992")
+  expect_identical(destination_identity$inode, "9007199254740993")
+  expect_identical(
+    dsprrr:::artifact_atomic_same_file(source_identity, destination_identity),
+    FALSE
+  )
+
+  expect_identical(
+    dsprrr:::artifact_atomic_replace(source, destination, "test artifact"),
+    destination
+  )
+  expect_identical(readLines(destination), "staged")
+  expect_identical(file.exists(source), FALSE)
+})
+
+test_that("atomic replacement fails closed without exact file identity", {
+  directory <- withr::local_tempdir()
+  source <- file.path(directory, "staged.txt")
+  destination <- file.path(directory, "published.txt")
+  writeLines("staged", source)
+  writeLines("old", destination)
+
+  testthat::local_mocked_bindings(
+    file_identity_exact = function(path) NULL,
+    .package = "dsprrr"
+  )
+  condition <- rlang::catch_cnd(
+    dsprrr:::artifact_atomic_replace(source, destination, "test artifact")
+  )
+
+  expect_s3_class(condition, "dsprrr_artifact_io_error")
+  expect_match(conditionMessage(condition), "Could not verify.*staging file")
+  expect_identical(readLines(source), "staged")
+  expect_identical(readLines(destination), "old")
+})
+
 test_that("atomic replacement rejects hard-link aliases without mutation", {
   directory <- withr::local_tempdir()
   source <- file.path(directory, "staged.txt")

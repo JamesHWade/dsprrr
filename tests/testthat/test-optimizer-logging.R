@@ -471,66 +471,48 @@ test_that("TrialLog rejects special file mode bits unchanged", {
   )
 })
 
-test_that("TrialLog rejects missing or non-finite directory identities", {
+test_that("TrialLog rejects unavailable exact directory identities", {
   log_dir <- local_private_trial_log_dir()
-  original_info <- trial_log_path_info
-  invalid_identity <- NA_real_
+  original_identity <- file_identity_exact
   testthat::local_mocked_bindings(
-    trial_log_path_info = function(path) {
-      info <- original_info(path)
-      if (!is.null(info) && nrow(info) == 1L && dir.exists(path)) {
-        info$device_id[[1L]] <- invalid_identity
+    file_identity_exact = function(path) {
+      if (dir.exists(path)) {
+        return(NULL)
       }
-      info
+      original_identity(path)
     },
     .package = "dsprrr"
   )
 
-  missing <- rlang::catch_cnd(
-    TrialLog$new("MissingIdentityOptimizer", log_dir = log_dir)
-  )
-  invalid_identity <- Inf
-  non_finite <- rlang::catch_cnd(
+  unavailable <- rlang::catch_cnd(
     TrialLog$new("MissingIdentityOptimizer", log_dir = log_dir)
   )
 
-  expect_s3_class(missing, "dsprrr_trial_log_trust_error")
-  expect_s3_class(non_finite, "dsprrr_trial_log_trust_error")
-  expect_match(conditionMessage(missing), "identity is unavailable")
-  expect_match(conditionMessage(non_finite), "identity is unavailable")
+  expect_s3_class(unavailable, "dsprrr_trial_log_trust_error")
+  expect_match(conditionMessage(unavailable), "identity is unavailable")
 })
 
 test_that("non-POSIX TrialLog files require stable platform identities", {
   log_dir <- local_private_trial_log_dir()
   journal <- file.path(log_dir, "trials.jsonl")
   writeLines(character(), journal)
-  original_info <- trial_log_path_info
-  invalid_identity <- NA_real_
+  original_identity <- file_identity_exact
   testthat::local_mocked_bindings(
     cache_private_modes_supported = function() FALSE,
-    trial_log_path_info = function(path) {
-      info <- original_info(path)
-      if (
-        !is.null(info) &&
-          nrow(info) == 1L &&
-          identical(basename(path), "trials.jsonl")
-      ) {
-        info$inode[[1L]] <- invalid_identity
+    file_identity_exact = function(path) {
+      if (identical(basename(path), "trials.jsonl")) {
+        return(NULL)
       }
-      info
+      original_identity(path)
     },
     .package = "dsprrr"
   )
   guard <- trial_log_prepare_directory(log_dir)
 
-  missing <- rlang::catch_cnd(trial_log_read_raw(journal, guard))
-  invalid_identity <- Inf
-  non_finite <- rlang::catch_cnd(trial_log_read_raw(journal, guard))
+  unavailable <- rlang::catch_cnd(trial_log_read_raw(journal, guard))
 
-  expect_s3_class(missing, "dsprrr_trial_log_trust_error")
-  expect_s3_class(non_finite, "dsprrr_trial_log_trust_error")
-  expect_match(conditionMessage(missing), "file identity is unavailable")
-  expect_match(conditionMessage(non_finite), "file identity is unavailable")
+  expect_s3_class(unavailable, "dsprrr_trial_log_trust_error")
+  expect_match(conditionMessage(unavailable), "file identity is unavailable")
 })
 
 test_that("TrialLog retains its original canonical directory identity", {

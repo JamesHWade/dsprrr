@@ -2,7 +2,7 @@
 #'
 #' @description
 #' `mcp_repl_runner()` creates a code runner backed by Posit's
-#' [`mcp-repl`](https://github.com/posit-dev/mcp-repl) MCP server. `mcp-repl`
+#' [`mcp-repl`](https://github.com/posit-dev/mcp-console) MCP server. `mcp-repl`
 #' keeps a long-lived R session and enforces a sandbox with operating-system
 #' primitives, so it is suitable for code written by a model or an optimizer.
 #' Use it with [rlm_module()], [code_act()], [program_of_thought()] and the
@@ -223,7 +223,7 @@ mcp_repl_tool <- function(
     cli::cli_abort(c(
       "Could not find the {.code mcp-repl} executable",
       "i" = "Install {.pkg posit-mcp-repl}, or supply an existing {.arg repl} tool function.",
-      "i" = "See {.url https://github.com/posit-dev/mcp-repl}."
+      "i" = "See {.url https://github.com/posit-dev/mcp-console}."
     ))
   }
 

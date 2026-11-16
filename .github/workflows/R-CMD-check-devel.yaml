@@ -1,5 +1,6 @@
 # R-devel is intentionally a qualification lane rather than a pull-request
 # feedback gate. Its dependency stack can take close to an hour to compile.
+# Windows also exercises the native file-identity API with the upcoming R release.
 on:
   workflow_dispatch:
   schedule:
@@ -11,8 +12,14 @@ permissions: read-all
 
 jobs:
   R-CMD-check-devel:
-    runs-on: ubuntu-latest
+    name: ${{ matrix.os }} (devel)
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 120
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
 
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}

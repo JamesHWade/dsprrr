@@ -1,6 +1,6 @@
 Package: dsprrr
 Title: Declarative Self-Improving Language Programs
-Version: 0.0.0.9000
+Version: 0.1.0
 Authors@R: c(
     person("James", "Wade", , "github@jameshwade.com", role = c("aut", "cre", "cph"),
            comment = c(ORCID = "0000-0002-9740-1905")),
@@ -15,6 +15,7 @@ Description: Build declarative, test-driven, and optimizable applications
     asynchronous execution. Designed for systematic improvement of
     language-model workflows in 'R'.
 License: MIT + file LICENSE
+NeedsCompilation: yes
 VignetteBuilder: knitr
 Config/testthat/edition: 3
 Encoding: UTF-8
@@ -84,6 +85,7 @@ Collate:
     'dsprrr-package.R'
     'ellmer.R'
     'evaluate.R'
+    'file-identity.R'
     'flex-code-bridge.R'
     'history-rlm.R'
     'history-runtime.R'

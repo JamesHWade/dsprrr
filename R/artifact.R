@@ -1572,7 +1572,7 @@ artifact_restore_content <- function(record) {
     record$kind,
     text = ellmer::ContentText(record$text),
     json = do.call(
-      get("ContentJson", envir = asNamespace("ellmer")),
+      ellmer_content_json,
       list(data = record$data, string = record$string)
     ),
     image_inline = ellmer::ContentImageInline(record$type, record$data),
@@ -2231,30 +2231,31 @@ artifact_atomic_identity <- function(path) {
     suppressWarnings(fs::file_info(path, follow = FALSE, fail = FALSE)),
     error = function(e) NULL
   )
+  file_identity <- file_identity_exact(path)
   if (
     is.null(info) ||
       nrow(info) != 1L ||
       !all(
-        c("type", "device_id", "inode", "size", "modification_time") %in%
-          names(info)
+        c("type", "size", "modification_time") %in% names(info)
       ) ||
       is.na(info$type[[1L]]) ||
-      !identical(as.character(info$type[[1L]]), "file")
+      !identical(as.character(info$type[[1L]]), "file") ||
+      is.null(file_identity)
   ) {
     return(NULL)
   }
   identity <- list(
-    device_id = suppressWarnings(as.numeric(info$device_id[[1L]])),
-    inode = suppressWarnings(as.numeric(info$inode[[1L]])),
+    device_id = file_identity$device_id,
+    inode = file_identity$inode,
     size = suppressWarnings(as.numeric(info$size[[1L]])),
     modification_time = suppressWarnings(
       as.numeric(info$modification_time[[1L]])
     )
   )
-  if (
-    any(lengths(identity) != 1L) ||
-      !all(is.finite(unlist(identity, use.names = FALSE)))
-  ) {
+  if (any(lengths(identity) != 1L)) {
+    return(NULL)
+  }
+  if (!all(is.finite(unlist(identity[c("size", "modification_time")])))) {
     return(NULL)
   }
   identity
@@ -4570,7 +4571,7 @@ artifact_deserialize_type <- function(type) {
     type$kind,
     ignore = ellmer::type_ignore(),
     json_schema = do.call(
-      get("TypeJsonSchema", envir = asNamespace("ellmer")),
+      ellmer::TypeJsonSchema,
       list(
         json = type$json,
         description = description,
@@ -4600,7 +4601,7 @@ artifact_deserialize_type <- function(type) {
         artifact_deserialize_type
       )
       do.call(
-        get("TypeObject", envir = asNamespace("ellmer")),
+        ellmer::TypeObject,
         list(
           properties = properties,
           description = description,
