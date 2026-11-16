@@ -245,6 +245,14 @@ lookup_incident("A password reset email is late")
 
 ## Compile with a deterministic proposer
 
+This executable R example needs `callr`, an optional dsprrr dependency used
+by `r_code_runner()` to start an R subprocess. Install it once before
+continuing:
+
+```{r install-callr, eval=FALSE}
+install.packages("callr")
+```
+
 The baseline makes one predictor call for every ticket. The fixed, reviewed
 candidate first asks the catalog about incident codes, returns a known owner
 directly, and calls one predictor for everything else.
