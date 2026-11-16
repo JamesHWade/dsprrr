@@ -179,25 +179,17 @@ prompt. The support file ships with the package and its implementation is
 available in the collapsed appendix. No credentials, provider requests,
 network access, or R interpreter service are used by either executed search.
 
-```{r offline-chat-fixtures, include=FALSE}
+Run this setup once before either journey to load the supplied fixtures into
+your R session:
+
+```{r offline-chat-fixtures}
 fixture_file <- system.file(
   "examples",
   "agentic-optimization-harnesses.R",
-  package = "dsprrr"
+  package = "dsprrr",
+  mustWork = TRUE
 )
-if (!nzchar(fixture_file)) {
-  package_root <- dirname(dirname(dirname(knitr::current_input(dir = TRUE))))
-  fixture_file <- file.path(
-    package_root,
-    "inst",
-    "examples",
-    "agentic-optimization-harnesses.R"
-  )
-}
-if (!file.exists(fixture_file)) {
-  stop("Could not locate the offline agentic-harness fixture source")
-}
-source(fixture_file, local = knitr::knit_global())
+source(fixture_file, local = TRUE)
 ```
 
 The fixture's rules make the transition explicit: the baseline quotes the
