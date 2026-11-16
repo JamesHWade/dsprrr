@@ -557,82 +557,6 @@ gepa_failed_examples <- function(
   })
 }
 
-gepa_next_generation <- function(
-  records,
-  population_size,
-  mutation_rate,
-  crossover_rate,
-  selection,
-  .llm,
-  verbose = FALSE,
-  budget = NULL,
-  generation = NA_integer_
-) {
-  scores_matrix <- do.call(rbind, lapply(records, function(rec) rec$scores))
-  if (selection == "pareto" && ncol(scores_matrix) > 1) {
-    ranks <- pareto_ranks(scores_matrix)
-    crowding <- pareto_crowding_distance(scores_matrix, ranks)
-  } else {
-    # For single-objective: rank by primary score (higher score = lower rank)
-    primary_scores <- scores_matrix[, 1]
-    # Handle NA scores by giving them worst rank
-    primary_scores[is.na(primary_scores)] <- -Inf
-    # Rank: 1 = best (highest score), higher rank = worse
-    ranks <- rank(-primary_scores, ties.method = "min")
-    # Use score as crowding for tiebreaking (higher is better)
-    crowding <- primary_scores
-    crowding[is.infinite(crowding)] <- 0
-  }
-
-  population <- vector("list", population_size)
-
-  for (i in seq_len(population_size)) {
-    parent1 <- gepa_select_parent(records, ranks, crowding)
-    parent2 <- gepa_select_parent(records, ranks, crowding)
-
-    child_instructions <- parent1$instructions
-    if (stats::runif(1) < crossover_rate) {
-      child_instructions <- gepa_crossover_instructions(
-        parent1$instructions,
-        parent2$instructions
-      )
-    }
-
-    if (stats::runif(1) < mutation_rate) {
-      child_instructions <- gepa_mutate_instruction(
-        child_instructions,
-        failed_examples = parent1$failed_examples,
-        .llm = .llm,
-        verbose = verbose,
-        budget = budget,
-        unit_id = paste0("gepa:generation:", generation, ":mutation:", i)
-      )
-    }
-
-    population[[i]] <- child_instructions
-  }
-
-  population
-}
-
-gepa_select_parent <- function(records, ranks, crowding) {
-  candidates <- sample(seq_along(records), size = 2)
-  a <- candidates[1]
-  b <- candidates[2]
-
-  if (ranks[a] < ranks[b]) {
-    return(records[[a]])
-  }
-  if (ranks[b] < ranks[a]) {
-    return(records[[b]])
-  }
-
-  if (crowding[a] >= crowding[b]) {
-    records[[a]]
-  } else {
-    records[[b]]
-  }
-}
 
 select_pareto_best <- function(scores_matrix, ranks, crowding) {
   best_rank <- min(ranks)
@@ -645,95 +569,6 @@ select_pareto_best <- function(scores_matrix, ranks, crowding) {
   candidates[which.max(crowding_scores)]
 }
 
-gepa_crossover_instructions <- function(parent1, parent2) {
-  parent1 <- parent1 %||% ""
-  parent2 <- parent2 %||% ""
-
-  if (nchar(parent1) == 0) {
-    return(parent2)
-  }
-  if (nchar(parent2) == 0) {
-    return(parent1)
-  }
-
-  paste(parent1, parent2, sep = "\n\n")
-}
-
-gepa_mutate_instruction <- function(
-  instruction,
-  failed_examples,
-  .llm = NULL,
-  verbose = FALSE,
-  budget = NULL,
-  unit_id = "gepa:reflection"
-) {
-  if (is.null(.llm)) {
-    cli::cli_abort(
-      c(
-        "GEPA cannot reflect without a reflection Chat",
-        "i" = "Supply {.arg .reflection_llm} to {.fn compile}.",
-        "i" = paste(
-          "An explicitly supplied {.arg .llm} remains a compatibility",
-          "fallback."
-        )
-      ),
-      class = "dsprrr_gepa_reflection_error"
-    )
-  }
-  assert_ellmer_chat(.llm, arg = ".llm")
-  .llm <- gepa_clone_reflection_chat(.llm)
-
-  prompt <- gepa_reflection_prompt(instruction, failed_examples)
-  type <- ellmer::type_object(instructions = ellmer::type_string())
-
-  if (!is.null(budget)) {
-    request <- optimizer_budgeted_provider_call(
-      budget = budget,
-      model = .llm,
-      stage = "gepa_reflection",
-      unit_id = unit_id,
-      call = function() {
-        .llm$chat_structured(prompt, type = type, echo = "none")
-      },
-      success = function(value, condition) {
-        is.null(condition) && is.list(value) && !is.null(value$instructions)
-      }
-    )
-    result <- request$value
-    if (!is.null(request$condition)) {
-      cli::cli_warn(c(
-        "GEPA reflection LLM call failed, using fallback mutation",
-        "x" = conditionMessage(request$condition),
-        "i" = "This may degrade optimization quality"
-      ))
-    }
-  } else {
-    result <- tryCatch(
-      .llm$chat_structured(prompt, type = type, echo = "none"),
-      error = function(e) {
-        cli::cli_warn(c(
-          "GEPA reflection LLM call failed, using fallback mutation",
-          "x" = conditionMessage(e),
-          "i" = "This may degrade optimization quality"
-        ))
-        NULL
-      }
-    )
-  }
-
-  if (is.list(result) && !is.null(result$instructions)) {
-    return(result$instructions)
-  }
-
-  if (verbose) {
-    cli::cli_warn(c(
-      "GEPA reflection returned unexpected format, using fallback mutation",
-      "i" = "Expected object with 'instructions' field"
-    ))
-  }
-
-  gepa_fallback_mutation(instruction, failed_examples)
-}
 
 gepa_reflection_prompt <- function(instruction, failed_examples) {
   failures_text <- gepa_format_failures(failed_examples)
@@ -790,20 +625,6 @@ gepa_format_failures <- function(failed_examples) {
   )
 
   paste(lines, collapse = "\n")
-}
-
-gepa_fallback_mutation <- function(instruction, failed_examples) {
-  suffix <- if (length(failed_examples) > 0) {
-    "Focus on the failed cases and be more explicit."
-  } else {
-    "Be more explicit and accurate."
-  }
-
-  if (nchar(instruction) == 0) {
-    return(suffix)
-  }
-
-  paste(instruction, suffix)
 }
 
 gepa_chat_model_name <- function(chat) {
