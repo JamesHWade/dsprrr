@@ -10,6 +10,11 @@ The check used `devtools::check(remote = TRUE, manual = TRUE,
 force_suggests = TRUE, run_dont_test = TRUE)` with API credentials removed.
 Examples, tests, vignettes, and both PDF and HTML manuals passed.
 
+The checked source includes the native helper that preserves exact filesystem
+IDs and the documented compiler prerequisite. The full test suite passed
+8,869 assertions; compilation, compiled-code checks and manual rebuilding
+also passed.
+
 ## Test environments
 
 * local macOS Golden Gate 27.0, R 4.6.1 (aarch64)
