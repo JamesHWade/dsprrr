@@ -24,3 +24,10 @@ Progress callback errors reject the async call after cleanup. A failed or
 cancelled call can leave partial native history; requested tool calls and
 actual tool results are recorded separately, without replaying tools.
 }
+\examples{
+control <- react_async_control()
+control$is_cancelled()
+control$cancel("User requested a stop")
+control$is_cancelled()
+control$cancel_reason()
+}

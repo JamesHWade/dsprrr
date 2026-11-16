@@ -1844,6 +1844,8 @@ trial_log_sync_locked <- function(
 #' where base R cannot verify owner-only access, the account's filesystem ACLs
 #' apply, and logging fails if stable file identifiers are unavailable.
 #'
+#' @return An R6 class generator. `TrialLog$new()` creates a trial log with
+#'   methods for recording trials, inspecting results, and saving progress.
 #' @family optimizer building blocks
 #' @examples
 #' log <- TrialLog$new("my-search")

@@ -3,6 +3,10 @@
 \name{TrialLog}
 \alias{TrialLog}
 \title{Record optimization trials in memory or on disk}
+\value{
+An R6 class generator. \code{TrialLog$new()} creates a trial log with
+methods for recording trials, inspecting results, and saving progress.
+}
 \description{
 A \code{TrialLog} collects the trial records of an optimizer run (see
 \code{\link[=create_trial]{create_trial()}}). Without \code{log_dir} it lives in memory. With \code{log_dir} it
