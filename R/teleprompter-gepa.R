@@ -810,11 +810,7 @@ gepa_chat_model_name <- function(chat) {
   if (is.null(chat)) {
     return(NULL)
   }
-  model <- ellmer_chat_model(chat)
-  if (is.null(model)) {
-    return(NULL)
-  }
-  model@name
+  ellmer_chat_model_name(chat)
 }
 
 gepa_clone_reflection_chat <- function(chat) {

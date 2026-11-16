@@ -209,11 +209,7 @@ concurrency_backend_available <- function(backend) {
   switch(
     backend,
     sequential = TRUE,
-    ellmer = exists(
-      "parallel_chat_structured",
-      envir = asNamespace("ellmer"),
-      inherits = FALSE
-    ),
+    ellmer = ellmer_function_available("parallel_chat_structured"),
     mirai = exists("mirai", envir = asNamespace("mirai"), inherits = FALSE),
     FALSE
   )

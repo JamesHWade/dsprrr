@@ -755,71 +755,7 @@ apply_chat_params <- function(chat, params) {
 
   cloned <- clone_ellmer_chat(chat, arg = "chat", reset_turns = FALSE)
 
-  provider <- tryCatch(
-    cloned$.__enclos_env__$private$provider,
-    error = function(e) NULL
-  )
-  if (is.null(provider)) {
-    cli::cli_abort(
-      "Cannot apply runtime parameters because the cloned Chat has no provider",
-      class = "dsprrr_chat_params_error"
-    )
-  }
-
-  # ellmer >= 0.5.0 sends request arguments from the Chat's Model object.
-  model <- tryCatch(
-    cloned$.__enclos_env__$private$model,
-    error = function(e) {
-      cli::cli_abort(
-        "Cannot access the cloned Chat model",
-        class = "dsprrr_chat_params_error",
-        parent = e
-      )
-    }
-  )
-  if (!inherits(model, "ellmer::Model")) {
-    cli::cli_abort(
-      "Cannot apply runtime parameters because the cloned Chat has no model",
-      class = "dsprrr_chat_params_error"
-    )
-  }
-
-  # Standard ellmer parameters go through the Model's params so ellmer
-  # translates them for each provider (OpenAI's Responses API expects
-  # `reasoning.effort`, not `reasoning_effort`). Anything else is sent
-  # verbatim as an extra request argument.
-  standard <- names(params) %in% setdiff(names(formals(ellmer::params)), "...")
-  model_params <- model@params %||% list()
-  for (name in names(params)[standard]) {
-    model_params[[name]] <- params[[name]]
-  }
-  existing_args <- model@extra_args %||% list()
-  for (name in names(params)[!standard]) {
-    existing_args[[name]] <- params[[name]]
-  }
-
-  tryCatch(
-    {
-      model@params <- model_params
-      model@extra_args <- existing_args
-      private <- cloned$.__enclos_env__$private
-      private$model <- model
-      # Keep the Provider's attached Model in sync, as Chat$set_model() does.
-      attr(private$provider, ".model") <- model
-    },
-    error = function(e) {
-      param_names <- paste(names(params), collapse = ", ")
-      cli::cli_abort(
-        c(
-          "Failed to apply runtime parameters to Chat provider",
-          "x" = "Parameters not applied: {.field {param_names}}",
-          "i" = "Error: {e$message}"
-        ),
-        class = "dsprrr_chat_params_error",
-        parent = e
-      )
-    }
-  )
+  ellmer_chat_set_runtime_params(cloned, params)
 
   cloned
 }
@@ -1497,7 +1433,7 @@ mock_batch_chat <- function(prompt, response, chat, turns_before = NULL) {
     ellmer::Provider(name = "dsprrr", base_url = "")
   }
   model <- if (trusted) ellmer_chat_model(chat) else NULL
-  mock <- utils::getFromNamespace("Chat", "ellmer")$new(
+  mock <- ellmer::Chat$new(
     provider = provider,
     model = model %||% ellmer::Model(name = "synthetic-batch-history")
   )
