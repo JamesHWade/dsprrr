@@ -4,6 +4,10 @@ First release. dsprrr is experimental; the API may change.
 
 * The GEPA learning journey adds an executable offline workflow with separate training, validation and holdout data, feedback, candidate lineage and budget accounting (#134).
 
+* Flex optimization and agentic harness tutorials now execute offline end-to-end, including compilation, candidate comparisons, separate holdout evaluation, and budget accounting (#135, #136).
+
+* ellmer compatibility access is centralized and tested against the minimum and current supported releases. Unsupported layouts produce actionable compatibility errors; untrusted accessors are rejected before invocation (#132).
+
 ## Breaking changes
 
 * dsprrr now requires ellmer >= 0.5.0. Runtime parameters such as
