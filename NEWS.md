@@ -2,6 +2,8 @@
 
 First development changelog. dsprrr is experimental; the API may change.
 
+* The GEPA learning journey adds an executable offline workflow with separate training, validation and holdout data, feedback, candidate lineage and budget accounting (#134).
+
 ## Breaking changes
 
 * dsprrr now requires ellmer >= 0.5.0. Runtime parameters such as
