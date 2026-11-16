@@ -86,6 +86,14 @@ conversation_history <- function(turns = list()) {
 #'   finish reason are retained. Usage, cost, and duration metadata use ellmer
 #'   defaults.
 #'
+#' @examples
+#' history <- conversation_history(list(
+#'   ellmer::UserTurn(list(ellmer::ContentText("Hello"))),
+#'   ellmer::AssistantTurn(list(ellmer::ContentText("Hi!")))
+#' ))
+#' turns <- history_turns(history)
+#' length(turns)
+#'
 #' @export
 history_turns <- function(history) {
   history <- history_validate_envelope(history)
@@ -104,6 +112,16 @@ history_turns <- function(history) {
 #' @param path A file path for the JSON document.
 #'
 #' @return The path, invisibly.
+#'
+#' @examples
+#' path <- tempfile(fileext = ".json")
+#' history <- conversation_history(list(
+#'   ellmer::UserTurn(list(ellmer::ContentText("Hello")))
+#' ))
+#' save_history(history, path)
+#' restored <- load_history(path)
+#' length(history_turns(restored))
+#' unlink(path)
 #'
 #' @export
 save_history <- function(history, path) {
@@ -130,6 +148,8 @@ save_history <- function(history, path) {
 #' @param path A file path to a JSON document written by save_history().
 #'
 #' @return A validated dsprrr_history object.
+#'
+#' @inherit save_history examples
 #'
 #' @export
 load_history <- function(path) {

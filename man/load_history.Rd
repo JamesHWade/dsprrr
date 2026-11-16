@@ -15,3 +15,14 @@ A validated dsprrr_history object.
 \description{
 Load conversation history from JSON
 }
+\examples{
+path <- tempfile(fileext = ".json")
+history <- conversation_history(list(
+  ellmer::UserTurn(list(ellmer::ContentText("Hello")))
+))
+save_history(history, path)
+restored <- load_history(path)
+length(history_turns(restored))
+unlink(path)
+
+}
