@@ -77,7 +77,9 @@ new_offline_chat <- function(model, responder, audit, session_id = model) {
     audit$clone_count <- audit$clone_count + 1L
     new_session <- paste0(model, "-fresh-", audit$clone_count)
     audit$clone_sessions <- c(audit$clone_sessions, new_session)
-    new_offline_chat(model, responder, audit, new_session)
+    cloned <- new_offline_chat(model, responder, audit, new_session)
+    cloned$set_turns(chat$get_turns())
+    cloned
   }
   unlockBinding("clone", chat)
   assign("clone", clone_chat, envir = chat)
