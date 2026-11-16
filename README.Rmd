@@ -45,6 +45,10 @@ dsprrr is not on CRAN yet. Install the development version from GitHub:
 pak::pak("JamesHWade/dsprrr")
 ```
 
+Installing from source requires a C compiler: Rtools on Windows, Xcode
+Command Line Tools on macOS, or your Linux distribution's build tools. The
+compiled helper preserves exact filesystem identities for safe persistence.
+
 You also need credentials for a model provider, for example `OPENAI_API_KEY`
 in your `.Renviron`.
 

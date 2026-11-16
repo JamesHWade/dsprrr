@@ -218,3 +218,4 @@ importFrom(purrr,
   map,
   map2
 )
+useDynLib(dsprrr, .registration = TRUE, .fixes = "C_")

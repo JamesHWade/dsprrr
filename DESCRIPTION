@@ -15,6 +15,7 @@ Description: Build declarative, test-driven, and optimizable applications
     asynchronous execution. Designed for systematic improvement of
     language-model workflows in 'R'.
 License: MIT + file LICENSE
+NeedsCompilation: yes
 VignetteBuilder: knitr
 Config/testthat/edition: 3
 Encoding: UTF-8
@@ -84,6 +85,7 @@ Collate:
     'dsprrr-package.R'
     'ellmer.R'
     'evaluate.R'
+    'file-identity.R'
     'flex-code-bridge.R'
     'history-rlm.R'
     'history-runtime.R'

@@ -43,3 +43,10 @@ vignettes/**/*_cache/
 # Kata machine-local overrides and retired Beads runtime state
 .kata.local.toml
 .beads/
+
+# Native build artifacts
+src/*.o
+src/*.so
+src/*.dll
+src/*.dylib
+src/symbols.rds

@@ -1592,18 +1592,12 @@ cache_directory_identity <- function(path) {
     as.character(fs::path_real(path)),
     error = function(e) NULL
   )
-  info <- tryCatch(
-    suppressWarnings(fs::file_info(path, follow = FALSE, fail = FALSE)),
-    error = function(e) NULL
-  )
+  file_identity <- file_identity_exact(path)
   owner <- cache_path_owner_id(path)
   mode <- cache_path_mode(path)
   if (
     is.null(canonical) ||
-      is.null(info) ||
-      nrow(info) != 1L ||
-      is.na(info$device_id[[1]]) ||
-      is.na(info$inode[[1]]) ||
+      is.null(file_identity) ||
       is.na(owner) ||
       is.na(mode)
   ) {
@@ -1611,8 +1605,8 @@ cache_directory_identity <- function(path) {
   }
   list(
     path = canonical,
-    device_id = as.numeric(info$device_id[[1]]),
-    inode = as.numeric(info$inode[[1]]),
+    device_id = file_identity$device_id,
+    inode = file_identity$inode,
     owner_id = owner,
     mode = mode
   )
@@ -2052,6 +2046,7 @@ cache_private_file_identity <- function(file, trust) {
     suppressWarnings(fs::file_info(file, follow = FALSE, fail = FALSE)),
     error = function(e) NULL
   )
+  file_identity <- file_identity_exact(file)
   if (
     is.na(owner) ||
       is.na(effective_owner) ||
@@ -2060,15 +2055,14 @@ cache_private_file_identity <- function(file, trust) {
       mode != as.integer(as.octmode("0600")) ||
       is.null(info) ||
       nrow(info) != 1L ||
-      is.na(info$device_id[[1]]) ||
-      is.na(info$inode[[1]])
+      is.null(file_identity)
   ) {
     return(list(
       ok = FALSE,
       reason = "a cache entry is not an effective-user-owned 0600 file"
     ))
   }
-  if (!identical(as.numeric(info$device_id[[1]]), trust$device_id)) {
+  if (!identical(file_identity$device_id, trust$device_id)) {
     return(list(
       ok = FALSE,
       reason = "a cache entry is on an unexpected device"
@@ -2077,8 +2071,8 @@ cache_private_file_identity <- function(file, trust) {
   list(
     ok = TRUE,
     identity = list(
-      device_id = as.numeric(info$device_id[[1]]),
-      inode = as.numeric(info$inode[[1]]),
+      device_id = file_identity$device_id,
+      inode = file_identity$inode,
       owner_id = owner,
       mode = mode,
       size = as.numeric(info$size[[1]]),

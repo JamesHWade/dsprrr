@@ -1,6 +1,7 @@
 #' @keywords internal
 #' @importFrom R6 R6Class
 #' @importFrom purrr map map2
+#' @useDynLib dsprrr, .registration = TRUE, .fixes = "C_"
 "_PACKAGE"
 
 ## usethis namespace: start

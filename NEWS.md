@@ -8,6 +8,8 @@ First release. dsprrr is experimental; the API may change.
 
 * ellmer compatibility access is centralized and tested against the minimum and current supported releases. Unsupported layouts produce actionable compatibility errors; untrusted accessors are rejected before invocation (#132).
 
+* Persistence guards preserve exact filesystem IDs, preventing distinct files from being mistaken for aliases on Windows while retaining hard-link and replacement detection. Installing from source now requires a C compiler.
+
 ## Breaking changes
 
 * dsprrr now requires ellmer >= 0.5.0. Runtime parameters such as
