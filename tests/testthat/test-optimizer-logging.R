@@ -887,14 +887,17 @@ test_that("two writers persist one identical trial idempotently", {
     log_dir,
     gate,
     ready,
-    value
+    value,
+    gate_timeout
   ) {
     namespace <- package_loader(package_context)
     Trial <- get("Trial", envir = namespace, inherits = FALSE)
     TrialLog <- get("TrialLog", envir = namespace, inherits = FALSE)
     options(dsprrr.trial_log_lock_hook = function() Sys.sleep(0.1))
-    file.create(ready)
-    deadline <- Sys.time() + 20
+    if (!file.create(ready)) {
+      stop("could not signal trial log writer readiness")
+    }
+    deadline <- Sys.time() + gate_timeout
     while (!file.exists(gate) && Sys.time() < deadline) {
       Sys.sleep(0.01)
     }
@@ -935,7 +938,8 @@ test_that("two writers persist one identical trial idempotently", {
         log_dir,
         gate,
         ready[[i]],
-        "same"
+        "same",
+        callr_readiness_timeout + 30
       ),
       supervise = TRUE
     )
@@ -945,11 +949,7 @@ test_that("two writers persist one identical trial idempotently", {
       process$kill()
     }
   }))
-  deadline <- Sys.time() + 20
-  while (!all(file.exists(ready)) && Sys.time() < deadline) {
-    Sys.sleep(0.01)
-  }
-  expect_identical(all(file.exists(ready)), TRUE)
+  callr_wait_for_files(processes, ready)
   file.create(gate)
   lapply(processes, function(process) process$wait(timeout = 20000))
   results <- lapply(processes, function(process) process$get_result())
@@ -981,14 +981,17 @@ test_that("two writers reject conflicting records for the same trial ID", {
     log_dir,
     gate,
     ready,
-    value
+    value,
+    gate_timeout
   ) {
     namespace <- package_loader(package_context)
     Trial <- get("Trial", envir = namespace, inherits = FALSE)
     TrialLog <- get("TrialLog", envir = namespace, inherits = FALSE)
     options(dsprrr.trial_log_lock_hook = function() Sys.sleep(0.1))
-    file.create(ready)
-    deadline <- Sys.time() + 20
+    if (!file.create(ready)) {
+      stop("could not signal trial log writer readiness")
+    }
+    deadline <- Sys.time() + gate_timeout
     while (!file.exists(gate) && Sys.time() < deadline) {
       Sys.sleep(0.01)
     }
@@ -1030,7 +1033,8 @@ test_that("two writers reject conflicting records for the same trial ID", {
           log_dir,
           gate,
           ready_path,
-          value
+          value,
+          callr_readiness_timeout + 30
         ),
         supervise = TRUE
       )
@@ -1043,11 +1047,7 @@ test_that("two writers reject conflicting records for the same trial ID", {
       process$kill()
     }
   }))
-  deadline <- Sys.time() + 20
-  while (!all(file.exists(ready)) && Sys.time() < deadline) {
-    Sys.sleep(0.01)
-  }
-  expect_identical(all(file.exists(ready)), TRUE)
+  callr_wait_for_files(processes, ready)
   file.create(gate)
   lapply(processes, function(process) process$wait(timeout = 20000))
   results <- lapply(processes, function(process) process$get_result())
@@ -1083,7 +1083,9 @@ test_that("process death releases the interprocess trial log lock", {
       namespace <- package_loader(package_context)
       TrialLog <- get("TrialLog", envir = namespace, inherits = FALSE)
       options(dsprrr.trial_log_lock_hook = function() {
-        file.create(ready)
+        if (!file.create(ready)) {
+          stop("could not signal trial log lock readiness")
+        }
         Sys.sleep(60)
       })
       TrialLog$new("CrashOptimizer", log_dir)
@@ -1092,11 +1094,7 @@ test_that("process death releases the interprocess trial log lock", {
     supervise = TRUE
   )
   withr::defer(if (holder$is_alive()) holder$kill())
-  deadline <- Sys.time() + 20
-  while (!file.exists(ready) && Sys.time() < deadline) {
-    Sys.sleep(0.01)
-  }
-  expect_identical(file.exists(ready), TRUE)
+  callr_wait_for_files(list(holder), ready)
   holder$kill()
   holder$wait(timeout = 10000)
   withr::local_options(dsprrr.trial_log_lock_timeout = 2)

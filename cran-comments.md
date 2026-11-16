@@ -12,7 +12,7 @@ Examples, tests, vignettes, and both PDF and HTML manuals passed.
 
 The checked source includes the native helper that preserves exact filesystem
 IDs and the documented compiler prerequisite. The full test suite passed
-8,869 assertions; compilation, compiled-code checks and manual rebuilding
+8,866 assertions; compilation, compiled-code checks and manual rebuilding
 also passed.
 
 ## Test environments
