@@ -483,28 +483,6 @@ predict_llm_numeric <- function(object, new_data, ...) {
   tibble::tibble(.pred = preds)
 }
 
-#' tunable() method for llm_predict
-#'
-#' Describes `temperature` and `top_p` as the tunable parameters of
-#' [llm_predict()] specifications for the tune package.
-#'
-#' @param x An `llm_predict` model specification.
-#' @param ... Unused.
-#' @return A tibble describing the tunable parameters.
-#' @noRd
-tunable_llm_predict <- function(x, ...) {
-  tibble::tibble(
-    name = c("temperature", "top_p"),
-    call_info = list(
-      list(pkg = "dsprrr", fun = "temperature"),
-      list(pkg = "dsprrr", fun = "top_p")
-    ),
-    source = c("model_spec", "model_spec"),
-    component = c("main", "main"),
-    component_id = c("main", "main")
-  )
-}
-
 #' Temperature parameter for dials
 #'
 #' @description

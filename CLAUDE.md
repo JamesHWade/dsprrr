@@ -59,8 +59,9 @@ GitHub Actions runs R CMD check across multiple R versions and OS platforms, wit
 # 1. Format ALL code with air (entire project)
 air format .
 
-# 2. Lint with jarl (auto-fix issues)
-jarl check --fix
+# 2. Check R source and tests with Jarl >= 0.6.0 (non-mutating)
+# Jarl 0.5.0 cannot parse this repository's per-file ignore configuration.
+jarl check R tests/testthat
 
 # 3. Run R CMD check (catches codoc mismatches, missing docs, etc.)
 Rscript -e "devtools::check()"
@@ -70,6 +71,27 @@ Rscript -e "pkgdown::build_site(preview = FALSE)"
 ```
 
 **Important**: The CI runs `air format --check` on both `R/` and `tests/` directories. Always format test files too!
+
+#### Ellmer compatibility
+
+The minimum supported ellmer version is 0.5.0. Keep compatibility probing and
+the private bridge in `R/ellmer.R`; callers should use public `Chat` getters
+and S7 properties. Use the private bridge only to update runtime model
+`params` and `extra_args` when ellmer has no public setter. Before writing,
+validate the ellmer version and object shape, then confirm the public getters
+agree with the values being changed. Raise
+`dsprrr_ellmer_compatibility_error` for an unsupported layout.
+
+Cache adapters must check canonical `Chat` methods before invoking getters.
+Cache identity must include model `params`, `extra_args`, and the account
+partition as distinct inputs. Artifact descriptors remain credential-free and
+separate from cache identity. Prefer exported ellmer functions; any namespace
+fallback belongs only in the compatibility adapter.
+
+Validate the minimum supported ellmer version and the current release with the
+focused compatibility, cache, artifact, history, and run test suites. Record
+the versions actually exercised; do not claim a release passed without running
+those suites.
 
 #### Automated PR Review (Recommended)
 
@@ -113,7 +135,7 @@ This command will:
 1. Check you're on a feature branch with all changes committed
 2. Auto-detect R package project and run appropriate quality gates:
    - `air format .` (formatting)
-   - `jarl check --fix` (linting)
+   - `jarl check R tests/testthat` (non-mutating lint check)
    - `devtools::check()` (R CMD check)
    - `pkgdown::build_site()` (documentation)
 3. Run comprehensive automated PR review via pr-review-toolkit
@@ -628,8 +650,8 @@ kata comment <id> --body "Implemented the first verified slice." --agent
 # Format ALL code with air (R/ and tests/)
 air format R/ tests/testthat/
 
-# Lint with jarl
-jarl check R/
+# Lint R source and tests with jarl
+jarl check R tests/testthat
 
 # Run tests
 Rscript -e "devtools::test()"
@@ -696,7 +718,7 @@ kata create "Follow-up task" \
 
 # 3. Run quality gates (if code changed)
 air format R/ tests/testthat/
-jarl check R/
+jarl check R tests/testthat
 Rscript -e "devtools::check()"
 
 # 4. Release unfinished work with durable context

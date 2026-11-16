@@ -1242,8 +1242,7 @@ history_decode_content <- function(content) {
     return(ellmer::ContentText(history_value_from_node(content$text)))
   }
   if (type == "json") {
-    constructor <- utils::getFromNamespace("ContentJson", "ellmer")
-    return(constructor(
+    return(ellmer_content_json(
       data = history_value_from_node(content$data),
       string = history_value_from_node(content$string)
     ))

@@ -534,7 +534,10 @@ test_dsp_configure_env <- function(.env = parent.frame()) {
   )
   clear_default_chat()
   withr::defer(clear_default_chat(), envir = .env)
-  withr::defer(.dsprrr_env$config <- NULL, envir = .env)
+  withr::defer(
+    assign("config", NULL, envir = .dsprrr_env),
+    envir = .env
+  )
 }
 
 test_that("dsp_configure applies model and temperature to the chat", {

@@ -1572,7 +1572,7 @@ artifact_restore_content <- function(record) {
     record$kind,
     text = ellmer::ContentText(record$text),
     json = do.call(
-      get("ContentJson", envir = asNamespace("ellmer")),
+      ellmer_content_json,
       list(data = record$data, string = record$string)
     ),
     image_inline = ellmer::ContentImageInline(record$type, record$data),
@@ -4570,7 +4570,7 @@ artifact_deserialize_type <- function(type) {
     type$kind,
     ignore = ellmer::type_ignore(),
     json_schema = do.call(
-      get("TypeJsonSchema", envir = asNamespace("ellmer")),
+      ellmer::TypeJsonSchema,
       list(
         json = type$json,
         description = description,
@@ -4600,7 +4600,7 @@ artifact_deserialize_type <- function(type) {
         artifact_deserialize_type
       )
       do.call(
-        get("TypeObject", envir = asNamespace("ellmer")),
+        ellmer::TypeObject,
         list(
           properties = properties,
           description = description,

@@ -1035,59 +1035,7 @@ cache_turn_fingerprint <- function(turn) {
 #' Verify the canonical mutable-state contract supplied by ellmer::Chat
 #' @noRd
 cache_is_trusted_ellmer_chat <- function(llm) {
-  if (
-    !is.environment(llm) ||
-      !R6::is.R6(llm) ||
-      !inherits(llm, "Chat")
-  ) {
-    return(FALSE)
-  }
-
-  generator <- tryCatch(
-    utils::getFromNamespace("Chat", "ellmer"),
-    error = function(e) NULL
-  )
-  enclosing <- tryCatch(llm$.__enclos_env__, error = function(e) NULL)
-  if (
-    is.null(generator) ||
-      !is.environment(enclosing) ||
-      !identical(parent.env(enclosing), asNamespace("ellmer"))
-  ) {
-    return(FALSE)
-  }
-
-  required <- c(
-    "get_turns",
-    "set_turns",
-    "get_provider",
-    "get_tools",
-    "get_system_prompt",
-    "clone",
-    "chat_structured"
-  )
-  methods_match <- vapply(
-    required,
-    function(name) {
-      method <- tryCatch(llm[[name]], error = function(e) NULL)
-      canonical <- generator$public_methods[[name]]
-      is.function(method) &&
-        is.function(canonical) &&
-        identical(environment(method), enclosing) &&
-        identical(formals(method), formals(canonical)) &&
-        identical(body(method), body(canonical))
-    },
-    logical(1)
-  )
-  if (!all(methods_match)) {
-    return(FALSE)
-  }
-
-  provider <- tryCatch(llm$get_provider(), error = function(e) NULL)
-  !is.null(provider) &&
-    tryCatch(
-      S7::S7_inherits(provider, ellmer::Provider),
-      error = function(e) FALSE
-    )
+  ellmer_chat_cache_supported(llm)
 }
 
 #' Require a Chat whose state can be inspected and replayed safely
@@ -1096,10 +1044,16 @@ cache_require_trusted_ellmer_chat <- function(llm, error_class) {
   if (!cache_is_trusted_ellmer_chat(llm)) {
     cli::cli_abort(
       c(
-        "Caching requires an unmodified {.cls ellmer::Chat}",
-        "i" = "Opaque or custom Chat state cannot be fingerprinted or replayed safely."
+        "Caching requires a compatible {.cls ellmer::Chat}",
+        "x" = "The Chat layout cannot be fingerprinted or replayed safely.",
+        "i" = "Use an unmodified ellmer::Chat with ellmer 0.5.0 or newer."
       ),
-      class = c("dsprrr_cache_untrusted_chat", error_class)
+      class = c(
+        "dsprrr_ellmer_compatibility_error",
+        "dsprrr_cache_untrusted_chat",
+        error_class
+      ),
+      operation = "caching"
     )
   }
   invisible(llm)
@@ -1161,11 +1115,21 @@ cache_provider_fingerprint <- function(llm, llm_id = NULL) {
     provider_name <- props$name %||% class(provider)[[1]]
     model <- cache_chat_get(llm, "get_model", default = NULL)
     # Runtime params such as temperature live on the Model object.
-    model_object <- ellmer_chat_model(llm)
-    if (!is.null(model_object)) {
-      props$params <- model_object@params
-      props$extra_args <- model_object@extra_args
-    }
+    model_values <- tryCatch(
+      ellmer_chat_model_values(llm, required = TRUE),
+      error = function(e) {
+        cli::cli_abort(
+          "Cannot inspect Chat request parameters for cache identity",
+          class = c(
+            "dsprrr_ellmer_compatibility_error",
+            "dsprrr_cache_fingerprint_error"
+          ),
+          parent = e
+        )
+      }
+    )
+    props$params <- model_values$params
+    props$extra_args <- model_values$extra_args
     account_partition <- cache_account_partition(props)
     props <- props[!vapply(names(props), cache_is_secret_name, logical(1))]
     props$name <- NULL
@@ -2620,8 +2584,7 @@ cache_replay_content <- function(content) {
     return(ellmer::ContentText(cache_replay_value(content@text)))
   }
   if (inherits(content, "ellmer::ContentJson")) {
-    constructor <- utils::getFromNamespace("ContentJson", "ellmer")
-    return(constructor(
+    return(ellmer_content_json(
       data = cache_replay_value(content@data),
       string = cache_replay_value(content@string)
     ))
@@ -2674,8 +2637,7 @@ cache_replay_content <- function(content) {
     ))
   }
   if (inherits(content, "ellmer::ContentUploaded")) {
-    constructor <- utils::getFromNamespace("ContentUploaded", "ellmer")
-    return(constructor(
+    return(ellmer::ContentUploaded(
       uri = cache_replay_value(content@uri),
       mime_type = cache_replay_value(content@mime_type)
     ))
