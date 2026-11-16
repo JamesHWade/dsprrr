@@ -178,10 +178,10 @@ First release. dsprrr is experimental; the API may change.
   provider calls beyond one baseline pass and one evidence pass. The new
   "Calibrated Decisions" article walks through both features.
 
-* The DSPy comparison article now uses DSPy 3.4.0 as its baseline. It covers
-  the LM transition, call-time RLM interpreter factories, the persistent
-  `LocalInterpreter`, the deprecation of `CodeAct` and `ProgramOfThought` in
-  DSPy 3.3.1, and objective-aware GEPA frontiers.
+* The DSPy comparison article uses DSPy 3.5.0 as its baseline. It covers
+  structured ReAct history and submission, native reasoning, RLM conversation
+  reuse, the lm15 provider transition, and the removal of upstream `CodeAct`
+  and `ProgramOfThought`. dsprrr retains its R-specific code modules.
 
 * `flex()` lets GEPA optimize how a module executes—not only its instructions—
   with two source modes. The safe default is a bounded versioned JSON graph with
