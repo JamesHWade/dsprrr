@@ -40,15 +40,18 @@ The default source is a one-step JSON program. This example runs a real
 API key nor a separate code interpreter:
 
 ```{r task-signature}
+library(dsprrr)
+
 route_signature <- signature(
   "ticket -> queue: enum('database', 'security', 'payments', 'identity')",
   instructions = "Route each support ticket to its owning queue."
 )
 ```
 
-The deterministic Chat fixture is defined in the appendix. It counts actual
-task and proposer requests, while its fixed response rules leave metric
-scoring and candidate selection to GEPA.
+Before running the JSON example in your own R session, run the fixture
+definitions in the [appendix](#appendix-offline-fixture-source) once. The
+deterministic Chat fixture counts actual task and proposer requests, while its
+fixed response rules leave metric scoring and candidate selection to GEPA.
 
 ```{r offline-fixture, include=FALSE}
 fixture_chat_class <- R6::R6Class(
