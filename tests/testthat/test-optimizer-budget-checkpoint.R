@@ -56,7 +56,7 @@ test_that("subprocess readiness propagates failures and stays bounded", {
 
   waiting_process <- callr::r_bg(
     function() {
-      while (TRUE) {
+      repeat {
         Sys.sleep(1)
       }
     },

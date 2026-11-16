@@ -1258,17 +1258,6 @@ decode_rlm_control <- function(
 }
 
 
-normalize_rlm_control_value <- function(
-  result,
-  stdout = NULL,
-  control_nonce = NULL
-) {
-  decode_rlm_control(result, control_nonce) %||%
-    decode_rlm_control(stdout, control_nonce) %||%
-    result
-}
-
-
 #' Check if a value is an RLM final answer
 #'
 #' @param x Value to check

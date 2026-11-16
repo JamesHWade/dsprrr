@@ -1,0 +1,4 @@
+# Test assertions intentionally exercise package internals through `:::`.
+# Keep all default rules active for package source code.
+[lint.per-file-ignores]
+"tests/testthat/" = ["internal_function"]

@@ -9,6 +9,7 @@
 ^\.dsprrr_cache$
 ^codecov\.yml$
 ^[.]?air[.]toml$
+^[.]?jarl[.]toml$
 ^\.vscode$
 ^_pkgdown\.yml$
 ^docs$

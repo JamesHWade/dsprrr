@@ -28,8 +28,8 @@ Automatically detect and run project-specific quality gates:
 # Format code
 air format .
 
-# Lint code
-jarl check --fix
+# Lint R source and tests without modifying files
+jarl check R tests/testthat
 
 # R CMD check
 Rscript -e "devtools::check()"
