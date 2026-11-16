@@ -404,26 +404,241 @@ structure_ellmer_tool_error <- function(err, tool_name) {
   )
 }
 
-#' Provider properties that ellmer 0.5.0 moved to the Model object
-#'
-#' Reading them through the Provider is deprecated and returns a stale copy,
-#' so provider inspection skips them and reads the Chat's Model instead.
+#' Inspect ellmer objects through their current public contract
 #' @noRd
 ellmer_deprecated_provider_props <- c("model", "params", "extra_args")
 
-#' Inspect a Provider without touching deprecated forwarding properties
-#' @noRd
 ellmer_provider_props <- function(provider) {
-  names <- setdiff(S7::prop_names(provider), ellmer_deprecated_provider_props)
-  stats::setNames(
-    lapply(names, function(name) S7::prop(provider, name)),
-    names
+  if (!S7::S7_inherits(provider, ellmer::Provider)) {
+    return(NULL)
+  }
+  fields <- setdiff(S7::prop_names(provider), ellmer_deprecated_provider_props)
+  stats::setNames(lapply(fields, function(x) S7::prop(provider, x)), fields)
+}
+
+ellmer_chat_model <- function(chat) {
+  model <- tryCatch(chat$get_model_object(), error = function(e) NULL)
+  if (S7::S7_inherits(model, ellmer::Model)) model else NULL
+}
+
+ellmer_chat_model_values <- function(chat, required = FALSE) {
+  model <- ellmer_chat_model(chat)
+  if (is.null(model)) {
+    if (isTRUE(required)) {
+      ellmer_compatibility_abort(
+        "inspect the Chat model",
+        "The Chat does not provide a supported ellmer Model object."
+      )
+    }
+    return(NULL)
+  }
+  fields <- c("name", "params", "extra_args")
+  if (!all(fields %in% S7::prop_names(model))) {
+    ellmer_compatibility_abort(
+      "inspect the Chat model",
+      "The ellmer Model is missing request identity properties."
+    )
+  }
+  stats::setNames(lapply(fields, function(x) S7::prop(model, x)), fields)
+}
+
+ellmer_chat_model_name <- function(chat) {
+  values <- ellmer_chat_model_values(chat)
+  if (is.null(values)) NULL else values$name
+}
+
+ellmer_function_available <- function(name) {
+  name %in%
+    getNamespaceExports("ellmer") &&
+    is.function(getExportedValue("ellmer", name))
+}
+
+ellmer_compatibility_abort <- function(
+  operation,
+  detail,
+  parent = NULL,
+  extra_class = character()
+) {
+  cli::cli_abort(
+    c(
+      "The installed ellmer Chat layout is not supported for {operation}",
+      "x" = detail,
+      "i" = "Upgrade ellmer if a required capability is missing; use an unmodified Chat where required."
+    ),
+    class = unique(c("dsprrr_ellmer_compatibility_error", extra_class)),
+    parent = parent,
+    operation = operation
   )
 }
 
-#' The Model object carrying a Chat's name, params, and extra args
-#' @noRd
-ellmer_chat_model <- function(chat) {
-  model <- tryCatch(chat$get_model_object(), error = function(e) NULL)
-  if (inherits(model, "ellmer::Model")) model else NULL
+ellmer_chat_private_state <- function(
+  chat,
+  operation,
+  extra_class = character()
+) {
+  fail <- function(detail) {
+    ellmer_compatibility_abort(operation, detail, extra_class = extra_class)
+  }
+  version <- tryCatch(utils::packageVersion("ellmer"), error = function(e) NULL)
+  if (is.null(version) || version < "0.5.0") {
+    fail("This operation requires ellmer 0.5.0 or newer.")
+  }
+  if (!is.environment(chat) || !R6::is.R6(chat) || !inherits(chat, "Chat")) {
+    fail("The supplied object is not an ellmer Chat R6 object.")
+  }
+
+  # Runtime Model params have no public setter in ellmer. Keep this bridge
+  # narrow and validate the private layout before reading or changing it.
+  enclosing <- tryCatch(chat$.__enclos_env__, error = function(e) NULL)
+  private <- tryCatch(enclosing$private, error = function(e) NULL)
+  if (
+    !is.environment(enclosing) ||
+      !is.environment(private) ||
+      !all(c("provider", "model") %in% ls(private, all.names = TRUE))
+  ) {
+    fail("The Chat is missing its supported provider or model bindings.")
+  }
+  provider <- tryCatch(private$provider, error = function(e) NULL)
+  model <- tryCatch(private$model, error = function(e) NULL)
+  if (!S7::S7_inherits(provider, ellmer::Provider)) {
+    fail("The Chat provider binding is not an ellmer Provider.")
+  }
+  if (
+    !S7::S7_inherits(model, ellmer::Model) ||
+      !all(c("name", "params", "extra_args") %in% S7::prop_names(model))
+  ) {
+    fail("The Chat model binding is not a compatible ellmer Model.")
+  }
+  if (
+    !identical(
+      tryCatch(chat$get_provider(), error = function(e) NULL),
+      provider
+    ) ||
+      !identical(
+        tryCatch(chat$get_model_object(), error = function(e) NULL),
+        model
+      )
+  ) {
+    fail(
+      "The Chat's public getters disagree with its provider or model bindings."
+    )
+  }
+  list(
+    enclosing = enclosing,
+    private = private,
+    provider = provider,
+    model = model
+  )
+}
+
+ellmer_chat_set_runtime_params <- function(chat, params) {
+  state <- ellmer_chat_private_state(
+    chat,
+    "applying runtime parameters",
+    extra_class = "dsprrr_chat_params_error"
+  )
+  # ellmer translates standard params for each provider; unknown names remain
+  # verbatim request arguments in the Model's extra_args.
+  standard <- names(params) %in% setdiff(names(formals(ellmer::params)), "...")
+  model_params <- S7::prop(state$model, "params") %||% list()
+  extra_args <- S7::prop(state$model, "extra_args") %||% list()
+  for (name in names(params)[standard]) {
+    model_params[[name]] <- params[[name]]
+  }
+  for (name in names(params)[!standard]) {
+    extra_args[[name]] <- params[[name]]
+  }
+  tryCatch(
+    {
+      S7::prop(state$model, "params") <- model_params
+      S7::prop(state$model, "extra_args") <- extra_args
+      state$private$model <- state$model
+      # The Provider also holds the Model used to form requests.
+      attr(state$private$provider, ".model") <- state$model
+    },
+    error = function(e) {
+      ellmer_compatibility_abort(
+        "applying runtime parameters",
+        paste0("ellmer rejected the Model update: ", conditionMessage(e)),
+        parent = e,
+        extra_class = "dsprrr_chat_params_error"
+      )
+    }
+  )
+  invisible(chat)
+}
+
+ellmer_chat_cache_methods_supported <- function(chat) {
+  if (!is.environment(chat) || !R6::is.R6(chat) || !inherits(chat, "Chat")) {
+    return(FALSE)
+  }
+  enclosing <- tryCatch(chat$.__enclos_env__, error = function(e) NULL)
+  if (
+    !is.environment(enclosing) ||
+      !identical(parent.env(enclosing), asNamespace("ellmer"))
+  ) {
+    return(FALSE)
+  }
+  generator <- tryCatch(
+    getExportedValue("ellmer", "Chat"),
+    error = function(e) NULL
+  )
+  if (is.null(generator)) {
+    return(FALSE)
+  }
+  required <- c(
+    "get_turns",
+    "set_turns",
+    "get_provider",
+    "get_model",
+    "get_model_object",
+    "get_tools",
+    "get_system_prompt",
+    "clone",
+    "chat_structured"
+  )
+  all(vapply(
+    required,
+    function(name) {
+      method <- tryCatch(chat[[name]], error = function(e) NULL)
+      canonical <- tryCatch(
+        generator$public_methods[[name]],
+        error = function(e) NULL
+      )
+      is.function(method) &&
+        is.function(canonical) &&
+        identical(environment(method), enclosing) &&
+        identical(formals(method), formals(canonical)) &&
+        identical(body(method), body(canonical))
+    },
+    logical(1)
+  ))
+}
+
+ellmer_chat_cache_supported <- function(chat) {
+  if (!ellmer_chat_cache_methods_supported(chat)) {
+    return(FALSE)
+  }
+  !is.null(tryCatch(
+    ellmer_chat_private_state(chat, "caching"),
+    error = function(e) NULL
+  ))
+}
+
+ellmer_internal_constructor <- function(name) {
+  if (name %in% getNamespaceExports("ellmer")) {
+    return(getExportedValue("ellmer", name))
+  }
+  get0(name, envir = asNamespace("ellmer"), inherits = FALSE)
+}
+
+ellmer_content_json <- function(data = NULL, string = NULL) {
+  constructor <- ellmer_internal_constructor("ContentJson")
+  if (!is.function(constructor)) {
+    ellmer_compatibility_abort(
+      "reconstructing structured content",
+      "This ellmer version does not provide the ContentJson constructor."
+    )
+  }
+  constructor(data = data, string = string)
 }
