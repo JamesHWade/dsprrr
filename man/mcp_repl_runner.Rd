@@ -50,7 +50,7 @@ and \verb{$shutdown()}.
 }
 \description{
 \code{mcp_repl_runner()} creates a code runner backed by Posit's
-\href{https://github.com/posit-dev/mcp-repl}{\code{mcp-repl}} MCP server. \code{mcp-repl}
+\href{https://github.com/posit-dev/mcp-console}{\code{mcp-repl}} MCP server. \code{mcp-repl}
 keeps a long-lived R session and enforces a sandbox with operating-system
 primitives, so it is suitable for code written by a model or an optimizer.
 Use it with \code{\link[=rlm_module]{rlm_module()}}, \code{\link[=code_act]{code_act()}}, \code{\link[=program_of_thought]{program_of_thought()}} and the

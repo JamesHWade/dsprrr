@@ -1,6 +1,6 @@
-# dsprrr 0.0.0.9000
+# dsprrr 0.1.0
 
-First development changelog. dsprrr is experimental; the API may change.
+First release. dsprrr is experimental; the API may change.
 
 * The GEPA learning journey adds an executable offline workflow with separate training, validation and holdout data, feedback, candidate lineage and budget accounting (#134).
 

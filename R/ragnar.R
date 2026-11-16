@@ -44,7 +44,11 @@
 #'
 #' # Use with a ReAct module
 #' agent <- react("question -> answer", tools = list(search_tool))
-#' run(agent, question = "How do I turn caching off?", .llm = ellmer::chat_openai(model = "gpt-6-luna"))
+#' run(
+#'   agent,
+#'   question = "How do I turn caching off?",
+#'   .llm = ellmer::chat_openai(model = "gpt-6-luna")
+#' )
 #'
 #' # Or register it on an ellmer Chat
 #' chat <- ellmer::chat_openai(model = "gpt-6-luna")

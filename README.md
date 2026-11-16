@@ -109,16 +109,16 @@ optimized <- analyzer |>
 
 ## What’s included
 
-| Area                 | Functions                                                                                                                          |
-|----------------------|------------------------------------------------------------------------------------------------------------------------------------|
-| Define tasks         | `signature()`, `input()`, `with_instructions()`                                                                                    |
-| Run them             | `module()`, `run()`, `run_dataset()`, `run_async()`, `run_stream()`                                                                |
-| Other ways to answer | `chain_of_thought()`, `react()`, `best_of_n()`, `refine()`, `ensemble()`, `program_of_thought()`, `code_act()`                     |
-| Compose              | `pipeline()`, `%>>%`, `module_fn()`                                                                                                |
-| Measure              | `evaluate()`, `metric_exact_match()`, `metric_f1()`, vitals bridges                                                                |
-| Optimize             | `compile()` with `LabeledFewShot()`, `BootstrapFewShot()`, `MIPROv2()`, `GEPA()`, `COPRO()`, `SIMBA()` and more; `optimize_grid()` |
-| Inspect              | `get_last_prompt()`, `inspect_history()`, `summarize_traces()`, `session_cost()`                                                   |
-| Save                 | `save_program()`, `pin_module_config()`                                                                                            |
+| Area | Functions |
+|----|----|
+| Define tasks | `signature()`, `input()`, `with_instructions()` |
+| Run them | `module()`, `run()`, `run_dataset()`, `run_async()`, `run_stream()` |
+| Other ways to answer | `chain_of_thought()`, `react()`, `best_of_n()`, `refine()`, `ensemble()`, `program_of_thought()`, `code_act()` |
+| Compose | `pipeline()`, `%>>%`, `module_fn()` |
+| Measure | `evaluate()`, `metric_exact_match()`, `metric_f1()`, vitals bridges |
+| Optimize | `compile()` with `LabeledFewShot()`, `BootstrapFewShot()`, `MIPROv2()`, `GEPA()`, `COPRO()`, `SIMBA()` and more; `optimize_grid()` |
+| Inspect | `get_last_prompt()`, `inspect_history()`, `summarize_traces()`, `session_cost()` |
+| Save | `save_program()`, `pin_module_config()` |
 
 Experimental: `rlm_module()` (a model explores a large R object by
 writing code), `flex()` (GEPA rewrites a whole program),
