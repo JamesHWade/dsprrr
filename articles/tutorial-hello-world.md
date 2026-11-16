@@ -14,6 +14,9 @@ Install dsprrr from GitHub. pak installs ellmer from CRAN along with it.
 pak::pak("JamesHWade/dsprrr")
 ```
 
+Installing from source requires a C compiler: Rtools on Windows, Xcode
+Command Line Tools on macOS, or your Linux distribution’s build tools.
+
 The tutorials use OpenAI. Add `OPENAI_API_KEY=<your key>` to your
 `.Renviron` file and restart R;
 [`dsprrr_sitrep()`](https://jameshwade.github.io/dsprrr/reference/dsprrr_sitrep.md)

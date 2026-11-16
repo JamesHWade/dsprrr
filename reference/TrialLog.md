@@ -8,6 +8,11 @@ run can be inspected or resumed later with
 [`load_trial_log()`](https://jameshwade.github.io/dsprrr/reference/load_trial_log.md).
 Optimizers create one when you give them a `log_dir`.
 
+## Value
+
+An R6 class generator. `TrialLog$new()` creates a trial log with methods
+for recording trials, inspecting results, and saving progress.
+
 ## Details
 
 A log directory holds `trials.jsonl`, the authoritative journal, and
@@ -256,8 +261,8 @@ log$as_tibble()[, c("trial_id", "status", "mean_score")]
 #> # A tibble: 2 × 3
 #>   trial_id                     status  mean_score
 #>   <chr>                        <chr>        <dbl>
-#> 1 trial_20261116_001234_ncnyz0 pending         NA
-#> 2 trial_20261116_001234_e01i28 pending         NA
+#> 1 trial_20261116_174003_ncnyz0 pending         NA
+#> 2 trial_20261116_174003_e01i28 pending         NA
 
 # Persist to a directory and load it again
 dir <- file.path(tempdir(), "trial-log-example")
@@ -269,5 +274,5 @@ load_trial_log(dir)
 #> 
 #> ── Trial Log: my-search 
 #> Trials: 1 (0 completed, 0 failed)
-#> Log Dir: /tmp/Rtmp6xAfVi/trial-log-example
+#> Log Dir: /tmp/Rtmpyn2oxz/trial-log-example
 ```

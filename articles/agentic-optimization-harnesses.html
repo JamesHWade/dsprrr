@@ -17,9 +17,9 @@
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Agentic optimization harnesses">
-<meta name="description" content="Run persistent or fresh-per-iteration research agents against a trusted dsprrr evaluator, with Posit mcp-repl sandboxing, budgets, lineage, and checkpoints.
+<meta name="description" content="Run bounded AutoResearch and MetaHarness journeys against an offline, two-step evidence-answer program, then inspect validation, holdout, budget, and candidate lineage.
 ">
-<meta property="og:description" content="Run persistent or fresh-per-iteration research agents against a trusted dsprrr evaluator, with Posit mcp-repl sandboxing, budgets, lineage, and checkpoints.
+<meta property="og:description" content="Run bounded AutoResearch and MetaHarness journeys against an offline, two-step evidence-answer program, then inspect validation, holdout, budget, and candidate lineage.
 ">
 <meta property="og:image" content="https://jameshwade.github.io/dsprrr/logo.svg">
 </head>
@@ -31,7 +31,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">dsprrr</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -137,146 +137,91 @@
 
     
     
-<p>Most dsprrr teleprompters own both candidate generation and
-selection. <code><a href="../reference/AutoResearch.html">AutoResearch()</a></code> and <code><a href="../reference/MetaHarness.html">MetaHarness()</a></code>
-split those jobs: an LLM agent proposes experiments, while a trusted R
-evaluator applies validated edits, runs the program, enforces budgets,
-and keeps the best result. This page shows how to run both harnesses on
-a two-step pipeline, keep the agent’s code in a sandbox, budget and
-resume a run, and read what happened.</p>
-<p>Both harnesses can jointly edit the instructions and templates of
-every optimizable module in a program. That makes them useful when the
-problem is not one weak prompt but the contract between several pipeline
-stages. They do not change the program’s structure or run
-optimizer-written module source. To let an optimizer change the
-implementation itself (predictor structure, deterministic R, or tools),
-use the experimental <code><a href="../reference/flex.html">flex()</a></code>; see <a href="flex-optimization.html">Flex: optimize a whole program</a>.</p>
+<p><code><a href="../reference/AutoResearch.html">AutoResearch()</a></code> and <code><a href="../reference/MetaHarness.html">MetaHarness()</a></code> let an
+agent propose changes to a program while dsprrr owns validation,
+evaluation, budgets, and candidate selection. This article executes both
+journeys through the real <code><a href="../reference/compile.html">compile()</a></code> pipeline with
+deterministic, local Chat fixtures. The scores prove that the workflow
+and result contract run; they are not evidence that a real model
+improves a task.</p>
+<p>The task is a two-step question-answering pipeline. The first step
+extracts evidence from a context; the second turns that evidence into an
+answer. The candidate that changes only the evidence step improves the
+validation score, but leaves a multiword answer truncated. A coordinated
+edit to both steps completes the answer contract.</p>
 <div class="section level2">
-<h2 id="choose-the-search-owner">Choose the search owner<a class="anchor" aria-label="anchor" href="#choose-the-search-owner"></a>
+<h2 id="define-the-program-and-independent-data-splits">Define the program and independent data splits<a class="anchor" aria-label="anchor" href="#define-the-program-and-independent-data-splits"></a>
 </h2>
-<table class="table">
-<colgroup>
-<col width="25%">
-<col width="25%">
-<col width="25%">
-<col width="25%">
-</colgroup>
-<thead><tr class="header">
-<th>Harness</th>
-<th>Who owns the loop</th>
-<th>Agent memory</th>
-<th>Candidates</th>
-</tr></thead>
-<tbody>
-<tr class="odd">
-<td><code><a href="../reference/AutoResearch.html">AutoResearch()</a></code></td>
-<td>One research agent</td>
-<td>Persistent across experiments</td>
-<td>One per <code>propose</code> action</td>
-</tr>
-<tr class="even">
-<td><code><a href="../reference/MetaHarness.html">MetaHarness()</a></code></td>
-<td>The R outer loop</td>
-<td>Fresh proposer each iteration</td>
-<td>A batch per iteration</td>
-</tr>
-</tbody>
-</table>
-<p><code><a href="../reference/AutoResearch.html">AutoResearch()</a></code> fits when one researcher should pursue a
-line of inquiry, use earlier results as working memory, branch, and
-decide when to stop. <code><a href="../reference/MetaHarness.html">MetaHarness()</a></code> fits when you want
-independent proposals, explicit frontier selection, and less dependence
-on one conversation’s hidden state.</p>
-<p>With either harness, dsprrr:</p>
-<ol style="list-style-type: decimal">
-<li>evaluates the unmodified program as a baseline;</li>
-<li>gives every candidate a content fingerprint and a parent id;</li>
-<li>rejects unknown module paths and unsupported fields;</li>
-<li>skips candidates identical to one already evaluated;</li>
-<li>charges every evaluation to the <code><a href="../reference/optimizer_control.html">optimizer_control()</a></code>
-budget; and</li>
-<li>returns the best scored program, including when a budget stops the
-run.</li>
-</ol>
-</div>
-<div class="section level2">
-<h2 id="the-example-program">The example program<a class="anchor" aria-label="anchor" href="#the-example-program"></a>
-</h2>
-<p>The examples optimize a two-step pipeline that answers questions from
-a short context. The first step quotes evidence, the second answers from
-it, so the two instructions have to agree on a format. The data has
-eight rows, which is enough to show the shape; a real run needs many
-more.</p>
+<p>The search sees training rows as proposal context and validation rows
+for candidate selection. The separate holdout rows stay outside
+<code><a href="../reference/compile.html">compile()</a></code> and are evaluated only after each search has
+returned.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/dsprrr" class="external-link">dsprrr</a></span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">find_evidence</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
-<span>  <span class="st">"context, question -&gt; evidence"</span>,</span>
-<span>  instructions <span class="op">=</span> <span class="st">"Restate the question, then quote the context sentences that answer it."</span></span>
-<span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">answer_from_evidence</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
-<span>  <span class="st">"evidence -&gt; answer"</span>,</span>
-<span>  instructions <span class="op">=</span> <span class="st">"Answer the restated question from the quoted sentences only."</span></span>
-<span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">qa_program</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pipeline.html">pipeline</a></span><span class="op">(</span><span class="va">find_evidence</span>, <span class="va">answer_from_evidence</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">examples</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tribble.html" class="external-link">tribble</a></span><span class="op">(</span></span>
-<span>  <span class="op">~</span><span class="va">context</span>, <span class="op">~</span><span class="va">question</span>, <span class="op">~</span><span class="va">answer</span>,</span>
-<span>  <span class="st">"The Oslo office opened in 2019 and has 42 staff."</span>, <span class="st">"When did the Oslo office open?"</span>, <span class="st">"2019"</span>,</span>
-<span>  <span class="st">"Refunds are processed within 5 business days."</span>, <span class="st">"How many business days do refunds take?"</span>, <span class="st">"5"</span>,</span>
-<span>  <span class="st">"The Lisbon office has 18 staff."</span>, <span class="st">"When did the Lisbon office open?"</span>, <span class="st">"unknown"</span>,</span>
-<span>  <span class="st">"The API allows 600 requests per minute."</span>, <span class="st">"How many requests per minute does the API allow?"</span>, <span class="st">"600"</span>,</span>
-<span>  <span class="st">"Maria Lopez leads the data platform team."</span>, <span class="st">"Who leads the data platform team?"</span>, <span class="st">"Maria Lopez"</span>,</span>
-<span>  <span class="st">"Backups run nightly at 02:00 UTC."</span>, <span class="st">"How long are backups kept?"</span>, <span class="st">"unknown"</span>,</span>
-<span>  <span class="st">"Support tickets are answered within 4 hours."</span>, <span class="st">"How fast are support tickets answered?"</span>, <span class="st">"4 hours"</span>,</span>
-<span>  <span class="st">"The Berlin office moved to Mitte in 2021."</span>, <span class="st">"How many staff work in the Berlin office?"</span>, <span class="st">"unknown"</span></span>
+<span><span class="va">trainset</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  context <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>    <span class="st">"The North Hall opened in 2018."</span>,</span>
+<span>    <span class="st">"Refunds are processed in 5 business days."</span>,</span>
+<span>    <span class="st">"The Kyoto office employs 12 analysts."</span>,</span>
+<span>    <span class="st">"Support is available every Tuesday."</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  question <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>    <span class="st">"Which year did North Hall open?"</span>,</span>
+<span>    <span class="st">"How long do refunds take?"</span>,</span>
+<span>    <span class="st">"How many analysts work in Kyoto?"</span>,</span>
+<span>    <span class="st">"Which weekday is support available?"</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  answer <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"2018"</span>, <span class="st">"5 business days"</span>, <span class="st">"12"</span>, <span class="st">"Tuesday"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
-<span><span class="va">trainset</span> <span class="op">&lt;-</span> <span class="va">examples</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">4</span>, <span class="op">]</span></span>
-<span><span class="va">valset</span> <span class="op">&lt;-</span> <span class="va">examples</span><span class="op">[</span><span class="fl">5</span><span class="op">:</span><span class="fl">8</span>, <span class="op">]</span></span></code></pre></div>
-</div>
-<div class="section level2">
-<h2 id="keep-code-execution-sandboxed">Keep code execution sandboxed<a class="anchor" aria-label="anchor" href="#keep-code-execution-sandboxed"></a>
-</h2>
-<p>The agent can ask to run R code to analyze the program, the frontier,
-and the training rows. The harnesses require an operating-system sandbox
-for that code by default. <code><a href="../reference/mcp_repl_runner.html">mcp_repl_runner()</a></code> provides one by
-launching Posit’s open-source <a href="https://github.com/posit-dev/mcp-repl" class="external-link">mcp-repl</a>, a persistent
-R session behind one MCP tool. Install the executable and the R
-client:</p>
-<div class="sourceCode" id="cb2"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="ex">uv</span> tool install posit-mcp-repl   <span class="co"># or: pipx install posit-mcp-repl</span></span>
-<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="ex">Rscript</span> <span class="at">-e</span> <span class="st">'install.packages("mcptools")'</span></span></code></pre></div>
-<p>Then create the runner:</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">runner</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mcp_repl_runner.html">mcp_repl_runner</a></span><span class="op">(</span></span>
-<span>  sandbox <span class="op">=</span> <span class="st">"workspace-write"</span>,</span>
-<span>  timeout <span class="op">=</span> <span class="fl">30</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p>The managed sandbox disables network access and limits writes to the
-workspace and temporary paths. The session stays alive across calls, so
-an agent can load a package or build an analysis once and keep working
-with it; <code>runner$reset()</code> starts a clean session. Code,
-results and context have size limits, listed in <a href="how-rlm-works.html#limits">How RLM works</a>.</p>
-<p>A runner built around your own
-<code>repl = function(input, timeout_ms)</code> is different: dsprrr did
-not launch that server and cannot vouch for its isolation, so the runner
-reports <code>sandboxed = FALSE</code> and the harnesses reject it.
-<code><a href="../reference/r_code_runner.html">r_code_runner()</a></code> is rejected for the same reason: its callr
-process keeps your user’s permissions and is not a security
-boundary.</p>
-<p>Set <code>sandbox = FALSE</code> on a harness only to remove the
-sandbox action entirely. Any supplied runner is then ignored; the agent
-can still propose edits but cannot run code.</p>
-</div>
-<div class="section level2">
-<h2 id="autoresearch-one-persistent-research-session">AutoResearch: one persistent research session<a class="anchor" aria-label="anchor" href="#autoresearch-one-persistent-research-session"></a>
-</h2>
-<p>Use separate chats for the program under test and the research agent.
-That keeps task traces, model choice, and cost attribution apart.</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ellmer.tidyverse.org" class="external-link">ellmer</a></span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">task_chat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-luna"</span><span class="op">)</span></span>
-<span><span class="va">research_chat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_anthropic.html" class="external-link">chat_anthropic</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"claude-sonnet-4-5"</span><span class="op">)</span></span>
+<span><span class="va">valset</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  context <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>    <span class="st">"The Cedar lab opened in 2021."</span>,</span>
+<span>    <span class="st">"Standard returns are completed in 7 business days."</span>,</span>
+<span>    <span class="st">"The Porto office employs 18 staff."</span>,</span>
+<span>    <span class="st">"Releases ship every Thursday."</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  question <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>    <span class="st">"Which year did Cedar lab open?"</span>,</span>
+<span>    <span class="st">"How long do standard returns take?"</span>,</span>
+<span>    <span class="st">"How many staff work in Porto?"</span>,</span>
+<span>    <span class="st">"Which weekday do releases ship?"</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  answer <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"2021"</span>, <span class="st">"7 business days"</span>, <span class="st">"18"</span>, <span class="st">"Thursday"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">holdout</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  context <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>    <span class="st">"The Field team launched in 2016."</span>,</span>
+<span>    <span class="st">"Replacement parts arrive in 3 business days."</span>,</span>
+<span>    <span class="st">"The Tallinn group has 9 engineers."</span>,</span>
+<span>    <span class="st">"Backups are checked every Friday."</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  question <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>    <span class="st">"Which year did the Field team start?"</span>,</span>
+<span>    <span class="st">"How long do replacement parts take?"</span>,</span>
+<span>    <span class="st">"How many engineers are in Tallinn?"</span>,</span>
+<span>    <span class="st">"Which weekday are backups checked?"</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  answer <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"2016"</span>, <span class="st">"3 business days"</span>, <span class="st">"9"</span>, <span class="st">"Friday"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">find_evidence</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
+<span>    <span class="st">"context, question -&gt; evidence: string"</span>,</span>
+<span>    instructions <span class="op">=</span> <span class="st">"Quote the supplied context as evidence."</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  template <span class="op">=</span> <span class="st">"Question: {question}\nContext: {context}\nEvidence:"</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">answer_from_evidence</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
+<span>    <span class="st">"evidence -&gt; answer: string"</span>,</span>
+<span>    instructions <span class="op">=</span> <span class="st">"Return the first word of the evidence as the answer."</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  template <span class="op">=</span> <span class="st">"Evidence: {evidence}\nAnswer:"</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">qa_program</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pipeline.html">pipeline</a></span><span class="op">(</span><span class="va">find_evidence</span>, <span class="va">answer_from_evidence</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">metric</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metric_with_feedback.html">metric_with_feedback</a></span><span class="op">(</span></span>
 <span>  <span class="kw">function</span><span class="op">(</span><span class="va">prediction</span>, <span class="va">expected</span><span class="op">)</span> <span class="op">{</span></span>
@@ -287,200 +232,166 @@ That keeps task traces, model choice, and cost attribution apart.</p>
 <span>        <span class="st">"Correct."</span></span>
 <span>      <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span></span>
 <span>        <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span></span>
-<span>          <span class="st">"Expected '"</span>, <span class="va">expected</span><span class="op">$</span><span class="va">answer</span>,</span>
-<span>          <span class="st">"' but got '"</span>, <span class="va">prediction</span><span class="op">$</span><span class="va">answer</span>, <span class="st">"'."</span></span>
+<span>          <span class="st">"Expected '"</span>,</span>
+<span>          <span class="va">expected</span><span class="op">$</span><span class="va">answer</span>,</span>
+<span>          <span class="st">"' but got '"</span>,</span>
+<span>          <span class="va">prediction</span><span class="op">$</span><span class="va">answer</span>,</span>
+<span>          <span class="st">"'. Preserve the full value."</span></span>
 <span>        <span class="op">)</span></span>
 <span>      <span class="op">}</span></span>
 <span>    <span class="op">)</span></span>
 <span>  <span class="op">}</span>,</span>
 <span>  field <span class="op">=</span> <span class="st">"answer"</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">research</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/AutoResearch.html">AutoResearch</a></span><span class="op">(</span></span>
-<span>  metric <span class="op">=</span> <span class="va">metric</span>,</span>
-<span>  max_iterations <span class="op">=</span> <span class="fl">16L</span>,</span>
-<span>  patience <span class="op">=</span> <span class="fl">5L</span>,</span>
-<span>  target_score <span class="op">=</span> <span class="fl">0.95</span>,</span>
-<span>  max_context_examples <span class="op">=</span> <span class="fl">20L</span>,</span>
-<span>  max_feedback_examples <span class="op">=</span> <span class="fl">8L</span>,</span>
-<span>  seed <span class="op">=</span> <span class="fl">42L</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span></span>
-<span>  <span class="va">qa_program</span>,</span>
-<span>  <span class="va">research</span>,</span>
-<span>  <span class="va">trainset</span>,</span>
-<span>  valset <span class="op">=</span> <span class="va">valset</span>,</span>
-<span>  .llm <span class="op">=</span> <span class="va">task_chat</span>,</span>
-<span>  .agent_llm <span class="op">=</span> <span class="va">research_chat</span>,</span>
-<span>  runner <span class="op">=</span> <span class="va">runner</span>,</span>
-<span>  objective <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span></span>
-<span>    <span class="st">"Answer from supplied evidence."</span>,</span>
-<span>    <span class="st">"Do not invent facts when the context is insufficient."</span></span>
-<span>  <span class="op">)</span>,</span>
-<span>  .cache <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p>The harnesses also accept <code><a href="../reference/metric_with_trace.html">metric_with_trace()</a></code> metrics,
-which can score a row from its <code>status</code>, ordered
-<code>events</code>, and module <code>metadata</code>. Candidate
-selection stays in the trusted R evaluator either way.</p>
-<p>On each turn the agent must choose one action:</p>
-<table class="table">
-<colgroup>
-<col width="50%">
-<col width="50%">
-</colgroup>
-<thead><tr class="header">
-<th>Action</th>
-<th>What the agent does</th>
-</tr></thead>
-<tbody>
-<tr class="odd">
-<td><code>sandbox</code></td>
-<td>Runs R code against a <code>.context</code> holding the objective,
-the editable program manifest, visible training rows, and the current
-frontier</td>
-</tr>
-<tr class="even">
-<td><code>propose</code></td>
-<td>Branches from a known candidate and submits one candidate: complete
-replacement instructions or templates at one or more module paths</td>
-</tr>
-<tr class="odd">
-<td><code>finish</code></td>
-<td>Stops, when another experiment is unlikely to help</td>
-</tr>
-</tbody>
-</table>
-<p>The agent decides the research policy, but it cannot write into the
-module or the evaluator directly. dsprrr re-validates and applies every
-candidate.</p>
-</div>
-<div class="section level2">
-<h2 id="meta-harness-fresh-proposers-trusted-selection">Meta-Harness: fresh proposers, trusted selection<a class="anchor" aria-label="anchor" href="#meta-harness-fresh-proposers-trusted-selection"></a>
-</h2>
-<p>Meta-Harness creates a fresh proposer chat for each outer iteration,
-so the proposer reasons from the persisted evidence rather than from
-earlier conversation. Pass an ellmer <code>Chat</code>; dsprrr clones it
-and clears its turns before each iteration:</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">harness</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/MetaHarness.html">MetaHarness</a></span><span class="op">(</span></span>
-<span>  metric <span class="op">=</span> <span class="va">metric</span>,</span>
-<span>  max_iterations <span class="op">=</span> <span class="fl">8L</span>,</span>
-<span>  max_candidates_per_iteration <span class="op">=</span> <span class="fl">4L</span>,</span>
-<span>  frontier_size <span class="op">=</span> <span class="fl">8L</span>,</span>
-<span>  patience <span class="op">=</span> <span class="fl">3L</span>,</span>
-<span>  seed <span class="op">=</span> <span class="fl">42L</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span></span>
-<span>  <span class="va">qa_program</span>,</span>
-<span>  <span class="va">harness</span>,</span>
-<span>  <span class="va">trainset</span>,</span>
-<span>  valset <span class="op">=</span> <span class="va">valset</span>,</span>
-<span>  .llm <span class="op">=</span> <span class="va">task_chat</span>,</span>
-<span>  .agent_llm <span class="op">=</span> <span class="va">research_chat</span>,</span>
-<span>  runner <span class="op">=</span> <span class="va">runner</span>,</span>
-<span>  objective <span class="op">=</span> <span class="st">"Improve factual accuracy without increasing abstention errors."</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p>Meta-Harness rejects agents that are not ellmer chats, or that cannot
-be cloned, because reusing them could carry hidden conversation state
-across iterations.</p>
-<p>Within an iteration, the proposer may request a few sandbox steps
-before it submits its batch. The outer loop then:</p>
-<ol style="list-style-type: decimal">
-<li>builds each proposal from its declared parent;</li>
-<li>rejects invalid or duplicate candidates;</li>
-<li>evaluates every unique candidate that fits the remaining
-budget;</li>
-<li>updates the scored frontier; and</li>
-<li>checkpoints the new lineage before starting a fresh proposer.</li>
-</ol>
-<p>The agent can inspect and hypothesize, but the scorer, the budget,
-and the accepted state stay with the host.</p>
-</div>
-<div class="section level2">
-<h2 id="joint-pipeline-edits">Joint pipeline edits<a class="anchor" aria-label="anchor" href="#joint-pipeline-edits"></a>
-</h2>
-<p>Candidates address modules by the paths that
-<code><a href="../reference/module-graph.html">named_parameters()</a></code> reports. They stay stable within one
-program:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="fu"><a href="../reference/module-graph.html">named_parameters</a></span><span class="op">(</span><span class="va">qa_program</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] "$/steps/1" "$/steps/2"</span></span></code></pre></div>
-<p>One candidate may replace fields at several paths. Here, a candidate
-can change the evidence step to write <code>NONE</code> when the context
-does not answer the question, and change the answer step to reply
-<code>unknown</code> when it sees <code>NONE</code>. The candidate
-ledger stores the complete resulting snapshot, not only the patch, so
-fingerprints, resumes, and comparisons are exact.</p>
-<p>Compiled and frozen modules are boundaries: the harnesses do not edit
-them or anything inside them. To let the agent edit an inner component,
-change the program before compiling rather than asking the agent to get
-around the boundary.</p>
-</div>
-<div class="section level2">
-<h2 id="budget-every-kind-of-work">Budget every kind of work<a class="anchor" aria-label="anchor" href="#budget-every-kind-of-work"></a>
-</h2>
-<p>The shared optimizer ledger counts baseline and candidate evaluations
-as trials, and tracks program calls and tokens during evaluation,
-proposer calls and tokens, metric calls, cost, elapsed time, and
-errors:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">control</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/optimizer_control.html">optimizer_control</a></span><span class="op">(</span></span>
-<span>  max_trials <span class="op">=</span> <span class="fl">25L</span>,</span>
-<span>  max_metric_calls <span class="op">=</span> <span class="fl">200L</span>,</span>
-<span>  max_provider_calls <span class="op">=</span> <span class="fl">250L</span>,</span>
-<span>  max_total_tokens <span class="op">=</span> <span class="fl">500000L</span>,</span>
-<span>  max_cost <span class="op">=</span> <span class="fl">10</span>,</span>
-<span>  max_elapsed_seconds <span class="op">=</span> <span class="fl">1800</span>,</span>
-<span>  checkpoint_path <span class="op">=</span> <span class="st">"meta-harness-checkpoint.rds"</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span></span>
-<span>  <span class="va">qa_program</span>,</span>
-<span>  <span class="va">harness</span>,</span>
-<span>  <span class="va">trainset</span>,</span>
-<span>  valset <span class="op">=</span> <span class="va">valset</span>,</span>
-<span>  .llm <span class="op">=</span> <span class="va">task_chat</span>,</span>
-<span>  .agent_llm <span class="op">=</span> <span class="va">research_chat</span>,</span>
-<span>  runner <span class="op">=</span> <span class="va">runner</span>,</span>
-<span>  control <span class="op">=</span> <span class="va">control</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p>A finite provider, token, or cost cap stops the run when a chat
-cannot report its usage, rather than running unmetered. A stopped run
-returns its best partial program and says why it stopped:</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">compiled</span><span class="op">)</span><span class="op">$</span><span class="va">budget</span></span>
-<span><span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">compiled</span><span class="op">)</span><span class="op">$</span><span class="va">stop_reason</span></span>
-<span><span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">compiled</span><span class="op">)</span><span class="op">$</span><span class="va">status</span></span></code></pre></div>
-</div>
-<div class="section level2">
-<h2 id="resume-and-audit-a-run">Resume and audit a run<a class="anchor" aria-label="anchor" href="#resume-and-audit-a-run"></a>
-</h2>
-<p>Both harnesses support optimizer checkpoints. Resume with the same
-program, data, metric, and harness configuration; resource limits may be
-raised:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">resumed</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span></span>
-<span>  <span class="va">qa_program</span>,</span>
-<span>  <span class="va">harness</span>,</span>
-<span>  <span class="va">trainset</span>,</span>
-<span>  valset <span class="op">=</span> <span class="va">valset</span>,</span>
-<span>  .llm <span class="op">=</span> <span class="va">task_chat</span>,</span>
-<span>  .agent_llm <span class="op">=</span> <span class="va">research_chat</span>,</span>
-<span>  runner <span class="op">=</span> <span class="va">runner</span>,</span>
-<span>  control <span class="op">=</span> <span class="fu"><a href="../reference/optimizer_control.html">optimizer_control</a></span><span class="op">(</span></span>
-<span>    max_trials <span class="op">=</span> <span class="fl">40L</span>,</span>
-<span>    max_cost <span class="op">=</span> <span class="fl">20</span>,</span>
-<span>    checkpoint_path <span class="op">=</span> <span class="st">"meta-harness-checkpoint.rds"</span>,</span>
-<span>    resume <span class="op">=</span> <span class="cn">TRUE</span></span>
+<p>Before either search starts, inspect the same paths and fields the
+harness allows. <code><a href="../reference/module-graph.html">named_parameters()</a></code> reports the stable
+module paths; instructions and prompt templates are the editable values
+on each leaf module.</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">editable_manifest</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">program</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">modules</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module-graph.html">named_parameters</a></span><span class="op">(</span></span>
+<span>    <span class="va">program</span>,</span>
+<span>    include_root <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>    boundaries <span class="op">=</span> <span class="st">"respect"</span></span>
 <span>  <span class="op">)</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p>The candidate ledger is attached to the returned module:</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">candidates</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">resumed</span><span class="op">)</span><span class="op">$</span><span class="va">trials</span></span>
-<span><span class="va">candidates</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>    path <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">modules</span><span class="op">)</span>,</span>
+<span>    editable <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span></span>
+<span>      <span class="va">modules</span>,</span>
+<span>      <span class="kw">function</span><span class="op">(</span><span class="va">component</span><span class="op">)</span> <span class="op">{</span></span>
+<span>        <span class="va">fields</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="op">)</span></span>
+<span>        <span class="va">instructions</span> <span class="op">&lt;-</span> <span class="kw"><a href="https://rdrr.io/r/base/conditions.html" class="external-link">tryCatch</a></span><span class="op">(</span></span>
+<span>          <span class="va">component</span><span class="op">$</span><span class="va">signature</span><span class="op">@</span><span class="va">instructions</span>,</span>
+<span>          error <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">e</span><span class="op">)</span> <span class="cn">NULL</span></span>
+<span>        <span class="op">)</span></span>
+<span>        <span class="va">template</span> <span class="op">&lt;-</span> <span class="kw"><a href="https://rdrr.io/r/base/conditions.html" class="external-link">tryCatch</a></span><span class="op">(</span><span class="va">component</span><span class="op">$</span><span class="va">template</span>, error <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">e</span><span class="op">)</span> <span class="cn">NULL</span><span class="op">)</span></span>
+<span>        <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">is.character</a></span><span class="op">(</span><span class="va">instructions</span><span class="op">)</span> <span class="op">&amp;&amp;</span> <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">instructions</span><span class="op">)</span> <span class="op">==</span> <span class="fl">1L</span><span class="op">)</span> <span class="op">{</span></span>
+<span>          <span class="va">fields</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">fields</span>, <span class="st">"instructions"</span><span class="op">)</span></span>
+<span>        <span class="op">}</span></span>
+<span>        <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">is.character</a></span><span class="op">(</span><span class="va">template</span><span class="op">)</span> <span class="op">&amp;&amp;</span> <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">template</span><span class="op">)</span> <span class="op">==</span> <span class="fl">1L</span><span class="op">)</span> <span class="op">{</span></span>
+<span>          <span class="va">fields</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">fields</span>, <span class="st">"template"</span><span class="op">)</span></span>
+<span>        <span class="op">}</span></span>
+<span>        <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">fields</span>, collapse <span class="op">=</span> <span class="st">", "</span><span class="op">)</span></span>
+<span>      <span class="op">}</span>,</span>
+<span>      <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
+<span>    <span class="op">)</span>,</span>
+<span>    row.names <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">}</span></span>
+<span></span>
+<span><span class="fu">editable_manifest</span><span class="op">(</span><span class="va">qa_program</span><span class="op">)</span></span>
+<span><span class="co">#&gt;        path               editable</span></span>
+<span><span class="co">#&gt; 1 $/steps/1 instructions, template</span></span>
+<span><span class="co">#&gt; 2 $/steps/2 instructions, template</span></span></code></pre></div>
+<p>For this pipeline the manifest contains <code>$/steps/1</code> and
+<code>$/steps/2</code>, each with <code>instructions</code> and
+<code>template</code>. A proposal that names another path or field is
+rejected before evaluation. An edit replaces a field’s complete value;
+it does not run module source code.</p>
+</div>
+<div class="section level2">
+<h2 id="create-deterministic-offline-chat-fixtures">Create deterministic offline Chat fixtures<a class="anchor" aria-label="anchor" href="#create-deterministic-offline-chat-fixtures"></a>
+</h2>
+<p>These small fixtures implement the ellmer Chat methods used by
+<code><a href="../reference/compile.html">compile()</a></code>. The task fixture reads the rendered prompts and
+returns scripted answers. The proposer fixture returns prewritten
+actions and records each session id and prompt. The support file ships
+with the package and its implementation is available in the collapsed
+appendix. No credentials, provider requests, network access, or R
+interpreter service are used by either executed search.</p>
+<p>Run this setup once before either journey to load the supplied
+fixtures into your R session:</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">fixture_file</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span></span>
+<span>  <span class="st">"examples"</span>,</span>
+<span>  <span class="st">"agentic-optimization-harnesses.R"</span>,</span>
+<span>  package <span class="op">=</span> <span class="st">"dsprrr"</span>,</span>
+<span>  mustWork <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/source.html" class="external-link">source</a></span><span class="op">(</span><span class="va">fixture_file</span>, local <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
+<p>The fixture’s rules make the transition explicit: the baseline quotes
+the context, the first candidate extracts the requested value, and only
+the coordinated candidate preserves the full multiword value through
+both stages. That deterministic behavior is a teaching device, not a
+model of general language understanding.</p>
+</div>
+<div class="section level2">
+<h2 id="autoresearch-one-persistent-research-session">AutoResearch: one persistent research session<a class="anchor" aria-label="anchor" href="#autoresearch-one-persistent-research-session"></a>
+</h2>
+<p>AutoResearch evaluates the baseline, then lets one proposer submit
+one candidate at a time. The first edit changes only the evidence step.
+It raises the score, but the answer step still truncates
+<code>7 business days</code>. The second proposal edits both steps and
+reaches the target score.</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">auto_agent_audit</span> <span class="op">&lt;-</span> <span class="fu">new_offline_audit</span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="va">auto_script</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/environment.html" class="external-link">new.env</a></span><span class="op">(</span>parent <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/environment.html" class="external-link">emptyenv</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">auto_script</span><span class="op">$</span><span class="va">next_action</span> <span class="op">&lt;-</span> <span class="fl">0L</span></span>
+<span><span class="va">auto_actions</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>  <span class="fu">action_propose</span><span class="op">(</span></span>
+<span>    <span class="st">"Extract evidence first; this tests whether the answer step can use it."</span>,</span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fu">candidate</span><span class="op">(</span></span>
+<span>      <span class="st">"evidence-only"</span>,</span>
+<span>      <span class="st">"The downstream step may still truncate a multiword value."</span>,</span>
+<span>      <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">edit_evidence_only</span><span class="op">)</span></span>
+<span>    <span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  <span class="fu">action_propose</span><span class="op">(</span></span>
+<span>    <span class="st">"The answer step must preserve the complete extracted value."</span>,</span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fu">candidate</span><span class="op">(</span></span>
+<span>      <span class="st">"coordinated-pipeline"</span>,</span>
+<span>      <span class="st">"Update the evidence and answer contracts together."</span>,</span>
+<span>      <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">edit_evidence_only</span>, <span class="va">edit_answer</span><span class="op">)</span></span>
+<span>    <span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">auto_agent_responder</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">prompt</span>, <span class="va">type</span>, <span class="va">...</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">auto_script</span><span class="op">$</span><span class="va">next_action</span> <span class="op">&lt;-</span> <span class="va">auto_script</span><span class="op">$</span><span class="va">next_action</span> <span class="op">+</span> <span class="fl">1L</span></span>
+<span>  <span class="va">auto_actions</span><span class="op">[[</span><span class="va">auto_script</span><span class="op">$</span><span class="va">next_action</span><span class="op">]</span><span class="op">]</span></span>
+<span><span class="op">}</span></span>
+<span><span class="va">auto_agent</span> <span class="op">&lt;-</span> <span class="fu">new_offline_chat</span><span class="op">(</span></span>
+<span>  <span class="st">"offline-autoresearch-proposer"</span>,</span>
+<span>  <span class="va">auto_agent_responder</span>,</span>
+<span>  <span class="va">auto_agent_audit</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">auto_call_start</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">task_audit</span><span class="op">$</span><span class="va">calls</span><span class="op">)</span></span>
+<span><span class="va">auto_compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span></span>
+<span>  <span class="va">qa_program</span>,</span>
+<span>  <span class="fu"><a href="../reference/AutoResearch.html">AutoResearch</a></span><span class="op">(</span></span>
+<span>    metric <span class="op">=</span> <span class="va">metric</span>,</span>
+<span>    max_iterations <span class="op">=</span> <span class="fl">2L</span>,</span>
+<span>    patience <span class="op">=</span> <span class="fl">2L</span>,</span>
+<span>    target_score <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>    seed <span class="op">=</span> <span class="fl">42L</span>,</span>
+<span>    sandbox <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>    verbose <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  <span class="va">trainset</span>,</span>
+<span>  valset <span class="op">=</span> <span class="va">valset</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="va">task_chat</span>,</span>
+<span>  .agent_llm <span class="op">=</span> <span class="va">auto_agent</span>,</span>
+<span>  control <span class="op">=</span> <span class="fu"><a href="../reference/optimizer_control.html">optimizer_control</a></span><span class="op">(</span></span>
+<span>    max_trials <span class="op">=</span> <span class="fl">4L</span>,</span>
+<span>    max_metric_calls <span class="op">=</span> <span class="fl">20L</span>,</span>
+<span>    max_provider_calls <span class="op">=</span> <span class="fl">40L</span>,</span>
+<span>    progress <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  .cache <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  objective <span class="op">=</span> <span class="st">"Answer from the context and preserve the complete value."</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">auto_task_calls</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">task_audit</span><span class="op">$</span><span class="va">calls</span><span class="op">)</span> <span class="op">-</span> <span class="va">auto_call_start</span></span>
+<span><span class="va">auto_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">auto_compiled</span><span class="op">)</span></span>
+<span><span class="fu">result_summary</span><span class="op">(</span><span class="va">auto_result</span><span class="op">)</span></span>
+<span><span class="co">#&gt;      optimizer    status baseline_score best_score  stop_reason</span></span>
+<span><span class="co">#&gt; 1 AutoResearch completed              0          1 target_score</span></span></code></pre></div>
+<p>The result reports a 0.00 baseline and a 1.00 best validation score.
+Inspect the candidate ledger to see that the first, single-stage edit
+scored 0.75, then the coordinated edit won. <code>parent_id</code>
+records which candidate the next experiment branched from.</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">auto_trials</span> <span class="op">&lt;-</span> <span class="va">auto_result</span><span class="op">$</span><span class="va">trials</span></span>
+<span><span class="va">auto_trials</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
 <span>  <span class="st">"id"</span>,</span>
 <span>  <span class="st">"parent_id"</span>,</span>
 <span>  <span class="st">"name"</span>,</span>
@@ -489,78 +400,899 @@ raised:</p>
 <span>  <span class="st">"selected"</span>,</span>
 <span>  <span class="st">"status"</span></span>
 <span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 3 × 7</span></span></span>
+<span><span class="co">#&gt;   id                       parent_id       name  iteration score selected status</span></span>
+<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>                    <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>           <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;lgl&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> baseline-594b4430aa07    <span style="color: #BB0000;">NA</span>              base…         0  0    FALSE    evalu…</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> candidate-1-3d25bbaa446c baseline-594b4… evid…         1  0.75 FALSE    evalu…</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> candidate-2-7bae3460a9c0 candidate-1-3d… coor…         2  1    TRUE     evalu…</span></span>
+<span><span class="va">auto_result</span><span class="op">$</span><span class="va">lineage</span></span>
+<span><span class="co">#&gt; $best_candidate_id</span></span>
+<span><span class="co">#&gt; [1] "candidate-2-7bae3460a9c0"</span></span>
+<span><span class="va">auto_result</span><span class="op">$</span><span class="va">stop_reason</span></span>
+<span><span class="co">#&gt; [1] "target_score"</span></span>
+<span><span class="fu">budget_summary</span><span class="op">(</span><span class="va">auto_result</span><span class="op">)</span></span>
+<span><span class="co">#&gt;   trials metric_calls provider_calls errors elapsed_seconds stopped max_trials</span></span>
+<span><span class="co">#&gt; 1      3           12             26      0           1.329   FALSE          4</span></span>
+<span><span class="co">#&gt;   max_metric_calls max_provider_calls</span></span>
+<span><span class="co">#&gt; 1               20                 40</span></span>
+<span><span class="va">auto_agent_sessions</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span></span>
+<span>  <span class="va">auto_agent_audit</span><span class="op">$</span><span class="va">calls</span>,</span>
+<span>  <span class="va">`[[`</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span>,</span>
+<span>  <span class="st">"session_id"</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  proposer_call <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_along</a></span><span class="op">(</span><span class="va">auto_agent_sessions</span><span class="op">)</span>,</span>
+<span>  session_id <span class="op">=</span> <span class="va">auto_agent_sessions</span>,</span>
+<span>  row.names <span class="op">=</span> <span class="cn">NULL</span></span>
+<span><span class="op">)</span></span>
+<span><span class="co">#&gt;   proposer_call                    session_id</span></span>
+<span><span class="co">#&gt; 1             1 offline-autoresearch-proposer</span></span>
+<span><span class="co">#&gt; 2             2 offline-autoresearch-proposer</span></span>
 <span></span>
-<span><span class="co"># Complete per-candidate program state and evaluation feedback:</span></span>
-<span><span class="va">candidates</span><span class="op">$</span><span class="va">snapshot</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span></span>
-<span><span class="va">candidates</span><span class="op">$</span><span class="va">feedback</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span></span>
-<span></span>
-<span><span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">resumed</span><span class="op">)</span><span class="op">$</span><span class="va">extensions</span><span class="op">$</span><span class="va">meta_harness</span><span class="op">$</span><span class="va">frontier_ids</span></span>
-<span><span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">resumed</span><span class="op">)</span><span class="op">$</span><span class="va">extensions</span><span class="op">$</span><span class="va">meta_harness</span><span class="op">$</span><span class="va">events</span></span>
-<span><span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">resumed</span><span class="op">)</span><span class="op">$</span><span class="va">stop_reason</span></span></code></pre></div>
-<p>With <code>log_dir</code> in the teleprompter or
-<code><a href="../reference/optimizer_control.html">optimizer_control()</a></code>, evaluations are also written through
-<code>TrialLog</code>.</p>
-<p>Resuming restores candidate lineage, evaluation evidence, budgets,
-and random-number state. It does not restore the agent’s conversation or
-the mcp-repl session; the resumed run uses the chat and runner you
-pass.</p>
-</div>
-<div class="section level2">
-<h2 id="compose-harnesses-with-omni">Compose harnesses with Omni<a class="anchor" aria-label="anchor" href="#compose-harnesses-with-omni"></a>
-</h2>
-<p>The harnesses are ordinary teleprompters, so <code><a href="../reference/Omni.html">Omni()</a></code> can
-run them as explorers. Pass their agent and runner through the
-per-explorer arguments:</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">omni</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/Omni.html">Omni</a></span><span class="op">(</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span></span>
+<span>  <span class="va">auto_result</span><span class="op">$</span><span class="va">baseline_score</span> <span class="op">==</span> <span class="fl">0</span>,</span>
+<span>  <span class="va">auto_trials</span><span class="op">$</span><span class="va">score</span><span class="op">[</span><span class="va">auto_trials</span><span class="op">$</span><span class="va">name</span> <span class="op">==</span> <span class="st">"evidence-only"</span><span class="op">]</span> <span class="op">==</span> <span class="fl">0.75</span>,</span>
+<span>  <span class="va">auto_result</span><span class="op">$</span><span class="va">best_score</span> <span class="op">==</span> <span class="fl">1</span>,</span>
+<span>  <span class="va">auto_trials</span><span class="op">$</span><span class="va">selected</span><span class="op">[</span><span class="va">auto_trials</span><span class="op">$</span><span class="va">name</span> <span class="op">==</span> <span class="st">"coordinated-pipeline"</span><span class="op">]</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/unique.html" class="external-link">unique</a></span><span class="op">(</span><span class="va">auto_agent_sessions</span><span class="op">)</span><span class="op">)</span> <span class="op">==</span> <span class="fl">1L</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="va">auto_result</span><span class="op">$</span><span class="va">stop_reason</span>, <span class="st">"target_score"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>The displayed provider-call count is derived from in-process fixture
+calls; there are no billable requests, token totals, or cost totals in
+these runs.</p>
+<p>The compile result’s scores come from <code>valset</code>. Run
+<code><a href="../reference/evaluate.html">evaluate()</a></code> on the original and returned programs to inspect
+their actual predictions against the labels; these check calls are
+outside the optimizer’s recorded budget.</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">auto_baseline_validation</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span></span>
+<span>  <span class="va">qa_program</span>,</span>
+<span>  <span class="va">valset</span>,</span>
 <span>  metric <span class="op">=</span> <span class="va">metric</span>,</span>
-<span>  explorers <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    research <span class="op">=</span> <span class="fu"><a href="../reference/AutoResearch.html">AutoResearch</a></span><span class="op">(</span>metric <span class="op">=</span> <span class="va">metric</span>, max_iterations <span class="op">=</span> <span class="fl">6L</span><span class="op">)</span>,</span>
-<span>    meta <span class="op">=</span> <span class="fu"><a href="../reference/MetaHarness.html">MetaHarness</a></span><span class="op">(</span>metric <span class="op">=</span> <span class="va">metric</span>, max_iterations <span class="op">=</span> <span class="fl">4L</span><span class="op">)</span></span>
-<span>  <span class="op">)</span>,</span>
-<span>  continuation <span class="op">=</span> <span class="fu"><a href="../reference/BootstrapFewShotWithRandomSearch.html">BootstrapFewShotWithRandomSearch</a></span><span class="op">(</span>metric <span class="op">=</span> <span class="va">metric</span><span class="op">)</span></span>
+<span>  .llm <span class="op">=</span> <span class="va">task_chat</span>,</span>
+<span>  .cache <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  .progress <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">auto_best_validation</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span></span>
+<span>  <span class="va">auto_compiled</span>,</span>
+<span>  <span class="va">valset</span>,</span>
+<span>  metric <span class="op">=</span> <span class="va">metric</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="va">task_chat</span>,</span>
+<span>  .cache <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  .progress <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span></span>
+<span><span class="va">auto_validation_rows</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  question <span class="op">=</span> <span class="va">valset</span><span class="op">$</span><span class="va">question</span>,</span>
+<span>  expected <span class="op">=</span> <span class="va">valset</span><span class="op">$</span><span class="va">answer</span>,</span>
+<span>  baseline <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span></span>
+<span>    <span class="va">auto_baseline_validation</span><span class="op">$</span><span class="va">predictions</span>,</span>
+<span>    <span class="va">`[[`</span>,</span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span>,</span>
+<span>    <span class="st">"answer"</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  returned_program <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span></span>
+<span>    <span class="va">auto_best_validation</span><span class="op">$</span><span class="va">predictions</span>,</span>
+<span>    <span class="va">`[[`</span>,</span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span>,</span>
+<span>    <span class="st">"answer"</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  score <span class="op">=</span> <span class="va">auto_best_validation</span><span class="op">$</span><span class="va">scores</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">auto_validation_rows</span></span>
+<span><span class="co">#&gt;                             question        expected baseline returned_program</span></span>
+<span><span class="co">#&gt; 1     Which year did Cedar lab open?            2021      The             2021</span></span>
+<span><span class="co">#&gt; 2 How long do standard returns take? 7 business days Standard  7 business days</span></span>
+<span><span class="co">#&gt; 3      How many staff work in Porto?              18      The               18</span></span>
+<span><span class="co">#&gt; 4    Which weekday do releases ship?        Thursday Releases         Thursday</span></span>
+<span><span class="co">#&gt;   score</span></span>
+<span><span class="co">#&gt; 1     1</span></span>
+<span><span class="co">#&gt; 2     1</span></span>
+<span><span class="co">#&gt; 3     1</span></span>
+<span><span class="co">#&gt; 4     1</span></span>
+<span></span>
+<span><span class="va">auto_baseline_holdout</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span></span>
 <span>  <span class="va">qa_program</span>,</span>
-<span>  <span class="va">omni</span>,</span>
+<span>  <span class="va">holdout</span>,</span>
+<span>  metric <span class="op">=</span> <span class="va">metric</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="va">task_chat</span>,</span>
+<span>  .cache <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  .progress <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">auto_best_holdout</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span></span>
+<span>  <span class="va">auto_compiled</span>,</span>
+<span>  <span class="va">holdout</span>,</span>
+<span>  metric <span class="op">=</span> <span class="va">metric</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="va">task_chat</span>,</span>
+<span>  .cache <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  .progress <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">auto_holdout_rows</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  question <span class="op">=</span> <span class="va">holdout</span><span class="op">$</span><span class="va">question</span>,</span>
+<span>  expected <span class="op">=</span> <span class="va">holdout</span><span class="op">$</span><span class="va">answer</span>,</span>
+<span>  baseline <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span></span>
+<span>    <span class="va">auto_baseline_holdout</span><span class="op">$</span><span class="va">predictions</span>,</span>
+<span>    <span class="va">`[[`</span>,</span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span>,</span>
+<span>    <span class="st">"answer"</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  returned_program <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span></span>
+<span>    <span class="va">auto_best_holdout</span><span class="op">$</span><span class="va">predictions</span>,</span>
+<span>    <span class="va">`[[`</span>,</span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span>,</span>
+<span>    <span class="st">"answer"</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  score <span class="op">=</span> <span class="va">auto_best_holdout</span><span class="op">$</span><span class="va">scores</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">auto_holdout_rows</span></span>
+<span><span class="co">#&gt;                               question        expected    baseline</span></span>
+<span><span class="co">#&gt; 1 Which year did the Field team start?            2016         The</span></span>
+<span><span class="co">#&gt; 2  How long do replacement parts take? 3 business days Replacement</span></span>
+<span><span class="co">#&gt; 3   How many engineers are in Tallinn?               9         The</span></span>
+<span><span class="co">#&gt; 4   Which weekday are backups checked?          Friday     Backups</span></span>
+<span><span class="co">#&gt;   returned_program score</span></span>
+<span><span class="co">#&gt; 1             2016     1</span></span>
+<span><span class="co">#&gt; 2  3 business days     1</span></span>
+<span><span class="co">#&gt; 3                9     1</span></span>
+<span><span class="co">#&gt; 4           Friday     1</span></span>
+<span></span>
+<span><span class="va">auto_scores</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  set <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>    <span class="st">"Validation baseline"</span>,</span>
+<span>    <span class="st">"Validation returned program"</span>,</span>
+<span>    <span class="st">"Holdout baseline"</span>,</span>
+<span>    <span class="st">"Holdout returned program"</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  rows <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">valset</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">valset</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">holdout</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">holdout</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  score <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>    <span class="va">auto_result</span><span class="op">$</span><span class="va">baseline_score</span>,</span>
+<span>    <span class="va">auto_best_validation</span><span class="op">$</span><span class="va">mean_score</span>,</span>
+<span>    <span class="va">auto_baseline_holdout</span><span class="op">$</span><span class="va">mean_score</span>,</span>
+<span>    <span class="va">auto_best_holdout</span><span class="op">$</span><span class="va">mean_score</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">auto_scores</span></span>
+<span><span class="co">#&gt;                           set rows score</span></span>
+<span><span class="co">#&gt; 1         Validation baseline    4     0</span></span>
+<span><span class="co">#&gt; 2 Validation returned program    4     1</span></span>
+<span><span class="co">#&gt; 3            Holdout baseline    4     0</span></span>
+<span><span class="co">#&gt; 4    Holdout returned program    4     1</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span></span>
+<span>  <span class="va">auto_best_validation</span><span class="op">$</span><span class="va">mean_score</span> <span class="op">==</span> <span class="va">auto_result</span><span class="op">$</span><span class="va">best_score</span>,</span>
+<span>  <span class="va">auto_baseline_holdout</span><span class="op">$</span><span class="va">mean_score</span> <span class="op">==</span> <span class="fl">0</span>,</span>
+<span>  <span class="va">auto_best_holdout</span><span class="op">$</span><span class="va">mean_score</span> <span class="op">==</span> <span class="fl">1</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>The four holdout questions and contexts do not appear in the proposer
+prompt; the code passes <code>trainset</code> and <code>valset</code> to
+<code><a href="../reference/compile.html">compile()</a></code> and uses <code>holdout</code> only in the later
+<code><a href="../reference/evaluate.html">evaluate()</a></code> calls. The audit also derives the number of task
+and proposer requests from executed fixture calls:</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  executed_calls <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">auto_task_calls</span>, <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">auto_agent_audit</span><span class="op">$</span><span class="va">calls</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  fixture <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Task evaluator"</span>, <span class="st">"AutoResearch proposer"</span><span class="op">)</span>,</span>
+<span>  row.names <span class="op">=</span> <span class="cn">NULL</span></span>
+<span><span class="op">)</span></span>
+<span><span class="co">#&gt;   executed_calls               fixture</span></span>
+<span><span class="co">#&gt; 1             24        Task evaluator</span></span>
+<span><span class="co">#&gt; 2              2 AutoResearch proposer</span></span>
+<span><span class="va">auto_prompt_text</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span><span class="va">auto_agent_audit</span><span class="op">$</span><span class="va">calls</span>, <span class="va">`[[`</span>, <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span>, <span class="st">"prompt"</span><span class="op">)</span>,</span>
+<span>  collapse <span class="op">=</span> <span class="st">"\n"</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">auto_holdout_seen</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span></span>
+<span>  <span class="va">holdout</span><span class="op">$</span><span class="va">context</span>,</span>
+<span>  <span class="kw">function</span><span class="op">(</span><span class="va">context</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grepl</a></span><span class="op">(</span><span class="va">context</span>, <span class="va">auto_prompt_text</span>, fixed <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/logical.html" class="external-link">logical</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  question <span class="op">=</span> <span class="va">holdout</span><span class="op">$</span><span class="va">question</span>,</span>
+<span>  appeared_in_proposer_prompt <span class="op">=</span> <span class="va">auto_holdout_seen</span></span>
+<span><span class="op">)</span></span>
+<span><span class="co">#&gt;                                                                          question</span></span>
+<span><span class="co">#&gt; The Field team launched in 2016.             Which year did the Field team start?</span></span>
+<span><span class="co">#&gt; Replacement parts arrive in 3 business days.  How long do replacement parts take?</span></span>
+<span><span class="co">#&gt; The Tallinn group has 9 engineers.             How many engineers are in Tallinn?</span></span>
+<span><span class="co">#&gt; Backups are checked every Friday.              Which weekday are backups checked?</span></span>
+<span><span class="co">#&gt;                                              appeared_in_proposer_prompt</span></span>
+<span><span class="co">#&gt; The Field team launched in 2016.                                   FALSE</span></span>
+<span><span class="co">#&gt; Replacement parts arrive in 3 business days.                       FALSE</span></span>
+<span><span class="co">#&gt; The Tallinn group has 9 engineers.                                 FALSE</span></span>
+<span><span class="co">#&gt; Backups are checked every Friday.                                  FALSE</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/any.html" class="external-link">any</a></span><span class="op">(</span><span class="va">auto_holdout_seen</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p>No checkpoint is configured for these short examples. For a resumable
+run, the same split rule keeps holdout out of <code><a href="../reference/compile.html">compile()</a></code> and
+its checkpoint state; evaluate holdout only after the final resumed
+candidate has been selected.</p>
+</div>
+<div class="section level2">
+<h2 id="metaharness-fresh-proposers-and-candidate-batches">MetaHarness: fresh proposers and candidate batches<a class="anchor" aria-label="anchor" href="#metaharness-fresh-proposers-and-candidate-batches"></a>
+</h2>
+<p>MetaHarness creates a fresh proposer clone for each outer iteration.
+The first proposer submits a two-candidate batch: the evidence-only edit
+and the coordinated edit. A second proposer sees the saved frontier and
+tries a formatting variant of the winner. The bounded run evaluates four
+trials in total: the baseline and three candidates.</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">meta_agent_audit</span> <span class="op">&lt;-</span> <span class="fu">new_offline_audit</span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="va">meta_script</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/environment.html" class="external-link">new.env</a></span><span class="op">(</span>parent <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/environment.html" class="external-link">emptyenv</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">meta_script</span><span class="op">$</span><span class="va">next_action</span> <span class="op">&lt;-</span> <span class="fl">0L</span></span>
+<span><span class="va">meta_actions</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>  <span class="fu">action_propose</span><span class="op">(</span></span>
+<span>    <span class="st">"Compare a local evidence edit with a coordinated answer contract."</span>,</span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>      <span class="fu">candidate</span><span class="op">(</span></span>
+<span>        <span class="st">"evidence-only"</span>,</span>
+<span>        <span class="st">"This candidate leaves the answer step's first-word rule in place."</span>,</span>
+<span>        <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">edit_evidence_only</span><span class="op">)</span></span>
+<span>      <span class="op">)</span>,</span>
+<span>      <span class="fu">candidate</span><span class="op">(</span></span>
+<span>        <span class="st">"coordinated-pipeline"</span>,</span>
+<span>        <span class="st">"Keep the complete multiword evidence through the second step."</span>,</span>
+<span>        <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">edit_evidence_only</span>, <span class="va">edit_answer</span><span class="op">)</span></span>
+<span>      <span class="op">)</span></span>
+<span>    <span class="op">)</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  <span class="fu">action_propose</span><span class="op">(</span></span>
+<span>    <span class="st">"The winning contract works; test a harmless output label change."</span>,</span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fu">candidate</span><span class="op">(</span></span>
+<span>      <span class="st">"coordinated-format-variant"</span>,</span>
+<span>      <span class="st">"Retain the full evidence value with a different final label."</span>,</span>
+<span>      <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>        path <span class="op">=</span> <span class="st">"$/steps/2"</span>,</span>
+<span>        template <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span></span>
+<span>          <span class="st">"Evidence block:"</span>,</span>
+<span>          <span class="st">"{evidence}"</span>,</span>
+<span>          <span class="st">"Return the full value:"</span>,</span>
+<span>          sep <span class="op">=</span> <span class="st">"\n"</span></span>
+<span>        <span class="op">)</span></span>
+<span>      <span class="op">)</span><span class="op">)</span></span>
+<span>    <span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">meta_agent_responder</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">prompt</span>, <span class="va">type</span>, <span class="va">session_id</span>, <span class="va">prior_turns</span>, <span class="va">...</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">meta_script</span><span class="op">$</span><span class="va">next_action</span> <span class="op">&lt;-</span> <span class="va">meta_script</span><span class="op">$</span><span class="va">next_action</span> <span class="op">+</span> <span class="fl">1L</span></span>
+<span>  <span class="va">meta_agent_audit</span><span class="op">$</span><span class="va">proposer_prompts</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/append.html" class="external-link">append</a></span><span class="op">(</span></span>
+<span>    <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/NULL.html" class="external-link">is.null</a></span><span class="op">(</span><span class="va">meta_agent_audit</span><span class="op">$</span><span class="va">proposer_prompts</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
+<span>      <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span></span>
+<span>    <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span></span>
+<span>      <span class="va">meta_agent_audit</span><span class="op">$</span><span class="va">proposer_prompts</span></span>
+<span>    <span class="op">}</span>,</span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>      session_id <span class="op">=</span> <span class="va">session_id</span>,</span>
+<span>      prior_turns <span class="op">=</span> <span class="va">prior_turns</span>,</span>
+<span>      prompt <span class="op">=</span> <span class="va">prompt</span></span>
+<span>    <span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="op">)</span></span>
+<span>  <span class="va">meta_actions</span><span class="op">[[</span><span class="va">meta_script</span><span class="op">$</span><span class="va">next_action</span><span class="op">]</span><span class="op">]</span></span>
+<span><span class="op">}</span></span>
+<span><span class="va">meta_agent</span> <span class="op">&lt;-</span> <span class="fu">new_offline_chat</span><span class="op">(</span></span>
+<span>  <span class="st">"offline-meta-harness-proposer"</span>,</span>
+<span>  <span class="va">meta_agent_responder</span>,</span>
+<span>  <span class="va">meta_agent_audit</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">meta_agent</span><span class="op">$</span><span class="fu">set_turns</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>role <span class="op">=</span> <span class="st">"user"</span>, content <span class="op">=</span> <span class="st">"stale source turn"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">meta_call_start</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">task_audit</span><span class="op">$</span><span class="va">calls</span><span class="op">)</span></span>
+<span><span class="va">meta_compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span></span>
+<span>  <span class="va">qa_program</span>,</span>
+<span>  <span class="fu"><a href="../reference/MetaHarness.html">MetaHarness</a></span><span class="op">(</span></span>
+<span>    metric <span class="op">=</span> <span class="va">metric</span>,</span>
+<span>    max_iterations <span class="op">=</span> <span class="fl">2L</span>,</span>
+<span>    max_candidates_per_iteration <span class="op">=</span> <span class="fl">2L</span>,</span>
+<span>    frontier_size <span class="op">=</span> <span class="fl">2L</span>,</span>
+<span>    patience <span class="op">=</span> <span class="fl">3L</span>,</span>
+<span>    seed <span class="op">=</span> <span class="fl">42L</span>,</span>
+<span>    sandbox <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>    verbose <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>  <span class="op">)</span>,</span>
 <span>  <span class="va">trainset</span>,</span>
 <span>  valset <span class="op">=</span> <span class="va">valset</span>,</span>
 <span>  .llm <span class="op">=</span> <span class="va">task_chat</span>,</span>
-<span>  explorer_compile_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    research <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>.agent_llm <span class="op">=</span> <span class="va">research_chat</span>, runner <span class="op">=</span> <span class="va">runner</span><span class="op">)</span>,</span>
-<span>    meta <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>.agent_llm <span class="op">=</span> <span class="va">research_chat</span>, runner <span class="op">=</span> <span class="va">runner</span><span class="op">)</span></span>
-<span>  <span class="op">)</span></span>
+<span>  .agent_llm <span class="op">=</span> <span class="va">meta_agent</span>,</span>
+<span>  control <span class="op">=</span> <span class="fu"><a href="../reference/optimizer_control.html">optimizer_control</a></span><span class="op">(</span></span>
+<span>    max_trials <span class="op">=</span> <span class="fl">5L</span>,</span>
+<span>    max_metric_calls <span class="op">=</span> <span class="fl">24L</span>,</span>
+<span>    max_provider_calls <span class="op">=</span> <span class="fl">50L</span>,</span>
+<span>    progress <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  .cache <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  objective <span class="op">=</span> <span class="st">"Answer from the context and preserve the complete value."</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">meta_task_calls</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">task_audit</span><span class="op">$</span><span class="va">calls</span><span class="op">)</span> <span class="op">-</span> <span class="va">meta_call_start</span></span>
+<span><span class="va">meta_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">meta_compiled</span><span class="op">)</span></span>
+<span><span class="fu">result_summary</span><span class="op">(</span><span class="va">meta_result</span><span class="op">)</span></span>
+<span><span class="co">#&gt;     optimizer    status baseline_score best_score    stop_reason</span></span>
+<span><span class="co">#&gt; 1 MetaHarness completed              0          1 max_iterations</span></span></code></pre></div>
+<p>Inspect the batch scores, candidate parents, selected result, final
+frontier, stop reason, and budget. The second candidate in the first
+batch branches from the improved evidence-only candidate; the second
+iteration’s formatting variant branches from the coordinated winner.</p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">meta_trials</span> <span class="op">&lt;-</span> <span class="va">meta_result</span><span class="op">$</span><span class="va">trials</span></span>
+<span><span class="va">meta_trials</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>  <span class="st">"id"</span>,</span>
+<span>  <span class="st">"parent_id"</span>,</span>
+<span>  <span class="st">"name"</span>,</span>
+<span>  <span class="st">"iteration"</span>,</span>
+<span>  <span class="st">"score"</span>,</span>
+<span>  <span class="st">"selected"</span>,</span>
+<span>  <span class="st">"status"</span></span>
+<span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 4 × 7</span></span></span>
+<span><span class="co">#&gt;   id                       parent_id       name  iteration score selected status</span></span>
+<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>                    <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>           <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;lgl&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> baseline-594b4430aa07    <span style="color: #BB0000;">NA</span>              base…         0  0    FALSE    evalu…</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> candidate-1-3d25bbaa446c baseline-594b4… evid…         1  0.75 FALSE    evalu…</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> candidate-1-7bae3460a9c0 candidate-1-3d… coor…         1  1    TRUE     evalu…</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span> candidate-2-ae5902503f42 candidate-1-7b… coor…         2  1    FALSE    evalu…</span></span>
+<span><span class="va">meta_result</span><span class="op">$</span><span class="va">lineage</span></span>
+<span><span class="co">#&gt; $best_candidate_id</span></span>
+<span><span class="co">#&gt; [1] "candidate-1-7bae3460a9c0"</span></span>
+<span><span class="va">meta_frontier</span> <span class="op">&lt;-</span> <span class="va">meta_result</span><span class="op">$</span><span class="va">extensions</span><span class="op">$</span><span class="va">meta_harness</span><span class="op">$</span><span class="va">frontier_ids</span></span>
+<span><span class="va">meta_frontier</span></span>
+<span><span class="co">#&gt; [1] "candidate-1-7bae3460a9c0" "candidate-2-ae5902503f42"</span></span>
+<span><span class="va">meta_events</span> <span class="op">&lt;-</span> <span class="va">meta_result</span><span class="op">$</span><span class="va">extensions</span><span class="op">$</span><span class="va">meta_harness</span><span class="op">$</span><span class="va">events</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  type <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span><span class="va">meta_events</span>, <span class="va">`[[`</span>, <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span>, <span class="st">"type"</span><span class="op">)</span>,</span>
+<span>  iteration <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span></span>
+<span>    <span class="va">meta_events</span>,</span>
+<span>    <span class="kw">function</span><span class="op">(</span><span class="va">event</span><span class="op">)</span> <span class="op">{</span></span>
+<span>      <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/NULL.html" class="external-link">is.null</a></span><span class="op">(</span><span class="va">event</span><span class="op">$</span><span class="va">iteration</span><span class="op">)</span><span class="op">)</span> <span class="cn">NA_integer_</span> <span class="kw">else</span> <span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">as.integer</a></span><span class="op">(</span><span class="va">event</span><span class="op">$</span><span class="va">iteration</span><span class="op">)</span></span>
+<span>    <span class="op">}</span>,</span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">integer</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  candidate_id <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span></span>
+<span>    <span class="va">meta_events</span>,</span>
+<span>    <span class="kw">function</span><span class="op">(</span><span class="va">event</span><span class="op">)</span> <span class="op">{</span></span>
+<span>      <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/NULL.html" class="external-link">is.null</a></span><span class="op">(</span><span class="va">event</span><span class="op">$</span><span class="va">candidate_id</span><span class="op">)</span><span class="op">)</span> <span class="cn">NA_character_</span> <span class="kw">else</span> <span class="va">event</span><span class="op">$</span><span class="va">candidate_id</span></span>
+<span>    <span class="op">}</span>,</span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  score <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span></span>
+<span>    <span class="va">meta_events</span>,</span>
+<span>    <span class="kw">function</span><span class="op">(</span><span class="va">event</span><span class="op">)</span> <span class="op">{</span></span>
+<span>      <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/NULL.html" class="external-link">is.null</a></span><span class="op">(</span><span class="va">event</span><span class="op">$</span><span class="va">score</span><span class="op">)</span><span class="op">)</span> <span class="cn">NA_real_</span> <span class="kw">else</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">event</span><span class="op">$</span><span class="va">score</span><span class="op">)</span></span>
+<span>    <span class="op">}</span>,</span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">numeric</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  row.names <span class="op">=</span> <span class="cn">NULL</span></span>
+<span><span class="op">)</span></span>
+<span><span class="co">#&gt;                  type iteration             candidate_id score</span></span>
+<span><span class="co">#&gt; 1 candidate_evaluated         0    baseline-594b4430aa07  0.00</span></span>
+<span><span class="co">#&gt; 2 candidate_evaluated         1 candidate-1-3d25bbaa446c  0.75</span></span>
+<span><span class="co">#&gt; 3 candidate_evaluated         1 candidate-1-7bae3460a9c0  1.00</span></span>
+<span><span class="co">#&gt; 4 candidate_evaluated         2 candidate-2-ae5902503f42  1.00</span></span>
+<span><span class="va">meta_result</span><span class="op">$</span><span class="va">stop_reason</span></span>
+<span><span class="co">#&gt; [1] "max_iterations"</span></span>
+<span><span class="fu">budget_summary</span><span class="op">(</span><span class="va">meta_result</span><span class="op">)</span></span>
+<span><span class="co">#&gt;   trials metric_calls provider_calls errors elapsed_seconds stopped max_trials</span></span>
+<span><span class="co">#&gt; 1      4           16             34      0            1.67   FALSE          5</span></span>
+<span><span class="co">#&gt;   max_metric_calls max_provider_calls</span></span>
+<span><span class="co">#&gt; 1               24                 50</span></span>
+<span></span>
+<span><span class="va">proposer_sessions</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  session_id <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span></span>
+<span>    <span class="va">meta_agent_audit</span><span class="op">$</span><span class="va">proposer_prompts</span>,</span>
+<span>    <span class="va">`[[`</span>,</span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span>,</span>
+<span>    <span class="st">"session_id"</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  prior_turns <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span></span>
+<span>    <span class="va">meta_agent_audit</span><span class="op">$</span><span class="va">proposer_prompts</span>,</span>
+<span>    <span class="va">`[[`</span>,</span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">integer</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span>,</span>
+<span>    <span class="st">"prior_turns"</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  row.names <span class="op">=</span> <span class="cn">NULL</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">proposer_sessions</span></span>
+<span><span class="co">#&gt;                              session_id prior_turns</span></span>
+<span><span class="co">#&gt; 1 offline-meta-harness-proposer-fresh-1           0</span></span>
+<span><span class="co">#&gt; 2 offline-meta-harness-proposer-fresh-2           0</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span></span>
+<span>  <span class="va">meta_result</span><span class="op">$</span><span class="va">baseline_score</span> <span class="op">==</span> <span class="fl">0</span>,</span>
+<span>  <span class="va">meta_trials</span><span class="op">$</span><span class="va">score</span><span class="op">[</span><span class="va">meta_trials</span><span class="op">$</span><span class="va">name</span> <span class="op">==</span> <span class="st">"evidence-only"</span><span class="op">]</span> <span class="op">==</span> <span class="fl">0.75</span>,</span>
+<span>  <span class="va">meta_trials</span><span class="op">$</span><span class="va">score</span><span class="op">[</span><span class="va">meta_trials</span><span class="op">$</span><span class="va">name</span> <span class="op">==</span> <span class="st">"coordinated-pipeline"</span><span class="op">]</span> <span class="op">==</span> <span class="fl">1</span>,</span>
+<span>  <span class="va">meta_trials</span><span class="op">$</span><span class="va">selected</span><span class="op">[</span><span class="va">meta_trials</span><span class="op">$</span><span class="va">name</span> <span class="op">==</span> <span class="st">"coordinated-pipeline"</span><span class="op">]</span>,</span>
+<span>  <span class="va">meta_trials</span><span class="op">$</span><span class="va">parent_id</span><span class="op">[</span><span class="va">meta_trials</span><span class="op">$</span><span class="va">name</span> <span class="op">==</span> <span class="st">"coordinated-pipeline"</span><span class="op">]</span> <span class="op">==</span></span>
+<span>    <span class="va">meta_trials</span><span class="op">$</span><span class="va">id</span><span class="op">[</span><span class="va">meta_trials</span><span class="op">$</span><span class="va">name</span> <span class="op">==</span> <span class="st">"evidence-only"</span><span class="op">]</span>,</span>
+<span>  <span class="va">meta_trials</span><span class="op">$</span><span class="va">parent_id</span><span class="op">[</span><span class="va">meta_trials</span><span class="op">$</span><span class="va">name</span> <span class="op">==</span> <span class="st">"coordinated-format-variant"</span><span class="op">]</span> <span class="op">==</span></span>
+<span>    <span class="va">meta_trials</span><span class="op">$</span><span class="va">id</span><span class="op">[</span><span class="va">meta_trials</span><span class="op">$</span><span class="va">name</span> <span class="op">==</span> <span class="st">"coordinated-pipeline"</span><span class="op">]</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">meta_frontier</span><span class="op">)</span> <span class="op">==</span> <span class="fl">2L</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="va">meta_result</span><span class="op">$</span><span class="va">stop_reason</span>, <span class="st">"max_iterations"</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/unique.html" class="external-link">unique</a></span><span class="op">(</span><span class="va">proposer_sessions</span><span class="op">$</span><span class="va">session_id</span><span class="op">)</span><span class="op">)</span> <span class="op">==</span> <span class="fl">2L</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/all.html" class="external-link">all</a></span><span class="op">(</span><span class="va">proposer_sessions</span><span class="op">$</span><span class="va">prior_turns</span> <span class="op">==</span> <span class="fl">0L</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">meta_agent</span><span class="op">$</span><span class="va">turns</span><span class="op">)</span> <span class="op">==</span> <span class="fl">1L</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p>Do not use a harness as the continuation. Unless the seed wins, the
-continuation receives an explorer’s compiled program, which the
-harnesses refuse to edit; Omni then records the error and keeps the
-exploration winner. Keep <code>parallel = FALSE</code> (the default)
-with harness explorers: parallel mode copies explorer arguments into
-separate worker processes, and a runner’s mcp-repl connection belongs to
-your session. See <a href="omni-meta-optimization.html">Compose
-optimizers with Omni</a> for the rest of the Omni workflow.</p>
+<p>Each MetaHarness iteration received a different Chat clone with an
+empty turn history, even though the source Chat held a stale turn. The
+fixture records the actual clone ids and empty histories; it does not
+infer freshness from the iteration number. Candidate scores and the
+frontier come from the executed evaluator and host-owned ledger.</p>
+<p>The returned program’s validation and independent holdout predictions
+are computed from the actual compiled module:</p>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">meta_baseline_validation</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span></span>
+<span>  <span class="va">qa_program</span>,</span>
+<span>  <span class="va">valset</span>,</span>
+<span>  metric <span class="op">=</span> <span class="va">metric</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="va">task_chat</span>,</span>
+<span>  .cache <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  .progress <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">meta_best_validation</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span></span>
+<span>  <span class="va">meta_compiled</span>,</span>
+<span>  <span class="va">valset</span>,</span>
+<span>  metric <span class="op">=</span> <span class="va">metric</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="va">task_chat</span>,</span>
+<span>  .cache <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  .progress <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">meta_baseline_holdout</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span></span>
+<span>  <span class="va">qa_program</span>,</span>
+<span>  <span class="va">holdout</span>,</span>
+<span>  metric <span class="op">=</span> <span class="va">metric</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="va">task_chat</span>,</span>
+<span>  .cache <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  .progress <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">meta_best_holdout</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span></span>
+<span>  <span class="va">meta_compiled</span>,</span>
+<span>  <span class="va">holdout</span>,</span>
+<span>  metric <span class="op">=</span> <span class="va">metric</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="va">task_chat</span>,</span>
+<span>  .cache <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  .progress <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">meta_validation_rows</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  question <span class="op">=</span> <span class="va">valset</span><span class="op">$</span><span class="va">question</span>,</span>
+<span>  expected <span class="op">=</span> <span class="va">valset</span><span class="op">$</span><span class="va">answer</span>,</span>
+<span>  baseline <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span></span>
+<span>    <span class="va">meta_baseline_validation</span><span class="op">$</span><span class="va">predictions</span>,</span>
+<span>    <span class="va">`[[`</span>,</span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span>,</span>
+<span>    <span class="st">"answer"</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  returned_program <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span></span>
+<span>    <span class="va">meta_best_validation</span><span class="op">$</span><span class="va">predictions</span>,</span>
+<span>    <span class="va">`[[`</span>,</span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span>,</span>
+<span>    <span class="st">"answer"</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  score <span class="op">=</span> <span class="va">meta_best_validation</span><span class="op">$</span><span class="va">scores</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">meta_validation_rows</span></span>
+<span><span class="co">#&gt;                             question        expected baseline returned_program</span></span>
+<span><span class="co">#&gt; 1     Which year did Cedar lab open?            2021      The             2021</span></span>
+<span><span class="co">#&gt; 2 How long do standard returns take? 7 business days Standard  7 business days</span></span>
+<span><span class="co">#&gt; 3      How many staff work in Porto?              18      The               18</span></span>
+<span><span class="co">#&gt; 4    Which weekday do releases ship?        Thursday Releases         Thursday</span></span>
+<span><span class="co">#&gt;   score</span></span>
+<span><span class="co">#&gt; 1     1</span></span>
+<span><span class="co">#&gt; 2     1</span></span>
+<span><span class="co">#&gt; 3     1</span></span>
+<span><span class="co">#&gt; 4     1</span></span>
+<span></span>
+<span><span class="va">meta_holdout_rows</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  question <span class="op">=</span> <span class="va">holdout</span><span class="op">$</span><span class="va">question</span>,</span>
+<span>  expected <span class="op">=</span> <span class="va">holdout</span><span class="op">$</span><span class="va">answer</span>,</span>
+<span>  baseline <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span></span>
+<span>    <span class="va">meta_baseline_holdout</span><span class="op">$</span><span class="va">predictions</span>,</span>
+<span>    <span class="va">`[[`</span>,</span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span>,</span>
+<span>    <span class="st">"answer"</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  returned_program <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span></span>
+<span>    <span class="va">meta_best_holdout</span><span class="op">$</span><span class="va">predictions</span>,</span>
+<span>    <span class="va">`[[`</span>,</span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span>,</span>
+<span>    <span class="st">"answer"</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  score <span class="op">=</span> <span class="va">meta_best_holdout</span><span class="op">$</span><span class="va">scores</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">meta_holdout_rows</span></span>
+<span><span class="co">#&gt;                               question        expected    baseline</span></span>
+<span><span class="co">#&gt; 1 Which year did the Field team start?            2016         The</span></span>
+<span><span class="co">#&gt; 2  How long do replacement parts take? 3 business days Replacement</span></span>
+<span><span class="co">#&gt; 3   How many engineers are in Tallinn?               9         The</span></span>
+<span><span class="co">#&gt; 4   Which weekday are backups checked?          Friday     Backups</span></span>
+<span><span class="co">#&gt;   returned_program score</span></span>
+<span><span class="co">#&gt; 1             2016     1</span></span>
+<span><span class="co">#&gt; 2  3 business days     1</span></span>
+<span><span class="co">#&gt; 3                9     1</span></span>
+<span><span class="co">#&gt; 4           Friday     1</span></span>
+<span></span>
+<span><span class="va">meta_scores</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  set <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>    <span class="st">"Validation baseline"</span>,</span>
+<span>    <span class="st">"Validation returned program"</span>,</span>
+<span>    <span class="st">"Holdout baseline"</span>,</span>
+<span>    <span class="st">"Holdout returned program"</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  rows <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">valset</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">valset</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">holdout</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">holdout</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  score <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>    <span class="va">meta_result</span><span class="op">$</span><span class="va">baseline_score</span>,</span>
+<span>    <span class="va">meta_best_validation</span><span class="op">$</span><span class="va">mean_score</span>,</span>
+<span>    <span class="va">meta_baseline_holdout</span><span class="op">$</span><span class="va">mean_score</span>,</span>
+<span>    <span class="va">meta_best_holdout</span><span class="op">$</span><span class="va">mean_score</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">meta_scores</span></span>
+<span><span class="co">#&gt;                           set rows score</span></span>
+<span><span class="co">#&gt; 1         Validation baseline    4     0</span></span>
+<span><span class="co">#&gt; 2 Validation returned program    4     1</span></span>
+<span><span class="co">#&gt; 3            Holdout baseline    4     0</span></span>
+<span><span class="co">#&gt; 4    Holdout returned program    4     1</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span></span>
+<span>  <span class="va">meta_best_validation</span><span class="op">$</span><span class="va">mean_score</span> <span class="op">==</span> <span class="va">meta_result</span><span class="op">$</span><span class="va">best_score</span>,</span>
+<span>  <span class="va">meta_baseline_holdout</span><span class="op">$</span><span class="va">mean_score</span> <span class="op">==</span> <span class="fl">0</span>,</span>
+<span>  <span class="va">meta_best_holdout</span><span class="op">$</span><span class="va">mean_score</span> <span class="op">==</span> <span class="fl">1</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>The holdout remains outside the proposer context and the compile-time
+selection data. The following audit checks every holdout context against
+the actual proposer prompts:</p>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">meta_prompt_text</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span><span class="va">meta_agent_audit</span><span class="op">$</span><span class="va">proposer_prompts</span>, <span class="va">`[[`</span>, <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span>, <span class="st">"prompt"</span><span class="op">)</span>,</span>
+<span>  collapse <span class="op">=</span> <span class="st">"\n"</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">meta_holdout_seen</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span></span>
+<span>  <span class="va">holdout</span><span class="op">$</span><span class="va">context</span>,</span>
+<span>  <span class="kw">function</span><span class="op">(</span><span class="va">context</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grepl</a></span><span class="op">(</span><span class="va">context</span>, <span class="va">meta_prompt_text</span>, fixed <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/logical.html" class="external-link">logical</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  question <span class="op">=</span> <span class="va">holdout</span><span class="op">$</span><span class="va">question</span>,</span>
+<span>  appeared_in_proposer_prompt <span class="op">=</span> <span class="va">meta_holdout_seen</span></span>
+<span><span class="op">)</span></span>
+<span><span class="co">#&gt;                                                                          question</span></span>
+<span><span class="co">#&gt; The Field team launched in 2016.             Which year did the Field team start?</span></span>
+<span><span class="co">#&gt; Replacement parts arrive in 3 business days.  How long do replacement parts take?</span></span>
+<span><span class="co">#&gt; The Tallinn group has 9 engineers.             How many engineers are in Tallinn?</span></span>
+<span><span class="co">#&gt; Backups are checked every Friday.              Which weekday are backups checked?</span></span>
+<span><span class="co">#&gt;                                              appeared_in_proposer_prompt</span></span>
+<span><span class="co">#&gt; The Field team launched in 2016.                                   FALSE</span></span>
+<span><span class="co">#&gt; Replacement parts arrive in 3 business days.                       FALSE</span></span>
+<span><span class="co">#&gt; The Tallinn group has 9 engineers.                                 FALSE</span></span>
+<span><span class="co">#&gt; Backups are checked every Friday.                                  FALSE</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  executed_calls <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">meta_task_calls</span>, <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">meta_agent_audit</span><span class="op">$</span><span class="va">calls</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  fixture <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Task evaluator"</span>, <span class="st">"MetaHarness proposers"</span><span class="op">)</span>,</span>
+<span>  row.names <span class="op">=</span> <span class="cn">NULL</span></span>
+<span><span class="op">)</span></span>
+<span><span class="co">#&gt;   executed_calls               fixture</span></span>
+<span><span class="co">#&gt; 1             32        Task evaluator</span></span>
+<span><span class="co">#&gt; 2              2 MetaHarness proposers</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/any.html" class="external-link">any</a></span><span class="op">(</span><span class="va">meta_holdout_seen</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="inspiration-and-differences">Inspiration and differences<a class="anchor" aria-label="anchor" href="#inspiration-and-differences"></a>
+<h2 id="sandbox-and-trust-boundaries">Sandbox and trust boundaries<a class="anchor" aria-label="anchor" href="#sandbox-and-trust-boundaries"></a>
 </h2>
-<p>The design credits four open projects:</p>
-<ul>
-<li>Andrej Karpathy’s <a href="https://github.com/karpathy/autoresearch" class="external-link"><code>autoresearch</code></a>,
-for the explicit baseline, experiment, score, keep-or-revert loop;</li>
-<li>the AutoResearch and Meta-Harness engines of <a href="https://github.com/gepa-ai/gepa" class="external-link">GEPA optimize-anything</a>, for a
-common trusted evaluation boundary and optimizer composition;</li>
-<li>the <a href="https://arxiv.org/abs/2603.28052" class="external-link">Meta-Harness
-paper</a>, for the fresh-proposer outer loop; and</li>
-<li>Posit’s <a href="https://github.com/posit-dev/mcp-repl" class="external-link"><code>mcp-repl</code></a>,
-for persistent R execution with OS-level sandboxing.</li>
-</ul>
-<p>dsprrr does not launch a coding-agent CLI, expose an HTTP evaluator,
-or ask an agent to edit arbitrary files. It uses provider-neutral ellmer
-chats, typed actions, complete module snapshots, the package’s optimizer
-ledger, and checkpoints. Benchmark these harnesses on your own task and
-budget; results reported by the source projects do not automatically
-transfer to a different model, metric, or program.</p>
+<p>The executed fixture journeys set <code>sandbox = FALSE</code> so
+they need no external interpreter. That setting disables sandbox
+actions: the proposer can submit validated instruction and template
+edits but cannot run exploratory R code.</p>
+<p>With the default <code>sandbox = TRUE</code>, each harness requires a
+runner that advertises a verified operating-system sandbox.
+<code><a href="../reference/mcp_repl_runner.html">mcp_repl_runner()</a></code> starts Posit’s <a href="https://github.com/posit-dev/mcp-console" class="external-link">mcp-console</a>,
+formerly named <code>mcp-repl</code>, with the
+<code>workspace-write</code> policy by default: network access is
+disabled and writes are limited to the workspace and temporary paths. It
+also needs the <code>mcptools</code> R package and <code>mcp-repl</code>
+executable. A user-managed connection passed through <code>repl =</code>
+is unverified because dsprrr did not start it, so the harness rejects it
+when sandboxing is required. <code><a href="../reference/r_code_runner.html">r_code_runner()</a></code> uses the
+current process permissions and is not a security boundary.</p>
+<p>The runner handles only agent-authored analysis code. Candidate
+evaluation and selection stay in the host R process under the package
+evaluator. The agent may replace complete <code>instructions</code> and
+<code>template</code> fields at listed module paths; it cannot edit R
+source or the evaluator. Limits on action code, output, iterations,
+trials, metric calls, and provider calls are separate from the
+operating-system sandbox. Treat values sent to a live model provider
+according to that provider’s data policy.</p>
+<p>To run analysis in a sandbox, install the two requirements and use a
+bounded runner:</p>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">runner</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mcp_repl_runner.html">mcp_repl_runner</a></span><span class="op">(</span></span>
+<span>  sandbox <span class="op">=</span> <span class="st">"workspace-write"</span>,</span>
+<span>  timeout <span class="op">=</span> <span class="fl">30</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">runner</span><span class="op">$</span><span class="fu">policy</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="optional-live-model-run">Optional live-model run<a class="anchor" aria-label="anchor" href="#optional-live-model-run"></a>
+</h2>
+<p>The earlier journeys are the complete offline path. For a live run,
+create ellmer Chats and supply a sandbox runner. This example stays
+unevaluated so a documentation build never makes provider calls or
+incurs charges. Keep holdout out of both <code><a href="../reference/compile.html">compile()</a></code> and the
+prompts.</p>
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">task_chat</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-luna"</span><span class="op">)</span></span>
+<span><span class="va">proposer_chat</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_anthropic.html" class="external-link">chat_anthropic</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"claude-sonnet-4-5"</span><span class="op">)</span></span>
+<span><span class="va">runner</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mcp_repl_runner.html">mcp_repl_runner</a></span><span class="op">(</span>sandbox <span class="op">=</span> <span class="st">"workspace-write"</span>, timeout <span class="op">=</span> <span class="fl">30</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">live_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span></span>
+<span>  <span class="va">qa_program</span>,</span>
+<span>  <span class="fu"><a href="../reference/AutoResearch.html">AutoResearch</a></span><span class="op">(</span>metric <span class="op">=</span> <span class="va">metric</span>, max_iterations <span class="op">=</span> <span class="fl">4L</span>, target_score <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>,</span>
+<span>  <span class="va">trainset</span>,</span>
+<span>  valset <span class="op">=</span> <span class="va">valset</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="va">task_chat</span>,</span>
+<span>  .agent_llm <span class="op">=</span> <span class="va">proposer_chat</span>,</span>
+<span>  runner <span class="op">=</span> <span class="va">runner</span>,</span>
+<span>  control <span class="op">=</span> <span class="fu"><a href="../reference/optimizer_control.html">optimizer_control</a></span><span class="op">(</span></span>
+<span>    max_trials <span class="op">=</span> <span class="fl">5L</span>,</span>
+<span>    max_metric_calls <span class="op">=</span> <span class="fl">20L</span>,</span>
+<span>    max_provider_calls <span class="op">=</span> <span class="fl">50L</span>,</span>
+<span>    max_cost <span class="op">=</span> <span class="fl">5</span>,</span>
+<span>    checkpoint_path <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"autoresearch-checkpoint.rds"</span><span class="op">)</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  objective <span class="op">=</span> <span class="st">"Answer from supplied evidence and preserve complete values."</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">live_result</span><span class="op">)</span></span></code></pre></div>
+<p>Use <code><a href="../reference/optimization_result.html">optimization_result()</a></code> to compare baseline and best
+scores, inspect the trial ledger and lineage, and see the budget and
+<code>stop_reason</code>. A checkpoint restores the optimizer ledger and
+random-number state; it does not restore the model conversation or
+runner session. For both deterministic fixtures and live models, treat
+any holdout score as a final report after candidate selection, not as
+input to the search.</p>
+<details><summary>
+View the deterministic offline fixture implementation
+</summary><pre><code class="language-r"><span> <span class="va">offline_chat_class</span> <span class="op">&lt;-</span> <span class="fu">R6</span><span class="fu">::</span><span class="kw"><a href="https://r6.r-lib.org/reference/R6Class.html" class="external-link">R6Class</a></span><span class="op">(</span></span>
+<span>  <span class="st">"Chat"</span>,</span>
+<span>  public <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    turns <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>    session_id <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>    initialize <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">model</span>, <span class="va">responder</span>, <span class="va">audit</span>, <span class="va">session_id</span><span class="op">)</span> <span class="op">{</span></span>
+<span>      <span class="va">self</span><span class="op">$</span><span class="va">turns</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span></span>
+<span>      <span class="va">self</span><span class="op">$</span><span class="va">session_id</span> <span class="op">&lt;-</span> <span class="va">session_id</span></span>
+<span>      <span class="va">private</span><span class="op">$</span><span class="va">model</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/Model.html" class="external-link">Model</a></span><span class="op">(</span>name <span class="op">=</span> <span class="va">model</span>, extra_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
+<span>      <span class="va">private</span><span class="op">$</span><span class="va">provider</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/Provider.html" class="external-link">Provider</a></span><span class="op">(</span></span>
+<span>        name <span class="op">=</span> <span class="st">"offline-fixture"</span>,</span>
+<span>        base_url <span class="op">=</span> <span class="st">""</span></span>
+<span>      <span class="op">)</span></span>
+<span>      <span class="va">private</span><span class="op">$</span><span class="va">responder</span> <span class="op">&lt;-</span> <span class="va">responder</span></span>
+<span>      <span class="va">private</span><span class="op">$</span><span class="va">audit</span> <span class="op">&lt;-</span> <span class="va">audit</span></span>
+<span>    <span class="op">}</span>,</span>
+<span>    chat <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">prompt</span>, <span class="va">...</span><span class="op">)</span> <span class="op">{</span></span>
+<span>      <span class="va">private</span><span class="op">$</span><span class="fu">call</span><span class="op">(</span><span class="va">prompt</span>, type <span class="op">=</span> <span class="cn">NULL</span>, <span class="va">...</span><span class="op">)</span></span>
+<span>    <span class="op">}</span>,</span>
+<span>    chat_structured <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">prompt</span>, <span class="va">type</span>, <span class="va">...</span><span class="op">)</span> <span class="op">{</span></span>
+<span>      <span class="va">private</span><span class="op">$</span><span class="fu">call</span><span class="op">(</span><span class="va">prompt</span>, type <span class="op">=</span> <span class="va">type</span>, <span class="va">...</span><span class="op">)</span></span>
+<span>    <span class="op">}</span>,</span>
+<span>    stream <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">...</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>    get_turns <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="va">self</span><span class="op">$</span><span class="va">turns</span>,</span>
+<span>    set_turns <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">turns</span><span class="op">)</span> <span class="op">{</span></span>
+<span>      <span class="va">self</span><span class="op">$</span><span class="va">turns</span> <span class="op">&lt;-</span> <span class="va">turns</span></span>
+<span>      <span class="fu"><a href="https://rdrr.io/r/base/invisible.html" class="external-link">invisible</a></span><span class="op">(</span><span class="va">self</span><span class="op">)</span></span>
+<span>    <span class="op">}</span>,</span>
+<span>    last_turn <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">role</span> <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span> <span class="op">{</span></span>
+<span>      <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">self</span><span class="op">$</span><span class="va">turns</span><span class="op">)</span> <span class="op">==</span> <span class="fl">0L</span><span class="op">)</span> <span class="cn">NULL</span> <span class="kw">else</span> <span class="va">self</span><span class="op">$</span><span class="va">turns</span><span class="op">[[</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">self</span><span class="op">$</span><span class="va">turns</span><span class="op">)</span><span class="op">]</span><span class="op">]</span></span>
+<span>    <span class="op">}</span>,</span>
+<span>    get_model <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="va">private</span><span class="op">$</span><span class="va">model</span><span class="op">@</span><span class="va">name</span>,</span>
+<span>    get_provider <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="va">private</span><span class="op">$</span><span class="va">provider</span>,</span>
+<span>    get_model_object <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="va">private</span><span class="op">$</span><span class="va">model</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  private <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    model <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>    provider <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>    responder <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>    audit <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>    call <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">prompt</span>, <span class="va">type</span>, <span class="va">...</span><span class="op">)</span> <span class="op">{</span></span>
+<span>      <span class="va">prompt</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">as.character</a></span><span class="op">(</span><span class="va">prompt</span><span class="op">)</span>, collapse <span class="op">=</span> <span class="st">"\n"</span><span class="op">)</span></span>
+<span>      <span class="va">prior_turns</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">self</span><span class="op">$</span><span class="va">turns</span><span class="op">)</span></span>
+<span>      <span class="va">private</span><span class="op">$</span><span class="va">audit</span><span class="op">$</span><span class="va">calls</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/append.html" class="external-link">append</a></span><span class="op">(</span></span>
+<span>        <span class="va">private</span><span class="op">$</span><span class="va">audit</span><span class="op">$</span><span class="va">calls</span>,</span>
+<span>        <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>          session_id <span class="op">=</span> <span class="va">self</span><span class="op">$</span><span class="va">session_id</span>,</span>
+<span>          prior_turns <span class="op">=</span> <span class="va">prior_turns</span>,</span>
+<span>          prompt <span class="op">=</span> <span class="va">prompt</span></span>
+<span>        <span class="op">)</span><span class="op">)</span></span>
+<span>      <span class="op">)</span></span>
+<span>      <span class="va">response</span> <span class="op">&lt;-</span> <span class="va">private</span><span class="op">$</span><span class="fu">responder</span><span class="op">(</span></span>
+<span>        <span class="va">prompt</span>,</span>
+<span>        <span class="va">type</span>,</span>
+<span>        session_id <span class="op">=</span> <span class="va">self</span><span class="op">$</span><span class="va">session_id</span>,</span>
+<span>        prior_turns <span class="op">=</span> <span class="va">prior_turns</span>,</span>
+<span>        <span class="va">...</span></span>
+<span>      <span class="op">)</span></span>
+<span>      <span class="va">response</span></span>
+<span>    <span class="op">}</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  lock_objects <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  parent_env <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/environment.html" class="external-link">globalenv</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">new_offline_audit</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">audit</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/environment.html" class="external-link">new.env</a></span><span class="op">(</span>parent <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/environment.html" class="external-link">emptyenv</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="va">audit</span><span class="op">$</span><span class="va">calls</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span></span>
+<span>  <span class="va">audit</span><span class="op">$</span><span class="va">clone_count</span> <span class="op">&lt;-</span> <span class="fl">0L</span></span>
+<span>  <span class="va">audit</span><span class="op">$</span><span class="va">clone_sessions</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="op">)</span></span>
+<span>  <span class="va">audit</span></span>
+<span><span class="op">}</span></span>
+<span></span>
+<span><span class="va">new_offline_chat</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">model</span>, <span class="va">responder</span>, <span class="va">audit</span>, <span class="va">session_id</span> <span class="op">=</span> <span class="va">model</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">chat</span> <span class="op">&lt;-</span> <span class="va">offline_chat_class</span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="va">model</span>, <span class="va">responder</span>, <span class="va">audit</span>, <span class="va">session_id</span><span class="op">)</span></span>
+<span>  <span class="va">clone_chat</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">deep</span> <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> <span class="op">{</span></span>
+<span>    <span class="va">audit</span><span class="op">$</span><span class="va">clone_count</span> <span class="op">&lt;-</span> <span class="va">audit</span><span class="op">$</span><span class="va">clone_count</span> <span class="op">+</span> <span class="fl">1L</span></span>
+<span>    <span class="va">new_session</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="va">model</span>, <span class="st">"-fresh-"</span>, <span class="va">audit</span><span class="op">$</span><span class="va">clone_count</span><span class="op">)</span></span>
+<span>    <span class="va">audit</span><span class="op">$</span><span class="va">clone_sessions</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">audit</span><span class="op">$</span><span class="va">clone_sessions</span>, <span class="va">new_session</span><span class="op">)</span></span>
+<span>    <span class="va">cloned</span> <span class="op">&lt;-</span> <span class="fu">new_offline_chat</span><span class="op">(</span><span class="va">model</span>, <span class="va">responder</span>, <span class="va">audit</span>, <span class="va">new_session</span><span class="op">)</span></span>
+<span>    <span class="va">cloned</span><span class="op">$</span><span class="fu">set_turns</span><span class="op">(</span><span class="va">chat</span><span class="op">$</span><span class="fu">get_turns</span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
+<span>    <span class="va">cloned</span></span>
+<span>  <span class="op">}</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/bindenv.html" class="external-link">unlockBinding</a></span><span class="op">(</span><span class="st">"clone"</span>, <span class="va">chat</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/assign.html" class="external-link">assign</a></span><span class="op">(</span><span class="st">"clone"</span>, <span class="va">clone_chat</span>, envir <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/bindenv.html" class="external-link">lockBinding</a></span><span class="op">(</span><span class="st">"clone"</span>, <span class="va">chat</span><span class="op">)</span></span>
+<span>  <span class="va">chat</span></span>
+<span><span class="op">}</span></span>
+<span></span>
+<span><span class="va">read_prompt_line</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">prompt</span>, <span class="va">prefix</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">lines</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/strsplit.html" class="external-link">strsplit</a></span><span class="op">(</span><span class="va">prompt</span>, <span class="st">"\n"</span>, fixed <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">[[</span><span class="fl">1L</span><span class="op">]</span><span class="op">]</span></span>
+<span>  <span class="va">matches</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grep</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"^"</span>, <span class="va">prefix</span><span class="op">)</span>, <span class="va">lines</span>, value <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span>  <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">matches</span><span class="op">)</span> <span class="op">!=</span> <span class="fl">1L</span><span class="op">)</span> <span class="op">{</span></span>
+<span>    <span class="kw"><a href="https://rdrr.io/r/base/stop.html" class="external-link">stop</a></span><span class="op">(</span><span class="st">"Offline task fixture expected one prompt line beginning: "</span>, <span class="va">prefix</span><span class="op">)</span></span>
+<span>  <span class="op">}</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">sub</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"^"</span>, <span class="va">prefix</span><span class="op">)</span>, <span class="st">""</span>, <span class="va">matches</span><span class="op">[[</span><span class="fl">1L</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span>
+<span><span class="op">}</span></span>
+<span></span>
+<span><span class="va">extract_requested_value</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">context</span>, <span class="va">question</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grepl</a></span><span class="op">(</span><span class="st">"year"</span>, <span class="va">question</span>, ignore.case <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
+<span>    <span class="va">value</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/regmatches.html" class="external-link">regmatches</a></span><span class="op">(</span><span class="va">context</span>, <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">regexpr</a></span><span class="op">(</span><span class="st">"\\b20[0-9]{2}\\b"</span>, <span class="va">context</span><span class="op">)</span><span class="op">)</span></span>
+<span>    <span class="kw"><a href="https://rdrr.io/r/base/function.html" class="external-link">return</a></span><span class="op">(</span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">value</span><span class="op">)</span> <span class="op">==</span> <span class="fl">0L</span><span class="op">)</span> <span class="st">"unknown"</span> <span class="kw">else</span> <span class="va">value</span><span class="op">)</span></span>
+<span>  <span class="op">}</span></span>
+<span>  <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grepl</a></span><span class="op">(</span><span class="st">"business days"</span>, <span class="va">context</span>, ignore.case <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
+<span>    <span class="va">value</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/regmatches.html" class="external-link">regmatches</a></span><span class="op">(</span></span>
+<span>      <span class="va">context</span>,</span>
+<span>      <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">regexpr</a></span><span class="op">(</span><span class="st">"\\b[0-9]+ business days\\b"</span>, <span class="va">context</span>, ignore.case <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span>    <span class="op">)</span></span>
+<span>    <span class="kw"><a href="https://rdrr.io/r/base/function.html" class="external-link">return</a></span><span class="op">(</span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">value</span><span class="op">)</span> <span class="op">==</span> <span class="fl">0L</span><span class="op">)</span> <span class="st">"unknown"</span> <span class="kw">else</span> <span class="va">value</span><span class="op">)</span></span>
+<span>  <span class="op">}</span></span>
+<span>  <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grepl</a></span><span class="op">(</span><span class="st">"weekday"</span>, <span class="va">question</span>, ignore.case <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
+<span>    <span class="va">weekdays</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>      <span class="st">"Monday"</span>,</span>
+<span>      <span class="st">"Tuesday"</span>,</span>
+<span>      <span class="st">"Wednesday"</span>,</span>
+<span>      <span class="st">"Thursday"</span>,</span>
+<span>      <span class="st">"Friday"</span>,</span>
+<span>      <span class="st">"Saturday"</span>,</span>
+<span>      <span class="st">"Sunday"</span></span>
+<span>    <span class="op">)</span></span>
+<span>    <span class="va">matches</span> <span class="op">&lt;-</span> <span class="va">weekdays</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span></span>
+<span>      <span class="va">weekdays</span>,</span>
+<span>      <span class="va">grepl</span>,</span>
+<span>      <span class="fu"><a href="https://rdrr.io/r/base/logical.html" class="external-link">logical</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span>,</span>
+<span>      x <span class="op">=</span> <span class="va">context</span>,</span>
+<span>      ignore.case <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span>    <span class="op">)</span><span class="op">]</span></span>
+<span>    <span class="kw"><a href="https://rdrr.io/r/base/function.html" class="external-link">return</a></span><span class="op">(</span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">matches</span><span class="op">)</span> <span class="op">==</span> <span class="fl">0L</span><span class="op">)</span> <span class="st">"unknown"</span> <span class="kw">else</span> <span class="va">matches</span><span class="op">[[</span><span class="fl">1L</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span>
+<span>  <span class="op">}</span></span>
+<span>  <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grepl</a></span><span class="op">(</span><span class="st">"how many"</span>, <span class="va">question</span>, ignore.case <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
+<span>    <span class="va">value</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/regmatches.html" class="external-link">regmatches</a></span><span class="op">(</span><span class="va">context</span>, <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">regexpr</a></span><span class="op">(</span><span class="st">"\\b[0-9]+\\b"</span>, <span class="va">context</span><span class="op">)</span><span class="op">)</span></span>
+<span>    <span class="kw"><a href="https://rdrr.io/r/base/function.html" class="external-link">return</a></span><span class="op">(</span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">value</span><span class="op">)</span> <span class="op">==</span> <span class="fl">0L</span><span class="op">)</span> <span class="st">"unknown"</span> <span class="kw">else</span> <span class="va">value</span><span class="op">)</span></span>
+<span>  <span class="op">}</span></span>
+<span>  <span class="st">"unknown"</span></span>
+<span><span class="op">}</span></span>
+<span></span>
+<span><span class="va">task_audit</span> <span class="op">&lt;-</span> <span class="fu">new_offline_audit</span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="va">task_responder</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">prompt</span>, <span class="va">type</span>, <span class="va">...</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">lines</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/strsplit.html" class="external-link">strsplit</a></span><span class="op">(</span><span class="va">prompt</span>, <span class="st">"\n"</span>, fixed <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">[[</span><span class="fl">1L</span><span class="op">]</span><span class="op">]</span></span>
+<span>  <span class="va">evidence_prompt</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/any.html" class="external-link">any</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grepl</a></span><span class="op">(</span><span class="st">"^Question: "</span>, <span class="va">lines</span><span class="op">)</span><span class="op">)</span> <span class="op">&amp;&amp;</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/any.html" class="external-link">any</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grepl</a></span><span class="op">(</span><span class="st">"^Context: "</span>, <span class="va">lines</span><span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="kw">if</span> <span class="op">(</span><span class="va">evidence_prompt</span><span class="op">)</span> <span class="op">{</span></span>
+<span>    <span class="va">context</span> <span class="op">&lt;-</span> <span class="fu">read_prompt_line</span><span class="op">(</span><span class="va">prompt</span>, <span class="st">"Context: "</span><span class="op">)</span></span>
+<span>    <span class="va">question</span> <span class="op">&lt;-</span> <span class="fu">read_prompt_line</span><span class="op">(</span><span class="va">prompt</span>, <span class="st">"Question: "</span><span class="op">)</span></span>
+<span>    <span class="kw">if</span> <span class="op">(</span></span>
+<span>      <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grepl</a></span><span class="op">(</span><span class="st">"write only that value"</span>, <span class="va">prompt</span>, fixed <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> <span class="op">&amp;&amp;</span></span>
+<span>        <span class="fu"><a href="https://rdrr.io/r/base/any.html" class="external-link">any</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grepl</a></span><span class="op">(</span><span class="st">"^Extracted value:$"</span>, <span class="va">lines</span><span class="op">)</span><span class="op">)</span></span>
+<span>    <span class="op">)</span> <span class="op">{</span></span>
+<span>      <span class="fu">extract_requested_value</span><span class="op">(</span><span class="va">context</span>, <span class="va">question</span><span class="op">)</span></span>
+<span>    <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span></span>
+<span>      <span class="va">context</span></span>
+<span>    <span class="op">}</span></span>
+<span>  <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span></span>
+<span>    <span class="va">evidence</span> <span class="op">&lt;-</span> <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/any.html" class="external-link">any</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grepl</a></span><span class="op">(</span><span class="st">"^Evidence block:$"</span>, <span class="va">lines</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
+<span>      <span class="va">index</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/match.html" class="external-link">match</a></span><span class="op">(</span><span class="st">"Evidence block:"</span>, <span class="va">lines</span><span class="op">)</span> <span class="op">+</span> <span class="fl">1L</span></span>
+<span>      <span class="va">lines</span><span class="op">[[</span><span class="va">index</span><span class="op">]</span><span class="op">]</span></span>
+<span>    <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span></span>
+<span>      <span class="fu">read_prompt_line</span><span class="op">(</span><span class="va">prompt</span>, <span class="st">"Evidence: "</span><span class="op">)</span></span>
+<span>    <span class="op">}</span></span>
+<span>    <span class="kw">if</span> <span class="op">(</span></span>
+<span>      <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grepl</a></span><span class="op">(</span><span class="st">"complete evidence value unchanged"</span>, <span class="va">prompt</span>, fixed <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> <span class="op">&amp;&amp;</span></span>
+<span>        <span class="fu"><a href="https://rdrr.io/r/base/any.html" class="external-link">any</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grepl</a></span><span class="op">(</span><span class="st">"^Evidence block:$"</span>, <span class="va">lines</span><span class="op">)</span><span class="op">)</span></span>
+<span>    <span class="op">)</span> <span class="op">{</span></span>
+<span>      <span class="va">evidence</span></span>
+<span>    <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span></span>
+<span>      <span class="fu"><a href="https://rdrr.io/r/base/strsplit.html" class="external-link">strsplit</a></span><span class="op">(</span><span class="va">evidence</span>, <span class="st">" "</span>, fixed <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">[[</span><span class="fl">1L</span><span class="op">]</span><span class="op">]</span><span class="op">[[</span><span class="fl">1L</span><span class="op">]</span><span class="op">]</span></span>
+<span>    <span class="op">}</span></span>
+<span>  <span class="op">}</span></span>
+<span><span class="op">}</span></span>
+<span></span>
+<span><span class="va">task_chat</span> <span class="op">&lt;-</span> <span class="fu">new_offline_chat</span><span class="op">(</span></span>
+<span>  <span class="st">"offline-task"</span>,</span>
+<span>  <span class="va">task_responder</span>,</span>
+<span>  <span class="va">task_audit</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">evidence_instructions</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span></span>
+<span>  <span class="st">"Extract the exact fact requested by the question from the context;"</span>,</span>
+<span>  <span class="st">"write only that value."</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">evidence_template</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span></span>
+<span>  <span class="st">"Question: {question}"</span>,</span>
+<span>  <span class="st">"Context: {context}"</span>,</span>
+<span>  <span class="st">"Extracted value:"</span>,</span>
+<span>  sep <span class="op">=</span> <span class="st">"\n"</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">answer_instructions</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span></span>
+<span>  <span class="st">"Return the complete evidence value unchanged, preserving multiple words."</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">answer_template</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span></span>
+<span>  <span class="st">"Evidence block:"</span>,</span>
+<span>  <span class="st">"{evidence}"</span>,</span>
+<span>  <span class="st">"Copy the complete value:"</span>,</span>
+<span>  sep <span class="op">=</span> <span class="st">"\n"</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">edit_evidence_only</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>  path <span class="op">=</span> <span class="st">"$/steps/1"</span>,</span>
+<span>  instructions <span class="op">=</span> <span class="va">evidence_instructions</span>,</span>
+<span>  template <span class="op">=</span> <span class="va">evidence_template</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">edit_answer</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>  path <span class="op">=</span> <span class="st">"$/steps/2"</span>,</span>
+<span>  instructions <span class="op">=</span> <span class="va">answer_instructions</span>,</span>
+<span>  template <span class="op">=</span> <span class="va">answer_template</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">candidate</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">name</span>, <span class="va">rationale</span>, <span class="va">edits</span>, <span class="va">parent_id</span> <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">proposal</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>name <span class="op">=</span> <span class="va">name</span>, rationale <span class="op">=</span> <span class="va">rationale</span>, edits <span class="op">=</span> <span class="va">edits</span><span class="op">)</span></span>
+<span>  <span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/NULL.html" class="external-link">is.null</a></span><span class="op">(</span><span class="va">parent_id</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
+<span>    <span class="va">proposal</span><span class="op">$</span><span class="va">parent_id</span> <span class="op">&lt;-</span> <span class="va">parent_id</span></span>
+<span>  <span class="op">}</span></span>
+<span>  <span class="va">proposal</span></span>
+<span><span class="op">}</span></span>
+<span></span>
+<span><span class="va">action_propose</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">rationale</span>, <span class="va">candidates</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>action <span class="op">=</span> <span class="st">"propose"</span>, rationale <span class="op">=</span> <span class="va">rationale</span>, candidates <span class="op">=</span> <span class="va">candidates</span><span class="op">)</span></span>
+<span><span class="op">}</span></span>
+<span></span>
+<span><span class="va">result_summary</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">result</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>    optimizer <span class="op">=</span> <span class="va">result</span><span class="op">$</span><span class="va">optimizer</span>,</span>
+<span>    status <span class="op">=</span> <span class="va">result</span><span class="op">$</span><span class="va">status</span>,</span>
+<span>    baseline_score <span class="op">=</span> <span class="va">result</span><span class="op">$</span><span class="va">baseline_score</span>,</span>
+<span>    best_score <span class="op">=</span> <span class="va">result</span><span class="op">$</span><span class="va">best_score</span>,</span>
+<span>    stop_reason <span class="op">=</span> <span class="va">result</span><span class="op">$</span><span class="va">stop_reason</span>,</span>
+<span>    row.names <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">}</span></span>
+<span></span>
+<span><span class="va">budget_summary</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">result</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">budget</span> <span class="op">&lt;-</span> <span class="va">result</span><span class="op">$</span><span class="va">budget</span></span>
+<span>  <span class="va">limits</span> <span class="op">&lt;-</span> <span class="va">budget</span><span class="op">$</span><span class="va">limits</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>    trials <span class="op">=</span> <span class="va">budget</span><span class="op">$</span><span class="va">trials</span>,</span>
+<span>    metric_calls <span class="op">=</span> <span class="va">budget</span><span class="op">$</span><span class="va">metric_calls</span>,</span>
+<span>    provider_calls <span class="op">=</span> <span class="va">budget</span><span class="op">$</span><span class="va">provider_calls</span>,</span>
+<span>    errors <span class="op">=</span> <span class="va">budget</span><span class="op">$</span><span class="va">total_errors</span>,</span>
+<span>    elapsed_seconds <span class="op">=</span> <span class="va">budget</span><span class="op">$</span><span class="va">elapsed_seconds</span>,</span>
+<span>    stopped <span class="op">=</span> <span class="va">budget</span><span class="op">$</span><span class="va">stopped</span>,</span>
+<span>    max_trials <span class="op">=</span> <span class="va">limits</span><span class="op">$</span><span class="va">max_trials</span>,</span>
+<span>    max_metric_calls <span class="op">=</span> <span class="va">limits</span><span class="op">$</span><span class="va">max_metric_calls</span>,</span>
+<span>    max_provider_calls <span class="op">=</span> <span class="va">limits</span><span class="op">$</span><span class="va">max_provider_calls</span>,</span>
+<span>    row.names <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">}</span> </span></code></pre>
+</details>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

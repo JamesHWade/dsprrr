@@ -29,3 +29,16 @@ cancellation while a
 [`run_async()`](https://jameshwade.github.io/dsprrr/reference/run_async.md)
 promise is pending. Repeated cancel requests after the first are
 ignored.
+
+## Examples
+
+``` r
+control <- react_async_control()
+control$is_cancelled()
+#> [1] FALSE
+control$cancel("User requested a stop")
+control$is_cancelled()
+#> [1] TRUE
+control$cancel_reason()
+#> [1] "User requested a stop"
+```

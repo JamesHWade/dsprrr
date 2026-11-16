@@ -15,7 +15,7 @@ Optimizers create one when you give them a log_dir."><meta property="og:image" c
 
     <a class="navbar-brand me-2" href="../index.html">dsprrr</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -107,6 +107,11 @@ Optimizers create one when you give them a <code>log_dir</code>.</p>
     </div>
 
 
+    <div class="section level2">
+    <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
+    <p>An R6 class generator. <code>TrialLog$new()</code> creates a trial log with
+methods for recording trials, inspecting results, and saving progress.</p>
+    </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>A log directory holds <code>trials.jsonl</code>, the authoritative journal, and three
@@ -338,8 +343,8 @@ refreshed on a best-effort basis and may lag if that refresh warns.</p><div clas
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 2 × 3</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   trial_id                     status  mean_score</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>                        <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>        <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">1</span> trial_20261116_001234_ncnyz0 pending         <span style="color: #BB0000;">NA</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">2</span> trial_20261116_001234_e01i28 pending         <span style="color: #BB0000;">NA</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">1</span> trial_20261116_174003_ncnyz0 pending         <span style="color: #BB0000;">NA</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">2</span> trial_20261116_174003_e01i28 pending         <span style="color: #BB0000;">NA</span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Persist to a directory and load it again</span></span></span>
 <span class="r-in"><span><span class="va">dir</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"trial-log-example"</span><span class="op">)</span></span></span>
@@ -351,7 +356,7 @@ refreshed on a best-effort basis and may lag if that refresh warns.</p><div clas
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> ── Trial Log: my-search </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">Trials</span>: 1 (0 completed, 0 failed)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">Log Dir</span>: <span style="color: #0000BB;">/tmp/Rtmp6xAfVi/trial-log-example</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">Log Dir</span>: <span style="color: #0000BB;">/tmp/Rtmpyn2oxz/trial-log-example</span></span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>

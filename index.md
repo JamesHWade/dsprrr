@@ -20,6 +20,9 @@ change.
 pak::pak("JamesHWade/dsprrr")
 ```
 
+Installing from source requires a C compiler: Rtools on Windows, Xcode
+Command Line Tools on macOS, or your Linux distribution’s build tools.
+
 You also need credentials for a model provider, for example
 `OPENAI_API_KEY` in your `.Renviron`.
 

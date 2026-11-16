@@ -17,3 +17,17 @@ load_history(path)
 ## Value
 
 A validated dsprrr_history object.
+
+## Examples
+
+``` r
+path <- tempfile(fileext = ".json")
+history <- conversation_history(list(
+  ellmer::UserTurn(list(ellmer::ContentText("Hello")))
+))
+save_history(history, path)
+restored <- load_history(path)
+length(history_turns(restored))
+#> [1] 1
+unlink(path)
+```

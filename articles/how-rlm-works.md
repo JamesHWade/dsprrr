@@ -32,7 +32,7 @@ decides what that code can touch and how large the inputs can be.
 
 |  | [`mcp_repl_runner()`](https://jameshwade.github.io/dsprrr/reference/mcp_repl_runner.md) | `r_code_runner(persistent = TRUE)` |
 |----|----|----|
-| Isolation | Operating-system sandbox from Posit’s [mcp-repl](https://github.com/posit-dev/mcp-repl): network off, writes only to the workspace and temporary files | A separate R process with your user’s file, network and environment access |
+| Isolation | Operating-system sandbox from Posit’s [mcp-repl](https://github.com/posit-dev/mcp-console): network off, writes only to the workspace and temporary files | A separate R process with your user’s file, network and environment access |
 | Use it for | Inputs you do not control, or code that must not reach your files and network | Inputs and code you trust |
 | Inputs | Serialized and sent with every step, so they must be small (see [limits](#limits)) | Any object callr can serialize, staged once per call |
 | Requires | The mcptools package and the `mcp-repl` executable | The callr package |

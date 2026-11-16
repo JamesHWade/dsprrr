@@ -26,7 +26,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">dsprrr</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -168,21 +168,21 @@ experimental and may change.</p>
 <tbody>
 <tr class="odd">
 <td><code><a href="../reference/decision_types.html">decision_bool()</a></code></td>
-<td><code><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_boolean()</a></code></td>
+<td><code>type_boolean()</code></td>
 <td>P(TRUE)</td>
 <td>
 <code>threshold</code> (default 0.5)</td>
 </tr>
 <tr class="even">
 <td><code><a href="../reference/decision_types.html">decision_score()</a></code></td>
-<td>ordered <code><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_enum()</a></code> rubric</td>
+<td>ordered <code>type_enum()</code> rubric</td>
 <td>a probability per level</td>
 <td>
 <code>cuts</code> on the mean level index</td>
 </tr>
 <tr class="odd">
 <td><code><a href="../reference/decision_types.html">decision_choice()</a></code></td>
-<td>unordered <code><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_enum()</a></code>
+<td>unordered <code>type_enum()</code>
 </td>
 <td>a probability per option</td>
 <td>
@@ -389,7 +389,7 @@ inputs and the columns your metric reads:</p>
 it.</li>
 <li>Evidence: it enables evidence decoding for every compatible output
 and records each row’s probabilities. Fields you configured are used as
-is. Described <code><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_boolean()</a></code> and <code><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_enum()</a></code>
+is. Described <code>type_boolean()</code> and <code>type_enum()</code>
 fields without a decision become <code><a href="../reference/decision_types.html">decision_bool()</a></code> and
 <code><a href="../reference/decision_types.html">decision_choice()</a></code>. Score decisions are never inferred,
 because an enum does not say whether its levels are ordered.</li>

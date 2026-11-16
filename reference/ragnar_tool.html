@@ -15,7 +15,7 @@ retrieves once, before every call."><meta property="og:image" content="https://j
 
     <a class="navbar-brand me-2" href="../index.html">dsprrr</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -187,7 +187,11 @@ stopping the conversation. Requires the ragnar package.</p>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Use with a ReAct module</span></span></span>
 <span class="r-in"><span><span class="va">agent</span> <span class="op">&lt;-</span> <span class="fu"><a href="react.html">react</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span>, tools <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">search_tool</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="fu"><a href="run.html">run</a></span><span class="op">(</span><span class="va">agent</span>, question <span class="op">=</span> <span class="st">"How do I turn caching off?"</span>, .llm <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-luna"</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="run.html">run</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>  <span class="va">agent</span>,</span></span>
+<span class="r-in"><span>  question <span class="op">=</span> <span class="st">"How do I turn caching off?"</span>,</span></span>
+<span class="r-in"><span>  .llm <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-luna"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Or register it on an ellmer Chat</span></span></span>
 <span class="r-in"><span><span class="va">chat</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-luna"</span><span class="op">)</span></span></span>

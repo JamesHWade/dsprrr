@@ -1,7 +1,7 @@
 # Run R code in an operating-system sandbox with mcp-repl
 
 `mcp_repl_runner()` creates a code runner backed by Posit's
-[`mcp-repl`](https://github.com/posit-dev/mcp-repl) MCP server.
+[`mcp-repl`](https://github.com/posit-dev/mcp-console) MCP server.
 `mcp-repl` keeps a long-lived R session and enforces a sandbox with
 operating-system primitives, so it is suitable for code written by a
 model or an optimizer. Use it with

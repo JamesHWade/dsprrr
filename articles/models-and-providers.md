@@ -167,7 +167,8 @@ module_parameters(qa, model = "gpt-6-luna", include = knobs)
 ## Images and other content
 
 Pass ellmer content objects as inputs. dsprrr writes the other inputs
-into the prompt text and sends each content object after it:
+into the prompt text and sends each content object after it. These
+examples use receipt images that you supply as local files:
 
 ``` r
 
@@ -176,7 +177,7 @@ chat <- ellmer::chat_openai(model = "gpt-6-luna")
 
 run(
   read_receipt,
-  receipt = ellmer::content_image_url("https://example.com/receipts/0901.jpg"),
+  receipt = ellmer::content_image_file("receipts/0901.jpg"),
   .llm = chat
 )
 ```
@@ -186,15 +187,15 @@ A list of content objects is a batch, one call per element:
 ``` r
 
 receipts <- list(
-  ellmer::content_image_url("https://example.com/receipts/0901.jpg"),
-  ellmer::content_image_url("https://example.com/receipts/0903.jpg")
+  ellmer::content_image_file("receipts/0901.jpg"),
+  ellmer::content_image_file("receipts/0903.jpg")
 )
 totals <- run(read_receipt, receipt = receipts, .llm = chat)
 totals[[1]]$total
 ```
 
 The result has one named list per image.
-[`ellmer::content_image_file()`](https://ellmer.tidyverse.org/reference/content_image_url.html)
+[`ellmer::content_image_url()`](https://ellmer.tidyverse.org/reference/content_image_url.html)
 and
 [`ellmer::content_pdf_url()`](https://ellmer.tidyverse.org/reference/content_pdf_file.html)
 build other kinds of content; the model must accept the kind you send.

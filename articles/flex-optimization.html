@@ -17,9 +17,9 @@
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Flex: optimize a whole program">
-<meta name="description" content="Use Flex when optimization should decide which model calls, deterministic code or tools a task needs, not only rewrite a prompt.
+<meta name="description" content="Start with declarative JSON, then use executable Flex when optimization needs deterministic logic or selected tools.
 ">
-<meta property="og:description" content="Use Flex when optimization should decide which model calls, deterministic code or tools a task needs, not only rewrite a prompt.
+<meta property="og:description" content="Start with declarative JSON, then use executable Flex when optimization needs deterministic logic or selected tools.
 ">
 <meta property="og:image" content="https://jameshwade.github.io/dsprrr/logo.svg">
 </head>
@@ -31,7 +31,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">dsprrr</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -137,112 +137,121 @@
 
     
     
-<p><code><a href="../reference/flex.html">flex()</a></code> is experimental: its source format and behavior
-may change.</p>
-<p>Most dsprrr optimizers improve the instructions or examples inside a
-program whose shape you chose. <code><a href="../reference/flex.html">flex()</a></code> makes the
-implementation itself optimizable: GEPA can change how many predictors
-run, add a deterministic branch, or call a tool you supplied. This page
-builds a support-ticket router, sets up a search that rewards skipping
-the model when a lookup table already knows the answer, and shows how to
-judge and keep the result.</p>
-<p>That freedom helps when you can score the outcome but do not yet know
-the best decomposition. It is unnecessary when the workflow is already
-clear.</p>
+<p><code><a href="../reference/flex.html">flex()</a></code> makes the program structure part of the
+optimization target. GEPA can change the number or order of predictor
+calls and, in executable mode, add deterministic logic or call a tool
+supplied by your application. Flex is experimental, so its source format
+and behavior may change.</p>
+<p>Start with declarative JSON when the workflow is a bounded graph of
+model steps. Use executable R only when the task calls for branching,
+computation, predictors created at run time, or named tools.</p>
 <table class="table">
 <colgroup>
-<col width="50%">
-<col width="50%">
+<col width="33%">
+<col width="33%">
+<col width="33%">
 </colgroup>
 <thead><tr class="header">
-<th>What should change?</th>
+<th>What may change?</th>
 <th>Use</th>
+<th>Execution boundary</th>
 </tr></thead>
 <tbody>
 <tr class="odd">
-<td>Instructions or examples inside a known module</td>
+<td>Instructions or examples inside a fixed module</td>
 <td>A regular module and teleprompter</td>
+<td>Normal module runtime</td>
 </tr>
 <tr class="even">
-<td>A workflow whose steps your team should own</td>
-<td>An explicit pipeline</td>
+<td>A known sequence of model steps</td>
+<td>JSON Flex</td>
+<td>Validated data; no code interpreter</td>
 </tr>
 <tr class="odd">
-<td>The number or order of Predict and Chain-of-Thought steps</td>
-<td>JSON Flex</td>
-</tr>
-<tr class="even">
-<td>The choice among R logic, predictors, and selected tools</td>
+<td>Branches, deterministic logic, or selected tools</td>
 <td>Executable Flex</td>
+<td>Fresh runner; sandbox optimizer-authored code</td>
 </tr>
 </tbody>
 </table>
 <div class="section level2">
-<h2 id="a-router-that-learns-when-not-to-call-a-model">A router that learns when not to call a model<a class="anchor" aria-label="anchor" href="#a-router-that-learns-when-not-to-call-a-model"></a>
+<h2 id="a-small-json-run-needs-no-interpreter">A small JSON run needs no interpreter<a class="anchor" aria-label="anchor" href="#a-small-json-run-needs-no-interpreter"></a>
 </h2>
-<p>Suppose a support team routes tickets to four queues. Some tickets
-contain an incident code with a known owner. Others need language-model
-judgment.</p>
-<p>A conventional predictor sends every ticket to the model. The Flex
-objective is more specific: keep routing accuracy, but avoid a predictor
-call when the incident catalog already contains the answer.</p>
-<p>The example runs optimizer-written R code inside Posit’s <a href="https://github.com/posit-dev/mcp-repl" class="external-link">mcp-repl</a>
-operating-system sandbox. Install the R client and the executable
-first:</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="ex">Rscript</span> <span class="at">-e</span> <span class="st">'install.packages("mcptools")'</span></span>
-<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a><span class="ex">uv</span> tool install posit-mcp-repl   <span class="co"># or: pipx install posit-mcp-repl</span></span></code></pre></div>
-<div class="section level3">
-<h3 id="define-the-task-and-its-evidence">Define the task and its evidence<a class="anchor" aria-label="anchor" href="#define-the-task-and-its-evidence"></a>
-</h3>
-<p>Use separate training and validation rows during search, then reserve
-a holdout set for the final comparison:</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<p>The default source is a one-step JSON program. This example runs a
+real <code><a href="../reference/run.html">run()</a></code> call against a deterministic local Chat fixture.
+It needs neither an API key nor a separate code interpreter:</p>
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/dsprrr" class="external-link">dsprrr</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">route_signature</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
 <span>  <span class="st">"ticket -&gt; queue: enum('database', 'security', 'payments', 'identity')"</span>,</span>
 <span>  instructions <span class="op">=</span> <span class="st">"Route each support ticket to its owning queue."</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>Before running the JSON example in your own R session, run the
+fixture definitions in the <a href="#appendix-offline-fixture-source">appendix</a> once. The
+deterministic Chat fixture counts actual task and proposer requests,
+while its fixed response rules leave metric scoring and candidate
+selection to GEPA.</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">json_program</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/message.html" class="external-link">suppressMessages</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/warning.html" class="external-link">suppressWarnings</a></span><span class="op">(</span><span class="fu"><a href="../reference/flex.html">flex</a></span><span class="op">(</span><span class="va">route_signature</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">json_fixture</span> <span class="op">&lt;-</span> <span class="fu">new_route_fixture</span><span class="op">(</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">json_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
+<span>  <span class="va">json_program</span>,</span>
+<span>  ticket <span class="op">=</span> <span class="st">"[INC-SEC-9] unusual-login burst"</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="va">json_fixture</span><span class="op">$</span><span class="va">chat</span>,</span>
+<span>  .cache <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  .return_format <span class="op">=</span> <span class="st">"structured"</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">train</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="va">json_program</span><span class="op">$</span><span class="va">module_src</span>, <span class="st">"\n"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; {"schema_version":1,"steps":[{"name":"predict","primitive":"predict","signature":"$outer","inputs":{"ticket":"$input.ticket"}}],"outputs":{"queue":"$step.predict.queue"}}</span></span>
+<span><span class="va">json_result</span><span class="op">$</span><span class="va">output</span></span>
+<span><span class="co">#&gt; $queue</span></span>
+<span><span class="co">#&gt; [1] "security"</span></span>
+<span><span class="va">json_result</span><span class="op">$</span><span class="va">metadata</span><span class="op">$</span><span class="va">predictor_calls</span></span>
+<span><span class="co">#&gt; [1] 1</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="va">json_result</span><span class="op">$</span><span class="va">output</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>queue <span class="op">=</span> <span class="st">"security"</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="va">json_result</span><span class="op">$</span><span class="va">metadata</span><span class="op">$</span><span class="va">predictor_calls</span>, <span class="fl">1L</span><span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>The fixture makes task predictions repeatable. The router below still
+runs through Flex’s actual R bridge, predictor, tool,
+<code><a href="../reference/compile.html">compile()</a></code> and <code><a href="../reference/evaluate.html">evaluate()</a></code> contracts. The fixed
+proposer demonstrates the optimizer plumbing; a live search is needed to
+assess whether a model can discover this candidate.</p>
+</div>
+<div class="section level2">
+<h2 id="the-routing-task">The routing task<a class="anchor" aria-label="anchor" href="#the-routing-task"></a>
+</h2>
+<p>A support team routes tickets to database, security, payments, or
+identity. Some tickets have an incident code with a catalog owner.
+Others need a language-model prediction. The search uses separate
+training and validation rows. The holdout data is introduced only after
+compilation.</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">train</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
 <span>  ticket <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
-<span>    <span class="st">"[INC-DB-17] checkout failures in us-east"</span>,</span>
-<span>    <span class="st">"Password reset links expire immediately"</span>,</span>
-<span>    <span class="st">"Duplicate charge after a plan upgrade"</span>,</span>
-<span>    <span class="st">"Queries time out after a schema migration"</span></span>
+<span>    <span class="st">"[INC-SEC-9] unusual-login burst"</span>,</span>
+<span>    <span class="st">"Password reset links expire immediately"</span></span>
 <span>  <span class="op">)</span>,</span>
-<span>  queue <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
-<span>    <span class="st">"database"</span>, <span class="st">"identity"</span>, <span class="st">"payments"</span>, <span class="st">"database"</span></span>
-<span>  <span class="op">)</span></span>
+<span>  queue <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"security"</span>, <span class="st">"identity"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">validation</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
 <span>  ticket <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
-<span>    <span class="st">"[INC-SEC-9] unusual-login burst"</span>,</span>
-<span>    <span class="st">"Card charged twice for one invoice"</span></span>
+<span>    <span class="st">"[INC-PAY-4] capture queue is growing"</span>,</span>
+<span>    <span class="st">"Renewal created two invoices"</span></span>
 <span>  <span class="op">)</span>,</span>
-<span>  queue <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"security"</span>, <span class="st">"payments"</span><span class="op">)</span></span>
+<span>  queue <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"payments"</span>, <span class="st">"payments"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">holdout</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
-<span>  ticket <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
-<span>    <span class="st">"[INC-PAY-4] capture queue is growing"</span>,</span>
-<span>    <span class="st">"[INC-DB-17] replicas unavailable"</span>,</span>
-<span>    <span class="st">"[INC-SEC-9] login spray detected"</span>,</span>
-<span>    <span class="st">"Reset email arrives after its token expires"</span>,</span>
-<span>    <span class="st">"Renewal created two invoices"</span>,</span>
-<span>    <span class="st">"Read traffic fails after failover"</span></span>
-<span>  <span class="op">)</span>,</span>
-<span>  queue <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
-<span>    <span class="st">"payments"</span>, <span class="st">"database"</span>, <span class="st">"security"</span>, <span class="st">"identity"</span>, <span class="st">"payments"</span>, <span class="st">"database"</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p>The catalog is an ordinary R closure wrapped in an ellmer tool
-definition. Its description tells GEPA what the tool returns; supplying
-it to Flex gives generated code one named capability rather than the
-rest of the host session.</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">lookup_incident_fn</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/eval.html" class="external-link">local</a></span><span class="op">(</span><span class="op">{</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/sets.html" class="external-link">intersect</a></span><span class="op">(</span><span class="va">train</span><span class="op">$</span><span class="va">ticket</span>, <span class="va">validation</span><span class="op">$</span><span class="va">ticket</span><span class="op">)</span><span class="op">)</span> <span class="op">==</span> <span class="fl">0L</span><span class="op">)</span></span></code></pre></div>
+<p>The named catalog is application-owned. Executable Flex can request
+only this tool; the optimizer does not receive the closure environment
+or the rest of the R session.</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">lookup_incident</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/eval.html" class="external-link">local</a></span><span class="op">(</span><span class="op">{</span></span>
 <span>  <span class="va">catalog</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
 <span>    <span class="st">"INC-DB-17"</span> <span class="op">=</span> <span class="st">"database"</span>,</span>
 <span>    <span class="st">"INC-SEC-9"</span> <span class="op">=</span> <span class="st">"security"</span>,</span>
@@ -264,348 +273,555 @@ rest of the host session.</p>
 <span>  <span class="op">}</span></span>
 <span><span class="op">}</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">lookup_incident</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/tool.html" class="external-link">tool</a></span><span class="op">(</span></span>
-<span>  <span class="va">lookup_incident_fn</span>,</span>
-<span>  name <span class="op">=</span> <span class="st">"lookup_incident"</span>,</span>
-<span>  description <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span></span>
-<span>    <span class="st">"Find the owner of an incident code in a support ticket."</span>,</span>
-<span>    <span class="st">"Returns list(found = FALSE) when no known code appears; otherwise"</span>,</span>
-<span>    <span class="st">"returns list(found = TRUE, queue = &lt;owning queue&gt;)."</span></span>
-<span>  <span class="op">)</span>,</span>
-<span>  arguments <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    ticket <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span></span>
-<span>      description <span class="op">=</span> <span class="st">"Complete support-ticket text."</span></span>
-<span>    <span class="op">)</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu">lookup_incident_fn</span><span class="op">(</span><span class="st">"[INC-DB-17] replicas unavailable"</span><span class="op">)</span></span>
+<span><span class="fu">lookup_incident</span><span class="op">(</span><span class="st">"[INC-DB-17] replicas unavailable"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; $found</span></span>
 <span><span class="co">#&gt; [1] TRUE</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $queue</span></span>
 <span><span class="co">#&gt; [1] "database"</span></span>
-<span><span class="fu">lookup_incident_fn</span><span class="op">(</span><span class="st">"Reset email arrives after its token expires"</span><span class="op">)</span></span>
+<span><span class="fu">lookup_incident</span><span class="op">(</span><span class="st">"A password reset email is late"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; $found</span></span>
 <span><span class="co">#&gt; [1] FALSE</span></span></code></pre></div>
 </div>
-<div class="section level3">
-<h3 id="start-with-one-predictor">Start with one predictor<a class="anchor" aria-label="anchor" href="#start-with-one-predictor"></a>
-</h3>
-<p>Executable Flex source defines a top-level <code>forward()</code>
-function. This baseline always calls one predictor, even for a ticket
-whose incident code is already in the catalog.</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="section level2">
+<h2 id="compile-with-a-deterministic-proposer">Compile with a deterministic proposer<a class="anchor" aria-label="anchor" href="#compile-with-a-deterministic-proposer"></a>
+</h2>
+<p>This executable R example needs <code>callr</code>, an optional
+dsprrr dependency used by <code><a href="../reference/r_code_runner.html">r_code_runner()</a></code> to start an R
+subprocess. Install it once before continuing:</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"callr"</span><span class="op">)</span></span></code></pre></div>
+<p>The baseline makes one predictor call for every ticket. The fixed,
+reviewed candidate first asks the catalog about incident codes, returns
+a known owner directly, and calls one predictor for everything else.</p>
+<p>The following Chat fixture returns that candidate when GEPA asks for
+<code>module_src</code>. For task predictions it returns a deterministic
+response from the prompt’s ticket text. GEPA runs the metric on Flex
+predictions and traces, then selects from the resulting validation
+scores.</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">baseline_source</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span></span>
 <span>  <span class="st">"router &lt;- Predict(\"$outer\", instructions = \"Choose the owning queue.\")"</span>,</span>
 <span>  <span class="st">"forward &lt;- function(ticket) router(ticket = ticket)"</span>,</span>
 <span>  sep <span class="op">=</span> <span class="st">"\n"</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">sandbox_factory</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="fu"><a href="../reference/mcp_repl_runner.html">mcp_repl_runner</a></span><span class="op">(</span>timeout <span class="op">=</span> <span class="fl">45</span><span class="op">)</span></span>
+<span><span class="va">selected_fixture_source</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span></span>
+<span>  <span class="st">"fallback &lt;- Predict(\"$outer\", instructions = \"Route tickets without a known incident code.\")"</span>,</span>
+<span>  <span class="st">"forward &lt;- function(ticket) {"</span>,</span>
+<span>  <span class="st">"  if (grepl(\"INC-\", ticket, fixed = TRUE)) {"</span>,</span>
+<span>  <span class="st">"    hit &lt;- lookup_incident(ticket = ticket)"</span>,</span>
+<span>  <span class="st">"    if (isTRUE(hit$found)) return(Prediction(queue = hit$queue))"</span>,</span>
+<span>  <span class="st">"  }"</span>,</span>
+<span>  <span class="st">"  fallback(ticket = ticket)"</span>,</span>
+<span>  <span class="st">"}"</span>,</span>
+<span>  sep <span class="op">=</span> <span class="st">"\n"</span></span>
+<span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">baseline</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/flex.html">flex</a></span><span class="op">(</span></span>
-<span>  <span class="va">route_signature</span>,</span>
-<span>  module_src <span class="op">=</span> <span class="va">baseline_source</span>,</span>
-<span>  tools <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>lookup_incident <span class="op">=</span> <span class="va">lookup_incident</span><span class="op">)</span>,</span>
-<span>  interpreter_factory <span class="op">=</span> <span class="va">sandbox_factory</span>,</span>
-<span>  source_format <span class="op">=</span> <span class="st">"r"</span>,</span>
-<span>  max_predictor_calls <span class="op">=</span> <span class="fl">1L</span>,</span>
-<span>  max_tool_calls <span class="op">=</span> <span class="fl">1L</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p><code>sandbox_factory</code> gives every call a fresh sandboxed R
-session; mcp-repl’s sandbox is what stands between optimizer-written
-source and your machine.</p>
-</div>
-<div class="section level3">
-<h3 id="score-the-answer-and-the-work">Score the answer and the work<a class="anchor" aria-label="anchor" href="#score-the-answer-and-the-work"></a>
-</h3>
-<p>An exact-match metric alone cannot distinguish two correct programs.
-A trace-aware metric can. Here, a correct route scores <code>1</code>; a
-correct route that needed a predictor scores <code>0.9</code>; a wrong
-route scores <code>0</code>.</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<span><span class="va">make_router</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">module_src</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/warning.html" class="external-link">suppressWarnings</a></span><span class="op">(</span><span class="fu"><a href="../reference/flex.html">flex</a></span><span class="op">(</span></span>
+<span>    <span class="va">route_signature</span>,</span>
+<span>    module_src <span class="op">=</span> <span class="va">module_src</span>,</span>
+<span>    tools <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>lookup_incident <span class="op">=</span> <span class="va">lookup_incident</span><span class="op">)</span>,</span>
+<span>    interpreter_factory <span class="op">=</span> <span class="va">r_code_runner</span>,</span>
+<span>    source_format <span class="op">=</span> <span class="st">"r"</span>,</span>
+<span>    require_sandbox <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>    max_predictor_calls <span class="op">=</span> <span class="fl">1L</span>,</span>
+<span>    max_tool_calls <span class="op">=</span> <span class="fl">1L</span></span>
+<span>  <span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">}</span></span>
+<span></span>
+<span><span class="va">baseline</span> <span class="op">&lt;-</span> <span class="fu">make_router</span><span class="op">(</span><span class="va">baseline_source</span><span class="op">)</span></span></code></pre></div>
+<p>This offline article runs only the two fixed source strings shown
+here through <code><a href="../reference/r_code_runner.html">r_code_runner()</a></code>. That runner starts an R
+subprocess, but it is not a security sandbox.
+<code>require_sandbox = FALSE</code> is appropriate here only because
+both sources are reviewed fixtures. For optimizer-authored R in an
+application, keep the default sandbox requirement and configure an
+enforced runner such as <code><a href="../reference/mcp_repl_runner.html">mcp_repl_runner()</a></code> with <a href="https://github.com/posit-dev/mcp-console" class="external-link">Posit’s MCP
+Console</a>.</p>
+<p>The metric checks the predicted queue against the row label. Correct
+answers score higher when they require no predictor; incorrect answers
+score zero. The execution trace supplies the call count used for that
+efficiency reward.</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">route_metric</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metric_with_trace.html">metric_with_trace</a></span><span class="op">(</span></span>
 <span>  <span class="kw">function</span><span class="op">(</span><span class="va">prediction</span>, <span class="va">expected</span>, <span class="va">program_trace</span><span class="op">)</span> <span class="op">{</span></span>
-<span>    <span class="va">observed</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">as.character</a></span><span class="op">(</span><span class="va">prediction</span><span class="op">$</span><span class="va">queue</span><span class="op">)</span></span>
-<span>    <span class="va">wanted</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">as.character</a></span><span class="op">(</span><span class="va">expected</span><span class="op">$</span><span class="va">queue</span><span class="op">)</span></span>
-<span>    <span class="va">correct</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="va">observed</span>, <span class="va">wanted</span><span class="op">)</span></span>
-<span></span>
-<span>    <span class="va">calls</span> <span class="op">&lt;-</span> <span class="va">program_trace</span><span class="op">$</span><span class="va">metadata</span><span class="op">$</span><span class="va">predictor_calls</span></span>
-<span>    <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/NULL.html" class="external-link">is.null</a></span><span class="op">(</span><span class="va">calls</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>      <span class="va">calls</span> <span class="op">&lt;-</span> <span class="fl">0L</span></span>
+<span>    <span class="va">correct</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span></span>
+<span>      <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">as.character</a></span><span class="op">(</span><span class="va">prediction</span><span class="op">$</span><span class="va">queue</span><span class="op">)</span>,</span>
+<span>      <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">as.character</a></span><span class="op">(</span><span class="va">expected</span><span class="op">$</span><span class="va">queue</span><span class="op">[[</span><span class="fl">1L</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span>
+<span>    <span class="op">)</span></span>
+<span>    <span class="va">predictor_calls</span> <span class="op">&lt;-</span> <span class="va">program_trace</span><span class="op">$</span><span class="va">metadata</span><span class="op">$</span><span class="va">predictor_calls</span></span>
+<span>    <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/NULL.html" class="external-link">is.null</a></span><span class="op">(</span><span class="va">predictor_calls</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
+<span>      <span class="va">predictor_calls</span> <span class="op">&lt;-</span> <span class="fl">0L</span></span>
 <span>    <span class="op">}</span></span>
 <span></span>
 <span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>      score <span class="op">=</span> <span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="va">correct</span><span class="op">)</span> <span class="fl">0</span> <span class="kw">else</span> <span class="kw">if</span> <span class="op">(</span><span class="va">calls</span> <span class="op">==</span> <span class="fl">0L</span><span class="op">)</span> <span class="fl">1</span> <span class="kw">else</span> <span class="fl">0.9</span>,</span>
-<span>      feedback <span class="op">=</span> <span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="va">correct</span><span class="op">)</span> <span class="op">{</span></span>
-<span>        <span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span><span class="st">"Expected '%s'; got '%s'."</span>, <span class="va">wanted</span>, <span class="va">observed</span><span class="op">)</span></span>
-<span>      <span class="op">}</span> <span class="kw">else</span> <span class="kw">if</span> <span class="op">(</span><span class="va">calls</span> <span class="op">&gt;</span> <span class="fl">0L</span><span class="op">)</span> <span class="op">{</span></span>
-<span>        <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span></span>
-<span>          <span class="st">"Correct, but a predictor ran."</span>,</span>
-<span>          <span class="st">"Prefer the incident catalog when it covers the ticket."</span></span>
-<span>        <span class="op">)</span></span>
+<span>      score <span class="op">=</span> <span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="va">correct</span><span class="op">)</span> <span class="op">{</span></span>
+<span>        <span class="fl">0</span></span>
+<span>      <span class="op">}</span> <span class="kw">else</span> <span class="kw">if</span> <span class="op">(</span><span class="va">predictor_calls</span> <span class="op">==</span> <span class="fl">0L</span><span class="op">)</span> <span class="op">{</span></span>
+<span>        <span class="fl">1</span></span>
 <span>      <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span></span>
-<span>        <span class="st">"Correct and deterministic."</span></span>
+<span>        <span class="fl">0.5</span></span>
+<span>      <span class="op">}</span>,</span>
+<span>      feedback <span class="op">=</span> <span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="va">correct</span><span class="op">)</span> <span class="op">{</span></span>
+<span>        <span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span></span>
+<span>          <span class="st">"Expected '%s'; got '%s'."</span>,</span>
+<span>          <span class="va">expected</span><span class="op">$</span><span class="va">queue</span><span class="op">[[</span><span class="fl">1L</span><span class="op">]</span><span class="op">]</span>,</span>
+<span>          <span class="va">prediction</span><span class="op">$</span><span class="va">queue</span></span>
+<span>        <span class="op">)</span></span>
+<span>      <span class="op">}</span> <span class="kw">else</span> <span class="kw">if</span> <span class="op">(</span><span class="va">predictor_calls</span> <span class="op">&gt;</span> <span class="fl">0L</span><span class="op">)</span> <span class="op">{</span></span>
+<span>        <span class="st">"Correct route; prefer the incident catalog when it has an owner."</span></span>
+<span>      <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span></span>
+<span>        <span class="st">"Correct route without a predictor call."</span></span>
 <span>      <span class="op">}</span></span>
 <span>    <span class="op">)</span></span>
 <span>  <span class="op">}</span>,</span>
 <span>  field <span class="op">=</span> <span class="st">"queue"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="run-the-search">Run the search<a class="anchor" aria-label="anchor" href="#run-the-search"></a>
-</h3>
-<p>GEPA proposes complete <code>module_src</code> candidates. Training
-rows generate feedback; validation rows decide which candidate survives.
-Keep the first run small and bounded:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">llm</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-luna"</span><span class="op">)</span></span>
+<p>GEPA’s validation score ranks the candidates. The
+<code><a href="../reference/evaluate.html">evaluate()</a></code> calls made by <code><a href="../reference/compile.html">compile()</a></code> execute the
+bound Flex program, and <code>route_metric</code> reads the resulting
+prediction and trace. Training rows are available to generate feedback;
+validation rows decide which candidate survives.</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">optimizer_fixture</span> <span class="op">&lt;-</span> <span class="fu">new_route_fixture</span><span class="op">(</span></span>
+<span>  proposed_source <span class="op">=</span> <span class="va">selected_fixture_source</span>,</span>
+<span>  model <span class="op">=</span> <span class="st">"fixture-gepa-router"</span></span>
+<span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">optimized</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span></span>
 <span>  <span class="va">baseline</span>,</span>
 <span>  <span class="fu"><a href="../reference/GEPA.html">GEPA</a></span><span class="op">(</span></span>
 <span>    metric <span class="op">=</span> <span class="va">route_metric</span>,</span>
-<span>    metric_threshold <span class="op">=</span> <span class="fl">0.95</span>,</span>
 <span>    population_size <span class="op">=</span> <span class="fl">2L</span>,</span>
 <span>    generations <span class="op">=</span> <span class="fl">1L</span>,</span>
 <span>    selection <span class="op">=</span> <span class="st">"current_best"</span>,</span>
-<span>    seed <span class="op">=</span> <span class="fl">20260810L</span>,</span>
 <span>    track_best_outputs <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>    verbose <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span>  <span class="op">)</span>,</span>
 <span>  trainset <span class="op">=</span> <span class="va">train</span>,</span>
 <span>  valset <span class="op">=</span> <span class="va">validation</span>,</span>
-<span>  .llm <span class="op">=</span> <span class="va">llm</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="va">optimizer_fixture</span><span class="op">$</span><span class="va">chat</span>,</span>
 <span>  control <span class="op">=</span> <span class="fu"><a href="../reference/optimizer_control.html">optimizer_control</a></span><span class="op">(</span></span>
-<span>    max_metric_calls <span class="op">=</span> <span class="fl">30L</span>,</span>
+<span>    max_metric_calls <span class="op">=</span> <span class="fl">40L</span>,</span>
 <span>    max_provider_calls <span class="op">=</span> <span class="fl">30L</span>,</span>
 <span>    max_elapsed_seconds <span class="op">=</span> <span class="fl">300</span>,</span>
 <span>    num_threads <span class="op">=</span> <span class="fl">1L</span>,</span>
 <span>    progress <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span>  <span class="op">)</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p><code>metric_threshold = 0.95</code> decides which training rows GEPA
-shows its proposer as failures: every row scoring below 0.95. With this
-metric that includes correct routes that needed a predictor (0.9), so
-their feedback (“Prefer the incident catalog…”) reaches the
-proposer.</p>
-<p>Model output varies, so a seed does not guarantee identical source.
-Judge the result on held-out behavior, not on whether it reproduces one
-program string. The limits stop the search and return its best partial
-result after 30 metric calls, 30 provider calls, or five minutes.</p>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">compile_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">optimized</span><span class="op">)</span></span>
+<span><span class="va">gepa_budget</span> <span class="op">&lt;-</span> <span class="va">compile_result</span><span class="op">$</span><span class="va">budget</span></span>
+<span></span>
+<span><span class="va">budget_summary</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  status <span class="op">=</span> <span class="va">compile_result</span><span class="op">$</span><span class="va">status</span>,</span>
+<span>  metric_calls <span class="op">=</span> <span class="va">gepa_budget</span><span class="op">$</span><span class="va">metric_calls</span>,</span>
+<span>  metric_call_limit <span class="op">=</span> <span class="va">gepa_budget</span><span class="op">$</span><span class="va">limits</span><span class="op">$</span><span class="va">max_metric_calls</span>,</span>
+<span>  provider_calls <span class="op">=</span> <span class="va">gepa_budget</span><span class="op">$</span><span class="va">provider_calls</span>,</span>
+<span>  provider_call_limit <span class="op">=</span> <span class="va">gepa_budget</span><span class="op">$</span><span class="va">limits</span><span class="op">$</span><span class="va">max_provider_calls</span>,</span>
+<span>  task_calls <span class="op">=</span> <span class="va">optimizer_fixture</span><span class="op">$</span><span class="va">audit</span><span class="op">$</span><span class="va">task_calls</span>,</span>
+<span>  proposal_calls <span class="op">=</span> <span class="va">optimizer_fixture</span><span class="op">$</span><span class="va">audit</span><span class="op">$</span><span class="va">proposal_calls</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="va">compile_result</span><span class="op">$</span><span class="va">status</span>, <span class="st">"completed"</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/Logic.html" class="external-link">isTRUE</a></span><span class="op">(</span><span class="va">gepa_budget</span><span class="op">$</span><span class="va">metric_calls</span> <span class="op">&lt;=</span> <span class="va">gepa_budget</span><span class="op">$</span><span class="va">limits</span><span class="op">$</span><span class="va">max_metric_calls</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/Logic.html" class="external-link">isTRUE</a></span><span class="op">(</span><span class="va">gepa_budget</span><span class="op">$</span><span class="va">provider_calls</span> <span class="op">&lt;=</span> <span class="va">gepa_budget</span><span class="op">$</span><span class="va">limits</span><span class="op">$</span><span class="va">max_provider_calls</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span></span>
+<span>    <span class="va">gepa_budget</span><span class="op">$</span><span class="va">provider_calls</span>,</span>
+<span>    <span class="va">optimizer_fixture</span><span class="op">$</span><span class="va">audit</span><span class="op">$</span><span class="va">task_calls</span> <span class="op">+</span> <span class="va">optimizer_fixture</span><span class="op">$</span><span class="va">audit</span><span class="op">$</span><span class="va">proposal_calls</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="va">optimizer_fixture</span><span class="op">$</span><span class="va">audit</span><span class="op">$</span><span class="va">proposal_calls</span>, <span class="fl">1L</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/Logic.html" class="external-link">isTRUE</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/all.equal.html" class="external-link">all.equal</a></span><span class="op">(</span><span class="va">compile_result</span><span class="op">$</span><span class="va">best_score</span>, <span class="fl">0.75</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="va">optimized</span><span class="op">$</span><span class="va">module_src</span>, <span class="va">selected_fixture_source</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">budget_summary</span></span>
+<span><span class="co">#&gt;      status metric_calls metric_call_limit provider_calls provider_call_limit</span></span>
+<span><span class="co">#&gt; 1 completed            8                40              7                  30</span></span>
+<span><span class="co">#&gt;   task_calls proposal_calls</span></span>
+<span><span class="co">#&gt; 1          6              1</span></span></code></pre></div>
+<p>GEPA selected source is part of the compiled module. Render both
+complete programs before using the result:</p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">selected_source</span> <span class="op">&lt;-</span> <span class="va">optimized</span><span class="op">$</span><span class="va">module_src</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Baseline source:\n"</span>, <span class="va">baseline</span><span class="op">$</span><span class="va">module_src</span>, <span class="st">"\n\n"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Baseline source:</span></span>
+<span><span class="co">#&gt;  router &lt;- Predict("$outer", instructions = "Choose the owning queue.")</span></span>
+<span><span class="co">#&gt; forward &lt;- function(ticket) router(ticket = ticket)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Selected source:\n"</span>, <span class="va">selected_source</span>, <span class="st">"\n"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Selected source:</span></span>
+<span><span class="co">#&gt;  fallback &lt;- Predict("$outer", instructions = "Route tickets without a known incident code.")</span></span>
+<span><span class="co">#&gt; forward &lt;- function(ticket) {</span></span>
+<span><span class="co">#&gt;   if (grepl("INC-", ticket, fixed = TRUE)) {</span></span>
+<span><span class="co">#&gt;     hit &lt;- lookup_incident(ticket = ticket)</span></span>
+<span><span class="co">#&gt;     if (isTRUE(hit$found)) return(Prediction(queue = hit$queue))</span></span>
+<span><span class="co">#&gt;   }</span></span>
+<span><span class="co">#&gt;   fallback(ticket = ticket)</span></span>
+<span><span class="co">#&gt; }</span></span>
+<span></span>
+<span><span class="va">compile_result</span><span class="op">$</span><span class="va">lineage</span><span class="op">$</span><span class="va">best_candidate_id</span></span>
+<span><span class="co">#&gt; [1] "candidate:98f898530da5c74b"</span></span>
+<span><span class="va">compile_result</span><span class="op">$</span><span class="va">best_score</span></span>
+<span><span class="co">#&gt; [1] 0.75</span></span></code></pre></div>
 </div>
-<div class="section level3">
-<h3 id="compare-quality-and-calls">Compare quality and calls<a class="anchor" aria-label="anchor" href="#compare-quality-and-calls"></a>
-</h3>
-<p>Report ordinary accuracy separately from the efficiency
-objective:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">accuracy</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"queue"</span><span class="op">)</span></span>
+<div class="section level2">
+<h2 id="evaluate-once-on-independent-holdout-data">Evaluate once on independent holdout data<a class="anchor" aria-label="anchor" href="#evaluate-once-on-independent-holdout-data"></a>
+</h2>
+<p>These six tickets have different text from the training and
+validation rows. The data object is created after
+<code><a href="../reference/compile.html">compile()</a></code>; the evaluations below happen outside GEPA
+selection. The catalog knows three incident codes; the remaining tickets
+use the task predictor.</p>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">holdout</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  ticket <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>    <span class="st">"[INC-DB-17] replicas unavailable"</span>,</span>
+<span>    <span class="st">"[INC-SEC-9] login spray detected"</span>,</span>
+<span>    <span class="st">"[INC-PAY-4] payment capture is delayed"</span>,</span>
+<span>    <span class="st">"Reset email arrives after its token expires"</span>,</span>
+<span>    <span class="st">"Duplicate charge after a plan upgrade"</span>,</span>
+<span>    <span class="st">"Read traffic fails after failover"</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  queue <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>    <span class="st">"database"</span>,</span>
+<span>    <span class="st">"security"</span>,</span>
+<span>    <span class="st">"payments"</span>,</span>
+<span>    <span class="st">"identity"</span>,</span>
+<span>    <span class="st">"payments"</span>,</span>
+<span>    <span class="st">"database"</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/sets.html" class="external-link">intersect</a></span><span class="op">(</span><span class="va">holdout</span><span class="op">$</span><span class="va">ticket</span>, <span class="va">train</span><span class="op">$</span><span class="va">ticket</span><span class="op">)</span><span class="op">)</span> <span class="op">==</span> <span class="fl">0L</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/sets.html" class="external-link">intersect</a></span><span class="op">(</span><span class="va">holdout</span><span class="op">$</span><span class="va">ticket</span>, <span class="va">validation</span><span class="op">$</span><span class="va">ticket</span><span class="op">)</span><span class="op">)</span> <span class="op">==</span> <span class="fl">0L</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">compile_prompts</span> <span class="op">&lt;-</span> <span class="va">optimizer_fixture</span><span class="op">$</span><span class="va">audit</span><span class="op">$</span><span class="va">prompts</span></span>
+<span><span class="va">holdout_absent_from_compile</span> <span class="op">&lt;-</span> <span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/any.html" class="external-link">any</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span></span>
+<span>  <span class="va">holdout</span><span class="op">$</span><span class="va">ticket</span>,</span>
+<span>  <span class="va">grepl</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/logical.html" class="external-link">logical</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span>,</span>
+<span>  x <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">compile_prompts</span>, collapse <span class="op">=</span> <span class="st">"\n"</span><span class="op">)</span>,</span>
+<span>  fixed <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="va">holdout_absent_from_compile</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">accuracy</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"queue"</span><span class="op">)</span></span>
+<span><span class="va">before_fixture</span> <span class="op">&lt;-</span> <span class="fu">new_route_fixture</span><span class="op">(</span>model <span class="op">=</span> <span class="st">"fixture-holdout-before"</span><span class="op">)</span></span>
+<span><span class="va">after_fixture</span> <span class="op">&lt;-</span> <span class="fu">new_route_fixture</span><span class="op">(</span>model <span class="op">=</span> <span class="st">"fixture-holdout-after"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">before</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span></span>
 <span>  <span class="va">baseline</span>,</span>
 <span>  <span class="va">holdout</span>,</span>
 <span>  metric <span class="op">=</span> <span class="va">accuracy</span>,</span>
-<span>  .llm <span class="op">=</span> <span class="va">llm</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="va">before_fixture</span><span class="op">$</span><span class="va">chat</span>,</span>
+<span>  .cache <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  .progress <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span>
 <span><span class="va">after</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span></span>
 <span>  <span class="va">optimized</span>,</span>
 <span>  <span class="va">holdout</span>,</span>
 <span>  metric <span class="op">=</span> <span class="va">accuracy</span>,</span>
-<span>  .llm <span class="op">=</span> <span class="va">llm</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="va">after_fixture</span><span class="op">$</span><span class="va">chat</span>,</span>
+<span>  .cache <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  .progress <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">count_calls</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">result</span>, <span class="va">field</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">metadata</span>, <span class="kw">function</span><span class="op">(</span><span class="va">metadata</span><span class="op">)</span> <span class="op">{</span></span>
-<span>    <span class="va">value</span> <span class="op">&lt;-</span> <span class="va">metadata</span><span class="op">[[</span><span class="va">field</span><span class="op">]</span><span class="op">]</span></span>
-<span>    <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/NULL.html" class="external-link">is.null</a></span><span class="op">(</span><span class="va">value</span><span class="op">)</span><span class="op">)</span> <span class="fl">0L</span> <span class="kw">else</span> <span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">as.integer</a></span><span class="op">(</span><span class="va">value</span><span class="op">)</span></span>
-<span>  <span class="op">}</span>, <span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">integer</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">count_metadata_calls</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">result</span>, <span class="va">field</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span></span>
+<span>    <span class="va">result</span><span class="op">$</span><span class="va">metadata</span>,</span>
+<span>    <span class="kw">function</span><span class="op">(</span><span class="va">metadata</span><span class="op">)</span> <span class="op">{</span></span>
+<span>      <span class="va">value</span> <span class="op">&lt;-</span> <span class="va">metadata</span><span class="op">[[</span><span class="va">field</span><span class="op">]</span><span class="op">]</span></span>
+<span>      <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/NULL.html" class="external-link">is.null</a></span><span class="op">(</span><span class="va">value</span><span class="op">)</span><span class="op">)</span> <span class="fl">0L</span> <span class="kw">else</span> <span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">as.integer</a></span><span class="op">(</span><span class="va">value</span><span class="op">)</span></span>
+<span>    <span class="op">}</span>,</span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">integer</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
+<span>  <span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">}</span></span>
 <span></span>
-<span><span class="va">comparison</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
-<span>  program <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"baseline"</span>, <span class="st">"optimized"</span><span class="op">)</span>,</span>
-<span>  accuracy <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">before</span><span class="op">$</span><span class="va">mean_score</span>, <span class="va">after</span><span class="op">$</span><span class="va">mean_score</span><span class="op">)</span>,</span>
+<span><span class="va">heldout</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  program <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"baseline"</span>, <span class="st">"selected"</span><span class="op">)</span>,</span>
+<span>  exact_match_quality <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">before</span><span class="op">$</span><span class="va">mean_score</span>, <span class="va">after</span><span class="op">$</span><span class="va">mean_score</span><span class="op">)</span>,</span>
 <span>  predictor_calls <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
-<span>    <span class="fu">count_calls</span><span class="op">(</span><span class="va">before</span>, <span class="st">"predictor_calls"</span><span class="op">)</span>,</span>
-<span>    <span class="fu">count_calls</span><span class="op">(</span><span class="va">after</span>, <span class="st">"predictor_calls"</span><span class="op">)</span></span>
+<span>    <span class="fu">count_metadata_calls</span><span class="op">(</span><span class="va">before</span>, <span class="st">"predictor_calls"</span><span class="op">)</span>,</span>
+<span>    <span class="fu">count_metadata_calls</span><span class="op">(</span><span class="va">after</span>, <span class="st">"predictor_calls"</span><span class="op">)</span></span>
 <span>  <span class="op">)</span>,</span>
 <span>  tool_calls <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
-<span>    <span class="fu">count_calls</span><span class="op">(</span><span class="va">before</span>, <span class="st">"tool_calls"</span><span class="op">)</span>,</span>
-<span>    <span class="fu">count_calls</span><span class="op">(</span><span class="va">after</span>, <span class="st">"tool_calls"</span><span class="op">)</span></span>
+<span>    <span class="fu">count_metadata_calls</span><span class="op">(</span><span class="va">before</span>, <span class="st">"tool_calls"</span><span class="op">)</span>,</span>
+<span>    <span class="fu">count_metadata_calls</span><span class="op">(</span><span class="va">after</span>, <span class="st">"tool_calls"</span><span class="op">)</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  fixture_model_calls <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>    <span class="va">before_fixture</span><span class="op">$</span><span class="va">audit</span><span class="op">$</span><span class="va">task_calls</span>,</span>
+<span>    <span class="va">after_fixture</span><span class="op">$</span><span class="va">audit</span><span class="op">$</span><span class="va">task_calls</span></span>
 <span>  <span class="op">)</span></span>
 <span><span class="op">)</span></span>
-<span><span class="va">comparison</span></span></code></pre></div>
-<p>This page shows no live results. dsprrr’s own tests run this workflow
-with a mock model that routes every ticket correctly and, when GEPA asks
-for a new program, returns a hybrid written by hand (shown in the next
-section). They check that GEPA selects that program on the validation
-rows and that Flex runs and counts it correctly; they say nothing about
-whether GEPA would write the hybrid itself. On the six holdout tickets
-the tests record:</p>
-<table class="table">
-<colgroup>
-<col width="20%">
-<col width="26%">
-<col width="26%">
-<col width="26%">
-</colgroup>
-<thead><tr class="header">
-<th>Program in the test</th>
-<th align="right">Holdout accuracy</th>
-<th align="right">Predictor calls</th>
-<th align="right">Tool calls</th>
-</tr></thead>
-<tbody>
-<tr class="odd">
-<td>Baseline</td>
-<td align="right">1.00</td>
-<td align="right">6</td>
-<td align="right">0</td>
-</tr>
-<tr class="even">
-<td>Hand-written hybrid</td>
-<td align="right">1.00</td>
-<td align="right">3</td>
-<td align="right">3</td>
-</tr>
-</tbody>
-</table>
-<p>For a live run, accept the candidate only when held-out quality is at
-least as good and predictor calls fall:</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span></span>
-<span>  <span class="va">after</span><span class="op">$</span><span class="va">mean_score</span> <span class="op">&gt;=</span> <span class="va">before</span><span class="op">$</span><span class="va">mean_score</span>,</span>
-<span>  <span class="fu">count_calls</span><span class="op">(</span><span class="va">after</span>, <span class="st">"predictor_calls"</span><span class="op">)</span> <span class="op">&lt;</span></span>
-<span>    <span class="fu">count_calls</span><span class="op">(</span><span class="va">before</span>, <span class="st">"predictor_calls"</span><span class="op">)</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-</div>
-</div>
-<div class="section level2">
-<h2 id="read-the-program-gepa-selected">Read the program GEPA selected<a class="anchor" aria-label="anchor" href="#read-the-program-gepa-selected"></a>
-</h2>
-<p>Always read executable source before you use it:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">optimized</span><span class="op">$</span><span class="va">module_src</span></span></code></pre></div>
-<p>A useful candidate for this task has a deterministic catalog path and
-a predictor fallback, like the hand-written hybrid that the package
-tests feed to GEPA:</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">fallback</span> <span class="op">&lt;-</span> <span class="fu">Predict</span><span class="op">(</span></span>
-<span>  <span class="st">"$outer"</span>,</span>
-<span>  instructions <span class="op">=</span> <span class="st">"Route tickets without a known incident code."</span></span>
-<span><span class="op">)</span></span>
-<span><span class="va">forward</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">ticket</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grepl</a></span><span class="op">(</span><span class="st">"INC-"</span>, <span class="va">ticket</span>, fixed <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>    <span class="va">hit</span> <span class="op">&lt;-</span> <span class="fu">lookup_incident</span><span class="op">(</span>ticket <span class="op">=</span> <span class="va">ticket</span><span class="op">)</span></span>
-<span>    <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Logic.html" class="external-link">isTRUE</a></span><span class="op">(</span><span class="va">hit</span><span class="op">$</span><span class="va">found</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>      <span class="kw"><a href="https://rdrr.io/r/base/function.html" class="external-link">return</a></span><span class="op">(</span><span class="fu">Prediction</span><span class="op">(</span>queue <span class="op">=</span> <span class="va">hit</span><span class="op">$</span><span class="va">queue</span><span class="op">)</span><span class="op">)</span></span>
-<span>    <span class="op">}</span></span>
-<span>  <span class="op">}</span></span>
-<span>  <span class="fu">fallback</span><span class="op">(</span>ticket <span class="op">=</span> <span class="va">ticket</span><span class="op">)</span></span>
-<span><span class="op">}</span></span></code></pre></div>
-<p><code>module_src</code> is the program itself, not an explanation of
-what happened. The evidence is in each row’s run metadata, which records
-the <code>module_src</code> it ran along with predictor calls, tool
-calls and tokens. GEPA also records the winning candidate ID and
-validation score:</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">optimized</span><span class="op">)</span><span class="op">$</span><span class="va">lineage</span><span class="op">$</span><span class="va">best_candidate_id</span></span>
-<span><span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">optimized</span><span class="op">)</span><span class="op">$</span><span class="va">extensions</span><span class="op">$</span><span class="va">gepa</span><span class="op">$</span><span class="va">best_scores</span></span>
-<span><span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">optimized</span><span class="op">)</span><span class="op">$</span><span class="va">extensions</span><span class="op">$</span><span class="va">gepa</span><span class="op">$</span><span class="va">per_val_instance_best_candidates</span></span></code></pre></div>
-</div>
-<div class="section level2">
-<h2 id="keep-the-selected-program">Keep the selected program<a class="anchor" aria-label="anchor" href="#keep-the-selected-program"></a>
-</h2>
-<p>Save the selected source with your code, and rebuild the module from
-it where you deploy. The tool and the sandbox factory stay in your code,
-where you can review and version them:</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/writeLines.html" class="external-link">writeLines</a></span><span class="op">(</span><span class="va">optimized</span><span class="op">$</span><span class="va">module_src</span>, <span class="st">"ticket-router.R"</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">router</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/flex.html">flex</a></span><span class="op">(</span></span>
+<span><span class="va">heldout</span></span>
+<span><span class="co">#&gt;    program exact_match_quality predictor_calls tool_calls fixture_model_calls</span></span>
+<span><span class="co">#&gt; 1 baseline                   1               6          0                   6</span></span>
+<span><span class="co">#&gt; 2 selected                   1               3          3                   3</span></span></code></pre></div>
+<p>The fixture counters and Flex trace metadata are execution counts.
+The acceptance decision below uses the independent exact-match results
+and those observed calls.</p>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">same_quality</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Logic.html" class="external-link">isTRUE</a></span><span class="op">(</span><span class="va">before</span><span class="op">$</span><span class="va">mean_score</span> <span class="op">==</span> <span class="va">after</span><span class="op">$</span><span class="va">mean_score</span><span class="op">)</span></span>
+<span><span class="va">fewer_model_calls</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Logic.html" class="external-link">isTRUE</a></span><span class="op">(</span></span>
+<span>  <span class="va">after_fixture</span><span class="op">$</span><span class="va">audit</span><span class="op">$</span><span class="va">task_calls</span> <span class="op">&lt;</span> <span class="va">before_fixture</span><span class="op">$</span><span class="va">audit</span><span class="op">$</span><span class="va">task_calls</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">accepted</span> <span class="op">&lt;-</span> <span class="va">same_quality</span> <span class="op">&amp;&amp;</span> <span class="va">fewer_model_calls</span></span>
+<span></span>
+<span><span class="va">decision</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  same_heldout_quality <span class="op">=</span> <span class="va">same_quality</span>,</span>
+<span>  fewer_fixture_model_calls <span class="op">=</span> <span class="va">fewer_model_calls</span>,</span>
+<span>  accepted <span class="op">=</span> <span class="va">accepted</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">decision</span></span>
+<span><span class="co">#&gt;   same_heldout_quality fewer_fixture_model_calls accepted</span></span>
+<span><span class="co">#&gt; 1                 TRUE                      TRUE     TRUE</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/Logic.html" class="external-link">isTRUE</a></span><span class="op">(</span><span class="va">before</span><span class="op">$</span><span class="va">mean_score</span> <span class="op">==</span> <span class="fl">1</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/Logic.html" class="external-link">isTRUE</a></span><span class="op">(</span><span class="va">after</span><span class="op">$</span><span class="va">mean_score</span> <span class="op">==</span> <span class="fl">1</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/Logic.html" class="external-link">isTRUE</a></span><span class="op">(</span><span class="va">heldout</span><span class="op">$</span><span class="va">predictor_calls</span><span class="op">[[</span><span class="fl">1L</span><span class="op">]</span><span class="op">]</span> <span class="op">==</span> <span class="va">before_fixture</span><span class="op">$</span><span class="va">audit</span><span class="op">$</span><span class="va">task_calls</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/Logic.html" class="external-link">isTRUE</a></span><span class="op">(</span><span class="va">heldout</span><span class="op">$</span><span class="va">predictor_calls</span><span class="op">[[</span><span class="fl">2L</span><span class="op">]</span><span class="op">]</span> <span class="op">==</span> <span class="va">after_fixture</span><span class="op">$</span><span class="va">audit</span><span class="op">$</span><span class="va">task_calls</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/Logic.html" class="external-link">isTRUE</a></span><span class="op">(</span><span class="va">heldout</span><span class="op">$</span><span class="va">predictor_calls</span><span class="op">[[</span><span class="fl">1L</span><span class="op">]</span><span class="op">]</span> <span class="op">==</span> <span class="fl">6L</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/Logic.html" class="external-link">isTRUE</a></span><span class="op">(</span><span class="va">heldout</span><span class="op">$</span><span class="va">predictor_calls</span><span class="op">[[</span><span class="fl">2L</span><span class="op">]</span><span class="op">]</span> <span class="op">==</span> <span class="fl">3L</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/Logic.html" class="external-link">isTRUE</a></span><span class="op">(</span><span class="va">heldout</span><span class="op">$</span><span class="va">tool_calls</span><span class="op">[[</span><span class="fl">1L</span><span class="op">]</span><span class="op">]</span> <span class="op">==</span> <span class="fl">0L</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/Logic.html" class="external-link">isTRUE</a></span><span class="op">(</span><span class="va">heldout</span><span class="op">$</span><span class="va">tool_calls</span><span class="op">[[</span><span class="fl">2L</span><span class="op">]</span><span class="op">]</span> <span class="op">==</span> <span class="fl">3L</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/Logic.html" class="external-link">isTRUE</a></span><span class="op">(</span><span class="va">accepted</span><span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>Here both programs route all six holdout tickets correctly. The
+selected source uses three tool calls and three predictor calls; the
+baseline uses six predictor calls. Treat this deterministic result as
+execution-path evidence; a live search is needed to assess whether a
+model would invent the same program.</p>
+<p><code><a href="../reference/optimization_result.html">optimization_result()</a></code> keeps the compile budget and
+selection lineage available for inspection:</p>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>  best_candidate_id <span class="op">=</span> <span class="va">compile_result</span><span class="op">$</span><span class="va">lineage</span><span class="op">$</span><span class="va">best_candidate_id</span>,</span>
+<span>  validation_score <span class="op">=</span> <span class="va">compile_result</span><span class="op">$</span><span class="va">best_score</span>,</span>
+<span>  budget <span class="op">=</span> <span class="va">budget_summary</span>,</span>
+<span>  holdout_absent_from_compile <span class="op">=</span> <span class="va">holdout_absent_from_compile</span>,</span>
+<span>  heldout <span class="op">=</span> <span class="va">heldout</span>,</span>
+<span>  acceptance <span class="op">=</span> <span class="va">decision</span></span>
+<span><span class="op">)</span></span>
+<span><span class="co">#&gt; $best_candidate_id</span></span>
+<span><span class="co">#&gt; [1] "candidate:98f898530da5c74b"</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $validation_score</span></span>
+<span><span class="co">#&gt; [1] 0.75</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $budget</span></span>
+<span><span class="co">#&gt;      status metric_calls metric_call_limit provider_calls provider_call_limit</span></span>
+<span><span class="co">#&gt; 1 completed            8                40              7                  30</span></span>
+<span><span class="co">#&gt;   task_calls proposal_calls</span></span>
+<span><span class="co">#&gt; 1          6              1</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $holdout_absent_from_compile</span></span>
+<span><span class="co">#&gt; [1] TRUE</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $heldout</span></span>
+<span><span class="co">#&gt;    program exact_match_quality predictor_calls tool_calls fixture_model_calls</span></span>
+<span><span class="co">#&gt; 1 baseline                   1               6          0                   6</span></span>
+<span><span class="co">#&gt; 2 selected                   1               3          3                   3</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $acceptance</span></span>
+<span><span class="co">#&gt;   same_heldout_quality fewer_fixture_model_calls accepted</span></span>
+<span><span class="co">#&gt; 1                 TRUE                      TRUE     TRUE</span></span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="try-a-live-search">Try a live search<a class="anchor" aria-label="anchor" href="#try-a-live-search"></a>
+</h2>
+<p>The deterministic journey above runs in documentation builds without
+credentials. To try a stochastic search, install <code>mcptools</code>
+and its <code>posit-mcp-repl</code> executable, then opt in to the chunk
+below. Optimizer-written R should run with the default enforced-sandbox
+requirement.</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a><span class="ex">Rscript</span> <span class="at">-e</span> <span class="st">'install.packages("mcptools")'</span></span>
+<span id="cb13-2"><a href="#cb13-2" tabindex="-1"></a><span class="ex">uv</span> tool install posit-mcp-repl</span></code></pre></div>
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">live_baseline</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/flex.html">flex</a></span><span class="op">(</span></span>
 <span>  <span class="va">route_signature</span>,</span>
-<span>  module_src <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/readLines.html" class="external-link">readLines</a></span><span class="op">(</span><span class="st">"ticket-router.R"</span><span class="op">)</span>, collapse <span class="op">=</span> <span class="st">"\n"</span><span class="op">)</span>,</span>
+<span>  module_src <span class="op">=</span> <span class="va">baseline_source</span>,</span>
 <span>  tools <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>lookup_incident <span class="op">=</span> <span class="va">lookup_incident</span><span class="op">)</span>,</span>
-<span>  interpreter_factory <span class="op">=</span> <span class="va">sandbox_factory</span>,</span>
+<span>  interpreter_factory <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="fu"><a href="../reference/mcp_repl_runner.html">mcp_repl_runner</a></span><span class="op">(</span>timeout <span class="op">=</span> <span class="fl">45</span><span class="op">)</span>,</span>
 <span>  source_format <span class="op">=</span> <span class="st">"r"</span>,</span>
 <span>  max_predictor_calls <span class="op">=</span> <span class="fl">1L</span>,</span>
 <span>  max_tool_calls <span class="op">=</span> <span class="fl">1L</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p>The saved file is Flex source for the sandbox, not a script to
-<code><a href="https://rdrr.io/r/base/source.html" class="external-link">source()</a></code>. Record the model, package versions, data split,
-metric and seed next to it.</p>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">task_chat</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-luna"</span><span class="op">)</span></span>
+<span><span class="va">reflection_chat</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-astra"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">live_optimized</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span></span>
+<span>  <span class="va">live_baseline</span>,</span>
+<span>  <span class="fu"><a href="../reference/GEPA.html">GEPA</a></span><span class="op">(</span></span>
+<span>    metric <span class="op">=</span> <span class="va">route_metric</span>,</span>
+<span>    population_size <span class="op">=</span> <span class="fl">4L</span>,</span>
+<span>    generations <span class="op">=</span> <span class="fl">2L</span>,</span>
+<span>    selection <span class="op">=</span> <span class="st">"current_best"</span>,</span>
+<span>    seed <span class="op">=</span> <span class="fl">42L</span>,</span>
+<span>    verbose <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  trainset <span class="op">=</span> <span class="va">train</span>,</span>
+<span>  valset <span class="op">=</span> <span class="va">validation</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="va">task_chat</span>,</span>
+<span>  .reflection_llm <span class="op">=</span> <span class="va">reflection_chat</span>,</span>
+<span>  control <span class="op">=</span> <span class="fu"><a href="../reference/optimizer_control.html">optimizer_control</a></span><span class="op">(</span></span>
+<span>    max_metric_calls <span class="op">=</span> <span class="fl">80L</span>,</span>
+<span>    max_provider_calls <span class="op">=</span> <span class="fl">50L</span>,</span>
+<span>    max_cost <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>    progress <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">live_optimized</span><span class="op">)</span></span></code></pre></div>
+<p>Review the complete <code>module_src</code>, then evaluate the
+candidate once on a holdout set that was not used for search. Keep the
+model, package version, data splits, metric, seed and budget with the
+selected source.</p>
 </div>
 <div class="section level2">
-<h2 id="choose-a-source-format">Choose a source format<a class="anchor" aria-label="anchor" href="#choose-a-source-format"></a>
+<h2 id="choose-the-right-source-format">Choose the right source format<a class="anchor" aria-label="anchor" href="#choose-the-right-source-format"></a>
 </h2>
-<p>Flex has two source formats because not every structural question
-needs code.</p>
-<table class="table">
-<colgroup>
-<col width="33%">
-<col width="33%">
-<col width="33%">
-</colgroup>
-<thead><tr class="header">
-<th>Mode</th>
-<th>Use it when</th>
-<th>Execution boundary</th>
-</tr></thead>
-<tbody>
-<tr class="odd">
-<td>JSON (default)</td>
-<td>GEPA may vary a bounded graph of Predict and Chain-of-Thought
-steps</td>
-<td>Parsed and type-checked as data; no code interpreter</td>
-</tr>
-<tr class="even">
-<td>R (opt-in)</td>
-<td>Candidates need branches, deterministic computation, dynamic
-predictors, or named tools</td>
-<td>Fresh runner from <code>interpreter_factory</code>; enforced sandbox
-required by default</td>
-</tr>
-</tbody>
-</table>
-<p>JSON sources use backward references between ordered steps and map
-their final values to the outer signature; <code><a href="../reference/flex.html">flex()</a></code> documents
-the schema. Start with JSON unless the optimization question needs R
-control flow or tools.</p>
-<p>Executable Flex exposes a small set of predictor constructors plus
-the named tools you supply. Those tools execute on the host and keep
-their closure environments, so treat each one as a privileged
-capability.</p>
-<p><code>max_predictor_calls</code> limits predictor invocations across
-the bridge, and <code>max_tool_calls</code> limits direct host-tool
-requests. A single agentic predictor such as ReAct, CodeAct, or RLM can
-perform additional work internally; configure that primitive’s own
-limits as well.</p>
-<p>The guest source runs again from the beginning after each bridged
-request while recorded host responses are replayed. Keep guest-side
-computation pure, avoid external side effects, and bound loops
-explicitly.</p>
-<p>Generated R must run in an enforced sandbox.
-<code><a href="../reference/r_code_runner.html">r_code_runner()</a></code> isolates a subprocess but is for source you
-already trust; do not disable <code>require_sandbox</code> for
-optimizer-authored code. Each sandboxed call has size limits, listed in
-<a href="how-rlm-works.html#limits">How RLM works</a>. Executable Flex
-runs rows one at a time and does not stream tokens.</p>
+<p>JSON is data describing an acyclic graph of <code>Predict</code> and
+<code>ChainOfThought</code> steps. Its references point to outer inputs
+or earlier step outputs, and Flex checks field types before execution.
+It needs no code interpreter.</p>
+<p>Executable R defines a top-level <code>forward()</code> function and
+can use <code>Predict()</code>, <code>ChainOfThought()</code>,
+<code>Prediction()</code>, the other documented Flex constructors, and
+the named tools you supplied. The source runs in a fresh runner and
+crosses a versioned JSON bridge for predictor and tool calls. Host tools
+retain their own permissions, even when the source runs in a
+sandbox.</p>
+<p><code>max_predictor_calls</code> and <code>max_tool_calls</code>
+bound the direct calls made by an invocation. Agentic predictors such as
+ReAct or RLM have their own limits. Guest-side computation runs again
+from the beginning after a bridged response, so keep it pure and bound
+loops explicitly. Executable Flex runs dataset rows sequentially and
+does not stream tokens.</p>
+<p>Use Flex when the outcome is measurable and the best choice among
+model calls, deterministic logic and selected tools is still open. If
+the workflow is already clear, prefer a regular module or an explicit
+pipeline. See <a href="advanced-optimization.html">Choose an
+optimizer</a> for the other optimization paths.</p>
 </div>
 <div class="section level2">
-<h2 id="when-flex-is-the-wrong-tool">When Flex is the wrong tool<a class="anchor" aria-label="anchor" href="#when-flex-is-the-wrong-tool"></a>
+<h2 id="appendix-offline-fixture-source">Appendix: offline fixture source<a class="anchor" aria-label="anchor" href="#appendix-offline-fixture-source"></a>
 </h2>
-<p>Do not use Flex merely because a task contains more than one step.
-Prefer a regular module when prompt or demonstration optimization is
-enough. Prefer an explicit pipeline when people should design and review
-the workflow. If a decision is entirely deterministic and already known,
-write an R function.</p>
-<p>Use Flex for the unresolved middle: the outcome is measurable,
-several implementation strategies are plausible, and the choice of model
-calls, code, or tools is itself what you want to optimize.</p>
-<p>To compare Flex with the other optimizers, see <a href="advanced-optimization.html">Choose an optimizer</a>.</p>
+<p>The article hides fixture setup from the main walkthrough. This chunk
+prints the exact Chat fixture code used above so you can reproduce the
+deterministic run or adapt its response rules.</p>
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">fixture_chat_class</span> <span class="op">&lt;-</span> <span class="fu">R6</span><span class="fu">::</span><span class="kw"><a href="https://r6.r-lib.org/reference/R6Class.html" class="external-link">R6Class</a></span><span class="op">(</span></span>
+<span>  <span class="st">"Chat"</span>,</span>
+<span>  public <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    turns <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>    initialize <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">model</span>, <span class="va">responder</span><span class="op">)</span> <span class="op">{</span></span>
+<span>      <span class="va">self</span><span class="op">$</span><span class="va">turns</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span></span>
+<span>      <span class="va">private</span><span class="op">$</span><span class="va">model</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/Model.html" class="external-link">Model</a></span><span class="op">(</span>name <span class="op">=</span> <span class="va">model</span>, extra_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
+<span>      <span class="va">private</span><span class="op">$</span><span class="va">provider</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/Provider.html" class="external-link">Provider</a></span><span class="op">(</span>name <span class="op">=</span> <span class="st">"fixture"</span>, base_url <span class="op">=</span> <span class="st">""</span><span class="op">)</span></span>
+<span>      <span class="va">private</span><span class="op">$</span><span class="va">responder</span> <span class="op">&lt;-</span> <span class="va">responder</span></span>
+<span>    <span class="op">}</span>,</span>
+<span>    chat <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">prompt</span>, <span class="va">...</span><span class="op">)</span> <span class="op">{</span></span>
+<span>      <span class="va">private</span><span class="op">$</span><span class="fu">responder</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">as.character</a></span><span class="op">(</span><span class="va">prompt</span><span class="op">)</span>, collapse <span class="op">=</span> <span class="st">"\n"</span><span class="op">)</span>, <span class="cn">NULL</span>, <span class="va">...</span><span class="op">)</span></span>
+<span>    <span class="op">}</span>,</span>
+<span>    chat_structured <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">prompt</span>, <span class="va">type</span>, <span class="va">...</span><span class="op">)</span> <span class="op">{</span></span>
+<span>      <span class="va">private</span><span class="op">$</span><span class="fu">responder</span><span class="op">(</span></span>
+<span>        <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">as.character</a></span><span class="op">(</span><span class="va">prompt</span><span class="op">)</span>, collapse <span class="op">=</span> <span class="st">"\n"</span><span class="op">)</span>,</span>
+<span>        <span class="va">type</span>,</span>
+<span>        <span class="va">...</span></span>
+<span>      <span class="op">)</span></span>
+<span>    <span class="op">}</span>,</span>
+<span>    stream <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">...</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>    get_turns <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="va">self</span><span class="op">$</span><span class="va">turns</span>,</span>
+<span>    set_turns <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">turns</span><span class="op">)</span> <span class="op">{</span></span>
+<span>      <span class="va">self</span><span class="op">$</span><span class="va">turns</span> <span class="op">&lt;-</span> <span class="va">turns</span></span>
+<span>      <span class="fu"><a href="https://rdrr.io/r/base/invisible.html" class="external-link">invisible</a></span><span class="op">(</span><span class="va">self</span><span class="op">)</span></span>
+<span>    <span class="op">}</span>,</span>
+<span>    last_turn <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">role</span> <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span> <span class="cn">NULL</span>,</span>
+<span>    get_model <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="va">private</span><span class="op">$</span><span class="va">model</span><span class="op">@</span><span class="va">name</span>,</span>
+<span>    get_provider <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="va">private</span><span class="op">$</span><span class="va">provider</span>,</span>
+<span>    get_model_object <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="va">private</span><span class="op">$</span><span class="va">model</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  private <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>model <span class="op">=</span> <span class="cn">NULL</span>, provider <span class="op">=</span> <span class="cn">NULL</span>, responder <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span>,</span>
+<span>  lock_objects <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  parent_env <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/environment.html" class="external-link">globalenv</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">new_route_fixture</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span></span>
+<span>  <span class="va">proposed_source</span> <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  <span class="va">model</span> <span class="op">=</span> <span class="st">"fixture-router"</span></span>
+<span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">audit</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/environment.html" class="external-link">new.env</a></span><span class="op">(</span>parent <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/environment.html" class="external-link">emptyenv</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="va">audit</span><span class="op">$</span><span class="va">prompts</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="op">)</span></span>
+<span>  <span class="va">audit</span><span class="op">$</span><span class="va">proposal_calls</span> <span class="op">&lt;-</span> <span class="fl">0L</span></span>
+<span>  <span class="va">audit</span><span class="op">$</span><span class="va">task_calls</span> <span class="op">&lt;-</span> <span class="fl">0L</span></span>
+<span></span>
+<span>  <span class="va">responder</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">prompt</span>, <span class="va">type</span>, <span class="va">...</span><span class="op">)</span> <span class="op">{</span></span>
+<span>    <span class="va">prompt</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">as.character</a></span><span class="op">(</span><span class="va">prompt</span><span class="op">)</span>, collapse <span class="op">=</span> <span class="st">"\n"</span><span class="op">)</span></span>
+<span>    <span class="va">audit</span><span class="op">$</span><span class="va">prompts</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">audit</span><span class="op">$</span><span class="va">prompts</span>, <span class="va">prompt</span><span class="op">)</span></span>
+<span>    <span class="va">fields</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">type</span><span class="op">@</span><span class="va">properties</span><span class="op">)</span></span>
+<span></span>
+<span>    <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="va">fields</span>, <span class="st">"module_src"</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
+<span>      <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/NULL.html" class="external-link">is.null</a></span><span class="op">(</span><span class="va">proposed_source</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
+<span>        <span class="kw"><a href="https://rdrr.io/r/base/stop.html" class="external-link">stop</a></span><span class="op">(</span><span class="st">"The JSON example does not configure a proposer"</span><span class="op">)</span></span>
+<span>      <span class="op">}</span></span>
+<span>      <span class="va">audit</span><span class="op">$</span><span class="va">proposal_calls</span> <span class="op">&lt;-</span> <span class="va">audit</span><span class="op">$</span><span class="va">proposal_calls</span> <span class="op">+</span> <span class="fl">1L</span></span>
+<span>      <span class="kw"><a href="https://rdrr.io/r/base/function.html" class="external-link">return</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>module_src <span class="op">=</span> <span class="va">proposed_source</span><span class="op">)</span><span class="op">)</span></span>
+<span>    <span class="op">}</span></span>
+<span></span>
+<span>    <span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="va">fields</span>, <span class="st">"queue"</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
+<span>      <span class="kw"><a href="https://rdrr.io/r/base/stop.html" class="external-link">stop</a></span><span class="op">(</span><span class="st">"Unexpected structured output requested by the fixture"</span><span class="op">)</span></span>
+<span>    <span class="op">}</span></span>
+<span>    <span class="va">audit</span><span class="op">$</span><span class="va">task_calls</span> <span class="op">&lt;-</span> <span class="va">audit</span><span class="op">$</span><span class="va">task_calls</span> <span class="op">+</span> <span class="fl">1L</span></span>
+<span></span>
+<span>    <span class="va">queue</span> <span class="op">&lt;-</span> <span class="kw">if</span> <span class="op">(</span></span>
+<span>      <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grepl</a></span><span class="op">(</span></span>
+<span>        <span class="st">"INC-DB-17|Queries time out|Read traffic"</span>,</span>
+<span>        <span class="va">prompt</span>,</span>
+<span>        ignore.case <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span>      <span class="op">)</span></span>
+<span>    <span class="op">)</span> <span class="op">{</span></span>
+<span>      <span class="st">"database"</span></span>
+<span>    <span class="op">}</span> <span class="kw">else</span> <span class="kw">if</span> <span class="op">(</span></span>
+<span>      <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grepl</a></span><span class="op">(</span></span>
+<span>        <span class="st">"INC-SEC-9|unusual-login|login spray"</span>,</span>
+<span>        <span class="va">prompt</span>,</span>
+<span>        ignore.case <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span>      <span class="op">)</span></span>
+<span>    <span class="op">)</span> <span class="op">{</span></span>
+<span>      <span class="st">"security"</span></span>
+<span>    <span class="op">}</span> <span class="kw">else</span> <span class="kw">if</span> <span class="op">(</span></span>
+<span>      <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grepl</a></span><span class="op">(</span></span>
+<span>        <span class="st">"INC-PAY-4|renewal|duplicate charge|Card charged twice"</span>,</span>
+<span>        <span class="va">prompt</span>,</span>
+<span>        ignore.case <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span>      <span class="op">)</span></span>
+<span>    <span class="op">)</span> <span class="op">{</span></span>
+<span>      <span class="st">"payments"</span></span>
+<span>    <span class="op">}</span> <span class="kw">else</span> <span class="kw">if</span> <span class="op">(</span></span>
+<span>      <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grepl</a></span><span class="op">(</span><span class="st">"Password reset|Reset email"</span>, <span class="va">prompt</span>, ignore.case <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span>    <span class="op">)</span> <span class="op">{</span></span>
+<span>      <span class="st">"identity"</span></span>
+<span>    <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span></span>
+<span>      <span class="kw"><a href="https://rdrr.io/r/base/stop.html" class="external-link">stop</a></span><span class="op">(</span><span class="st">"Unexpected ticket in the deterministic task fixture"</span><span class="op">)</span></span>
+<span>    <span class="op">}</span></span>
+<span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>queue <span class="op">=</span> <span class="va">queue</span><span class="op">)</span></span>
+<span>  <span class="op">}</span></span>
+<span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    chat <span class="op">=</span> <span class="va">fixture_chat_class</span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="va">model</span>, <span class="va">responder</span><span class="op">)</span>,</span>
+<span>    audit <span class="op">=</span> <span class="va">audit</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">}</span></span></code></pre></div>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

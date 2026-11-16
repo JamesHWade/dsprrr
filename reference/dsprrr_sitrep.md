@@ -53,7 +53,7 @@ status <- dsprrr_sitrep()
 #> ── Packages ──
 #> 
 #> ✔ ellmer 0.5.2 (OK)
-#> ✔ dsprrr 0.0.0.9000
+#> ✔ dsprrr 0.1.0
 #> 
 #> 
 #> ── Default Chat ──

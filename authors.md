@@ -13,13 +13,13 @@ Source:
 [`DESCRIPTION`](https://github.com/JamesHWade/dsprrr/blob/main/DESCRIPTION)
 
 Wade J, Sokolov A (2026). *dsprrr: Declarative Self-Improving Language
-Programs*. R package version 0.0.0.9000,
+Programs*. R package version 0.1.0,
 <https://github.com/JamesHWade/dsprrr>.
 
     @Manual{,
       title = {dsprrr: Declarative Self-Improving Language Programs},
       author = {James Wade and Anatoliy Sokolov},
       year = {2026},
-      note = {R package version 0.0.0.9000},
+      note = {R package version 0.1.0},
       url = {https://github.com/JamesHWade/dsprrr},
     }

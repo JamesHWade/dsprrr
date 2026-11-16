@@ -28,9 +28,9 @@ library(dsprrr)
 
 | Helper | Signature output | Model reports | Setting |
 |----|----|----|----|
-| [`decision_bool()`](https://jameshwade.github.io/dsprrr/reference/decision_types.md) | [`type_boolean()`](https://ellmer.tidyverse.org/reference/type_boolean.html) | P(TRUE) | `threshold` (default 0.5) |
-| [`decision_score()`](https://jameshwade.github.io/dsprrr/reference/decision_types.md) | ordered [`type_enum()`](https://ellmer.tidyverse.org/reference/type_boolean.html) rubric | a probability per level | `cuts` on the mean level index |
-| [`decision_choice()`](https://jameshwade.github.io/dsprrr/reference/decision_types.md) | unordered [`type_enum()`](https://ellmer.tidyverse.org/reference/type_boolean.html) | a probability per option | `weights` per option |
+| [`decision_bool()`](https://jameshwade.github.io/dsprrr/reference/decision_types.md) | `type_boolean()` | P(TRUE) | `threshold` (default 0.5) |
+| [`decision_score()`](https://jameshwade.github.io/dsprrr/reference/decision_types.md) | ordered `type_enum()` rubric | a probability per level | `cuts` on the mean level index |
+| [`decision_choice()`](https://jameshwade.github.io/dsprrr/reference/decision_types.md) | unordered `type_enum()` | a probability per option | `weights` per option |
 
 The signature keeps its ordinary output types. Predictions still contain
 a plain `TRUE`/`FALSE` or a character label, so existing metrics such as
@@ -236,11 +236,8 @@ A `ReAnchor` compilation runs in four steps:
     it.
 2.  Evidence: it enables evidence decoding for every compatible output
     and records each row’s probabilities. Fields you configured are used
-    as is. Described
-    [`type_boolean()`](https://ellmer.tidyverse.org/reference/type_boolean.html)
-    and
-    [`type_enum()`](https://ellmer.tidyverse.org/reference/type_boolean.html)
-    fields without a decision become
+    as is. Described `type_boolean()` and `type_enum()` fields without a
+    decision become
     [`decision_bool()`](https://jameshwade.github.io/dsprrr/reference/decision_types.md)
     and
     [`decision_choice()`](https://jameshwade.github.io/dsprrr/reference/decision_types.md).

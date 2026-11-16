@@ -109,8 +109,8 @@ Features whose interfaces may change.
 - [Flex: optimize a whole
   program](https://jameshwade.github.io/dsprrr/articles/flex-optimization.md):
 
-  Use Flex when optimization should decide which model calls,
-  deterministic code or tools a task needs, not only rewrite a prompt.
+  Start with declarative JSON, then use executable Flex when
+  optimization needs deterministic logic or selected tools.
 
 - [Compose optimizers with
   Omni](https://jameshwade.github.io/dsprrr/articles/omni-meta-optimization.md):
@@ -121,9 +121,9 @@ Features whose interfaces may change.
 - [Agentic optimization
   harnesses](https://jameshwade.github.io/dsprrr/articles/agentic-optimization-harnesses.md):
 
-  Run persistent or fresh-per-iteration research agents against a
-  trusted dsprrr evaluator, with Posit mcp-repl sandboxing, budgets,
-  lineage, and checkpoints.
+  Run bounded AutoResearch and MetaHarness journeys against an offline,
+  two-step evidence-answer program, then inspect validation, holdout,
+  budget, and candidate lineage.
 
 ### Reference
 
