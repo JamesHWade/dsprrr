@@ -16,11 +16,6 @@ library(dsprrr)
 
 old_cache <- configure_cache(enable = FALSE)
 
-route_signature <- signature(
-  "ticket -> queue: enum('database', 'security', 'payments', 'identity')",
-  instructions = "Route each support ticket to its owning queue."
-)
-
 ```
 
 `flex()` makes the program structure part of the optimization target. GEPA can
@@ -44,11 +39,18 @@ The default source is a one-step JSON program. This example runs a real
 `run()` call against a deterministic local Chat fixture. It needs neither an
 API key nor a separate code interpreter:
 
-The fixture below implements the ellmer Chat methods used by this article.
-It counts actual task and proposer calls; its fixed response rules do not
-score programs or choose the GEPA winner.
+```{r task-signature}
+route_signature <- signature(
+  "ticket -> queue: enum('database', 'security', 'payments', 'identity')",
+  instructions = "Route each support ticket to its owning queue."
+)
+```
 
-```{r offline-fixture}
+The deterministic Chat fixture is defined in the appendix. It counts actual
+task and proposer requests, while its fixed response rules leave metric
+scoring and candidate selection to GEPA.
+
+```{r offline-fixture, include=FALSE}
 fixture_chat_class <- R6::R6Class(
   "Chat",
   public = list(
@@ -155,7 +157,7 @@ new_route_fixture <- function(
 ```
 
 ```{r json-example}
-json_program <- flex(route_signature)
+json_program <- suppressMessages(suppressWarnings(flex(route_signature)))
 json_fixture <- new_route_fixture()
 
 json_result <- run(
@@ -376,8 +378,23 @@ budget_summary <- data.frame(
   metric_call_limit = gepa_budget$limits$max_metric_calls,
   provider_calls = gepa_budget$provider_calls,
   provider_call_limit = gepa_budget$limits$max_provider_calls,
+  task_calls = optimizer_fixture$audit$task_calls,
   proposal_calls = optimizer_fixture$audit$proposal_calls
 )
+
+stopifnot(
+  identical(compile_result$status, "completed"),
+  isTRUE(gepa_budget$metric_calls <= gepa_budget$limits$max_metric_calls),
+  isTRUE(gepa_budget$provider_calls <= gepa_budget$limits$max_provider_calls),
+  identical(
+    gepa_budget$provider_calls,
+    optimizer_fixture$audit$task_calls + optimizer_fixture$audit$proposal_calls
+  ),
+  identical(optimizer_fixture$audit$proposal_calls, 1L),
+  isTRUE(all.equal(compile_result$best_score, 0.75)),
+  identical(optimized$module_src, selected_fixture_source)
+)
+
 budget_summary
 ```
 
@@ -618,6 +635,18 @@ calls, deterministic logic and selected tools is still open. If the workflow
 is already clear, prefer a regular module or an explicit pipeline. See
 [Choose an optimizer](advanced-optimization.html) for the other optimization
 paths.
+
+## Appendix: offline fixture source
+
+The article hides fixture setup from the main walkthrough. This chunk prints
+the exact Chat fixture code used above so you can reproduce the deterministic
+run or adapt its response rules.
+
+```{r offline-fixture-source, echo=FALSE, results='asis'}
+cat("```r\n")
+cat(knitr::knit_code$get("offline-fixture"), sep = "\n")
+cat("\n```")
+```
 
 ```{r restore-cache, include=FALSE}
 if (is.null(old_cache)) {
