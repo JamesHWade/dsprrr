@@ -41,6 +41,7 @@
     <li><h6 class="dropdown-header" data-toc-skip>Measure and improve</h6></li>
     <li><a class="dropdown-item" href="../articles/compilation-optimization.html">Compile and optimize</a></li>
     <li><a class="dropdown-item" href="../articles/advanced-optimization.html">Choose an optimizer</a></li>
+    <li><a class="dropdown-item" href="../articles/gepa-learning-journey.html">A GEPA learning journey</a></li>
     <li><a class="dropdown-item" href="../articles/vitals-recipes.html">Evaluate with vitals</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Run</h6></li>
@@ -91,7 +92,8 @@
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.0.0.9000" id="dsprrr-0009000">dsprrr 0.0.0.9000<a class="anchor" aria-label="anchor" href="#dsprrr-0009000"></a></h2>
 <p>First development changelog. dsprrr is experimental; the API may change.</p>
-<div class="section level3">
+<ul><li>The GEPA learning journey adds an executable offline workflow with separate training, validation and holdout data, feedback, candidate lineage and budget accounting (<a href="https://github.com/JamesHWade/dsprrr/issues/134" class="external-link">#134</a>).</li>
+</ul><div class="section level3">
 <h3 id="breaking-changes-0-0-0-9000">Breaking changes<a class="anchor" aria-label="anchor" href="#breaking-changes-0-0-0-9000"></a></h3>
 <ul><li><p>dsprrr now requires ellmer &gt;= 0.5.0. Runtime parameters such as <code>temperature</code> are applied to the Chat’s <code>Model</code> object, where ellmer 0.5.0 keeps request arguments. Provider inspection (cache keys, program artifacts, and optimizer checkpoints) no longer reads the deprecated <code>Provider@model</code>, <code>@params</code>, and <code>@extra_args</code> properties, so no deprecation warnings are raised. Cache keys still include the model’s params and extra arguments.</p></li>
 <li><p><code><a href="../reference/module.html">module()</a></code> now constructs only standard prediction modules. Tool use and other advanced execution semantics use explicit constructors such as <code><a href="../reference/react.html">react()</a></code>, <code><a href="../reference/chain_of_thought.html">chain_of_thought()</a></code>, <code><a href="../reference/program_of_thought.html">program_of_thought()</a></code>, <code><a href="../reference/code_act.html">code_act()</a></code>, <code><a href="../reference/rlm_module.html">rlm_module()</a></code>, and <code><a href="../reference/flex.html">flex()</a></code>; advanced arguments passed to <code><a href="../reference/module.html">module()</a></code> fail with a typed, actionable error instead of silently changing module type. <code>compile(program, teleprompter, trainset)</code> is the only compilation entry point; <code>compile_module()</code> and the shallow R6 <code>$predict()</code> and <code>$optimize()</code> aliases have been removed. <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">stats::predict()</a></code> remains for data-frame interoperability, <code><a href="../reference/module_fn.html">module_fn()</a></code> remains the custom-module extension seam, and the functional <code><a href="../reference/optimize_grid.html">optimize_grid()</a></code> interface remains primary.</p></li>

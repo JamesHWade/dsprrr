@@ -345,9 +345,16 @@ rounds it scores every candidate on `valset` and runs it on `trainset`
 to collect the rows it gets wrong. Candidates that score best on at
 least one validation row become parents. A child takes each part of the
 program whole from one parent or the other, so crossover never splices
-text, and with probability `mutation_rate` the task chat (`.llm`)
-rewrites the child’s instructions after reading its parent’s failed
-rows.
+text. With probability `mutation_rate`, the reflection Chat
+(`.reflection_llm`) rewrites the child’s instructions after reading its
+parent’s failed training rows; `.llm` evaluates the candidates. When
+`.reflection_llm` is omitted, an explicitly supplied `.llm` remains the
+compatibility fallback for both roles.
+
+For a complete offline run with separate train, validation and holdout
+data, feedback, candidate lineage and budget accounting, see [A GEPA
+learning
+journey](https://jameshwade.github.io/dsprrr/articles/gepa-learning-journey.md).
 
 GEPA reads textual feedback when the metric returns it, which makes the
 rewrites more specific.
@@ -384,7 +391,8 @@ evolved <- triage |>
     ),
     trainset,
     valset = valset,
-    .llm = llm
+    .llm = llm,
+    .reflection_llm = ellmer::chat_openai(model = "gpt-6-astra")
   )
 ```
 

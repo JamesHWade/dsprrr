@@ -64,6 +64,7 @@
     <li><h6 class="dropdown-header" data-toc-skip>Measure and improve</h6></li>
     <li><a class="dropdown-item" href="../articles/compilation-optimization.html">Compile and optimize</a></li>
     <li><a class="dropdown-item" href="../articles/advanced-optimization.html">Choose an optimizer</a></li>
+    <li><a class="dropdown-item" href="../articles/gepa-learning-journey.html">A GEPA learning journey</a></li>
     <li><a class="dropdown-item" href="../articles/vitals-recipes.html">Evaluate with vitals</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Run</h6></li>
@@ -592,10 +593,15 @@ each of <code>generations</code> rounds it scores every candidate on
 <code>valset</code> and runs it on <code>trainset</code> to collect the
 rows it gets wrong. Candidates that score best on at least one
 validation row become parents. A child takes each part of the program
-whole from one parent or the other, so crossover never splices text, and
-with probability <code>mutation_rate</code> the task chat
-(<code>.llm</code>) rewrites the child’s instructions after reading its
-parent’s failed rows.</p>
+whole from one parent or the other, so crossover never splices text.
+With probability <code>mutation_rate</code>, the reflection Chat
+(<code>.reflection_llm</code>) rewrites the child’s instructions after
+reading its parent’s failed training rows; <code>.llm</code> evaluates
+the candidates. When <code>.reflection_llm</code> is omitted, an
+explicitly supplied <code>.llm</code> remains the compatibility fallback
+for both roles.</p>
+<p>For a complete offline run with separate train, validation and
+holdout data, feedback, candidate lineage and budget accounting, see <a href="gepa-learning-journey.html">A GEPA learning journey</a>.</p>
 <p>GEPA reads textual feedback when the metric returns it, which makes
 the rewrites more specific. <code><a href="../reference/metric_with_feedback.html">metric_with_feedback()</a></code> marks
 such a metric:</p>
@@ -628,7 +634,8 @@ such a metric:</p>
 <span>    <span class="op">)</span>,</span>
 <span>    <span class="va">trainset</span>,</span>
 <span>    valset <span class="op">=</span> <span class="va">valset</span>,</span>
-<span>    .llm <span class="op">=</span> <span class="va">llm</span></span>
+<span>    .llm <span class="op">=</span> <span class="va">llm</span>,</span>
+<span>    .reflection_llm <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-astra"</span><span class="op">)</span></span>
 <span>  <span class="op">)</span></span></code></pre></div>
 <p>In a single-predictor module the instructions are the only part, so
 crossover can only copy a parent’s wording, and new wording comes from

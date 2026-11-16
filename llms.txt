@@ -679,8 +679,17 @@ Evaluate modules and optimize them with data.
 
 - [Compile and
   optimize](https://jameshwade.github.io/dsprrr/articles/compilation-optimization.md):
+
 - [Choose an
   optimizer](https://jameshwade.github.io/dsprrr/articles/advanced-optimization.md):
+
+- [A GEPA learning
+  journey](https://jameshwade.github.io/dsprrr/articles/gepa-learning-journey.md):
+
+  Run a deterministic, offline GEPA search with separate training,
+  validation and holdout data, then inspect feedback, lineage and
+  budget.
+
 - [Evaluate with
   vitals](https://jameshwade.github.io/dsprrr/articles/vitals-recipes.md):
 
