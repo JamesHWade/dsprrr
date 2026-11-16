@@ -116,6 +116,7 @@ test_that("directory symlinks with trailing separators fail closed", {
     skip("This environment does not permit symbolic links")
   }
 
+  on.exit(fs::link_delete(link), add = TRUE, after = FALSE)
   expect_null(dsprrr:::file_identity_exact(link))
   expect_null(dsprrr:::file_identity_exact(paste0(link, "/")))
 })
