@@ -75,7 +75,7 @@ as_dsprrr_traces(samples)
 #> # A tibble: 1 × 10
 #>   timestamp           latency_ms input_tokens output_tokens total_tokens   cost
 #>   <dttm>                   <dbl>        <int>         <int>        <int>  <dbl>
-#> 1 2026-11-16 17:40:06         NA           52             6           58 0.0001
+#> 1 2026-11-16 20:33:45         NA           52             6           58 0.0001
 #> # ℹ 4 more variables: model <chr>, prompt_length <int>, prompt <chr>,
 #> #   output <list>
 
