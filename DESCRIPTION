@@ -71,7 +71,10 @@ Suggests:
     yardstick
 Collate:
     'accessors.R'
+    'artifact-codec.R'
+    'artifact-manifest.R'
     'artifact-phases.R'
+    'artifact-storage.R'
     'artifact.R'
     'assertion-helpers.R'
     'assertion.R'
