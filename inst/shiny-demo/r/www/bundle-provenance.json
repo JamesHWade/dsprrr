@@ -6,7 +6,7 @@
     "node": "v24.16.0",
     "platform": "darwin/arm64",
     "esbuild": "0.28.1",
-    "package_lock_sha256": "03e7fc473a290e1d9204b614ec203f95c029f69d2aa664b1bea55243f7a50205",
+    "package_lock_sha256": "a6901bfb9b93d2c0ce2861c9f49ed761c235c926555cdac33fb97b2d216b3618",
     "bundle": true,
     "format": "esm",
     "minify": true,
