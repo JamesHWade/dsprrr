@@ -108,6 +108,7 @@ FnModule <- R6::R6Class(
         self$config$name <- name
       }
     },
+    .artifact_forward_fn = function() private$.forward_fn,
     forward = function(batch, .llm = NULL, trace = TRUE, ...) {
       inputs <- if (is.data.frame(batch)) {
         if (nrow(batch) != 1L) {

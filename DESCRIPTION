@@ -71,6 +71,7 @@ Suggests:
     yardstick
 Collate:
     'accessors.R'
+    'artifact-phases.R'
     'artifact.R'
     'assertion-helpers.R'
     'assertion.R'

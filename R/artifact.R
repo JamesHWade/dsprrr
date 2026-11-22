@@ -99,76 +99,12 @@ artifact_format_version <- function() 6L
 #' @rdname program-artifact
 #' @export
 program_artifact <- function(program, registry = list(), trusted = FALSE) {
-  module_graph_check_program(program)
-  registry <- artifact_merge_registries(
-    artifact_bound_registry(program),
-    artifact_validate_registry(registry)
+  plan <- artifact_plan_program(
+    program,
+    registry = registry,
+    trusted = trusted
   )
-  trusted <- artifact_validate_trusted(trusted)
-
-  graph <- module_graph(program, boundaries = "cross", cycles = "record")
-  if (any(graph$cycle)) {
-    cycle <- graph[which(graph$cycle)[1], , drop = FALSE]
-    cli::cli_abort(
-      c(
-        "Cyclic module graphs cannot be persisted",
-        "x" = "Path {.val {cycle$path}} points back to {.val {cycle$canonical_path}}.",
-        "i" = "Break the cycle before creating an artifact. Shared acyclic modules are supported."
-      ),
-      class = "dsprrr_artifact_cycle"
-    )
-  }
-
-  canonical <- graph[!graph$shared, , drop = FALSE]
-  node_ids <- stats::setNames(
-    canonical$path,
-    canonical$id
-  )
-  exclusions <- new.env(parent = emptyenv())
-  exclusions$records <- list()
-
-  nodes <- lapply(seq_len(nrow(canonical)), function(i) {
-    module <- canonical$module[[i]]
-    artifact_serialize_node(
-      module = module,
-      id = node_ids[[canonical$id[[i]]]],
-      path = canonical$path[[i]],
-      node_ids = node_ids,
-      registry = registry,
-      trusted = trusted,
-      exclusions = exclusions
-    )
-  })
-  names(nodes) <- vapply(nodes, `[[`, character(1), "id")
-
-  edges <- lapply(seq_len(nrow(graph))[-1], function(i) {
-    parent_row <- match(graph$parent_path[[i]], graph$path)
-    list(
-      from = node_ids[[graph$id[[parent_row]]]],
-      to = node_ids[[graph$id[[i]]]],
-      path = graph$path[[i]]
-    )
-  })
-
-  artifact <- structure(
-    list(
-      format = "dsprrr-program",
-      format_version = artifact_format_version(),
-      root = node_ids[[canonical$id[[1]]]],
-      graph = list(
-        cycle_policy = "reject",
-        shared_identity = "preserve",
-        nodes = nodes,
-        edges = edges
-      ),
-      metadata = artifact_metadata(),
-      exclusions = exclusions$records
-    ),
-    class = c("dsprrr_program_artifact", "list")
-  )
-  artifact$integrity <- artifact_integrity(artifact)
-  artifact_validate_manifest(artifact)
-  artifact
+  artifact_finalize_program(artifact_serialize_program_plan(plan))
 }
 
 #' @rdname program-artifact
@@ -850,7 +786,7 @@ artifact_serialize_fields <- function(
     ),
     FnModule = list(
       forward_fn = runtime(
-        module$.__enclos_env__$private$.forward_fn,
+        module$.artifact_forward_fn(),
         "forward_fn"
       )
     ),
@@ -2490,25 +2426,13 @@ restore_program_artifact <- function(
   registry = list(),
   trusted = FALSE
 ) {
-  registry <- artifact_validate_registry(registry)
-  trusted <- artifact_validate_trusted(trusted)
-  artifact_validate_manifest(artifact)
-
-  cache <- new.env(parent = emptyenv(), hash = TRUE)
-  program <- artifact_build_node(
-    artifact$root,
+  admission <- artifact_admit_restore(
     artifact,
-    cache,
-    active = character(),
     registry = registry,
     trusted = trusted
   )
-  artifact_validate_restored_graph(program, artifact)
-  modules <- mget(ls(cache, all.names = TRUE), envir = cache, inherits = FALSE)
-  artifact_bind_registry(modules, artifact, registry)
-  artifact_bind_state_exclusions(modules, artifact)
-  artifact_bind_restored_identity(program, artifact)
-  program
+  execution <- artifact_execute_restore(admission)
+  artifact_finalize_restore(execution, admission)
 }
 
 artifact_bind_state_exclusions <- function(modules, artifact) {
