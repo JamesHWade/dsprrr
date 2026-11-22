@@ -86,7 +86,8 @@ literals:
 ``` r
 
 try(LabeledFewShot(k = 3))
-#> Error : <dsprrr::LabeledFewShot> object properties are invalid:
+#> Error in LabeledFewShot(k = 3) : 
+#>   <dsprrr::LabeledFewShot> object properties are invalid:
 #> - @k must be <integer>, not <double>
 ```
 

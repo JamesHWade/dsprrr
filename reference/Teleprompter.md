@@ -99,6 +99,7 @@ Teleprompter()
 
 # Counts must be integers
 try(Teleprompter(max_errors = 5))
-#> Error : <dsprrr::Teleprompter> object properties are invalid:
+#> Error in Teleprompter(max_errors = 5) : 
+#>   <dsprrr::Teleprompter> object properties are invalid:
 #> - @max_errors must be <integer>, not <double>
 ```
