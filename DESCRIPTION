@@ -112,6 +112,7 @@ Collate:
     'module-rag.R'
     'module-react-doc.R'
     'module-react.R'
+    'module-rlm-phases.R'
     'module-rlm.R'
     'module-wrapper.R'
     'module.R'

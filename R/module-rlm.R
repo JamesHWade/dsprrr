@@ -1134,139 +1134,20 @@ RLMModule <- R6::R6Class(
       .history = NULL,
       ...
     ) {
-      validate_cache_arg(.cache)
-      supplied_history <- NULL
-      prior_context <- ""
-      task_text <- NULL
-      if (!is.null(.history)) {
-        supplied_history <- rlm_history_validate(.history)
-        if (is.null(self$interpreter_factory) || !is.null(self$runner)) {
-          cli::cli_abort(
-            c(
-              "Explicit RLM history requires an invocation-owned interpreter factory",
-              "x" = "This module has a caller-owned runner or no factory.",
-              "i" = "Create the module with {.arg interpreter_factory}; each call must start in a fresh interpreter."
-            ),
-            class = c(
-              "dsprrr_rlm_history_factory_error",
-              "dsprrr_history_error"
-            )
-          )
-        }
-        prior_context <- history_render_rlm(supplied_history)
-      }
-      reasoning_mode <- module_reasoning_mode(self)
-      validate_rlm_predictor_children(
-        list(
-          generate_action = self$generate_action,
-          extract = self$extract
-        ),
-        self$signature@output_type,
-        reasoning_mode = reasoning_mode
+      prepared <- rlm_prepare_invocation_phase(
+        module = self,
+        batch = batch,
+        .llm = .llm,
+        .cache = .cache,
+        .history = .history
       )
-      # Handle inputs
-      if (is.data.frame(batch)) {
-        if (nrow(batch) != 1L) {
-          cli::cli_abort(
-            c(
-              "RLM forward() accepts exactly one data-frame row",
-              "x" = "Received {nrow(batch)} rows.",
-              "i" = "Use {.fn run} with an interpreter factory for isolated batch execution."
-            ),
-            class = "dsprrr_rlm_batch_error"
-          )
-        }
-        inputs <- as.list(batch[1, , drop = FALSE])
-      } else {
-        inputs <- batch
-      }
-      expected_inputs <- vapply(
-        self$signature@inputs,
-        function(input) input$name,
-        character(1)
-      )
-      valid_empty_inputs <- is.list(inputs) &&
-        length(inputs) == 0L &&
-        length(expected_inputs) == 0L
-      if (
-        !is.list(inputs) ||
-          (!valid_empty_inputs && is.null(names(inputs))) ||
-          anyNA(names(inputs)) ||
-          !all(nzchar(names(inputs))) ||
-          anyDuplicated(names(inputs))
-      ) {
-        cli::cli_abort(
-          "RLM inputs must be supplied as a named list or data frame",
-          class = "dsprrr_rlm_input_error"
-        )
-      }
-      required_inputs <- vapply(
-        self$signature@inputs,
-        function(input) {
-          tryCatch(isTRUE(input$type@required), error = function(e) TRUE)
-        },
-        logical(1)
-      )
-      missing_inputs <- setdiff(
-        expected_inputs[required_inputs],
-        names(inputs)
-      )
-      unexpected_inputs <- setdiff(names(inputs), expected_inputs)
-      if (length(missing_inputs) > 0L || length(unexpected_inputs) > 0L) {
-        cli::cli_abort(
-          c(
-            "RLM inputs must match declared signature fields",
-            if (length(missing_inputs) > 0L) {
-              c("x" = "Missing: {.field {missing_inputs}}")
-            },
-            if (length(unexpected_inputs) > 0L) {
-              c("x" = "Unexpected: {.field {unexpected_inputs}}")
-            }
-          ),
-          class = "dsprrr_rlm_input_error"
-        )
-      }
-
-      # Get LLM - clone for fresh conversation
-      base_llm <- resolve_module_llm(self, .llm = .llm)
-
-      llm <- clone_rlm_chat(base_llm)
-      sub_lm <- self$sub_lm %||% base_llm
-
       with_code_runner_lease(
         self$runner,
         self$interpreter_factory,
         "RLM",
         function(runner, lease) {
           start_time <- Sys.time()
-
-          if (!isTRUE(lease$policy$persistent)) {
-            cli::cli_abort(
-              c(
-                "RLM requires a persistent interpreter",
-                "x" = "The selected runner starts a fresh execution state for each turn.",
-                "i" = "Use {.code r_code_runner(persistent = TRUE)} for trusted inputs or {.fn mcp_repl_runner} for managed execution."
-              ),
-              class = "dsprrr_rlm_persistent_runner_error"
-            )
-          }
-
-          # Initialize call counter (shared across recursions)
-          call_counter <- new.env()
-          call_counter$count <- 0L
-          call_counter$provider_calls <- 0L
-          call_counter$provider_calls_known <- TRUE
-          call_counter$usage <- list()
-
-          prepare_context <- tryCatch(
-            runner[["prepare_context"]],
-            error = function(e) NULL
-          )
-          context_prepared <- FALSE
-          if (isTRUE(lease$policy$persistent) && is.function(prepare_context)) {
-            prepare_context(inputs)
-            context_prepared <- TRUE
-          }
+          session <- rlm_prepare_runner(runner, lease, prepared$inputs)
           session_state_id <- paste0(".dsprrr_rlm_state_", rlm_control_nonce())
           if (!isTRUE(lease$owned)) {
             on.exit(
@@ -1274,295 +1155,41 @@ RLMModule <- R6::R6Class(
               add = TRUE
             )
           }
-
-          # Build context description for system prompt
-          context_desc <- private$describe_context(inputs)
-          if (!is.null(supplied_history)) {
-            task_text <- history_rlm_task_text(
-              self$signature@instructions,
-              context_desc
-            )
-          }
-
-          # Build system prompt
-          system_prompt <- private$build_system_prompt(
-            context_desc,
-            has_sub_lm = self$max_llm_calls > 0L,
-            prior_context = prior_context
+          operations <- list(
+            describe_context = private$describe_context,
+            build_system_prompt = private$build_system_prompt,
+            build_iteration_prompt = private$build_iteration_prompt,
+            get_code_response = private$get_code_response,
+            execute_with_rlm_tools = private$execute_with_rlm_tools,
+            compact_action_metadata = private$compact_action_metadata,
+            extract_fallback = private$extract_fallback,
+            build_output = private$build_output,
+            summarize_action_usage = private$summarize_action_usage,
+            metadata_provider_calls = private$metadata_provider_calls,
+            summarize_provider_calls = private$summarize_provider_calls,
+            sum_provider_call_counts = private$sum_provider_call_counts,
+            summarize_trace_inputs = private$summarize_trace_inputs,
+            append_bounded_trace = private$append_bounded_trace,
+            rlm_model_name = private$rlm_model_name,
+            aggregate_native_reasoning = private$aggregate_native_reasoning
           )
-
-          # REPL iteration loop
-          history <- list()
-          final_answer <- NULL
-          fallback_metadata <- NULL
-          result_chat <- llm
-
-          for (iter in seq_len(self$max_iterations)) {
-            if (self$verbose) {
-              cli::cli_alert_info("RLM Iteration {iter}/{self$max_iterations}")
-            }
-
-            # Build prompt for this iteration
-            prompt <- private$build_iteration_prompt(
-              system_prompt,
-              history,
-              iter
-            )
-
-            # Get LLM response (code generation)
-            response <- private$get_code_response(
-              base_llm,
-              prompt,
-              trace = trace,
-              .cache = .cache
-            )
-            result_chat <- response$chat
-
-            if (self$verbose) {
-              cli::cli_alert(
-                "Code generated: {substr(response$code, 1, 100)}..."
-              )
-            }
-
-            # Execute code with RLM tools injected
-            exec_result <- private$execute_with_rlm_tools(
-              response$code,
-              inputs,
-              call_counter,
-              runner,
-              lease$policy,
-              sub_lm = sub_lm,
-              context_prepared = context_prepared,
-              session_state_id = session_state_id
-            )
-
-            # Record in history
-            action_history <- list(iteration = iter)
-            if (identical(reasoning_mode, "rationale")) {
-              action_history$reasoning <- response$reasoning
-            } else if (identical(reasoning_mode, "plan")) {
-              action_history$plan <- response$plan
-            }
-            action_history$code <- response$code
-            action_history$output <- exec_result$formatted_output
-            action_history$success <- exec_result$success
-            action_history$is_final <- exec_result$is_final
-            action_history$action_metadata <- private$compact_action_metadata(
-              response$metadata
-            )
-            action_history$execution_metadata <- list(
-              duration_ms = exec_result$raw_result$duration_ms %||% NA_real_,
-              error_type = exec_result$raw_result$error_type %||% NULL
-            )
-            history[[iter]] <- action_history
-
-            # Check for SUBMIT() termination
-            if (isTRUE(exec_result$success) && isTRUE(exec_result$is_final)) {
-              final_answer <- exec_result$final_value
-              if (self$verbose) {
-                cli::cli_alert_success("SUBMIT called with answer")
-              }
-              break
-            }
-
-            # Check for errors - feed back to LLM for retry
-            if (!exec_result$success) {
-              if (self$verbose) {
-                cli::cli_alert_warning(
-                  "Iteration {iter}: Code execution failed - {exec_result$error}"
-                )
-              }
-              # Error will be in history, LLM can see and fix
-              next
-            }
-
-            if (self$verbose) {
-              cli::cli_alert(
-                "Output: {substr(exec_result$formatted_output, 1, 200)}..."
-              )
-            }
-          }
-
-          final_source <- "submit"
-
-          # Fallback extract if no SUBMIT()
-          if (is.null(final_answer)) {
-            final_source <- "fallback"
-            cli::cli_warn(c(
-              "RLM reached max_iterations ({self$max_iterations}) without SUBMIT()",
-              "i" = "Using fallback extraction from trajectory",
-              "i" = "Consider increasing max_iterations or simplifying the query"
-            ))
-            fallback_result <- private$extract_fallback(
-              inputs,
-              history,
-              base_llm,
-              trace = trace,
-              .cache = .cache,
-              prior_context = prior_context,
-              context_desc = if (!is.null(supplied_history)) {
-                context_desc
-              } else {
-                NULL
-              }
-            )
-            final_answer <- fallback_result$value
-            fallback_metadata <- fallback_result$metadata
-            result_chat <- fallback_result$chat
-          }
-
-          output <- private$build_output(final_answer, source = final_source)
-          next_history <- if (is.null(supplied_history)) {
-            NULL
-          } else {
-            portable_trajectory <- lapply(history, function(step) {
-              list(
-                iteration = as.integer(step$iteration),
-                code = step$code,
-                output = step$output,
-                success = isTRUE(step$success),
-                is_final = isTRUE(step$is_final)
-              )
-            })
-            history_append_rlm(
-              supplied_history,
-              task_text = task_text,
-              trajectory = portable_trajectory,
-              output = output,
-              output_source = final_source
-            )
-          }
-          usage <- private$summarize_action_usage(
-            history,
-            fallback_metadata = fallback_metadata,
-            recursive_metadata = call_counter$usage
+          execution <- rlm_execute_invocation_phase(
+            module = self,
+            prepared = prepared,
+            runner = runner,
+            lease = lease,
+            operations = operations,
+            session = session,
+            session_state_id = session_state_id,
+            start_time = start_time,
+            trace = trace
           )
-          action_calls <- length(history)
-          extraction_calls <- as.integer(identical(final_source, "fallback"))
-          action_provider_calls <- private$summarize_provider_calls(
-            lapply(history, function(entry) entry$action_metadata %||% list())
-          )
-          extraction_provider_calls <- if (extraction_calls == 1L) {
-            private$metadata_provider_calls(fallback_metadata)
-          } else {
-            0L
-          }
-          recursive_provider_calls <- if (
-            isTRUE(call_counter$provider_calls_known)
-          ) {
-            as.integer(call_counter$provider_calls)
-          } else {
-            NA_integer_
-          }
-          provider_calls <- private$sum_provider_call_counts(c(
-            action_provider_calls,
-            recursive_provider_calls,
-            extraction_provider_calls
-          ))
-
-          # Store REPL history
-          if (trace) {
-            self$state$trace_sequence <- self$state$trace_sequence + 1
-            input_summary <- private$summarize_trace_inputs(inputs)
-            self$state$repl_history <- private$append_bounded_trace(
-              self$state$repl_history,
-              list(
-                timestamp = start_time,
-                inputs = input_summary,
-                history = history,
-                final_answer = output,
-                iterations_used = length(history),
-                llm_calls_used = call_counter$count
-              )
-            )
-            trace_entry <- list(
-              timestamp = start_time,
-              inputs = input_summary,
-              output = output,
-              history = history,
-              latency_ms = as.numeric(difftime(
-                Sys.time(),
-                start_time,
-                units = "secs"
-              )) *
-                1000,
-              tokens = usage,
-              input_tokens = usage$input_tokens,
-              cached_input_tokens = usage$cached_input_tokens,
-              output_tokens = usage$output_tokens,
-              total_tokens = usage$total_tokens,
-              cost = usage$cost,
-              provider_calls = provider_calls,
-              action_calls = action_calls,
-              action_provider_calls = action_provider_calls,
-              recursive_calls = call_counter$count,
-              recursive_provider_calls = recursive_provider_calls,
-              extraction_calls = extraction_calls,
-              extraction_provider_calls = extraction_provider_calls,
-              model = private$rlm_model_name(base_llm),
-              output_source = final_source
-            )
-            self$state$traces <- private$append_bounded_trace(
-              self$state$traces,
-              trace_entry
-            )
-            add_to_global_history(trace_entry, source = "RLMModule")
-          }
-
-          duration_secs <- as.numeric(difftime(
-            Sys.time(),
-            start_time,
-            units = "secs"
-          ))
-          duration_ms <- duration_secs * 1000
-
-          # Build metadata
-          metadata <- list(
-            model = "rlm",
-            iterations = length(history),
-            max_iterations = self$max_iterations,
-            llm_calls = call_counter$count,
-            max_llm_calls = self$max_llm_calls,
-            output_source = final_source,
-            duration_ms = round(duration_ms, 2),
-            repl_history = history,
-            input_tokens = usage$input_tokens,
-            cached_input_tokens = usage$cached_input_tokens,
-            output_tokens = usage$output_tokens,
-            total_tokens = usage$total_tokens,
-            cost = usage$cost,
-            provider_calls = provider_calls,
-            action_calls = action_calls,
-            action_provider_calls = action_provider_calls,
-            recursive_calls = call_counter$count,
-            recursive_provider_calls = recursive_provider_calls,
-            extraction_calls = extraction_calls,
-            extraction_provider_calls = extraction_provider_calls,
-            runner_policy = lease$policy_summary,
-            runner_lifecycle = if (lease$owned) {
-              "invocation-owned"
-            } else {
-              "caller-owned"
-            }
-          )
-          if (!is.null(next_history)) {
-            metadata$conversation_history <- next_history
-          }
-          if (!identical(reasoning_mode, "rationale")) {
-            metadata$reasoning_mode <- reasoning_mode
-          }
-          if (identical(reasoning_mode, "native")) {
-            native_reasoning <- private$aggregate_native_reasoning(history)
-            metadata["native_reasoning"] <- list(native_reasoning$contents)
-            metadata["native_reasoning_action_indices"] <- list(
-              native_reasoning$action_indices
-            )
-          }
-
-          tibble::tibble(
-            output = list(output),
-            chat = list(result_chat),
-            metadata = list(metadata)
+          rlm_finalize_invocation_phase(
+            module = self,
+            prepared = prepared,
+            execution = execution,
+            operations = operations,
+            trace = trace
           )
         }
       )
@@ -1777,48 +1404,6 @@ RLMModule <- R6::R6Class(
       names(private$get_output_specs())
     },
 
-    #' Format a true-length head-and-tail excerpt
-    format_excerpt = function(text, max_chars = self$max_output_chars) {
-      if (is.null(text) || length(text) == 0L) {
-        return("")
-      }
-      text <- paste(as.character(text), collapse = "\n")
-      total <- nchar(text, type = "chars")
-      if (total <= max_chars) {
-        return(text)
-      }
-      marker <- paste0("\n... [", total, " total characters] ...\n")
-      if (nchar(marker) + 2L > max_chars) {
-        return(substr(text, 1L, max_chars))
-      }
-      omitted <- total
-      for (iteration in seq_len(10L)) {
-        marker <- paste0(
-          "\n... [",
-          omitted,
-          " characters omitted; total ",
-          total,
-          "] ...\n"
-        )
-        if (nchar(marker) + 2L > max_chars) {
-          return(substr(text, 1L, max_chars))
-        }
-        visible <- max_chars - nchar(marker)
-        head_chars <- ceiling(visible / 2)
-        tail_chars <- floor(visible / 2)
-        next_omitted <- total - head_chars - tail_chars
-        if (identical(next_omitted, omitted)) {
-          break
-        }
-        omitted <- next_omitted
-      }
-      paste0(
-        substr(text, 1L, head_chars),
-        marker,
-        substr(text, total - tail_chars + 1L, total)
-      )
-    },
-
     #' Preview one context value without embedding the full object
     preview_context_value = function(value) {
       text <- if (is.character(value) && length(value) == 1L) {
@@ -1834,7 +1419,7 @@ RLMModule <- R6::R6Class(
           collapse = " "
         )
       }
-      private$format_excerpt(text, max_chars = 1000L)
+      rlm_format_excerpt(text, max_chars = 1000L)
     },
 
     #' Describe context variables for the system prompt
@@ -2088,7 +1673,7 @@ Code:
 ```
 
 {if (h$success) 'Output:' else 'Error:'}
-{private$format_excerpt(h$output)}
+{rlm_format_excerpt(h$output, self$max_output_chars)}
 {if (h$is_final) '(SUBMIT was called)' else ''}
 "
           )
@@ -2453,11 +2038,14 @@ Code:
       formatted_output <- if (is_final) {
         "[SUBMIT accepted]"
       } else if (result$success) {
-        private$format_execution_output(result)
+        rlm_format_execution_output(result, self$max_output_chars)
       } else {
         paste("Error:", result$error %||% "Unknown error")
       }
-      formatted_output <- private$format_excerpt(formatted_output)
+      formatted_output <- rlm_format_excerpt(
+        formatted_output,
+        self$max_output_chars
+      )
 
       list(
         success = is_final || isTRUE(result$success),
@@ -2537,7 +2125,7 @@ Code:
             value = text,
             formatted_output = paste0(
               "Query result: ",
-              private$format_excerpt(text)
+              rlm_format_excerpt(text, self$max_output_chars)
             ),
             error = NULL,
             metadata = chat_usage_metadata(query_llm, turns_before)
@@ -2662,7 +2250,7 @@ Code:
               "Query ",
               index,
               " result: ",
-              private$format_excerpt(value)
+              rlm_format_excerpt(value, self$max_output_chars)
             )
           },
           character(1)
@@ -2673,7 +2261,10 @@ Code:
       list(
         success = TRUE,
         value = vapply(results, as.character, character(1)),
-        formatted_output = private$format_excerpt(formatted_output),
+        formatted_output = rlm_format_excerpt(
+          formatted_output,
+          self$max_output_chars
+        ),
         error = NULL,
         errors = errors
       )
@@ -2892,89 +2483,6 @@ Code:
       as.integer(min(n_queries, floor(max_active)))
     },
 
-    #' Format execution output for history
-    format_execution_output = function(result) {
-      parts <- character()
-
-      # Safely check stdout (may be NULL or missing)
-      stdout_val <- result$stdout
-      if (
-        !is.null(stdout_val) &&
-          is.character(stdout_val) &&
-          nchar(stdout_val) > 0
-      ) {
-        parts <- c(parts, paste0("stdout:\n", stdout_val))
-      }
-
-      # Safely check messages (may be NULL or missing)
-      messages_val <- result$messages
-      if (
-        !is.null(messages_val) &&
-          is.character(messages_val) &&
-          nchar(messages_val) > 0
-      ) {
-        parts <- c(parts, paste0("messages:\n", messages_val))
-      }
-
-      # Safely check warnings (may be NULL or missing)
-      warnings_val <- result$warnings
-      if (
-        !is.null(warnings_val) &&
-          is.character(warnings_val) &&
-          nchar(warnings_val) > 0
-      ) {
-        parts <- c(parts, paste0("warnings:\n", warnings_val))
-      }
-
-      if (!is.null(result$result)) {
-        result_str <- tryCatch(
-          {
-            if (is.data.frame(result$result)) {
-              rows <- nrow(result$result)
-              shown <- if (rows <= 20L) {
-                result$result
-              } else {
-                rbind(
-                  utils::head(result$result, 10L),
-                  utils::tail(result$result, 10L)
-                )
-              }
-              rendered <- paste(
-                utils::capture.output(print(shown)),
-                collapse = "\n"
-              )
-              if (rows > 20L) {
-                paste0(
-                  rendered,
-                  "\n... [",
-                  rows - 20L,
-                  " data-frame rows omitted; ",
-                  rows,
-                  " total]"
-                )
-              } else {
-                rendered
-              }
-            } else if (
-              is.atomic(result$result) && length(result$result) <= 10
-            ) {
-              paste(result$result, collapse = ", ")
-            } else {
-              paste(utils::capture.output(str(result$result)), collapse = "\n")
-            }
-          },
-          error = function(e) deparse(result$result)[1]
-        )
-        parts <- c(parts, paste0("result:\n", result_str))
-      }
-
-      if (length(parts) == 0) {
-        return("[No output]")
-      }
-
-      private$format_excerpt(paste(parts, collapse = "\n\n"))
-    },
-
     #' Extract answer via fallback when max_iterations reached
     extract_fallback = function(
       inputs,
@@ -2994,7 +2502,7 @@ Code:
             "Iteration {h$iteration}:
 {annotation}
 Code: {h$code}
-Output: {private$format_excerpt(h$output, max_chars = self$max_output_chars)}"
+Output: {rlm_format_excerpt(h$output, max_chars = self$max_output_chars)}"
           )
         },
         character(1)
