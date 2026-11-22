@@ -1,4 +1,5 @@
 #' Construct a typed mirai boundary condition
+#' @noRd
 mirai_boundary_condition <- function(message, classes) {
   condition <- simpleError(as.character(message)[1])
   class(condition) <- unique(c(classes, class(condition)))
