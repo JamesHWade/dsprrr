@@ -553,10 +553,11 @@ schedule_mirai_batch <- function(
     task_started_elapsed[[index]] <<- concurrency_elapsed()
     i <- index
     output_type <- module$signature@output_type
+    worker <- mirai_batch_worker
     tasks[[index]] <<- mirai::mirai(
       .expr = worker(i, requests, output_type, llm_template),
       .args = list(
-        worker = mirai_batch_worker,
+        worker = worker,
         i = i,
         requests = requests,
         output_type = output_type,
