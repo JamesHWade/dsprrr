@@ -63,7 +63,7 @@ worse cannot replace a better program.
 Omni adapts the explore, pick-best and continue pattern of the Omni
 meta-optimizer in the \href{https://github.com/gepa-ai/gepa}{GEPA project},
 described in the
-\href{https://gepa-ai.github.io/gepa/blog/2026/07/22/optimize-anything-omni/}{GEPA Omni announcement}.
+\href{https://gepa.dev/blog/2026/07/22/optimize-anything-omni/}{GEPA Omni announcement}.
 
 Omni needs validation data: pass \code{valset} to \code{\link[=compile]{compile()}}, or it holds out
 \code{floor(valset_ratio * nrow(trainset))} rows and stops with an error when

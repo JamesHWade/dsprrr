@@ -4,7 +4,7 @@
       Omni(metric = omni_metric, explorers = list(a = OmniMarkingTeleprompter(marker = "a")),
       continuation = OmniMarkingTeleprompter(marker = "-c", append = TRUE))
     Condition
-      Error:
+      Error in `Omni()`:
       ! <dsprrr::Omni> object properties are invalid:
       - @explorers explorers must be a named list of at least two teleprompters
 
@@ -15,7 +15,7 @@
       OmniMarkingTeleprompter(marker = "b")), continuation = OmniMarkingTeleprompter(
         marker = "-c", append = TRUE))
     Condition
-      Error:
+      Error in `Omni()`:
       ! <dsprrr::Omni> object properties are invalid:
       - @explorers explorers must be named
 
@@ -24,7 +24,7 @@
     Code
       make_omni(seed = 1.5)
     Condition
-      Error:
+      Error in `Omni()`:
       ! <dsprrr::Omni> object properties are invalid:
       - @seed seed must be a single whole number between -2147483647 and 2147483647, or NULL
 
@@ -33,7 +33,7 @@
     Code
       make_omni(seed = .Machine$integer.max + 1)
     Condition
-      Error:
+      Error in `Omni()`:
       ! <dsprrr::Omni> object properties are invalid:
       - @seed seed must be a single whole number between -2147483647 and 2147483647, or NULL
 
@@ -107,3 +107,4 @@
       ! `.llm` must be an ellmer Chat R6 object
       x Got <list>.
       i Create one with an `ellmer::chat_*()` constructor.
+

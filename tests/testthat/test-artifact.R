@@ -1919,7 +1919,11 @@ test_that("arbitrary runtime objects honor registry and dual trusted opt-in", {
     "dsprrr_artifact_unsafe_value"
   )
   trusted_restored <- restore_module_config(embedded, trusted = TRUE)
-  expect_identical(trusted_restored$config$runtime_value, runtime_value)
+  # S7 >= 1.0 serializes the class constructor's environment, which here
+  # captures test-local bindings, so compare class and value instead.
+  restored_value <- trusted_restored$config$runtime_value
+  expect_identical(class(restored_value), class(runtime_value))
+  expect_identical(restored_value@value, runtime_value@value)
 })
 
 test_that("generated optimizer prompts and demo payloads are excluded", {
