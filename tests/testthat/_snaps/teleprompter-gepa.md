@@ -3,7 +3,7 @@
     Code
       GEPA(component_selector = "random")
     Condition
-      Error:
+      Error in `GEPA()`:
       ! <dsprrr::GEPA> object properties are invalid:
       - @component_selector component_selector must be 'round_robin', 'all', or a function
 
@@ -12,7 +12,7 @@
     Code
       GEPA(max_merge_invocations = -1L)
     Condition
-      Error:
+      Error in `GEPA()`:
       ! <dsprrr::GEPA> object properties are invalid:
       - @max_merge_invocations max_merge_invocations must be a non-negative integer or NULL
 
@@ -29,3 +29,4 @@
       conditionMessage(invalid_chat)
     Output
       [1] "`.reflection_llm` must be an ellmer Chat R6 object\nx Got <list>.\ni Create one with an `ellmer::chat_*()` constructor."
+

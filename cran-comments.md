@@ -1,25 +1,21 @@
 ## R CMD check results
 
-The complete local check of dsprrr 0.1.0 on 2026-11-16 reported:
-
 0 errors | 0 warnings | 1 note
 
 * This is a new submission.
 
-The check used `devtools::check(remote = TRUE, manual = TRUE,
-force_suggests = TRUE, run_dont_test = TRUE)` with API credentials removed.
-Examples, tests, vignettes, and both PDF and HTML manuals passed.
-
-The checked source includes the native helper that preserves exact filesystem
-IDs and the documented compiler prerequisite. The full test suite passed
-8,866 assertions; compilation, compiled-code checks and manual rebuilding
-also passed.
-
 ## Test environments
 
-* local macOS Golden Gate 27.0, R 4.6.1 (aarch64)
-* Hosted release and Windows-devel qualification results are recorded in
-  https://github.com/JamesHWade/dsprrr/issues/143.
+* local macOS Golden Gate 27.0 (aarch64), R 4.6.1:
+  `R CMD check --as-cran --run-donttest` with remote incoming checks, all
+  Suggests installed and API credentials removed. Examples, tests (8,773
+  passing assertions), vignettes, and both PDF and HTML manuals passed.
+* GitHub Actions: ubuntu-latest (R release and oldrel-1), windows-latest
+  (R release and R-devel), macos-latest (R release).
+* win-builder: R-devel.
+
+The tests and vignettes do not require API keys or network access; tests that
+need a live language-model provider are skipped on CRAN.
 
 ## First submission
 

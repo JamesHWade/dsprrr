@@ -360,11 +360,12 @@ GridSearchTeleprompter <- S7::new_class(
   properties = list(
     variants = S7::new_property(
       S7::class_data.frame,
-      default = tibble::tibble(
+      # S7 >= 1.0 requires non-scalar defaults to be quoted calls
+      default = quote(tibble::tibble(
         id = 1L,
         instructions = NA_character_,
         template = NA_character_
-      ),
+      )),
       validator = function(value) {
         if (!is.data.frame(value)) {
           return("variants must be a data frame or tibble")
