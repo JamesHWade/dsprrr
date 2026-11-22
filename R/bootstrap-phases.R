@@ -55,35 +55,6 @@ bootstrap_begin_checkpoint <- function(
       is.null(.optimizer_budget) &&
       optimizer_checkpoint_enabled(control)
   ) {
-    effective_runtime <- optimizer_checkpoint_effective_runtime_identity(
-      program,
-      .llm = .llm,
-      registry = artifact_validate_registry(control@checkpoint_registry),
-      path = "effective_runtime"
-    )
-    config <- if (identical(mode, "module")) {
-      list(
-        max_bootstrapped_demos = teleprompter@max_bootstrapped_demos,
-        max_labeled_demos = teleprompter@max_labeled_demos,
-        max_rounds = teleprompter@max_rounds,
-        metric_threshold = teleprompter@metric_threshold,
-        teacher_settings = teacher_settings,
-        seed = teleprompter@seed,
-        effective_runtime = effective_runtime,
-        mode = mode
-      )
-    } else {
-      list(
-        max_bootstrapped_demos = teleprompter@max_bootstrapped_demos,
-        max_labeled_demos = teleprompter@max_labeled_demos,
-        max_rounds = teleprompter@max_rounds,
-        metric_threshold = teleprompter@metric_threshold,
-        seed = teleprompter@seed,
-        effective_runtime = effective_runtime,
-        mode = mode
-      )
-    }
-
     initial_state <- if (identical(mode, "module")) {
       list(
         kind = "module",
@@ -103,7 +74,28 @@ bootstrap_begin_checkpoint <- function(
       program = program,
       data = list(trainset = trainset, valset = valset),
       metric = teleprompter@metric,
-      config = config,
+      # Checkpoint admission must precede resolving the runtime identity.
+      config = c(
+        list(
+          max_bootstrapped_demos = teleprompter@max_bootstrapped_demos,
+          max_labeled_demos = teleprompter@max_labeled_demos,
+          max_rounds = teleprompter@max_rounds,
+          metric_threshold = teleprompter@metric_threshold
+        ),
+        if (identical(mode, "module")) {
+          list(teacher_settings = teacher_settings)
+        },
+        list(
+          seed = teleprompter@seed,
+          effective_runtime = optimizer_checkpoint_effective_runtime_identity(
+            program,
+            .llm = .llm,
+            registry = artifact_validate_registry(control@checkpoint_registry),
+            path = "effective_runtime"
+          ),
+          mode = mode
+        )
+      ),
       control = control,
       initial_state = initial_state,
       initial_phase = "bootstrap"

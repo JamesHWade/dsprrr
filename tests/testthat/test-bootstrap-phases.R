@@ -168,3 +168,22 @@ test_that("execution and finalization phases compose through the central result"
   )
   expect_true(compiled$config$compiled)
 })
+
+
+test_that("checkpoint registry is admitted before resolving runtime identity", {
+  program <- module(signature("x -> y"))
+  registered <- function(x) x
+  control <- optimizer_control(
+    checkpoint_path = withr::local_tempfile(),
+    checkpoint_registry = list(first = registered, second = registered)
+  )
+  error <- rlang::catch_cnd(compile_bootstrap(
+    BootstrapFewShot(metric = function(...) 1),
+    program,
+    data.frame(x = "a", y = "A"),
+    .llm = stop("runtime resolved before registry validation"),
+    control = control
+  ))
+
+  expect_s3_class(error, "dsprrr_artifact_registry_error")
+})
