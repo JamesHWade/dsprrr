@@ -567,7 +567,10 @@ rlm_format_execution_output <- function(result, max_output_chars) {
         } else if (is.atomic(result$result) && length(result$result) <= 10) {
           paste(result$result, collapse = ", ")
         } else {
-          paste(utils::capture.output(str(result$result)), collapse = "\n")
+          paste(
+            utils::capture.output(utils::str(result$result)),
+            collapse = "\n"
+          )
         }
       },
       error = function(e) deparse(result$result)[1]
