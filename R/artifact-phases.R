@@ -20,7 +20,8 @@ artifact_plan_program <- function(program, registry = list(), trusted = FALSE) {
         "x" = "Path {.val {cycle$path}} points back to {.val {cycle$canonical_path}}.",
         "i" = "Break the cycle before creating an artifact. Shared acyclic modules are supported."
       ),
-      class = "dsprrr_artifact_cycle"
+      class = "dsprrr_artifact_cycle",
+      call = rlang::caller_env()
     )
   }
 
