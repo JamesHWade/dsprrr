@@ -64,5 +64,5 @@ trials <- list(
 path <- tempfile(fileext = ".jsonl")
 write_trials_jsonl(trials, path)
 readLines(path, n = 1)
-#> [1] "{\"schema_version\":1,\"trial_id\":\"trial_20261122_185328_ncnyz0\",\"optimizer_name\":\"my-search\",\"params\":{\"k\":2},\"metric_summary\":[],\"cost_summary\":[],\"start_time\":\"2026-11-22T18:53:28\",\"end_time\":null,\"notes\":\"\",\"status\":\"pending\",\"trace_context\":[]}"
+#> [1] "{\"schema_version\":1,\"trial_id\":\"trial_20261122_191526_ncnyz0\",\"optimizer_name\":\"my-search\",\"params\":{\"k\":2},\"metric_summary\":[],\"cost_summary\":[],\"start_time\":\"2026-11-22T19:15:26\",\"end_time\":null,\"notes\":\"\",\"status\":\"pending\",\"trace_context\":[]}"
 ```

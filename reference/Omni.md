@@ -86,7 +86,7 @@ An `Omni` object to pass to
 Omni adapts the explore, pick-best and continue pattern of the Omni
 meta-optimizer in the [GEPA project](https://github.com/gepa-ai/gepa),
 described in the [GEPA Omni
-announcement](https://gepa-ai.github.io/gepa/blog/2026/07/22/optimize-anything-omni/).
+announcement](https://gepa.dev/blog/2026/07/22/optimize-anything-omni/).
 
 Omni needs validation data: pass `valset` to
 [`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md),
