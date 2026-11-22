@@ -68,7 +68,7 @@ place, unlike \code{\link[=compile]{compile()}}, which returns a new program.
 \details{
 Give the candidates as \code{grid}, a data frame with one row per candidate, or
 as \code{parameters}, which is expanded into a grid: a named list is crossed with
-\code{\link[=expand.grid]{expand.grid()}}, and a tidymodels parameter set (see \code{\link[=module_parameters]{module_parameters()}})
+\code{\link[base:expand.grid]{base::expand.grid()}}, and a tidymodels parameter set (see \code{\link[=module_parameters]{module_parameters()}})
 is expanded with \code{dials::grid_regular()} or \code{dials::grid_random()},
 depending on \code{control}. One of the two is required.
 

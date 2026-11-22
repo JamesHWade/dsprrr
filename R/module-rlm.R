@@ -62,7 +62,7 @@ NULL
 #' created, because they cannot be checked in the repair loop.
 #'
 #' `reasoning_mode` changes the action predictor, not the declared final
-#' output. `"rationale"` preserves the existing `reasoning` and `code` action
+#' output. `"rationale"` uses `reasoning` and `code` action
 #' fields. `"native"` requests code only and records provider-supplied
 #' `ContentThinking` blocks in `get_metadata()` when they are present; the
 #' structured metadata also has `native_reasoning_action_indices`, aligned
@@ -3092,6 +3092,8 @@ answer possible with what was discovered.
 
 
 #' Run a recursive language model (RLM) in one call
+#'
+#' `r lifecycle::badge("experimental")`
 #'
 #' @description
 #' `rlm()` runs a one-off RLM investigation: it builds an [rlm_module()], runs

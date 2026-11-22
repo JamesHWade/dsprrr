@@ -131,7 +131,7 @@ compile_default <- function(teleprompter, program, trainset, ...) {
 #' @param sample If `TRUE` (the default), draw `k` rows at random. If `FALSE`,
 #'   take the first `k` rows.
 #' @param seed Integer seed for the random draw (default `123L`). It is passed
-#'   to [set.seed()], which also resets the session's random number stream.
+#'   to [base::set.seed()], which also resets the session's random number stream.
 #'
 #' @return A `LabeledFewShot` object to pass to [compile()].
 #' @family teleprompters
@@ -291,7 +291,7 @@ compile_labeled <- function(teleprompter, program, trainset, .llm = NULL, ...) {
 #' `trainset` are held out for scoring and the demonstrations come from the
 #' remaining rows. The drawn demonstrations replace any the module already had.
 #' The split and the draw use R's random number generator without a fixed
-#' seed, so call [set.seed()] first for reproducible results.
+#' seed, so call [base::set.seed()] first for reproducible results.
 #'
 #' The search runs [optimize_grid()] on a copy of the module, so the scores of
 #' all variants are available from [optimization_result()] and [top_trials()].

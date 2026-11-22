@@ -1,5 +1,8 @@
 ---
 title: "Evaluate with vitals"
+description: >
+  Evaluate dsprrr modules as vitals tasks and solvers, compare variants across
+  epochs, browse vitals logs, and wrap vitals scorers as dsprrr metrics.
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Evaluate with vitals}
@@ -10,15 +13,19 @@ vignette: >
 ```{r}
 #| include: false
 # Skip evaluation during R CMD check or CI (cassettes may not match current code)
-# VITALS_SHOULD_EVAL can override for cassette recording
-force_eval <- identical(Sys.getenv("VITALS_SHOULD_EVAL"), "true")
+# DSPRRR_VIGNETTES_EVAL / VITALS_SHOULD_EVAL can override for cassette recording
+force_eval <- identical(Sys.getenv("DSPRRR_VIGNETTES_EVAL"), "true") ||
+  identical(Sys.getenv("VITALS_SHOULD_EVAL"), "true")
 in_check <- !force_eval && (
   nzchar(Sys.getenv("_R_CHECK_PACKAGE_NAME_")) ||
   identical(Sys.getenv("NOT_CRAN"), "false")
 )
 
-should_eval <- !in_check && dsprrr:::eval_vignette()
 has_vitals <- requireNamespace("vitals", quietly = TRUE)
+should_eval <- !in_check &&
+  has_vitals &&
+  requireNamespace("vcr", quietly = TRUE) &&
+  dsprrr:::eval_vignette()
 
 knitr::opts_chunk$set(
   collapse = TRUE,
@@ -43,8 +50,9 @@ if (should_eval) {
 applications: a `Task` runs a solver over a dataset, grades each answer with a
 scorer, and writes a log you can browse. This page shows how to evaluate a
 dsprrr module as a vitals solver, choose a scorer, read the results, and use
-vitals scorers as dsprrr metrics. The code uses `gpt-6-luna`; the outputs below
-are recorded responses from `gpt-4o-mini`, replayed when the site is built.
+vitals scorers as dsprrr metrics. *The code uses `gpt-6-luna`; recorded outputs
+on the [package website](https://jameshwade.github.io/dsprrr/articles/vitals-recipes.html)
+come from `gpt-4o-mini` and are omitted in offline CRAN vignette builds.*
 
 ```{r setup}
 #| eval: !expr has_vitals
@@ -373,9 +381,10 @@ response cache.
 ## Build the Task yourself
 
 `as_vitals_solver()` wraps a module as a vitals solver, for when you want to
-call `Task$new()` directly. A module whose only input is named `input` reads
-vitals' `input` column as is; for other or multiple inputs, use
-`as_vitals_task()`, which packs them into that column for you.
+call `Task$new()` directly. Any single-input module reads vitals' `input`
+column directly (even when the signature names the input something else, such
+as `question`); for modules with multiple inputs, use `as_vitals_task()`, which
+packs them into that column for you.
 
 ```{r}
 #| eval: false
@@ -430,5 +439,12 @@ evaluate(
 `metric_model_graded_qa()` and `metric_model_graded_fact()` exist too, but they
 currently show the grader the prediction as R list syntax and no question
 unless the data has an `input` column; for model grading, use
-`model_graded_qa()` in a vitals Task as shown above. For how metrics drive
-optimization, see [Metrics and evaluation](concepts-why-metrics-matter.html).
+`model_graded_qa()` in a vitals Task as shown above.
+
+## See also
+
+- `as_vitals_samples()`, `as_vitals_cost()`, `as_dsprrr_traces()`, and
+  `pin_vitals_log()` convert samples, costs, and traces between `dsprrr` and
+  `vitals` (or persist evaluation results to a `pins` board).
+- [Metrics and evaluation](concepts-why-metrics-matter.html) covers how metrics
+  and sample sizes drive optimization.

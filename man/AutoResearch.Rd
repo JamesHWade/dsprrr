@@ -67,6 +67,8 @@ decides when to stop. dsprrr keeps control of budgets, evaluation,
 checkpoints and the choice of the final program.
 }
 \details{
+\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
+
 \code{AutoResearch()} is inspired by Andrej Karpathy's
 \href{https://github.com/karpathy/autoresearch}{\code{autoresearch}} and the
 AutoResearch engine in the
@@ -100,6 +102,12 @@ research <- AutoResearch(
 research
 
 \dontrun{
+program <- module(signature("question -> answer"))
+trainset <- data.frame(
+  question = c("Capital of France?", "Capital of Peru?"),
+  answer = c("Paris", "Lima")
+)
+valset <- data.frame(question = "Capital of Japan?", answer = "Tokyo")
 compiled <- compile(
   program,
   research,

@@ -25,8 +25,8 @@ Replay mode, the default, needs no API key. Live mode runs your own RLM
 queries and needs an OpenAI API key. The app needs the shiny package.
 }
 \examples{
-\dontrun{
-run_demo()
+if (interactive()) {
+  run_demo()
 }
 }
 \seealso{

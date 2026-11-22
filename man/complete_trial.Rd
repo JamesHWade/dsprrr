@@ -26,18 +26,11 @@ evaluation from \code{\link[=eval_program]{eval_program()}} into a trial record 
 \code{"completed"}.
 }
 \examples{
-\dontrun{
-program <- module(signature("question -> answer"))
-data <- data.frame(question = "2 + 2?", answer = "4")
-result <- eval_program(
-  program,
-  data,
-  metric_exact_match(field = "answer"),
-  .llm = ellmer::chat_openai(model = "gpt-6-luna")
-)
+program <- module_fn("x -> answer", function(x) list(answer = toupper(x)))
+data <- data.frame(x = c("a", "b"), answer = c("A", "B"))
+result <- eval_program(program, data, metric_exact_match(field = "answer"))
 trial <- create_trial("my-search", params = list(variant = "baseline"))
-complete_trial(trial, result, compiled_artifact_ref = program)
-}
+complete_trial(trial, result)
 }
 \seealso{
 Other optimizer building blocks:

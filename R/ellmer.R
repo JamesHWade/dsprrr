@@ -48,7 +48,7 @@ copy_ellmer_type <- function(type) {
 #'   - `"abort"`: the error propagates to the caller.
 #'   - `"return"`: a `dsprrr_tool_error` condition carrying the error
 #'     description in `$payload` is signalled, which a
-#'     [withCallingHandlers()] handler can inspect.
+#'     [base::withCallingHandlers()] handler can inspect.
 #' @param trace_context A named, JSON-compatible list recorded in the
 #'   metadata and traces of every call made through the tool, as in [run()].
 #'

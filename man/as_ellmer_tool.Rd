@@ -64,7 +64,7 @@ model can read and react to. Its \verb{$type} holds the condition class.
 \item \code{"abort"}: the error propagates to the caller.
 \item \code{"return"}: a \code{dsprrr_tool_error} condition carrying the error
 description in \verb{$payload} is signalled, which a
-\code{\link[=withCallingHandlers]{withCallingHandlers()}} handler can inspect.
+\code{\link[base:withCallingHandlers]{base::withCallingHandlers()}} handler can inspect.
 }}
 
 \item{trace_context}{A named, JSON-compatible list recorded in the

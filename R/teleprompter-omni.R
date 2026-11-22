@@ -4,6 +4,8 @@
 
 #' Omni: explore with several optimizers, then continue from the best
 #'
+#' `r lifecycle::badge("experimental")`
+#'
 #' @include teleprompter.R optimizer-core.R teleprompter-better-together.R
 #'
 #' @description
@@ -69,10 +71,10 @@
 #'     bootstrap = BootstrapFewShotWithRandomSearch(metric = metric),
 #'     gepa = GEPA(metric = metric, population_size = 4L, generations = 2L)
 #'   ),
-#'   continuation = GEPA(
+#'   continuation = SIMBA(
 #'     metric = metric,
-#'     population_size = 4L,
-#'     generations = 2L
+#'     bsize = 2L,
+#'     max_steps = 2L
 #'   )
 #' )
 #' tp

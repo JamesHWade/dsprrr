@@ -1,5 +1,9 @@
 ---
 title: "Generate an llms.txt file"
+description: >
+  Build a multi-stage dsprrr program that writes an llms.txt summary for an R
+  package, executes its generated R examples in callr as a metric, and improves
+  it with BootstrapFewShot().
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Generate an llms.txt file}
@@ -9,12 +13,15 @@ vignette: >
 
 ```{r}
 #| include: false
-force_eval <- identical(Sys.getenv("VITALS_SHOULD_EVAL"), "true")
+force_eval <- identical(Sys.getenv("DSPRRR_VIGNETTES_EVAL"), "true") ||
+  identical(Sys.getenv("VITALS_SHOULD_EVAL"), "true")
 in_check <- !force_eval && (
   nzchar(Sys.getenv("_R_CHECK_PACKAGE_NAME_")) ||
     identical(Sys.getenv("NOT_CRAN"), "false")
 )
-should_eval <- !in_check && dsprrr:::eval_vignette()
+should_eval <- !in_check &&
+  requireNamespace("vcr", quietly = TRUE) &&
+  dsprrr:::eval_vignette()
 
 knitr::opts_chunk$set(
   collapse = TRUE,
@@ -94,7 +101,8 @@ gather_package_info <- function(pkg_path = ".") {
   )
 }
 
-# "." from the package root, ".." from the vignettes folder
+# Point `pkg_root` at any local source package directory ("." from a package
+# root, ".." when knitting from vignettes/)
 pkg_root <- if (file.exists("DESCRIPTION")) "." else ".."
 info <- gather_package_info(pkg_root)
 info$title
@@ -219,11 +227,15 @@ examples_mod
 
 ## Run it
 
-`analyze_package()` passes each stage's fields to the next. `run()` treats an
-input longer than one as a batch, one call per element, so vectors and
-tables are collapsed to single strings on the way:
+`analyze_package()` passes each stage's fields to the next. Notice that it
+reuses one `llm` chat across all four stages intentionally, so later stages see
+the earlier conversation turns (contrast [Build a text
+adventure](text-adventure.html), which clones the chat to keep calls isolated).
+Because `run()` treats an input longer than one as a batch, vectors and tables
+are collapsed to single strings on the way:
 
 ```{r analyze}
+#| eval: true
 analyze_package <- function(info, llm = chat_openai(model = "gpt-6-luna")) {
   # One chat for all four stages, so later stages also see earlier turns.
   purpose <- run(
@@ -273,9 +285,10 @@ analyze_package <- function(info, llm = chat_openai(model = "gpt-6-luna")) {
 ```
 
 The writer's output type is a bare `type_string()`, so `run()` returns the
-text itself. Here is the file gpt-4.1 wrote for dsprrr when this article was
-recorded, in January 2026; the code now uses gpt-6-luna, whose file will read
-differently:
+text itself. *Recorded outputs on the
+[package website](https://jameshwade.github.io/dsprrr/articles/llms-txt.html)
+were captured with `gpt-4.1`; `gpt-6-luna` will write different wording, and
+offline CRAN vignettes omit the recorded output.*
 
 ```{r simple-use}
 #| cassette: simple-use
@@ -285,18 +298,27 @@ cat(llms_txt)
 
 ## Check the examples
 
-The prose is plausible. The Common Workflow code is not: `module()` has no
-`task` argument, `compile()` needs a teleprompter, `optimize_grid()` has no
-`trainset` argument, and `evaluate()` takes `data`, not `dataset`. Look back
-at the printed `examples_mod`: the examples stage gets function names and a
-purpose statement, but no argument lists, so the model guesses them.
+In the recorded run, the prose is plausible—but the generated **Common
+Workflow** code block hallucinates the API:
+
+```r
+# Typical hallucinated lines from the recorded first run:
+mod <- module(sig, task = "qa")          # module() has no `task` argument
+opt <- compile(mod, trainset)            # compile() requires a teleprompter
+optimize_grid(mod, trainset = data, ...) # optimize_grid() takes `data`, not `trainset`
+evaluate(mod, dataset = test, ...)       # evaluate() takes `data`, not `dataset`
+```
+
+Look back at the printed `examples_mod`: the examples stage gets function names
+and a purpose statement, but no argument lists, so the model guesses them.
 
 Reading every generated example for mistakes like these doesn't scale.
 Running them does. `run_block()` evaluates one code block in a fresh R
 process, in a temporary directory and without API keys, so model-written
 code stays away from your session and your credentials:
 
-```{r check}
+```{r check-helpers}
+#| eval: true
 code_blocks <- function(md) {
   blocks <- regmatches(md, gregexpr("(?s)```r\\n.*?\\n```", md, perl = TRUE))
   gsub("^```r\\n|\\n```$", "", blocks[[1]])
@@ -326,12 +348,14 @@ example_problems <- function(md) {
   problems[grepl("^No default Chat", problems)] <- NA
   problems
 }
+```
 
+```{r check}
 example_problems(llms_txt)
 ```
 
-The Quick Start runs as far as `run()`, which is as far as it can get
-without a model. The Common Workflow stops at its first mistake.
+In the recorded run, the Quick Start runs cleanly as far as `run()` (`NA`),
+while the Common Workflow stops at its first invented argument.
 
 One sample says little, so here is a second run of the same program:
 
@@ -341,11 +365,11 @@ second_run <- analyze_package(info)
 example_problems(second_run)
 ```
 
-Different text, same kind of failure: this time the intermediate example
-passes a whole tibble to `run()` (`run(qa_mod, test_data)`), which expects
-named inputs. Rerunning until an example happens to work is not a fix. The
-program needs to show the model how the functions are called, and you need
-a score that tells you whether the change worked.
+Different wording, same kind of failure: in the recorded second run, the
+intermediate example passes a whole tibble to `run()` (`run(qa_mod, test_data)`),
+which expects named inputs. Rerunning until an example happens to work is not a
+fix. The program needs to show the model how the functions are called, and you
+need a score that tells you whether the change worked.
 
 ## Make it one program
 
@@ -398,7 +422,8 @@ llms_program <- pipeline(
 )
 ```
 
-The package name stops at the first step, so R adds the heading:
+Because `notes` does not emit `pkg_name`—and pipelines forward only the
+previous step's outputs—R prepends the `# dsprrr` heading when writing the file:
 
 ```{r pipeline-run}
 #| eval: false
@@ -467,6 +492,9 @@ evaluate(tuned, dsprrr_facts, metric = examples_run, .llm = llm)$mean_score
 ```
 
 `compile()` returns a new program and leaves `llms_program` unchanged, so you
-can score both on packages that were not in the training set before choosing.
+can compare both on packages outside the training set before deploying. That is
+the full dsprrr pattern in miniature: replace a brittle multi-prompt script with
+a pipeline, grade its outputs with executable R checks, and let an optimizer
+harvest passing examples across every step.
 [Compile and optimize](compilation-optimization.html) covers the other
 optimizers and how to choose between them.

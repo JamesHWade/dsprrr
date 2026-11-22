@@ -1,5 +1,8 @@
 ---
 title: "Tutorial 3: Extract structured data"
+description: >
+  Extract multiple typed fields, arrays, nested records, and optional values
+  from unstructured text into R lists and tibbles.
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Tutorial 3: Extract structured data}
@@ -9,13 +12,16 @@ vignette: >
 
 ```{r}
 #| include: false
-force_eval <- identical(Sys.getenv("VITALS_SHOULD_EVAL"), "true")
+force_eval <- identical(Sys.getenv("DSPRRR_VIGNETTES_EVAL"), "true") ||
+  identical(Sys.getenv("VITALS_SHOULD_EVAL"), "true")
 in_check <- !force_eval && (
   nzchar(Sys.getenv("_R_CHECK_PACKAGE_NAME_")) ||
   identical(Sys.getenv("NOT_CRAN"), "false")
 )
 
-should_eval <- !in_check && dsprrr:::eval_vignette()
+should_eval <- !in_check &&
+  requireNamespace("vcr", quietly = TRUE) &&
+  dsprrr:::eval_vignette()
 
 knitr::opts_chunk$set(
   collapse = TRUE,
@@ -37,12 +43,14 @@ if (should_eval) {
 ```
 
 The classifier in [Tutorial 2](tutorial-build-classifier.html) returns one
-label per text. Extraction needs more: a headline and a sentiment, the people
-named in an article, the sender and action items of an email. By the end of
-this tutorial you can declare outputs like these and get them back as R lists
-and tibbles with a fixed shape.
+label per text. Real extraction tasks usually need more: a headline and a
+sentiment, the people named in an article, or the sender and action items of an
+email. This tutorial shows how to declare multi-field, array, nested, and
+optional outputs so they come back as typed R lists and tibbles.
 
 ```{r setup}
+#| eval: true
+#| message: false
 library(dsprrr)
 library(ellmer)
 library(tibble)
@@ -50,8 +58,8 @@ library(tibble)
 chat <- chat_openai(model = "gpt-6-luna")
 ```
 
-The answers on this page were recorded with `gpt-4.1` and are replayed when the
-site is built, so `gpt-6-luna` may word them differently.
+*Recorded outputs on the package website were captured with `gpt-4.1`;
+`gpt-6-luna` may word them differently.*
 
 ## Return several fields
 
@@ -101,11 +109,12 @@ character strings.
 
 ## Describe fields with `type_object()`
 
-The string notation cannot describe an output. For that, and for nested
-records, build the output from ellmer types. `type_object()` takes one argument
-per field:
+The string notation names and types outputs, but it cannot attach descriptions
+to individual output fields. For field descriptions and nested records, build
+the output from ellmer types. `type_object()` takes one argument per field:
 
 ```{r type-object-basic}
+#| eval: true
 sig <- signature(
   inputs = list(
     input("article", description = "News article to analyze")
@@ -268,8 +277,8 @@ triage <- module(sig)
 ```
 
 As in Tutorial 2, `run_dataset()` returns a `result` list-column of named
-lists. Turn each record into a one-row tibble and bind them to get one row per
-email and a typed column per field:
+lists alongside your original columns. When every output field is scalar, turn
+each record into a one-row tibble, bind the rows, and keep `id` attached:
 
 ```{r triage-batch}
 #| cassette: true
@@ -284,10 +293,15 @@ emails <- tibble(
 
 results <- run_dataset(triage, emails, .llm = chat)
 
-results$result |>
+fields <- results$result |>
   purrr::map(as_tibble) |>
   purrr::list_rbind()
+
+tibble::as_tibble(cbind(results["id"], fields))
 ```
+
+(`as_tibble()` assumes every field is length 1; if a record contains a
+`type_array()`, keep it as a list-column or unnest with `tidyr::unnest_wider()`.)
 
 ## Allow missing values
 
@@ -311,9 +325,12 @@ sig <- signature(
 event_extractor <- module(sig)
 
 run(event_extractor, text = "The contract renews on 1 March 2027.", .llm = chat)
+#> $event: "Contract renewal"
+#> $date:  "2027-03-01"
 
 coffee <- run(event_extractor, text = "We should get coffee sometime.", .llm = chat)
 is.null(coffee$date)
+#> [1] TRUE
 ```
 
 When the model leaves the date out, `coffee$date` is `NULL`, so test for it

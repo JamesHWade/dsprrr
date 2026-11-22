@@ -76,6 +76,8 @@ evaluates every unique candidate and alone decides what enters the
 frontier.
 }
 \details{
+\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
+
 \code{MetaHarness()} is inspired by the Meta-Harness engine in the
 \href{https://github.com/gepa-ai/gepa}{GEPA optimize-anything project} and the
 \href{https://arxiv.org/abs/2603.28052}{Meta-Harness paper}. It keeps the
@@ -107,6 +109,12 @@ harness <- MetaHarness(
 harness
 
 \dontrun{
+program <- module(signature("question -> answer"))
+trainset <- data.frame(
+  question = c("Capital of France?", "Capital of Peru?"),
+  answer = c("Paris", "Lima")
+)
+valset <- data.frame(question = "Capital of Japan?", answer = "Tokyo")
 compiled <- compile(
   program,
   harness,

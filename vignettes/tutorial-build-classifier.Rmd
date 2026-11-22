@@ -1,5 +1,9 @@
 ---
 title: "Tutorial 2: Build a classifier"
+description: >
+  Scale a sentiment classifier from a single review to vectors and data frames
+  with run_dataset(), steer borderline cases with instructions, and describe
+  inputs with input().
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Tutorial 2: Build a classifier}
@@ -9,13 +13,16 @@ vignette: >
 
 ```{r}
 #| include: false
-force_eval <- identical(Sys.getenv("VITALS_SHOULD_EVAL"), "true")
+force_eval <- identical(Sys.getenv("DSPRRR_VIGNETTES_EVAL"), "true") ||
+  identical(Sys.getenv("VITALS_SHOULD_EVAL"), "true")
 in_check <- !force_eval && (
   nzchar(Sys.getenv("_R_CHECK_PACKAGE_NAME_")) ||
   identical(Sys.getenv("NOT_CRAN"), "false")
 )
 
-should_eval <- !in_check && dsprrr:::eval_vignette()
+should_eval <- !in_check &&
+  requireNamespace("vcr", quietly = TRUE) &&
+  dsprrr:::eval_vignette()
 
 knitr::opts_chunk$set(
   collapse = TRUE,
@@ -36,9 +43,12 @@ if (should_eval) {
 }
 ```
 
-You will build a sentiment classifier and run it three ways: on one text, on a
-vector of texts, and on a data frame with `run_dataset()`. It uses the
-signature syntax from [Tutorial 1](tutorial-hello-world.html).
+Classifying one review is easy; classifying a whole column of reviews—and
+deciding what to do with borderline ones—is where modules pay off. Picking up
+from [Tutorial 1](tutorial-hello-world.html), this tutorial runs a sentiment
+classifier on a single text, a character vector, and a data frame with
+`run_dataset()`, then shows how instructions and input descriptions steer the
+model.
 
 ```{r setup}
 #| eval: true
@@ -49,12 +59,13 @@ library(ellmer)
 chat <- chat_openai(model = "gpt-6-luna")
 ```
 
-The answers on this page were recorded with `gpt-4.1` and are replayed when the
-site is built, so `gpt-6-luna` may word them differently.
+*Recorded outputs on the package website were captured with `gpt-4.1`;
+`gpt-6-luna` may answer slightly differently.*
 
 ## Define the classifier
 
-Start from the sentiment signature in Tutorial 1 and print the module:
+Start from the sentiment signature in Tutorial 1 and print the module (a
+*prediction module*, `PredictModule`):
 
 ```{r create-module}
 #| eval: true
@@ -65,7 +76,7 @@ classifier <- module(
 classifier
 ```
 
-The printout shows the inputs, the output type and the instructions that start
+The printout shows the inputs, the output type, and the instructions that start
 every prompt. This signature has no instructions of its own, so dsprrr wrote a
 default from the field names.
 
@@ -113,7 +124,8 @@ purrr::map_chr(sentiments, "sentiment")
 ```
 
 Each element is still its own request to the model, and by default they are
-sent one after another. `concurrency_control()` lets several run at once.
+sent one after another. Passing `.concurrency = concurrency_control(...)` lets
+several requests run at once (see [Run dsprrr in pipelines](orchestration.html)).
 
 ## Add instructions
 
@@ -121,6 +133,7 @@ Instructions replace the default line. Use them to settle cases the labels
 leave open, such as mixed reviews:
 
 ```{r add-instructions}
+#| eval: true
 sig <- signature(
   "text -> sentiment: enum('positive', 'negative', 'neutral')",
   instructions = "Classify the overall sentiment. If mixed, choose the dominant emotion."
@@ -129,7 +142,8 @@ sig <- signature(
 classifier2 <- module(sig)
 ```
 
-The new module takes the same inputs, one at a time or as a vector:
+The new module takes the same inputs—one at a time, as a vector, or on
+borderline cases like `"The service was terrible but the food was amazing."`:
 
 ```{r run-single}
 #| cassette: true
@@ -176,9 +190,9 @@ made and the tokens they used.
 
 ## Describe the inputs
 
-A signature can also be built from `input()` objects and an ellmer type. An
-input's description becomes its heading in the prompt, in place of the
-input's name:
+A signature can also be built from `input()` objects and an ellmer output type
+such as `ellmer::type_enum()`. An input's description is added as a `#` heading
+above that field in the prompt:
 
 ```{r with-descriptions}
 #| cassette: true
@@ -197,6 +211,12 @@ run(
   review_text = "Five stars! Would buy again!",
   .llm = chat
 )
+```
+
+You can inspect the exact prompt that was sent:
+
+```{r inspect-described-prompt}
+cat(get_last_prompt()$prompt)
 ```
 
 The output type here is a bare `type_enum()` rather than a named field, so

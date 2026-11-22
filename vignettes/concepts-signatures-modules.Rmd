@@ -1,5 +1,9 @@
 ---
 title: "How dsprrr works"
+description: >
+  The core mental model behind dsprrr: immutable S7 signatures, stateful R6
+  modules, the five-function lifecycle, and when plain prompting is still
+  enough.
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{How dsprrr works}
@@ -61,9 +65,8 @@ chat$chat(
 )
 ```
 
-The reply is a sentence you have to parse, the wording is frozen inside the
-string, and you have no measure of how often it is right. The same task in
-dsprrr:
+That call returns free-form prose that you have to parse, with the wording
+hard-coded inside the string. The same task in dsprrr:
 
 ```{r}
 classify <- module(signature(
@@ -101,8 +104,9 @@ metric <- metric_exact_match(field = "sentiment")
 
 before <- evaluate(classify, splits$val, metric, .llm = chat)
 
+# LabeledFewShot copies training rows into demos without making any model calls
 tuned <- classify |>
-  compile(LabeledFewShot(k = 3L), splits$train, .llm = chat)
+  compile(LabeledFewShot(k = 3L), splits$train)
 after <- evaluate(tuned, splits$val, metric, .llm = chat)
 
 c(before = before$mean_score, after = after$mean_score)
@@ -162,7 +166,7 @@ vary between versions of the program:
 | Field | Holds | Changed by |
 |---|---|---|
 | `mod$signature` | The interface | Optimizers that tune instructions swap in a new signature |
-| `mod$demos` | Few-shot examples | `compile()` with `LabeledFewShot()` or `BootstrapFewShot()` |
+| `mod$demos` | Few-shot examples (on prediction modules) | `compile()` with `LabeledFewShot()` or `BootstrapFewShot()` |
 | `mod$config` | Settings such as `temperature` | You, or `optimize_grid()` |
 | `mod$chat` | An optional ellmer chat for this module | You, via `module(sig, chat = ...)` |
 | `mod$state` | Traces and optimization results | `run()`, `evaluate()` and optimizers |
@@ -193,7 +197,7 @@ recent prompt and response.
 
 ## Running, evaluating and compiling
 
-Five functions cover the life of a module:
+Five functions cover the full lifecycle—`signature() |> module() |> run() |> evaluate() |> compile()`:
 
 | Function | What it does | Returns | Changes the module |
 |---|---|---|---|

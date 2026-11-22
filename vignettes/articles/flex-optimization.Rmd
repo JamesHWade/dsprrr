@@ -2,7 +2,7 @@
 title: "Flex: optimize a whole program"
 description: >
   Start with declarative JSON, then use executable Flex when optimization
-  needs deterministic logic or selected tools.
+  needs deterministic R logic or selected host tools.
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Flex: optimize a whole program}
@@ -10,50 +10,38 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-```{r setup, include=FALSE}
+```{r}
+#| label: setup
+#| include: false
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 library(dsprrr)
-
 old_cache <- configure_cache(enable = FALSE)
-
 ```
 
-`flex()` makes the program structure part of the optimization target. GEPA can
-change the number or order of predictor calls and, in executable mode, add
-deterministic logic or call a tool supplied by your application. Flex is
-experimental, so its source format and behavior may change.
+Most dsprrr optimizers keep a program's structure fixed and tune its
+instructions or demonstrations. `flex()` *(experimental)* makes the program's
+structure itself part of the search space: `GEPA()` can add or remove predictor
+steps, introduce deterministic R logic, or call tools you expose.
 
-Start with declarative JSON when the workflow is a bounded graph of model
-steps. Use executable R only when the task calls for branching, computation,
-predictors created at run time, or named tools.
-
-| What may change? | Use | Execution boundary |
+| What should change? | Use | Execution boundary |
 |---|---|---|
-| Instructions or examples inside a fixed module | A regular module and teleprompter | Normal module runtime |
-| A known sequence of model steps | JSON Flex | Validated data; no code interpreter |
-| Branches, deterministic logic, or selected tools | Executable Flex | Fresh runner; sandbox optimizer-authored code |
+| Instructions or demos inside a fixed module | Regular `module()` + teleprompter | Standard host runtime |
+| A bounded sequence of model steps | **JSON Flex** (`source_format = "json"`, default) | Validated data; no code interpreter |
+| Branches, R logic, or host tools | **Executable Flex** (`source_format = "r"`) | Fresh runner; OS sandbox required by default |
 
-## A small JSON run needs no interpreter
+Start with JSON Flex when the workflow is a pure graph of `Predict` and
+`ChainOfThought` steps. Reach for executable R Flex only when deterministic
+checks or tools can solve part of the task directly.
 
-The default source is a one-step JSON program. This example runs a real
-`run()` call against a deterministic local Chat fixture. It needs neither an
-API key nor a separate code interpreter:
+> **Note on the offline runner:** To execute end-to-end in documentation builds
+> without API keys, this walkthrough uses a deterministic local Chat fixture
+> (defined in a hidden setup chunk) and `r_code_runner()` over two reviewed
+> source strings. A live search with `mcp_repl_runner()` and real ellmer Chats
+> appears near the end of the page.
 
-```{r task-signature}
-library(dsprrr)
-
-route_signature <- signature(
-  "ticket -> queue: enum('database', 'security', 'payments', 'identity')",
-  instructions = "Route each support ticket to its owning queue."
-)
-```
-
-Before running the JSON example in your own R session, run the fixture
-definitions in the [appendix](#appendix-offline-fixture-source) once. The
-deterministic Chat fixture counts actual task and proposer requests, while its
-fixed response rules leave metric scoring and candidate selection to GEPA.
-
-```{r offline-fixture, include=FALSE}
+```{r}
+#| label: offline-fixture
+#| include: false
 fixture_chat_class <- R6::R6Class(
   "Chat",
   public = list(
@@ -68,11 +56,7 @@ fixture_chat_class <- R6::R6Class(
       private$responder(paste(as.character(prompt), collapse = "\n"), NULL, ...)
     },
     chat_structured = function(prompt, type, ...) {
-      private$responder(
-        paste(as.character(prompt), collapse = "\n"),
-        type,
-        ...
-      )
+      private$responder(paste(as.character(prompt), collapse = "\n"), type, ...)
     },
     stream = function(...) character(),
     get_turns = function() self$turns,
@@ -118,27 +102,15 @@ new_route_fixture <- function(
     audit$task_calls <- audit$task_calls + 1L
 
     queue <- if (
-      grepl(
-        "INC-DB-17|Queries time out|Read traffic",
-        prompt,
-        ignore.case = TRUE
-      )
+      grepl("INC-DB-17|Queries time out|Read traffic", prompt, ignore.case = TRUE)
     ) {
       "database"
     } else if (
-      grepl(
-        "INC-SEC-9|unusual-login|login spray",
-        prompt,
-        ignore.case = TRUE
-      )
+      grepl("INC-SEC-9|unusual-login|login spray", prompt, ignore.case = TRUE)
     ) {
       "security"
     } else if (
-      grepl(
-        "INC-PAY-4|renewal|duplicate charge|Card charged twice",
-        prompt,
-        ignore.case = TRUE
-      )
+      grepl("INC-PAY-4|renewal|duplicate charge|Card charged twice", prompt, ignore.case = TRUE)
     ) {
       "payments"
     } else if (
@@ -159,8 +131,31 @@ new_route_fixture <- function(
 }
 ```
 
-```{r json-example}
-json_program <- suppressMessages(suppressWarnings(flex(route_signature)))
+## 1. Start with declarative JSON Flex
+
+Calling `flex()` on a signature builds a one-step declarative JSON program by
+default. JSON Flex checks field types ahead of time and needs no code
+interpreter:
+
+```{r}
+#| label: json-example
+#| warning: false
+#| message: false
+library(dsprrr)
+
+route_signature <- signature(
+  "ticket -> queue: enum('database', 'security', 'payments', 'identity')",
+  instructions = "Route each support ticket to its owning queue."
+)
+
+json_program <- flex(route_signature)
+cat(json_program$module_src, "\n")
+```
+
+Run it like any other module:
+
+```{r}
+#| label: json-run
 json_fixture <- new_route_fixture()
 
 json_result <- run(
@@ -171,28 +166,21 @@ json_result <- run(
   .return_format = "structured"
 )
 
-cat(json_program$module_src, "\n")
 json_result$output
 json_result$metadata$predictor_calls
-stopifnot(
-  identical(json_result$output, list(queue = "security")),
-  identical(json_result$metadata$predictor_calls, 1L)
-)
 ```
 
-The fixture makes task predictions repeatable. The router below still runs
-through Flex's actual R bridge, predictor, tool, `compile()` and `evaluate()`
-contracts. The fixed proposer demonstrates the optimizer plumbing; a live
-search is needed to assess whether a model can discover this candidate.
+## 2. Add a host tool with executable R Flex
 
-## The routing task
+Suppose a support team routes tickets to `database`, `security`, `payments`, or
+`identity`. Some tickets carry an incident code whose owner already lives in an
+internal catalog; the rest require an LLM call.
 
-A support team routes tickets to database, security, payments, or identity.
-Some tickets have an incident code with a catalog owner. Others need a
-language-model prediction. The search uses separate training and validation
-rows. The holdout data is introduced only after compilation.
+Keep `train` and `validation` separate during compilation, and hold out a third
+dataset for the final check:
 
-```{r router-data}
+```{r}
+#| label: router-data
 train <- data.frame(
   ticket = c(
     "[INC-SEC-9] unusual-login burst",
@@ -208,15 +196,14 @@ validation <- data.frame(
   ),
   queue = c("payments", "payments")
 )
-
-stopifnot(length(intersect(train$ticket, validation$ticket)) == 0L)
 ```
 
-The named catalog is application-owned. Executable Flex can request only this
-tool; the optimizer does not receive the closure environment or the rest of
-the R session.
+Expose the incident catalog as a plain host R function. Executable Flex calls
+only the named tools you pass in—the optimizer never sees the closure's private
+environment or the rest of your R session:
 
-```{r router-tool}
+```{r}
+#| label: router-tool
 lookup_incident <- local({
   catalog <- c(
     "INC-DB-17" = "database",
@@ -243,26 +230,16 @@ lookup_incident("[INC-DB-17] replicas unavailable")
 lookup_incident("A password reset email is late")
 ```
 
-## Compile with a deterministic proposer
+An executable Flex program defines a top-level `forward()` function that can
+call Flex primitives (`Predict()`, `ChainOfThought()`, `Prediction()`,
+`ReAct()`, `RLM()`, `ProgramOfThought()`) alongside your named tools. Our
+baseline calls a predictor on every ticket; the candidate we want GEPA to find
+checks `lookup_incident()` first and falls back to the predictor only when the
+catalog misses:
 
-This executable R example needs `callr`, an optional dsprrr dependency used
-by `r_code_runner()` to start an R subprocess. Install it once before
-continuing:
-
-```{r install-callr, eval=FALSE}
-install.packages("callr")
-```
-
-The baseline makes one predictor call for every ticket. The fixed, reviewed
-candidate first asks the catalog about incident codes, returns a known owner
-directly, and calls one predictor for everything else.
-
-The following Chat fixture returns that candidate when GEPA asks for
-`module_src`. For task predictions it returns a deterministic response from
-the prompt's ticket text. GEPA runs the metric on Flex predictions and traces,
-then selects from the resulting validation scores.
-
-```{r router-sources}
+```{r}
+#| label: router-sources
+#| warning: false
 baseline_source <- paste(
   "router <- Predict(\"$outer\", instructions = \"Choose the owning queue.\")",
   "forward <- function(ticket) router(ticket = ticket)",
@@ -281,61 +258,44 @@ selected_fixture_source <- paste(
   sep = "\n"
 )
 
-make_router <- function(module_src) {
-  suppressWarnings(flex(
-    route_signature,
-    module_src = module_src,
-    tools = list(lookup_incident = lookup_incident),
-    interpreter_factory = r_code_runner,
-    source_format = "r",
-    require_sandbox = FALSE,
-    max_predictor_calls = 1L,
-    max_tool_calls = 1L
-  ))
-}
-
-baseline <- make_router(baseline_source)
+baseline <- flex(
+  route_signature,
+  module_src = baseline_source,
+  tools = list(lookup_incident = lookup_incident),
+  interpreter_factory = r_code_runner,
+  source_format = "r",
+  require_sandbox = FALSE,
+  max_predictor_calls = 1L,
+  max_tool_calls = 1L
+)
 ```
 
-This offline article runs only the two fixed source strings shown here through
-`r_code_runner()`. That runner starts an R subprocess, but it is not a security
-sandbox. `require_sandbox = FALSE` is appropriate here only because both
-sources are reviewed fixtures. For optimizer-authored R in an application,
-keep the default sandbox requirement and configure an enforced runner such as
-`mcp_repl_runner()` with [Posit's MCP Console][mcp-console].
+Notice `require_sandbox = FALSE` with `r_code_runner()` (requires the optional
+`callr` package). That is safe here *only* because both source strings are
+reviewed fixtures; for live model-authored R code, keep the default
+`require_sandbox = TRUE` with an OS-sandboxed runner such as
+`mcp_repl_runner()`.
 
-[mcp-console]: https://github.com/posit-dev/mcp-console
+## 3. Reward efficiency with a trace-aware metric
 
-The metric checks the predicted queue against the row label. Correct answers
-score higher when they require no predictor; incorrect answers score zero.
-The execution trace supplies the call count used for that efficiency reward.
+A trace-aware metric (`metric_with_trace()`) can reward both accuracy and
+avoiding unnecessary model calls: `1.0` for a right answer with zero predictor
+calls, `0.5` for a right answer using a predictor, and `0.0` for a wrong route:
 
-```{r router-metric}
+```{r}
+#| label: router-metric
 route_metric <- metric_with_trace(
   function(prediction, expected, program_trace) {
     correct <- identical(
       as.character(prediction$queue),
       as.character(expected$queue[[1L]])
     )
-    predictor_calls <- program_trace$metadata$predictor_calls
-    if (is.null(predictor_calls)) {
-      predictor_calls <- 0L
-    }
+    predictor_calls <- program_trace$metadata$predictor_calls %||% 0L
 
     list(
-      score = if (!correct) {
-        0
-      } else if (predictor_calls == 0L) {
-        1
-      } else {
-        0.5
-      },
+      score = if (!correct) 0 else if (predictor_calls == 0L) 1 else 0.5,
       feedback = if (!correct) {
-        sprintf(
-          "Expected '%s'; got '%s'.",
-          expected$queue[[1L]],
-          prediction$queue
-        )
+        sprintf("Expected '%s'; got '%s'.", expected$queue[[1L]], prediction$queue)
       } else if (predictor_calls > 0L) {
         "Correct route; prefer the incident catalog when it has an owner."
       } else {
@@ -347,12 +307,10 @@ route_metric <- metric_with_trace(
 )
 ```
 
-GEPA's validation score ranks the candidates. The `evaluate()` calls made by
-`compile()` execute the bound Flex program, and `route_metric` reads the
-resulting prediction and trace. Training rows are available to generate
-feedback; validation rows decide which candidate survives.
+## 4. Compile with `GEPA()` and inspect the winning source
 
-```{r router-compile}
+```{r}
+#| label: router-compile
 optimizer_fixture <- new_route_fixture(
   proposed_source = selected_fixture_source,
   model = "fixture-gepa-router"
@@ -381,55 +339,24 @@ optimized <- compile(
 )
 
 compile_result <- optimization_result(optimized)
-gepa_budget <- compile_result$budget
-
-budget_summary <- data.frame(
-  status = compile_result$status,
-  metric_calls = gepa_budget$metric_calls,
-  metric_call_limit = gepa_budget$limits$max_metric_calls,
-  provider_calls = gepa_budget$provider_calls,
-  provider_call_limit = gepa_budget$limits$max_provider_calls,
-  task_calls = optimizer_fixture$audit$task_calls,
-  proposal_calls = optimizer_fixture$audit$proposal_calls
-)
-
-stopifnot(
-  identical(compile_result$status, "completed"),
-  isTRUE(gepa_budget$metric_calls <= gepa_budget$limits$max_metric_calls),
-  isTRUE(gepa_budget$provider_calls <= gepa_budget$limits$max_provider_calls),
-  identical(
-    gepa_budget$provider_calls,
-    optimizer_fixture$audit$task_calls + optimizer_fixture$audit$proposal_calls
-  ),
-  identical(optimizer_fixture$audit$proposal_calls, 1L),
-  isTRUE(all.equal(compile_result$best_score, 0.75)),
-  identical(optimized$module_src, selected_fixture_source)
-)
-
-budget_summary
+compile_result
 ```
 
-GEPA selected source is part of the compiled module. Render both complete
-programs before using the result:
+The source GEPA selected is stored directly on the compiled module—always
+inspect it before deploying:
 
-```{r router-source-review}
-selected_source <- optimized$module_src
-
-cat("Baseline source:\n", baseline$module_src, "\n\n")
-cat("Selected source:\n", selected_source, "\n")
-
-compile_result$lineage$best_candidate_id
-compile_result$best_score
+```{r}
+#| label: router-source-review
+cat(optimized$module_src, "\n")
 ```
 
-## Evaluate once on independent holdout data
+## 5. Compare once on untouched holdout tickets
 
-These six tickets have different text from the training and validation rows.
-The data object is created after `compile()`; the evaluations below happen
-outside GEPA selection. The catalog knows three incident codes; the remaining
-tickets use the task predictor.
+Evaluate both the baseline and compiled programs on six fresh tickets (three
+with catalog incident codes, three without):
 
-```{r router-holdout}
+```{r}
+#| label: router-holdout
 holdout <- data.frame(
   ticket = c(
     "[INC-DB-17] replicas unavailable",
@@ -439,147 +366,82 @@ holdout <- data.frame(
     "Duplicate charge after a plan upgrade",
     "Read traffic fails after failover"
   ),
-  queue = c(
-    "database",
-    "security",
-    "payments",
-    "identity",
-    "payments",
-    "database"
-  )
+  queue = c("database", "security", "payments", "identity", "payments", "database")
 )
-
-stopifnot(
-  length(intersect(holdout$ticket, train$ticket)) == 0L,
-  length(intersect(holdout$ticket, validation$ticket)) == 0L
-)
-
-compile_prompts <- optimizer_fixture$audit$prompts
-holdout_absent_from_compile <- !any(vapply(
-  holdout$ticket,
-  grepl,
-  logical(1),
-  x = paste(compile_prompts, collapse = "\n"),
-  fixed = TRUE
-))
-stopifnot(holdout_absent_from_compile)
 
 accuracy <- metric_exact_match(field = "queue")
 before_fixture <- new_route_fixture(model = "fixture-holdout-before")
 after_fixture <- new_route_fixture(model = "fixture-holdout-after")
 
 before <- evaluate(
-  baseline,
-  holdout,
-  metric = accuracy,
-  .llm = before_fixture$chat,
-  .cache = FALSE,
-  .progress = FALSE
+  baseline, holdout, metric = accuracy,
+  .llm = before_fixture$chat, .cache = FALSE, .progress = FALSE
 )
 after <- evaluate(
-  optimized,
-  holdout,
-  metric = accuracy,
-  .llm = after_fixture$chat,
-  .cache = FALSE,
-  .progress = FALSE
+  optimized, holdout, metric = accuracy,
+  .llm = after_fixture$chat, .cache = FALSE, .progress = FALSE
 )
 
-count_metadata_calls <- function(result, field) {
-  sum(vapply(
-    result$metadata,
-    function(metadata) {
-      value <- metadata[[field]]
-      if (is.null(value)) 0L else as.integer(value)
-    },
-    integer(1)
-  ))
+count_calls <- function(res, field) {
+  sum(vapply(res$metadata, function(m) as.integer(m[[field]] %||% 0L), integer(1)))
 }
 
 heldout <- data.frame(
   program = c("baseline", "selected"),
-  exact_match_quality = c(before$mean_score, after$mean_score),
+  exact_match = c(before$mean_score, after$mean_score),
   predictor_calls = c(
-    count_metadata_calls(before, "predictor_calls"),
-    count_metadata_calls(after, "predictor_calls")
+    count_calls(before, "predictor_calls"),
+    count_calls(after, "predictor_calls")
   ),
   tool_calls = c(
-    count_metadata_calls(before, "tool_calls"),
-    count_metadata_calls(after, "tool_calls")
-  ),
-  fixture_model_calls = c(
-    before_fixture$audit$task_calls,
-    after_fixture$audit$task_calls
+    count_calls(before, "tool_calls"),
+    count_calls(after, "tool_calls")
   )
 )
-
 heldout
 ```
 
-The fixture counters and Flex trace metadata are execution counts. The
-acceptance decision below uses the independent exact-match results and those
-observed calls.
+Both programs route all six holdout tickets accurately (`1.0`), while the
+selected Flex program cuts predictor calls in half (6 → 3) by resolving catalog
+incidents locally through `lookup_incident()`.
 
-```{r router-acceptance}
-same_quality <- isTRUE(before$mean_score == after$mean_score)
-fewer_model_calls <- isTRUE(
-  after_fixture$audit$task_calls < before_fixture$audit$task_calls
-)
-accepted <- same_quality && fewer_model_calls
-
-decision <- data.frame(
-  same_heldout_quality = same_quality,
-  fewer_fixture_model_calls = fewer_model_calls,
-  accepted = accepted
-)
-decision
-
+```{r}
+#| label: verify-invariants
+#| include: false
+gepa_budget <- compile_result$budget
+compile_prompts <- paste(optimizer_fixture$audit$prompts, collapse = "\n")
 stopifnot(
-  isTRUE(before$mean_score == 1),
-  isTRUE(after$mean_score == 1),
-  isTRUE(heldout$predictor_calls[[1L]] == before_fixture$audit$task_calls),
-  isTRUE(heldout$predictor_calls[[2L]] == after_fixture$audit$task_calls),
-  isTRUE(heldout$predictor_calls[[1L]] == 6L),
-  isTRUE(heldout$predictor_calls[[2L]] == 3L),
-  isTRUE(heldout$tool_calls[[1L]] == 0L),
-  isTRUE(heldout$tool_calls[[2L]] == 3L),
-  isTRUE(accepted)
+  identical(json_result$output, list(queue = "security")),
+  identical(json_result$metadata$predictor_calls, 1L),
+  length(intersect(train$ticket, validation$ticket)) == 0L,
+  length(intersect(holdout$ticket, c(train$ticket, validation$ticket))) == 0L,
+  !any(vapply(holdout$ticket, grepl, logical(1), x = compile_prompts, fixed = TRUE)),
+  identical(compile_result$status, "completed"),
+  isTRUE(gepa_budget$metric_calls <= gepa_budget$limits$max_metric_calls),
+  isTRUE(gepa_budget$provider_calls <= gepa_budget$limits$max_provider_calls),
+  identical(gepa_budget$provider_calls, optimizer_fixture$audit$task_calls + optimizer_fixture$audit$proposal_calls),
+  isTRUE(all.equal(compile_result$best_score, 0.75)),
+  identical(optimized$module_src, selected_fixture_source),
+  isTRUE(before$mean_score == 1 && after$mean_score == 1),
+  identical(heldout$predictor_calls, c(6L, 3L)),
+  identical(heldout$tool_calls, c(0L, 3L))
 )
 ```
 
-Here both programs route all six holdout tickets correctly. The selected
-source uses three tool calls and three predictor calls; the baseline uses six
-predictor calls. Treat this deterministic result as execution-path evidence;
-a live search is needed to assess whether a model would invent the same
-program.
+## 6. Run a live sandboxed search
 
-`optimization_result()` keeps the compile budget and selection lineage
-available for inspection:
-
-```{r router-result}
-list(
-  best_candidate_id = compile_result$lineage$best_candidate_id,
-  validation_score = compile_result$best_score,
-  budget = budget_summary,
-  holdout_absent_from_compile = holdout_absent_from_compile,
-  heldout = heldout,
-  acceptance = decision
-)
-```
-
-## Try a live search
-
-The deterministic journey above runs in documentation builds without
-credentials. To try a stochastic search, install `mcptools` and its
-`posit-mcp-repl` executable, then opt in to the chunk below. Optimizer-written
-R should run with the default enforced-sandbox requirement.
+For live model-authored R code, install `mcptools` and Posit's `mcp-repl`
+sandbox ([posit-dev/mcp-console](https://github.com/posit-dev/mcp-console)) and
+keep `require_sandbox = TRUE` (the default):
 
 ```sh
 Rscript -e 'install.packages("mcptools")'
 uv tool install posit-mcp-repl
 ```
 
-```{r live-gepa, eval=FALSE}
+```{r}
+#| label: live-gepa
+#| eval: false
 live_baseline <- flex(
   route_signature,
   module_src = baseline_source,
@@ -589,9 +451,6 @@ live_baseline <- flex(
   max_predictor_calls = 1L,
   max_tool_calls = 1L
 )
-
-task_chat <- ellmer::chat_openai(model = "gpt-6-luna")
-reflection_chat <- ellmer::chat_openai(model = "gpt-6-astra")
 
 live_optimized <- compile(
   live_baseline,
@@ -605,8 +464,8 @@ live_optimized <- compile(
   ),
   trainset = train,
   valset = validation,
-  .llm = task_chat,
-  .reflection_llm = reflection_chat,
+  .llm = ellmer::chat_openai(model = "gpt-6-luna"),
+  .reflection_llm = ellmer::chat_openai(model = "gpt-6-astra"),
   control = optimizer_control(
     max_metric_calls = 80L,
     max_provider_calls = 50L,
@@ -618,48 +477,24 @@ live_optimized <- compile(
 optimization_result(live_optimized)
 ```
 
-Review the complete `module_src`, then evaluate the candidate once on a
-holdout set that was not used for search. Keep the model, package version,
-data splits, metric, seed and budget with the selected source.
+## Operational limits to keep in mind
 
-## Choose the right source format
+- `max_predictor_calls` and `max_tool_calls` bound direct calls per invocation
+  (nested `ReAct()` / `RLM()` predictors have their own step bounds).
+- Guest R code replays from the top after each bridged predictor or tool call,
+  so keep guest-side logic pure and bound loops explicitly.
+- Host tools run in your R session with their own permissions, even when guest
+  source runs inside `mcp_repl_runner()`.
+- Executable Flex evaluates dataset rows sequentially and does not stream
+  tokens.
 
-JSON is data describing an acyclic graph of `Predict` and
-`ChainOfThought` steps. Its references point to outer inputs or earlier step
-outputs, and Flex checks field types before execution. It needs no code
-interpreter.
+When the workflow structure is already known, a plain `module()` or `pipeline()`
+is simpler and cheaper; see [Choose an optimizer](advanced-optimization.html)
+for the other optimization strategies.
 
-Executable R defines a top-level `forward()` function and can use
-`Predict()`, `ChainOfThought()`, `Prediction()`, the other documented Flex
-constructors, and the named tools you supplied. The source runs in a fresh
-runner and crosses a versioned JSON bridge for predictor and tool calls. Host
-tools retain their own permissions, even when the source runs in a sandbox.
-
-`max_predictor_calls` and `max_tool_calls` bound the direct calls made by an
-invocation. Agentic predictors such as ReAct or RLM have their own limits.
-Guest-side computation runs again from the beginning after a bridged response,
-so keep it pure and bound loops explicitly. Executable Flex runs dataset rows
-sequentially and does not stream tokens.
-
-Use Flex when the outcome is measurable and the best choice among model
-calls, deterministic logic and selected tools is still open. If the workflow
-is already clear, prefer a regular module or an explicit pipeline. See
-[Choose an optimizer](advanced-optimization.html) for the other optimization
-paths.
-
-## Appendix: offline fixture source
-
-The article hides fixture setup from the main walkthrough. This chunk prints
-the exact Chat fixture code used above so you can reproduce the deterministic
-run or adapt its response rules.
-
-```{r offline-fixture-source, echo=FALSE, results='asis'}
-cat("```r\n")
-cat(knitr::knit_code$get("offline-fixture"), sep = "\n")
-cat("\n```")
-```
-
-```{r restore-cache, include=FALSE}
+```{r}
+#| label: restore-cache
+#| include: false
 if (is.null(old_cache)) {
   configure_cache(enable = TRUE)
 } else {

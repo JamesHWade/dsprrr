@@ -1,5 +1,8 @@
 ---
 title: "Use dsprrr with tidymodels"
+description: >
+  Score dsprrr predictions with yardstick, build tuning grids with dials, and
+  wrap zero-shot modules in the llm_predict() parsnip model specification.
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Use dsprrr with tidymodels}
@@ -7,7 +10,8 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-```{r, include = FALSE}
+```{r}
+#| include: false
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
@@ -17,10 +21,10 @@ has_dials <- requireNamespace("dials", quietly = TRUE)
 has_parsnip <- requireNamespace("parsnip", quietly = TRUE)
 ```
 
-This page shows how dsprrr fits with tidymodels today: score module output
-with yardstick, and build grids for `optimize_grid()` with dials. It also
-explains what the parsnip model `llm_predict()` does, and why it can't be
-fitted yet.
+dsprrr integrates with tidymodels in three places: scoring module predictions
+with `yardstick`, building parameter grids for `optimize_grid()` with `dials`,
+and wrapping zero-shot prediction modules in the `llm_predict()` `parsnip`
+model specification.
 
 ```{r setup}
 #| eval: true
@@ -31,8 +35,8 @@ library(dsprrr)
 ## Score predictions with yardstick
 
 Run the module over a data frame with `run_dataset()`, which keeps every column
-and adds a `result` list column. Turn the predicted field into a factor with
-the truth's levels, and any yardstick metric works:
+and adds a `result` list-column. Turn the predicted field into a factor with
+the truth's levels, and any `yardstick` metric works:
 
 ```{r}
 library(yardstick)
@@ -64,13 +68,13 @@ conf_mat(scored, truth = sentiment, estimate = .pred_class)
 ```
 
 A row whose call failed holds `NA` in `result`, hence the `is.list()` check.
-Setting `levels` matters: yardstick refuses a prediction factor whose levels
+Setting `levels` matters: `yardstick` refuses a prediction factor whose levels
 differ from the truth's, which happens whenever some class is never predicted.
 
 ## Build grids with dials
 
-`temperature()`, `top_p()` and `reasoning_effort()` are dials parameter
-objects. `temperature()` and `top_p()` default to the range 0 to 1:
+`temperature()`, `top_p()`, and `reasoning_effort()` are `dials` parameter
+objects (`temperature()` and `top_p()` default to `[0, 1]`):
 
 ```{r dials-params}
 #| eval: !expr has_dials
@@ -79,9 +83,23 @@ reasoning_effort()
 dials::grid_regular(temperature(), levels = 3)
 ```
 
-`optimize_grid()` takes such a grid directly, or a `dials::parameters()` set to
-build one from. It tries each row on the data and keeps the best settings in
-the module:
+`module_parameters()` suggests a `dials` parameter set for a module, swapping
+`temperature`/`top_p` for `reasoning_effort` when `model` looks like a
+reasoning model (pass `include` to pick only the knobs you want):
+
+```{r module-params}
+#| eval: !expr has_dials
+classify <- module(
+  signature("text -> sentiment: enum('negative', 'neutral', 'positive')")
+)
+knobs <- c("temperature", "top_p", "reasoning_effort")
+module_parameters(classify, model = "claude-sonnet-4-5", include = knobs)
+module_parameters(classify, model = "gpt-6-luna", include = knobs)
+```
+
+`optimize_grid()` accepts a `dials` grid directly, or a `dials::parameters()`
+set to build one from. It evaluates each row and keeps the best settings on the
+module:
 
 ```{r}
 optimize_grid(
@@ -98,18 +116,22 @@ optimize_grid(
 module_trials(classify)
 ```
 
-`module_parameters(classify)` suggests a parameter set for a module. To tune
-how much a reasoning model thinks, use a `reasoning_effort()` grid instead; see
-[Models, providers and streaming](models-and-providers.html).
+To tune how much a reasoning model thinks instead, sweep a `reasoning_effort()`
+grid; see [Models, providers and streaming](models-and-providers.html).
 
 ## The parsnip model
 
-When parsnip is loaded, dsprrr registers a model type, `llm_predict()`, with
-the engine `"dsprrr"` for classification and regression:
+When `parsnip` is loaded, dsprrr registers a model type, `llm_predict()`, with
+the `"dsprrr"` engine for classification and regression:
 
 ```{r parsnip-spec}
 #| eval: !expr has_parsnip
 library(parsnip)
+
+reviews <- tibble::tibble(
+  text = c("Arrived broken.", "Works great.", "It's a chair."),
+  sentiment = factor(c("negative", "positive", "neutral"))
+)
 
 spec <- llm_predict(
   mode = "classification",
@@ -117,26 +139,36 @@ spec <- llm_predict(
   temperature = 0
 ) |>
   set_engine("dsprrr")
-spec
+
+fitted <- fit_xy(spec, x = reviews["text"], y = reviews$sentiment)
+fitted
 ```
 
-Fitting this model does not learn from the training data. The engine's fit
-step builds a zero-shot module from `signature` (or, without one, from the
-predictor names and the outcome's distinct values, such as
-`text -> output: enum('negative', 'positive')`), puts `temperature` and
-`top_p` in the module's config, and records the predictor names. The
-training rows are not used as examples. `predict()` then runs the module on
-`new_data` with the default Chat, so call `set_default_chat()` first. It
-returns `.pred_class` for classification, as a factor with only the levels that
-were predicted, or `.pred` for regression.
+Fitting builds a zero-shot module from `signature` (or, without one, derives
+it from the predictor names and outcome levels), stores `temperature` and
+`top_p` in the module's config, and makes no model calls. Use `fit_xy()` (or
+`workflows::add_variables()`) rather than a formula for free-text columns: R's
+formula interface converts character predictors into factors with fixed
+training levels, which rejects unseen text at prediction time.
 
-With parsnip 1.6.0, `fit()` and `fit_xy()` on this specification currently
-stop with "no applicable method for 'filter' applied to an object of class
-"NULL"", because the engine registers no predictor encoding. The same failure
-stops `tune::tune_grid()` and workflows, which fit models through these
-functions.
-Until that is fixed, the module and `run_dataset()` approach at the top of this
-page gives the same zero-shot predictions.
+`predict()` runs the module on `new_data` using the default Chat (set with
+`set_default_chat()` or `local_lm()`) and returns `.pred_class` (preserving
+the training factor's levels) or `.pred`:
+
+```{r}
+set_default_chat(
+  ellmer::chat_openai(
+    model = "gpt-6-luna",
+    params = ellmer::params(reasoning_effort = "none")
+  )
+)
+predict(fitted, new_data = tibble::tibble(text = c("Best purchase ever!", "Total junk.")))
+#> # A tibble: 2 x 1
+#>   .pred_class
+#>   <fct>
+#> 1 positive
+#> 2 negative
+```
 
 For evaluation with graded or repeated samples, see
 [Evaluate with vitals](vitals-recipes.html).

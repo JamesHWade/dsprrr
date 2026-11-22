@@ -9,7 +9,7 @@
 #' @details
 #' Give the candidates as `grid`, a data frame with one row per candidate, or
 #' as `parameters`, which is expanded into a grid: a named list is crossed with
-#' [expand.grid()], and a tidymodels parameter set (see [module_parameters()])
+#' [base::expand.grid()], and a tidymodels parameter set (see [module_parameters()])
 #' is expanded with `dials::grid_regular()` or `dials::grid_random()`,
 #' depending on `control`. One of the two is required.
 #'

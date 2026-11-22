@@ -27,7 +27,7 @@ omitted.}
 (see below), or \code{NULL}.}
 
 \item{.history}{Explicit conversation history is not supported by streaming;
-use synchronous \code{\link[=run]{run()}} for scalar root ReAct continuation.}
+use synchronous \code{\link[=run]{run()}} for scalar root ReAct or RLM continuation.}
 }
 \value{
 The output, invisibly, in the same form as \code{\link[=run]{run()}} returns it.
