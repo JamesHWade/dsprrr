@@ -80,6 +80,7 @@ Collate:
     'assertion.R'
     'async-trace.R'
     'async.R'
+    'bootstrap-phases.R'
     'cache.R'
     'chat-default.R'
     'compile.R'

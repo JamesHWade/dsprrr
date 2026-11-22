@@ -93,23 +93,28 @@ That output was recorded from a real call to `gpt-4.1` in the
 tutorial](https://jameshwade.github.io/dsprrr/articles/tutorial-structured-outputs.html);
 `gpt-6-luna` may word the summary differently.
 
-To measure and improve a module, give it labeled rows and a metric:
+Measure the module against labeled reviews, then compile it with the
+same metric.
 
 ``` r
-scores <- evaluate(
-  analyzer,
-  labeled_reviews,
-  metric = metric_exact_match(field = "sentiment"),
-  .llm = chat
+labeled_reviews <- data.frame(
+  review = c("Blends smoothly", "Broke on the first day", "It works as described"),
+  sentiment = c("positive", "negative", "neutral"),
+  stars = c(5L, 1L, 3L),
+  summary = c("Smooth blending", "Broke immediately", "Works as described")
 )
+metric <- metric_exact_match(field = "sentiment")
+
+scores <- evaluate(analyzer, labeled_reviews, metric = metric, .llm = chat)
 scores$mean_score
 
-optimized <- analyzer |>
-  compile(
-    BootstrapFewShot(metric = metric_exact_match(field = "sentiment")),
-    trainset = labeled_reviews,
-    .llm = chat
-  )
+optimized <- compile(
+  analyzer,
+  BootstrapFewShot(metric = metric),
+  trainset = labeled_reviews,
+  .llm = chat
+)
+optimization_result(optimized)
 ```
 
 ## What’s included
