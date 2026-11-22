@@ -107,6 +107,13 @@ export_traces <- function(
 #' @export
 #' @family inspection
 #' @examples
+#' shout <- module_fn(
+#'   "text -> out",
+#'   function(text) list(out = toupper(text))
+#' )
+#' run(shout, text = "hello")
+#' summarize_traces(shout)
+#'
 #' \dontrun{
 #' qa <- module(signature("question -> answer"))
 #' run(qa, question = "What is 2 + 2?", .llm = ellmer::chat_openai(model = "gpt-6-luna"))
@@ -123,8 +130,16 @@ summarize_traces <- function(module) {
   # Add model usage breakdown if we have traces
   if (nrow(traces_df) > 0) {
     model_counts <- table(traces_df$model)
-    summary$model_usage <- as.data.frame(model_counts)
-    names(summary$model_usage) <- c("model", "n_requests")
+    if (length(model_counts) > 0) {
+      summary$model_usage <- as.data.frame(model_counts)
+      names(summary$model_usage) <- c("model", "n_requests")
+    } else {
+      summary$model_usage <- data.frame(
+        model = character(0),
+        n_requests = integer(0),
+        stringsAsFactors = FALSE
+      )
+    }
 
     summary$avg_latency_ms <- mean(traces_df$latency_ms, na.rm = TRUE)
     summary$avg_tokens_per_request <- mean(traces_df$total_tokens, na.rm = TRUE)

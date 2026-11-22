@@ -441,16 +441,32 @@ extract_history_entry <- function(trace, source) {
   }
 
   metadata <- trace$metadata %||% list()
-  if (is.null(entry$tokens_in) && !is.null(metadata$input_tokens)) {
+  if (
+    (is.null(entry$tokens_in) || is.na(entry$tokens_in)) &&
+      !is.null(metadata$input_tokens) &&
+      !is.na(metadata$input_tokens)
+  ) {
     entry$tokens_in <- as.integer(metadata$input_tokens)
   }
-  if (is.null(entry$tokens_out) && !is.null(metadata$output_tokens)) {
+  if (
+    (is.null(entry$tokens_out) || is.na(entry$tokens_out)) &&
+      !is.null(metadata$output_tokens) &&
+      !is.na(metadata$output_tokens)
+  ) {
     entry$tokens_out <- as.integer(metadata$output_tokens)
   }
-  if (is.null(entry$cost) && !is.null(metadata$cost)) {
+  if (
+    (is.null(entry$cost) || is.na(entry$cost)) &&
+      !is.null(metadata$cost) &&
+      !is.na(metadata$cost)
+  ) {
     entry$cost <- metadata$cost
   }
-  if (is.null(entry$duration_s) && !is.null(metadata$duration_s)) {
+  if (
+    (is.null(entry$duration_s) || is.na(entry$duration_s)) &&
+      !is.null(metadata$duration_s) &&
+      !is.na(metadata$duration_s)
+  ) {
     entry$duration_s <- metadata$duration_s
   }
 

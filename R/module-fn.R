@@ -175,6 +175,30 @@ FnModule <- R6::R6Class(
         chat = list(llm),
         metadata = list(metadata)
       )
+    },
+    deepcopy = function() {
+      new_config <- if (length(self$config) > 0) {
+        lapply(self$config, function(x) x)
+      } else {
+        list()
+      }
+
+      new_signature <- Signature(
+        inputs = self$signature@inputs,
+        output_type = self$signature@output_type,
+        instructions = self$signature@instructions
+      )
+
+      new_module <- FnModule$new(
+        signature = new_signature,
+        forward_fn = private$.forward_fn,
+        chat = self$chat,
+        config = new_config
+      )
+
+      new_module$state <- lapply(self$state, function(x) x)
+
+      artifact_copy_runtime(self, new_module)
     }
   )
 )
