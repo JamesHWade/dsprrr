@@ -802,7 +802,7 @@ test_that("RLM excerpts honor very small output bounds", {
     runner = r_code_runner(),
     max_output_chars = 40L
   )
-  excerpt <- module$.__enclos_env__$private$format_excerpt(strrep("x", 100000L))
+  excerpt <- rlm_format_excerpt(strrep("x", 100000L), module$max_output_chars)
 
   expect_lte(nchar(excerpt), 40L)
   expect_identical(excerpt, strrep("x", 40L))
@@ -818,12 +818,15 @@ test_that("RLM bounds rendered data frames before retaining trajectory output", 
     id = seq_len(40000L),
     value = sprintf("row-%05d", seq_len(40000L))
   )
-  formatted <- module$.__enclos_env__$private$format_execution_output(list(
-    stdout = "",
-    messages = "",
-    warnings = "",
-    result = large
-  ))
+  formatted <- rlm_format_execution_output(
+    list(
+      stdout = "",
+      messages = "",
+      warnings = "",
+      result = large
+    ),
+    module$max_output_chars
+  )
 
   expect_lte(nchar(formatted), 300L)
   expect_match(formatted, "39980 data-frame rows omitted", fixed = TRUE)
