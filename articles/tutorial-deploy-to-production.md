@@ -62,7 +62,7 @@ when the session ends:
 board <- board_temp()
 
 pin_module_config(board, "sentiment-classifier", classifier)
-#> Creating new version '20261122T191725Z-26939'
+#> Creating new version '20261124T014028Z-b863c'
 #> Writing to pin 'sentiment-classifier'
 #> ✔ Pinned program artifact: "sentiment-classifier"
 #> ℹ Root module: <PredictModule>
@@ -207,7 +207,7 @@ run(classifier, review = "Does the job.", .llm = chat)
 #> [1] "neutral"
 
 pin_trace(board, "sentiment-traces", classifier)
-#> Creating new version '20261122T191726Z-bbf90'
+#> Creating new version '20261124T014029Z-598de'
 #> Writing to pin 'sentiment-traces'
 #> ✔ Pinned 4 traces: "sentiment-traces"
 #> ℹ Total tokens: 941
@@ -223,10 +223,10 @@ export_traces(classifier)
 #> # A tibble: 4 × 11
 #>     timestamp latency_ms input_tokens cached_input_tokens output_tokens
 #>         <dbl>      <dbl>        <int>               <int>         <int>
-#> 1 1795375045.       848.          101                   0             7
-#> 2 1795375046.       355.          200                   0             7
-#> 3 1795375046.       315.          271                   0             7
-#> 4 1795375047.       317.          341                   0             7
+#> 1 1795484428.       883.          101                   0             7
+#> 2 1795484429.       359.          200                   0             7
+#> 3 1795484429.       320.          271                   0             7
+#> 4 1795484430.       322.          341                   0             7
 #> # ℹ 6 more variables: total_tokens <int>, cost <dbl>, model <chr>,
 #> #   prompt_length <int>, program_artifact_id <chr>, trace_context <list>
 ```

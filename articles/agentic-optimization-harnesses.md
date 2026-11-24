@@ -297,7 +297,7 @@ auto_result$stop_reason
 #> [1] "target_score"
 budget_summary(auto_result)
 #>   trials metric_calls provider_calls errors elapsed_seconds stopped max_trials
-#> 1      3           12             26      0           1.342   FALSE          4
+#> 1      3           12             26      0           1.299   FALSE          4
 #>   max_metric_calls max_provider_calls
 #> 1               20                 40
 auto_agent_sessions <- vapply(
@@ -673,7 +673,7 @@ meta_result$stop_reason
 #> [1] "max_iterations"
 budget_summary(meta_result)
 #>   trials metric_calls provider_calls errors elapsed_seconds stopped max_trials
-#> 1      4           16             34      0           1.717   FALSE          5
+#> 1      4           16             34      0           1.661   FALSE          5
 #>   max_metric_calls max_provider_calls
 #> 1               24                 50
 
