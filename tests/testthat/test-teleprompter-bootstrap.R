@@ -451,9 +451,7 @@ test_that("BootstrapFewShot max_errors zero stops after the first attempt", {
 })
 
 test_that("BootstrapFewShot logging cannot bypass the shared metric budget", {
-  log_dir <- tempfile("bootstrap-budget-log-")
-  dir.create(log_dir, mode = "0700")
-  withr::defer(unlink(log_dir, recursive = TRUE, force = TRUE))
+  log_dir <- local_private_storage_dir()
   eval_calls <- 0L
 
   testthat::local_mocked_bindings(

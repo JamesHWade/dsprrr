@@ -561,10 +561,7 @@ test_that("GEPA Pareto selection survives an interrupted worse generation", {
 
 test_that("GEPA never selects or logs a biased partial metric evaluation", {
   eval_calls <- 0L
-  log_dir <- withr::local_tempdir()
-  if (.Platform$OS.type == "unix") {
-    Sys.chmod(log_dir, mode = "0700", use_umask = FALSE)
-  }
+  log_dir <- local_private_storage_dir()
 
   testthat::local_mocked_bindings(
     eval_program = function(program, dataset, ...) {

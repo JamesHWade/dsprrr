@@ -42,13 +42,7 @@ log$add_trial(create_trial("my-search", params = list(k = 4L)))
 log$n_trials()
 log$as_tibble()[, c("trial_id", "status", "mean_score")]
 
-# Persist to a directory and load it again
-dir <- file.path(tempdir(), "trial-log-example")
-saved <- TrialLog$new("my-search", log_dir = dir)
-saved$add_trial(create_trial("my-search", params = list(k = 2L)))
-list.files(dir)
-load_trial_log(dir)
-
+# See example(load_trial_log) to persist and reopen a log.
 }
 \seealso{
 Other optimizer building blocks:

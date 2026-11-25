@@ -1824,13 +1824,7 @@ trial_log_sync_locked <- function(
 #' log$n_trials()
 #' log$as_tibble()[, c("trial_id", "status", "mean_score")]
 #'
-#' # Persist to a directory and load it again
-#' dir <- file.path(tempdir(), "trial-log-example")
-#' saved <- TrialLog$new("my-search", log_dir = dir)
-#' saved$add_trial(create_trial("my-search", params = list(k = 2L)))
-#' list.files(dir)
-#' load_trial_log(dir)
-#'
+#' # See example(load_trial_log) to persist and reopen a log.
 #' @export
 TrialLog <- R6::R6Class(
   "TrialLog",
@@ -2255,8 +2249,11 @@ TrialLog <- R6::R6Class(
 #'   create_trial("my-search", params = list(k = 4L))
 #' )
 #' path <- tempfile(fileext = ".jsonl")
-#' write_trials_jsonl(trials, path)
-#' readLines(path, n = 1)
+#' # Shared temporary directories can be unsuitable for private logs.
+#' tryCatch({
+#'   write_trials_jsonl(trials, path)
+#'   read_trials_jsonl(path)[[1]]
+#' }, dsprrr_trial_log_trust_error = function(e) message(conditionMessage(e)))
 write_trials_jsonl <- function(trials, path, append = FALSE) {
   original_path <- path
   absolute <- trial_log_absolute_path(path)
@@ -2466,12 +2463,7 @@ trial_log_parse_jsonl_file <- function(path) {
 #' @family optimizer building blocks
 #' @export
 #'
-#' @examples
-#' path <- tempfile(fileext = ".jsonl")
-#' trials <- list(create_trial("my-search", params = list(k = 2L)))
-#' write_trials_jsonl(trials, path)
-#' trials <- read_trials_jsonl(path)
-#' trials[[1]]
+#' @inherit write_trials_jsonl examples
 read_trials_jsonl <- function(path) {
   trial_log_parse_jsonl_file(path)
 }
@@ -2489,12 +2481,13 @@ read_trials_jsonl <- function(path) {
 #' @export
 #'
 #' @examples
-#' dir <- file.path(tempdir(), "load-trial-log-example")
-#' log <- TrialLog$new("my-search", log_dir = dir)
-#' log$add_trial(create_trial("my-search", params = list(k = 2L)))
-#'
-#' restored <- load_trial_log(dir)
-#' restored$as_tibble()[, c("trial_id", "status")]
+#' # Persist and reopen a log if the temporary directory permits private storage.
+#' dir <- tempfile("trial-log-")
+#' tryCatch({
+#'   log <- TrialLog$new("my-search", log_dir = dir)
+#'   log$add_trial(create_trial("my-search", params = list(k = 2L)))
+#'   load_trial_log(dir)$as_tibble()[, c("trial_id", "status")]
+#' }, dsprrr_trial_log_trust_error = function(e) message(conditionMessage(e)))
 load_trial_log <- function(log_dir) {
   if (!dir.exists(log_dir)) {
     cli::cli_abort("Directory not found: {.path {log_dir}}")

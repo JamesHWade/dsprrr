@@ -10,8 +10,8 @@
 local_reset_cache <- function(.env = parent.frame()) {
   withr::defer(
     {
-      # Reset to defaults
-      dsprrr:::configure_cache()
+      # Restore the memory-only configuration from setup.R
+      dsprrr:::configure_cache(enable_disk = FALSE)
       dsprrr:::clear_cache()
       dsprrr::clear_prompt_history()
     },

@@ -530,7 +530,7 @@ test_that("TrialLog JSONL roundtrip preserves unknown and zero costs", {
     )
   }
 
-  path <- withr::local_tempfile(fileext = ".jsonl")
+  path <- file.path(local_private_storage_dir(), "trials.jsonl")
   write_trials_jsonl(
     list(
       completed_trial("unknown", NA_real_),
@@ -559,10 +559,7 @@ test_that("TrialLog print and README render cost state explicitly", {
     )
   }
 
-  unknown_dir <- withr::local_tempdir()
-  if (.Platform$OS.type == "unix") {
-    Sys.chmod(unknown_dir, mode = "0700", use_umask = FALSE)
-  }
+  unknown_dir <- local_private_storage_dir()
   unknown_log <- TrialLog$new("TestOptimizer", log_dir = unknown_dir)
   unknown_log$add_trial(completed_trial("unknown", NA_real_))
 
@@ -581,10 +578,7 @@ test_that("TrialLog print and README render cost state explicitly", {
   expect_true(is.na(loaded$summary()$total_cost))
   expect_true(is.na(loaded$as_tibble()$total_cost))
 
-  zero_dir <- withr::local_tempdir()
-  if (.Platform$OS.type == "unix") {
-    Sys.chmod(zero_dir, mode = "0700", use_umask = FALSE)
-  }
+  zero_dir <- local_private_storage_dir()
   zero_log <- TrialLog$new("TestOptimizer", log_dir = zero_dir)
   zero_log$add_trial(completed_trial("zero", 0))
 
@@ -612,8 +606,7 @@ test_that("write_trials_jsonl and read_trials_jsonl roundtrip", {
     EvalResult(mean_score = 0.85, n_evaluated = 10L)
   )
 
-  tmp <- tempfile(fileext = ".jsonl")
-  on.exit(unlink(tmp), add = TRUE)
+  tmp <- file.path(local_private_storage_dir(), "trials.jsonl")
 
   write_trials_jsonl(trials, tmp)
   expect_true(file.exists(tmp))
@@ -628,8 +621,7 @@ test_that("write_trials_jsonl and read_trials_jsonl roundtrip", {
 })
 
 test_that("TrialLog persists to directory", {
-  tmp_dir <- tempfile()
-  on.exit(unlink(tmp_dir, recursive = TRUE), add = TRUE)
+  tmp_dir <- file.path(local_private_storage_dir(), "log")
 
   log <- TrialLog$new("TestOpt", log_dir = tmp_dir)
 
@@ -836,8 +828,7 @@ test_that("update_cost_summary handles NULL values in cost list", {
 
 # Tests for JSONL parse error handling
 test_that("read_trials_jsonl handles malformed JSON gracefully", {
-  tmp <- tempfile(fileext = ".jsonl")
-  on.exit(unlink(tmp), add = TRUE)
+  tmp <- file.path(local_private_storage_dir(), "trials.jsonl")
 
   # Write two current-schema records around one malformed line. Generate the
   # valid fixtures through the canonical serializer so schema_version and
