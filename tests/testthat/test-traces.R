@@ -70,6 +70,13 @@ test_that("export_traces omits prompts and responses unless requested", {
 })
 
 test_that("summarize_traces handles traces with missing model names", {
+  old_chat <- set_default_chat(NULL)
+  clear_default_chat()
+  withr::defer({
+    clear_default_chat()
+    set_default_chat(old_chat)
+  })
+
   shout <- module_fn(
     "text -> out",
     function(text) list(out = toupper(text))
