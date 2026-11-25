@@ -151,9 +151,17 @@ paths are rejected rather than repaired. The directory must already exist.</p>
 <span class="r-in"><span>  <span class="fu"><a href="create_trial.html">create_trial</a></span><span class="op">(</span><span class="st">"my-search"</span>, params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>k <span class="op">=</span> <span class="fl">4L</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".jsonl"</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="fu">write_trials_jsonl</span><span class="op">(</span><span class="va">trials</span>, <span class="va">path</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/readLines.html" class="external-link">readLines</a></span><span class="op">(</span><span class="va">path</span>, n <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "{\"schema_version\":1,\"trial_id\":\"trial_20261125_115849_e01i28\",\"optimizer_name\":\"my-search\",\"params\":{\"k\":2},\"metric_summary\":[],\"cost_summary\":[],\"start_time\":\"2026-11-25T11:58:49\",\"end_time\":null,\"notes\":\"\",\"status\":\"pending\",\"trace_context\":[]}"</span>
+<span class="r-in"><span><span class="co"># Shared temporary directories can be unsuitable for private logs.</span></span></span>
+<span class="r-in"><span><span class="kw"><a href="https://rdrr.io/r/base/conditions.html" class="external-link">tryCatch</a></span><span class="op">(</span><span class="op">{</span></span></span>
+<span class="r-in"><span>  <span class="fu">write_trials_jsonl</span><span class="op">(</span><span class="va">trials</span>, <span class="va">path</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="read_trials_jsonl.html">read_trials_jsonl</a></span><span class="op">(</span><span class="va">path</span><span class="op">)</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span></span></span>
+<span class="r-in"><span><span class="op">}</span>, dsprrr_trial_log_trust_error <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">e</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/message.html" class="external-link">message</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/conditions.html" class="external-link">conditionMessage</a></span><span class="op">(</span><span class="va">e</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> ── Trial: trial_20261125_223016_e01i28 </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> • <span style="color: #00BB00;">Status</span>: pending</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">Optimizer</span>: my-search</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">Params</span>: k</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">Started</span>: 2026-11-25 22:30:16</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

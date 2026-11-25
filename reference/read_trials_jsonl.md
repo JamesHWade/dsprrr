@@ -38,15 +38,20 @@ Other optimizer building blocks:
 ## Examples
 
 ``` r
+trials <- list(
+  create_trial("my-search", params = list(k = 2L)),
+  create_trial("my-search", params = list(k = 4L))
+)
 path <- tempfile(fileext = ".jsonl")
-trials <- list(create_trial("my-search", params = list(k = 2L)))
-write_trials_jsonl(trials, path)
-trials <- read_trials_jsonl(path)
-trials[[1]]
+# Shared temporary directories can be unsuitable for private logs.
+tryCatch({
+  write_trials_jsonl(trials, path)
+  read_trials_jsonl(path)[[1]]
+}, dsprrr_trial_log_trust_error = function(e) message(conditionMessage(e)))
 #> 
-#> ── Trial: trial_20261125_115826_ncnyz0 
+#> ── Trial: trial_20261125_222953_ncnyz0 
 #> • Status: pending
 #> Optimizer: my-search
 #> Params: k
-#> Started: 2026-11-25 11:58:26
+#> Started: 2026-11-25 22:29:53
 ```

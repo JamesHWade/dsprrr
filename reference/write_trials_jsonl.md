@@ -62,7 +62,15 @@ trials <- list(
   create_trial("my-search", params = list(k = 4L))
 )
 path <- tempfile(fileext = ".jsonl")
-write_trials_jsonl(trials, path)
-readLines(path, n = 1)
-#> [1] "{\"schema_version\":1,\"trial_id\":\"trial_20261125_115849_e01i28\",\"optimizer_name\":\"my-search\",\"params\":{\"k\":2},\"metric_summary\":[],\"cost_summary\":[],\"start_time\":\"2026-11-25T11:58:49\",\"end_time\":null,\"notes\":\"\",\"status\":\"pending\",\"trace_context\":[]}"
+# Shared temporary directories can be unsuitable for private logs.
+tryCatch({
+  write_trials_jsonl(trials, path)
+  read_trials_jsonl(path)[[1]]
+}, dsprrr_trial_log_trust_error = function(e) message(conditionMessage(e)))
+#> 
+#> ── Trial: trial_20261125_223016_e01i28 
+#> • Status: pending
+#> Optimizer: my-search
+#> Params: k
+#> Started: 2026-11-25 22:30:16
 ```

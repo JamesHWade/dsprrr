@@ -37,14 +37,15 @@ Other optimizer building blocks:
 ## Examples
 
 ``` r
-dir <- file.path(tempdir(), "load-trial-log-example")
-log <- TrialLog$new("my-search", log_dir = dir)
-log$add_trial(create_trial("my-search", params = list(k = 2L)))
-
-restored <- load_trial_log(dir)
-restored$as_tibble()[, c("trial_id", "status")]
+# Persist and reopen a log if the temporary directory permits private storage.
+dir <- tempfile("trial-log-")
+tryCatch({
+  log <- TrialLog$new("my-search", log_dir = dir)
+  log$add_trial(create_trial("my-search", params = list(k = 2L)))
+  load_trial_log(dir)$as_tibble()[, c("trial_id", "status")]
+}, dsprrr_trial_log_trust_error = function(e) message(conditionMessage(e)))
 #> # A tibble: 1 × 2
 #>   trial_id                     status 
 #>   <chr>                        <chr>  
-#> 1 trial_20261125_115800_hzgis9 pending
+#> 1 trial_20261125_222928_hzgis9 pending
 ```
