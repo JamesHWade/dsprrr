@@ -191,7 +191,13 @@ restore_module_config <- function(
 #' @export
 #' @family persistence
 #'
-#' @examples
+#' @examplesIf rlang::is_installed("pins")
+#' board <- pins::board_temp()
+#' shout <- module_fn("text -> out", function(text) list(out = toupper(text)))
+#' run(shout, text = "hello")
+#' pin_trace(board, "shout-traces", shout, include_outputs = TRUE)
+#' pins::pin_read(board, "shout-traces")$summary
+#'
 #' \dontrun{
 #' board <- pins::board_folder("pins")
 #' classifier <- module(signature("text -> sentiment"))

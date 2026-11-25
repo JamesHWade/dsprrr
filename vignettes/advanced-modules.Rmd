@@ -1,5 +1,9 @@
 ---
 title: "Choose a module type"
+description: >
+  Compare dsprrr's module constructors—prediction, chain-of-thought, retry
+  wrappers, ensembles, ReAct tools, RAG, code execution, and custom functions—on
+  one shared task.
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Choose a module type}
@@ -9,24 +13,12 @@ vignette: >
 
 ```{r}
 #| include: false
-# Skip evaluation during R CMD check or CI
-in_check <- nzchar(Sys.getenv("_R_CHECK_PACKAGE_NAME_")) ||
-            identical(Sys.getenv("NOT_CRAN"), "false")
-
-should_eval <- !in_check && dsprrr:::eval_vignette()
-
+# Chunks that call a model are not evaluated; offline examples are.
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
-  eval = should_eval
+  eval = FALSE
 )
-
-if (should_eval) {
-  if (!is.null(vcr::current_cassette())) {
-    try(vcr::eject_cassette(), silent = TRUE)
-  }
-  vcr::setup_knitr()
-}
 ```
 
 ```{r setup}
@@ -37,26 +29,39 @@ library(dsprrr)
 
 Every dsprrr module comes from a constructor and runs with `run()`. The
 constructors differ in how they reach an answer: one prompt, several attempts,
-tools, or generated R code. This page helps you pick one. The table compares
-them, and the sections below run one small task through each pattern so you
-can see what changes in the code and in the number of model calls.
+retrieval, tools, or generated R code. Start simple and escalate only when a
+metric tells you to:
+
+- **One call:** `module()` or `chain_of_thought()` handles most classification and extraction tasks.
+- **Retry or vote:** `best_of_n()`, `refine()`, `with_assertions()`, `multi_chain_comparison()`, or `ensemble()` when you can score or combine attempts.
+- **External data or exact math:** `rag_module()`, `react()`, `program_of_thought()`, `code_act()`, or `module_fn()`.
+- **Multi-step or search:** `pipeline()`, `rlm_module()`, or `flex()`.
+
+The table compares every constructor, and the sections below run one small task
+through each pattern so you can see what changes in the code and in the number
+of model calls.
 
 | Constructor | What it does | Use it when | Model calls per input |
 |---|---|---|---|
 | `module()` | One structured prediction | The task fits in one prompt | 1 |
-| `chain_of_thought()` | Adds a `reasoning` output before the answer | Worked steps help the answer | 1 |
+| `chain_of_thought()` | Adds a `reasoning` (or `plan`) field, or exposes native thinking | Worked steps help the answer | 1 |
 | `best_of_n()` | Reruns a module and keeps the attempt with the highest reward | You can score an output in R | 1 to `N` |
 | `refine()` | Like `best_of_n()`, and each retry gets feedback text | A retry can be told what to fix | 1 to `N` |
 | `with_assertions()` | Checks outputs against rules and retries with the failed rules' messages | Outputs must meet hard constraints | 1 to `max_retries` + 1 |
 | `multi_chain_comparison()` | Runs `M` reasoning chains, then one call compares them | Samples disagree and you want one reconciled answer | `M` + 1 |
 | `ensemble()` | Runs several modules and combines their outputs | You have variants to vote between | Sum over members |
-| `react()` | Lets the model call your R functions as tools | The answer needs data or actions the model lacks | 2, plus 1 per tool round |
-| `program_of_thought()` | The model writes R code and R runs it | The answer needs exact computation | 1, plus 1 per repair |
+| `rag_module()` | Retrieves passages and appends them to the prompt | Answers depend on a document collection | 1 |
+| `react()` | Lets the model call your R functions as tools | The answer needs data or actions the model lacks | 2, plus 1 per tool round (`finalization = "submit"` saves 1) |
+| `program_of_thought()` | The model writes R code and R runs it | The answer needs exact computation | 1–2, plus 1 per repair |
 | `code_act()` | An agent with your tools and an R execution tool | A task needs both tools and computation | 1, plus 1 per tool round |
 | `rlm_module()` | The model explores large R objects one step at a time (experimental) | The input is too big or irregular for one prompt | 1 per step, plus recursive queries |
 | `flex()` | A program whose structure an optimizer can rewrite (experimental) | The best program shape is the open question | Depends on the program |
 | `module_fn()` | Wraps an R function as a module | You need custom logic around model calls | Whatever the function makes |
 | `pipeline()` | Runs modules in sequence | A task splits into steps | Sum over steps |
+
+For document search, see [Retrieval-augmented generation](rag-workflows.html).
+For probability-backed thresholds on boolean or enum outputs, see
+[Calibrated decisions](calibrated-decisions.html).
 
 With `.return_format = "structured"`, most modules report what a call
 actually used in `metadata$provider_calls`, `metadata$total_tokens` and
@@ -74,21 +79,28 @@ question <- "A train leaves at 9:40 and arrives at 13:05. How many minutes is th
 call with an extra `reasoning` output placed before the answer, so the model
 writes out its steps first:
 
-```{r predict-and-cot}
+```r
 basic <- module(signature("question -> answer"))
 run(basic, question = question, .llm = llm)
+#> $answer: "205"
 
 cot <- chain_of_thought("question -> answer")
 result <- run(cot, question = question, .llm = llm)
-result$reasoning
-result$answer
+result$reasoning # step-by-step rationale
+result$answer    # "205"
 ```
 
 The reasoning costs output tokens and is not guaranteed to reflect how the
-model reached its answer, so judge the answer with a metric. Under the hood,
-`chain_of_thought()` builds its signature with `with_reasoning()`, which
-describes the new field with `prefix` followed by "produce the" and the
-output names. Write the prefix as the start of a sentence that ends in "to":
+model reached its answer, so judge the answer with a metric. With a reasoning
+model such as `gpt-6-luna`, `chain_of_thought(..., mode = "native")` keeps the
+signature unchanged and exposes provider-supplied thinking blocks in
+`get_metadata(result)$native_reasoning` (with `.return_format = "structured"`),
+while `mode = "plan"` adds a short `plan` field instead of `reasoning`.
+
+Under the hood, the default `"rationale"` mode builds its signature with
+`with_reasoning()`, which describes the new field with `prefix` followed by
+"produce the" and the output names. Write the prefix as the start of a sentence
+that ends in "to":
 
 ```{r reasoning-prefix}
 #| eval: true
@@ -232,12 +244,11 @@ checked$get_attempts()
 
 `multi_chain_comparison()` runs a chain-of-thought version of the signature
 `M` times at `temperature` (default 0.7), then makes one more call that reads
-all attempts and returns a reasoned final answer. gpt-6-luna accepts that
-temperature only with reasoning turned off, so the example gives it its own
-chat with `reasoning_effort = "none"`. The default comparison
+all attempts and returns a reasoned final answer. The default comparison
 prompt lists the attempts but not the original inputs, so pass a
-`comparison_template` that includes them. It is a glue string with `{M}`,
-`{attempts_text}` and your input fields:
+`comparison_template` that includes them—a glue string with `{M}`,
+`{attempts_text}`, and your input fields. Pass `.cache = FALSE` to `run()` so
+the response cache does not replay the first chain `M` times:
 
 ```{r mcc}
 mcc <- multi_chain_comparison(
@@ -252,9 +263,12 @@ mcc_llm <- ellmer::chat_openai(
   model = "gpt-6-luna",
   params = ellmer::params(reasoning_effort = "none")
 )
-run(mcc, question = question, .llm = mcc_llm)
+run(mcc, question = question, .llm = mcc_llm, .cache = FALSE)
 mcc$get_attempts()
 ```
+
+Because `gpt-6-luna` only accepts `temperature` when reasoning is turned off,
+the example creates a chat with `reasoning_effort = "none"`.
 
 `ensemble()` runs each member once and combines their outputs with
 `reduce_fn`. Members must share input names. Unlike the comparison call
@@ -326,9 +340,11 @@ result$metadata$tools_used
 ```
 
 `max_iterations` (default 10) caps the tool rounds and errors when the model
-goes past it. The agent registers its tools on the chat it runs with, which
-is why this example gives it a chat of its own. Tools run in your R session
-with your permissions, so keep them narrow.
+goes past it. Passing `finalization = "submit"` lets the model return its
+schema-validated answer through a reserved `submit` tool call inside the loop,
+saving the extra structured-output request. The agent registers its tools on
+the chat it runs with, which is why this example gives it a chat of its own.
+Tools run in your R session with your permissions, so keep them narrow.
 
 ## Compute with code
 
@@ -372,9 +388,10 @@ run(agent, question = "How many minutes does train 412 take?", .llm = llm)
 
 ## Custom logic: module_fn()
 
-`module_fn()` turns an R function into a module with a signature, so it works
-with `run()`, `run_dataset()`, `evaluate()` and pipelines. This one needs no
-model at all:
+When you already know the exact R formula—rather than asking the model to
+invent code on the fly—wrap it in `module_fn()`. It turns any R function into
+a module with a signature, so it works with `run()`, `run_dataset()`,
+`evaluate()`, and pipelines. This one needs no model at all:
 
 ```{r module-fn}
 #| eval: true
@@ -413,17 +430,19 @@ them one step at a time: it writes a little R, reads bounded output, decides
 what to look at next, and calls `SUBMIT()` when it has the answer. Use it
 when the evidence sits in an object too large or irregular to paste into a
 prompt and you cannot say in advance which slice matters. It needs a
-persistent runner. [How RLM works](how-rlm-works.html) explains the execution
-model and runner choices, and [Investigate a regression with
-RLM](tutorial-rlm-dsprrr.html) works through an example.
+persistent runner. [How RLM works](https://jameshwade.github.io/dsprrr/articles/how-rlm-works.html)
+explains the execution model and runner choices, and
+[Investigate a regression with RLM](https://jameshwade.github.io/dsprrr/articles/tutorial-rlm-dsprrr.html)
+works through an example.
 
 ## Search the program shape: flex() (experimental)
 
 `flex()` wraps a signature in a program whose source GEPA can rewrite: it can
 add or remove predictor steps and, with executable source, add R logic or
 tool calls. Use it when the right structure is what you want to find out. If
-you already know the structure, write a module or a pipeline. [Flex: optimize
-a whole program](flex-optimization.html) shows a complete run.
+you already know the structure, write a module or a pipeline.
+[Flex: optimize a whole program](https://jameshwade.github.io/dsprrr/articles/flex-optimization.html)
+shows a complete run.
 
 ## Wrappers and optimization
 
@@ -431,12 +450,18 @@ Wrappers keep the module they wrap. `optimize_grid()` can tune their
 settings, for example `parameters = list(N = c(1L, 3L))`, and changes the
 wrapper in place. Demo-based compilation does not work on a wrapped program
 (`LabeledFewShot()` stops with "cannot label nested predictors"), so compile
-the inner module on a labeled `trainset` (columns `question` and `answer`)
-and wrap the compiled copy:
+the inner module on a labeled training set and wrap the compiled copy:
 
 ```{r compile-then-wrap}
-compiled_qa <- compile(qa, LabeledFewShot(k = 4L), trainset)
+#| eval: true
+qa <- module(signature("question -> answer"))
+trainset <- tibble::tibble(
+  question = c("8:00 to 9:30?", "10:15 to 11:00?", "14:00 to 16:20?"),
+  answer = c("90", "45", "140")
+)
+compiled_qa <- compile(qa, LabeledFewShot(k = 2L), trainset)
 reliable <- best_of_n(compiled_qa, N = 3L, reward_fn = digits_only)
+reliable
 ```
 
 For multi-step programs, [Chain modules into pipelines](chaining-modules.html)

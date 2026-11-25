@@ -1,5 +1,8 @@
 ---
 title: "How optimization works"
+description: >
+  What dsprrr optimizers search over, how metrics and data splits guide them,
+  why winning validation scores are optimistic, and where model calls go.
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{How optimization works}
@@ -34,12 +37,12 @@ and the instructions, and each has its own way of producing candidates:
 | Demos | Labeled rows, copied as they are | `LabeledFewShot`, `GridSearchTeleprompter`, `SIMBA`, `MIPROv2` |
 | Demos | The module's own outputs that passed the metric | `BootstrapFewShot`, `BootstrapFewShotWithRandomSearch`, `MIPROv2` |
 | Demos | Training rows retrieved for each input by similarity | `KNNFewShot` |
-| Instructions or templates | Variants that you write | `GridSearchTeleprompter`, `optimize_grid()` |
+| Instructions or templates | Variants that you write, or an agent proposing edits across leaf modules | `GridSearchTeleprompter`, `optimize_grid()`, `AutoResearch()`, `MetaHarness()` |
 | Instructions | A model rewriting them after reading failed rows | `COPRO`, `GEPA`, `SIMBA` (as appended rules) |
 | Instructions | A data summary and fixed tips appended | `MIPROv2` |
 | Decision thresholds and weights | Probabilities recorded in one extra pass | `ReAnchor` |
-| Request settings, such as reasoning effort or temperature | A grid that you define | `optimize_grid()` |
-| The program's source | A model rewriting it | `GEPA` on `flex()` modules, `AutoResearch()`, `MetaHarness()` |
+| Request settings, such as reasoning effort or temperature | A grid that you define | `optimize_grid()`, `GridSearchTeleprompter` |
+| The program's source | A model rewriting a `flex()` program | `GEPA` on `flex()` modules |
 
 The three kinds of demos behave differently. Labeled demos show the answers
 you wrote, but each takes its output from a single column, so a demo for a
@@ -59,12 +62,13 @@ never sent to the model: the threshold that turns a probability into `TRUE`, or 
 weights that pick an option. It records probabilities once and fits the
 numbers without further calls. At the other end, GEPA can treat a whole
 `flex()` program as one candidate and rewrite its source; see
-[Flex: optimize a whole program](flex-optimization.html).
+[Flex: optimize a whole program](https://jameshwade.github.io/dsprrr/articles/flex-optimization.html).
 
 Request settings, such as `reasoning_effort` or `temperature`, are searched
-only by `optimize_grid()`. Reasoning models such as gpt-6-luna reject
-`temperature` while they reason, so sweep `reasoning_effort` with them, or turn
-reasoning off (`reasoning_effort = "none"`) before sweeping `temperature`.
+with `optimize_grid()` (or as columns in `GridSearchTeleprompter`'s
+`variants`). Reasoning models such as `gpt-6-luna` reject `temperature` while
+they reason, so sweep `reasoning_effort` with them, or turn reasoning off
+(`reasoning_effort = "none"`) before sweeping `temperature`.
 
 ## How the metric steers the search
 
@@ -105,7 +109,7 @@ When you pass no `valset`, optimizers fall back in different ways:
 | `GridSearchTeleprompter` | Scores on a random fifth of `trainset` and takes demos from the rest |
 | `BootstrapFewShotWithRandomSearch` | Stops with an error: `valset` is required |
 | `BetterTogether`, `Omni` | Hold out 10% of `trainset` |
-| `COPRO`, `MIPROv2`, `SIMBA`, `GEPA` | Score candidates on `trainset` itself |
+| `COPRO`, `MIPROv2`, `SIMBA`, `GEPA`, `AutoResearch`, `MetaHarness` | Score candidates on `trainset` itself |
 | `ReAnchor` | Checks fitted settings on folds of `trainset`; `valset` is only reported |
 | `LabeledFewShot`, `KNNFewShot`, `BootstrapFewShot` | Do not rank candidates |
 
@@ -137,8 +141,10 @@ data.frame(n_candidates, expected_winner = round(expected_winner, 2))
 ```
 
 None of these candidates is better than the others, yet the best of 20 looks
-far better than 70%. Optimizers that compare many candidates on the same rows,
-such as `MIPROv2`, `GEPA` and `BootstrapFewShotWithRandomSearch`, report this
+far better than 70% (`rbinom()` models independent candidate errors; shared
+validation rows correlate mistakes and shrink—but do not remove—this winner's
+curse). Optimizers that compare many candidates on the same rows,
+such as `MIPROv2`, `GEPA`, and `BootstrapFewShotWithRandomSearch`, report this
 inflated number as `best_score`. More validation rows shrink the effect, and a
 score on test rows that no step has seen removes it. The same holds for your
 own comparisons: if you try ten optimizers and keep the best, score the winner
@@ -146,9 +152,10 @@ again on fresh rows.
 
 Two other effects push in the same direction. Training rows reach the prompt,
 as demos, as examples shown to the rewriting model, and in `SIMBA`'s fallback
-rules, so duplicates or near-duplicates between the splits inflate every
-score. Keep the splits disjoint. And a test set that you score after every
-change slowly turns into a validation set; score it once per decision.
+rules (when `prompt_model` is `NULL`), so duplicates or near-duplicates between
+the splits inflate every score. Keep the splits disjoint. And a test set that
+you score after every change slowly turns into a validation set; score it once
+per decision.
 
 ## Where the model calls go
 
@@ -162,7 +169,7 @@ the scoring calls come to roughly:
 | `GridSearchTeleprompter` with 4 variants | 4 × 50 = 200 |
 | `BootstrapFewShotWithRandomSearch`, default 16 candidates | 16 × 50 = 800, plus bootstrapping |
 | `MIPROv2` with `auto = "light"` | 16 batches of 5 plus 4 passes over 50 = 280, plus bootstrapping |
-| `COPRO` with the defaults, `breadth = 10L` and `depth = 3L` | Up to 30 × 50 = 1,500, plus 50 for the baseline and at least 200 to find failures |
+| `COPRO` with the defaults, `breadth = 10L` and `depth = 3L` | Up to 30 × 50 = 1,500, plus 50 for the baseline and 20 to 80 to scan for failures (20 training rows initially, plus 20 after each improving round) |
 | `GEPA` with the defaults, 20 candidates for 10 generations | 20 × 10 × (50 + 200) = 50,000 |
 
 GEPA's defaults suit large budgets; the example in

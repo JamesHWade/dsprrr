@@ -24,10 +24,10 @@ NULL
 #' chat (see [dsp_configure()]); a fitted model makes no model calls until
 #' it predicts.
 #'
-#' Known issue: the engine is registered without parsnip's encoding
-#' information, so `parsnip::fit()` and `parsnip::fit_xy()` currently fail
-#' with "no applicable method for 'filter'". Until that is fixed, the
-#' specification cannot be fitted through parsnip, workflows or tune.
+#' Use [parsnip::fit_xy()] (or `workflows::add_variables()`) rather than a
+#' formula when predictors are free-text character columns: R's formula
+#' interface converts character columns to factors with fixed training levels,
+#' which rejects unseen text at prediction time.
 #'
 #' @param mode `"classification"` (the default) or `"regression"`.
 #' @param signature Optional signature string or [signature()] object for the
@@ -160,7 +160,7 @@ register_dsprrr_engine <- function() {
     eng = "dsprrr",
     parsnip = "temperature",
     original = "temperature",
-    func = list(pkg = "dials", fun = "temperature"),
+    func = list(pkg = "dsprrr", fun = "temperature"),
     has_submodel = FALSE
   )
 
@@ -169,9 +169,24 @@ register_dsprrr_engine <- function() {
     eng = "dsprrr",
     parsnip = "top_p",
     original = "top_p",
-    func = list(pkg = "dials", fun = "top_p"),
+    func = list(pkg = "dsprrr", fun = "top_p"),
     has_submodel = FALSE
   )
+
+  # Register encodings (text columns are passed directly without dummy coding)
+  for (mode in c("classification", "regression")) {
+    parsnip::set_encoding(
+      model = "llm_predict",
+      eng = "dsprrr",
+      mode = mode,
+      options = list(
+        predictor_indicators = "none",
+        compute_intercept = FALSE,
+        remove_intercept = FALSE,
+        allow_sparse_x = FALSE
+      )
+    )
+  }
 
   # Register fit function
   parsnip::set_fit(
@@ -330,6 +345,9 @@ fit_llm_predict <- function(
   # Store training data info for reference
   attr(mod, "input_names") <- names(x)
   attr(mod, "outcome_type") <- if (is.factor(y)) "factor" else class(y)[1]
+  if (is.factor(y)) {
+    attr(mod, "outcome_levels") <- levels(y)
+  }
 
   mod
 }
@@ -387,18 +405,36 @@ predict_llm_class <- function(object, new_data, ...) {
   preds <- vapply(
     results$result,
     function(x) {
-      if (is.list(x) && !is.null(x$output)) {
-        as.character(x$output)
-      } else if (is.na(x) || identical(x, NA_character_)) {
+      if (is.list(x)) {
+        val <- if (!is.null(x$output)) {
+          x$output
+        } else if (length(x) >= 1L) {
+          x[[1L]]
+        } else {
+          NA_character_
+        }
+        if (length(val) == 0L || is.na(val[[1L]])) {
+          NA_character_
+        } else {
+          as.character(val[[1L]])
+        }
+      } else if (length(x) == 0L || is.na(x[[1L]])) {
         NA_character_
       } else {
-        as.character(x)
+        as.character(x[[1L]])
       }
     },
     character(1)
   )
 
-  tibble::tibble(.pred_class = factor(preds))
+  outcome_levels <- attr(object, "outcome_levels")
+  pred_factor <- if (!is.null(outcome_levels)) {
+    factor(preds, levels = outcome_levels)
+  } else {
+    factor(preds)
+  }
+
+  tibble::tibble(.pred_class = pred_factor)
 }
 
 #' @rdname fit_llm_predict
@@ -453,28 +489,28 @@ predict_llm_numeric <- function(object, new_data, ...) {
     seq_along(results$result),
     function(i) {
       x <- results$result[[i]]
-      if (is.list(x) && !is.null(x$output)) {
-        val <- as.numeric(x$output)
-        if (is.na(val)) {
-          cli::cli_warn(
-            "Could not convert LLM output to numeric for row {i}: {.val {x$output}}"
-          )
-          NA_real_
+      raw <- if (is.list(x)) {
+        if (!is.null(x$output)) {
+          x$output
+        } else if (length(x) >= 1L) {
+          x[[1L]]
         } else {
-          val
+          NA_real_
         }
-      } else if (is.na(x)) {
+      } else {
+        x
+      }
+      if (length(raw) == 0L || is.na(raw[[1L]])) {
+        return(NA_real_)
+      }
+      val <- suppressWarnings(as.numeric(raw[[1L]]))
+      if (is.na(val)) {
+        cli::cli_warn(
+          "Could not convert LLM output to numeric for row {i}: {.val {raw[[1L]]}}"
+        )
         NA_real_
       } else {
-        val <- as.numeric(x)
-        if (is.na(val)) {
-          cli::cli_warn(
-            "Could not convert LLM output to numeric for row {i}: {.val {x}}"
-          )
-          NA_real_
-        } else {
-          val
-        }
+        val
       }
     },
     numeric(1)

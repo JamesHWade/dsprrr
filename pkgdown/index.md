@@ -2,24 +2,35 @@
 
 dsprrr lets you write LLM features in R as small programs instead of prompt
 strings. You declare a task's inputs and typed outputs; dsprrr builds the
-prompt, calls the model, and returns an R list with the types you asked for.
-Once you have labeled examples, you can score the program with a metric and
-let an optimizer tune its instructions and few-shot examples against that
-score.
+prompt, calls the model through [ellmer](https://ellmer.tidyverse.org), and
+returns an R list with the types you asked for. Once you have labeled examples,
+you can score the program with a metric and let an optimizer tune its
+instructions and few-shot examples against that score.
 
-The design follows [DSPy](https://dspy.ai). Model calls go through
-[ellmer](https://ellmer.tidyverse.org), so any provider ellmer supports works.
-dsprrr is experimental and not yet on CRAN; the API may still change.
+If you have a prompt that already works and no data to measure it against,
+plain ellmer is enough. dsprrr earns its keep when you want typed outputs
+across many inputs, a score you can track, or a prompt tuned on examples
+instead of by hand. The design follows [DSPy](https://dspy.ai), and any
+provider ellmer supports works.
 
 ## Installation
+
+Install the released version from CRAN:
+
+```r
+install.packages("dsprrr")
+```
+
+Or install the development version from GitHub:
 
 ```r
 # install.packages("pak")
 pak::pak("JamesHWade/dsprrr")
 ```
 
-Installing from source requires a C compiler: Rtools on Windows, Xcode
-Command Line Tools on macOS, or your Linux distribution's build tools.
+Installing from source requires a C compiler (Rtools on Windows, Xcode Command
+Line Tools on macOS, or your Linux distribution's build tools); the compiled
+helper preserves exact filesystem identities for safe persistence.
 
 You also need credentials for a model provider, for example `OPENAI_API_KEY`
 in your `.Renviron`.
@@ -94,15 +105,15 @@ step-by-step reasoning first, or by a loop that calls R functions as tools.
 <div class="col-md-7">
 
 ```r
-route <- module(sig)            # one call
-route <- chain_of_thought(sig)  # reason, then answer
+route <- module(sig)                # one call
+route_cot <- chain_of_thought(sig)  # reason, then answer
 
 lookup <- ellmer::tool(
   function(query) "Duplicate charges are refunded by billing.",
   description = "Look up support policy",
   arguments = list(query = ellmer::type_string())
 )
-route <- react(sig, tools = list(lookup))  # call tools as needed
+route_agent <- react(sig, tools = list(lookup))  # call tools as needed
 ```
 
 </div>
@@ -150,9 +161,9 @@ scores$mean_score
 
 ### Optimizers
 
-**Improve it with data.** `compile()` returns a new module whose
-instructions or examples were chosen to raise the metric on your training
-rows. Check the result on rows it did not see.
+**Improve it with data.** `compile()` returns a new module whose examples or
+instructions were tuned to raise the metric on your training rows. Check the
+result on rows it did not see.
 
 [Compile and optimize &rarr;](articles/compilation-optimization.html)
 
@@ -162,7 +173,8 @@ rows. Check the result on rows it did not see.
 ```r
 optimizer <- BootstrapFewShot(
   metric = metric_exact_match(field = "urgency"),
-  max_bootstrapped_demos = 4L
+  max_bootstrapped_demos = 2L,
+  max_labeled_demos = 0L
 )
 
 split <- split_dataset(tickets, prop = 0.5, seed = 1)
@@ -195,12 +207,14 @@ evaluate(
 
 Some features are experimental: `rlm_module()` lets a model explore a large R
 object by writing code ([How RLM works](articles/how-rlm-works.html)), `flex()`
-lets GEPA rewrite a whole program
-([Flex](articles/flex-optimization.html)), and `Omni()` and the agentic
-harnesses compose optimizers
+lets GEPA rewrite a whole program ([Flex](articles/flex-optimization.html)),
+`with_decisions()` and `ReAnchor()` calibrate probability-backed decision
+thresholds ([Calibrated decisions](articles/calibrated-decisions.html)), and
+`Omni()` and the agentic harnesses compose optimizers
 ([Omni](articles/omni-meta-optimization.html),
 [agentic harnesses](articles/agentic-optimization-harnesses.html)).
 
-dsprrr is inspired by [DSPy](https://dspy.ai) from Stanford NLP. It builds on
-[ellmer](https://ellmer.tidyverse.org) for model access and bridges to
+dsprrr is experimental; the API may change. It is inspired by
+[DSPy](https://dspy.ai) from Stanford NLP, builds on
+[ellmer](https://ellmer.tidyverse.org) for model access, and bridges to
 [vitals](https://vitals.tidyverse.org) for evaluation.

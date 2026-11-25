@@ -1,5 +1,9 @@
 ---
 title: "Compile and optimize"
+description: >
+  Walk through a full optimization run: define a task and metric, compile with
+  LabeledFewShot and GridSearchTeleprompter, evaluate on held-out data, inspect
+  what changed, and save the result.
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Compile and optimize}
@@ -9,13 +13,16 @@ vignette: >
 
 ```{r}
 #| include: false
-force_eval <- identical(Sys.getenv("VITALS_SHOULD_EVAL"), "true")
+force_eval <- identical(Sys.getenv("DSPRRR_VIGNETTES_EVAL"), "true") ||
+  identical(Sys.getenv("VITALS_SHOULD_EVAL"), "true")
 in_check <- !force_eval && (
   nzchar(Sys.getenv("_R_CHECK_PACKAGE_NAME_")) ||
   identical(Sys.getenv("NOT_CRAN"), "false")
 )
 
-should_eval <- !in_check && dsprrr:::eval_vignette()
+should_eval <- !in_check &&
+  requireNamespace("vcr", quietly = TRUE) &&
+  dsprrr:::eval_vignette()
 
 knitr::opts_chunk$set(
   collapse = TRUE,
@@ -40,12 +47,11 @@ if (should_eval) {
 }
 ```
 
-`compile()` runs an optimizer, called a teleprompter, over a module and a set
-of labeled examples, and returns a copy of the module with new demos or
-instructions. This guide goes through one complete run: define the task, the
-labeled data and the metric, compile with two teleprompters, score the result
-on rows the optimizer never saw, check what changed, and save the compiled
-module.
+`compile()` runs an optimizer—called a *teleprompter*—over a module and a set
+of labeled examples, and returns a new copy of the module with tuned demos or
+instructions. This guide walks through one complete run: define the task, data,
+and metric, compile with two teleprompters, score the result on held-out rows,
+inspect what changed, and save the compiled module.
 
 ## Setup
 
@@ -62,10 +68,12 @@ search_llm <- chat_openai(
 )
 ```
 
-`llm` runs and scores the module. `search_llm` thinks less, which makes it
-cheaper, and is used only while searching. The output on this page was
-recorded with `gpt-5-mini` (runs) and `gpt-4o-mini` (search) and is replayed
-when the site is built, so `gpt-6-luna` may give different answers and scores.
+`llm` runs and scores the module; `search_llm` uses lower reasoning effort to
+keep the search cheaper. *Recorded outputs on the
+[package website](https://jameshwade.github.io/dsprrr/articles/compilation-optimization.html)
+were captured with `gpt-5-mini` (runs) and `gpt-4o-mini` (search); `gpt-6-luna`
+may give different answers and scores, and offline CRAN vignettes omit recorded
+outputs.*
 
 ## Task, data and metric
 
@@ -141,8 +149,8 @@ category_metric(
 This metric checks the category only. The evaluation below shows what that
 leaves out.
 
-Before compiling anything, score the module as it is. That baseline is the
-number a compiled module has to beat:
+On your own data, score the uncompiled module first so you have a baseline to
+beat:
 
 ```{r baseline}
 #| eval: false
@@ -191,9 +199,9 @@ drawn from the training rows.
 email_variants <- data.frame(
   id = c("professional", "friendly", "analytical"),
   instructions_suffix = c(
-    ". Use professional business judgment.",
-    ". Consider customer satisfaction and relationship.",
-    ". Analyze linguistic patterns and intent markers."
+    "Use professional business judgment.",
+    "Consider customer satisfaction and relationship.",
+    "Analyze linguistic patterns and intent markers."
   )
 )
 
@@ -249,16 +257,18 @@ tibble::tibble(
 )
 ```
 
-Both misses are priorities. Neither the metric nor the demos covered priority,
-so the search had no way to improve it: an optimizer improves only what its
-metric measures. Compare `results$mean_score` with the baseline from before,
-on the same rows, and keep the compiled module only if it wins there.
+In the recorded run, both misses are priorities. Neither the metric nor the
+demos covered priority, so the search had no way to improve it: an optimizer
+improves only what its metric measures. Always compare `results$mean_score`
+against your uncompiled baseline on the same held-out rows, and keep the
+compiled module only if it wins there.
 
 ## Inspect what changed
 
-`optimization_result()` reports the same fields for every optimizer:
-`best_score`, `best_params`, `trials`, `lineage`, `budget`, `stop_reason`, and
-optimizer-specific details under `extensions`.
+`optimization_result()` returns a uniform contract across every optimizer,
+including `status`, `baseline_score`, `best_score`, `best_params`, `trials`,
+`lineage`, `budget`, `stop_reason`, and optimizer-specific details under
+`extensions`:
 
 ```{r inspect}
 res <- optimization_result(optimized_grid)
@@ -321,9 +331,14 @@ bootstrapped <- email_classifier |>
   )
 ```
 
-`compile()` always returns a copy. To tune settings such as reasoning effort on the
-module itself, use `optimize_grid()`, which updates the module in place
-([Tutorial 5](tutorial-optimize-your-module.html) walks through it).
+`compile()` always returns a copy. To tune settings such as `reasoning_effort`
+on the module itself, use `optimize_grid()`, which updates the module in place.
 
-[Choose an optimizer](advanced-optimization.html) compares the eleven
-teleprompters and shows how to call each one.
+## Where to go next
+
+- [Choose an optimizer](advanced-optimization.html) compares all built-in
+  teleprompters and shows how to call each one.
+- [Tutorial 5: Optimize a module](tutorial-optimize-your-module.html) walks
+  through `optimize_grid()`.
+- [How optimization works](concepts-optimization-theory.html) explains the
+  trade-offs behind search budgets, overfitting, and validation splits.

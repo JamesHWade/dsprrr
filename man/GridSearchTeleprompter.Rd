@@ -63,7 +63,7 @@ demonstrations are drawn from all of \code{trainset}. Without \code{valset},
 \code{trainset} are held out for scoring and the demonstrations come from the
 remaining rows. The drawn demonstrations replace any the module already had.
 The split and the draw use R's random number generator without a fixed
-seed, so call \code{\link[=set.seed]{set.seed()}} first for reproducible results.
+seed, so call \code{\link[base:set.seed]{base::set.seed()}} first for reproducible results.
 
 The search runs \code{\link[=optimize_grid]{optimize_grid()}} on a copy of the module, so the scores of
 all variants are available from \code{\link[=optimization_result]{optimization_result()}} and \code{\link[=top_trials]{top_trials()}}.

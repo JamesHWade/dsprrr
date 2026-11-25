@@ -485,15 +485,29 @@ test_that("generated targets workflow runs its core graph end to end", {
     dsprrr.targets.llm_factory = function(model) make_mock_chat()
   )
 
-  targets::tar_make(
-    names = "summary_json",
-    callr_function = NULL,
-    reporter = "silent"
-  )
+  if (rlang::is_installed("pins")) {
+    targets::tar_make(
+      names = c("summary_json", "pinned_traces"),
+      callr_function = NULL,
+      reporter = "silent"
+    )
+  } else {
+    targets::tar_make(
+      names = "summary_json",
+      callr_function = NULL,
+      reporter = "silent"
+    )
+  }
 
   optimized <- targets::tar_read_raw("optimized_module")
   evaluation <- targets::tar_read_raw("evaluation_results")
   summary_path <- targets::tar_read_raw("summary_json")
+  if (rlang::is_installed("pins")) {
+    board <- targets::tar_read_raw("pins_board")
+    pinned_trace_data <- pins::pin_read(board, "sentiment-eval-traces")
+    expect_equal(pinned_trace_data$metadata$n_traces, 3L)
+    expect_equal(nrow(pinned_trace_data$traces), 3L)
+  }
   metadata <- targets::tar_meta(
     fields = c("name", "error")
   )

@@ -24,6 +24,13 @@ tokens, cost and latency, and the calls per model. Printing the result
 gives a short report.
 }
 \examples{
+shout <- module_fn(
+  "text -> out",
+  function(text) list(out = toupper(text))
+)
+run(shout, text = "hello")
+summarize_traces(shout)
+
 \dontrun{
 qa <- module(signature("question -> answer"))
 run(qa, question = "What is 2 + 2?", .llm = ellmer::chat_openai(model = "gpt-6-luna"))

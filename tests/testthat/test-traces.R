@@ -68,3 +68,25 @@ test_that("export_traces omits prompts and responses unless requested", {
   expect_false("prompt" %in% names(with_outputs))
   expect_true("response" %in% names(with_outputs))
 })
+
+test_that("summarize_traces handles traces with missing model names", {
+  old_chat <- set_default_chat(NULL)
+  clear_default_chat()
+  withr::defer({
+    clear_default_chat()
+    set_default_chat(old_chat)
+  })
+
+  shout <- module_fn(
+    "text -> out",
+    function(text) list(out = toupper(text))
+  )
+  run(shout, text = "hello")
+
+  summary <- summarize_traces(shout)
+  expect_s3_class(summary, "dsprrr_trace_summary")
+  expect_identical(summary$n_traces, 1L)
+  expect_s3_class(summary$model_usage, "data.frame")
+  expect_identical(names(summary$model_usage), c("model", "n_requests"))
+  expect_identical(nrow(summary$model_usage), 0L)
+})

@@ -185,3 +185,21 @@ test_that("module_fn allows optional output fields to be omitted", {
   mod3 <- module_fn(sig, function(text) list(rationale = "only optional"))
   expect_error(run(mod3, text = "anything"), "missing required output fields")
 })
+
+test_that("FnModule supports deepcopy and eval_program without mutating original traces", {
+  add_one <- module_fn(
+    "x -> answer",
+    function(x) list(answer = as.character(as.numeric(x) + 1))
+  )
+  dataset <- data.frame(x = c("1", "2"), answer = c("2", "3"))
+
+  eval_res <- eval_program(
+    add_one,
+    dataset,
+    metric = metric_exact_match(field = "answer")
+  )
+
+  expect_equal(eval_res@mean_score, 1)
+  expect_identical(eval_res@n_evaluated, 2L)
+  expect_identical(length(add_one$state$traces), 0L)
+})

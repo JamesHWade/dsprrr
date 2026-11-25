@@ -35,7 +35,7 @@ promise carries it in its \code{dsprrr_trace_context} attribute. Direct Predict
 calls also record it in the module's traces.}
 
 \item{.history}{Explicit conversation history is not supported by async
-execution; use synchronous \code{\link[=run]{run()}} for scalar root ReAct continuation.}
+execution; use synchronous \code{\link[=run]{run()}} for scalar root ReAct or RLM continuation.}
 
 \item{.control}{An optional \code{\link[=react_async_control]{react_async_control()}} for cooperative
 cancellation and progress reporting. Supported only for \code{\link[=react]{react()}} modules.}

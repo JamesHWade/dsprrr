@@ -12,7 +12,8 @@
 #'   treat every value as one context object whatever its length; use
 #'   [run_dataset()] to run them several times.
 #' @param .history A `dsprrr_history` from [conversation_history()] or
-#'   [load_history()]. The default `NULL` keeps existing Chat behavior. A
+#'   [load_history()]. With `NULL` (the default), `run()` uses the Chat's
+#'   current turns unchanged. A
 #'   non-`NULL` history is supported for scalar root [react()] and
 #'   [rlm_module()] calls and requires `.return_format = "structured"`; the
 #'   result carries the new history in `metadata$conversation_history`.

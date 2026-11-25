@@ -285,3 +285,41 @@ test_that("Module$inspect() method exists and works", {
   # Check that the method exists
   expect_true("inspect" %in% names(mod))
 })
+
+test_that("add_to_global_history falls back to metadata when AssistantTurn slots are NA", {
+  clear_prompt_history()
+  withr::defer(clear_prompt_history())
+
+  na_turn <- ellmer::AssistantTurn(
+    contents = list(ellmer::ContentText("positive")),
+    tokens = c(NA_real_, NA_real_, NA_real_),
+    cost = NA_real_,
+    duration = NA_real_
+  )
+  trace <- list(
+    timestamp = Sys.time(),
+    prompt = "Classify: Great!",
+    output = list(sentiment = "positive"),
+    assistant_turn = na_turn,
+    model = "gpt-6-luna",
+    metadata = list(
+      input_tokens = 24L,
+      output_tokens = 8L,
+      cost = 0.0005,
+      duration_s = 0.4
+    )
+  )
+
+  add_to_global_history(trace, source = "test")
+  last <- get_last_prompt()
+
+  expect_equal(last$tokens_in, 24L)
+  expect_equal(last$tokens_out, 8L)
+  expect_equal(last$cost, 0.0005)
+  expect_equal(last$duration_s, 0.4)
+
+  sc <- session_cost()
+  expect_equal(sc$tokens_in, 24L)
+  expect_equal(sc$tokens_out, 8L)
+  expect_equal(sc$cost, 0.0005)
+})

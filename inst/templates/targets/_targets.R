@@ -259,10 +259,15 @@ list(
   tar_target(
     pinned_traces,
     {
+      traced_module <- optimized_module$clone(deep = TRUE)
+      traced_module$state$traces <- unlist(
+        lapply(evaluation_results$traces, function(tr) tr$events),
+        recursive = FALSE
+      )
       dsprrr::pin_trace(
         board = pins_board,
         name = "sentiment-eval-traces",
-        module = optimized_module,
+        module = traced_module,
         include_prompts = TRUE,
         description = paste("Evaluation traces from", Sys.time())
       )

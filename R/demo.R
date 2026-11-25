@@ -18,8 +18,8 @@
 #' @seealso [rlm_module()]
 #' @export
 #' @examples
-#' \dontrun{
-#' run_demo()
+#' if (interactive()) {
+#'   run_demo()
 #' }
 run_demo <- function(port = NULL, launch.browser = TRUE) {
   rlang::check_installed("shiny", reason = "to run the interactive demo")

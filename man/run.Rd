@@ -16,7 +16,8 @@ treat every value as one context object whatever its length; use
 \code{\link[=run_dataset]{run_dataset()}} to run them several times.}
 
 \item{.history}{A \code{dsprrr_history} from \code{\link[=conversation_history]{conversation_history()}} or
-\code{\link[=load_history]{load_history()}}. The default \code{NULL} keeps existing Chat behavior. A
+\code{\link[=load_history]{load_history()}}. With \code{NULL} (the default), \code{run()} uses the Chat's
+current turns unchanged. A
 non-\code{NULL} history is supported for scalar root \code{\link[=react]{react()}} and
 \code{\link[=rlm_module]{rlm_module()}} calls and requires \code{.return_format = "structured"}; the
 result carries the new history in \code{metadata$conversation_history}.

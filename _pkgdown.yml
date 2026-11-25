@@ -118,6 +118,7 @@ redirects:
   - ["articles/concepts-dspy-philosophy.html", "articles/concepts-signatures-modules.html"]
   - ["articles/advanced-ellmer.html", "articles/models-and-providers.html"]
   - ["articles/reasoning-models.html", "articles/models-and-providers.html"]
+  - ["articles/evaluation-metrics.html", "articles/concepts-why-metrics-matter.html"]
 
 articles:
   - title: Tutorials
@@ -209,7 +210,7 @@ reference:
     - flex
 
   - title: Compose programs
-    desc: Chain modules, retry them with a reward, or combine several answers.
+    desc: Chain modules, retry them with a reward, combine answers, or transform program graphs.
     contents:
     - pipeline
     - step
@@ -221,6 +222,7 @@ reference:
     - reduce_weighted_vote
     - reduce_first
     - reduce_best_by_metric
+    - module-graph
 
   - title: Programs that run code
     desc: Let a model write and run R code, and choose where that code runs.
@@ -289,7 +291,7 @@ reference:
   - title: Optimize with compile()
     desc: >
       Optimizers, which dsprrr calls teleprompters, tune a program's
-      demonstrations, instructions or decision rules against a metric. The
+      demonstrations or instructions against a metric. The
       "Choose an optimizer" article compares them.
     contents:
     - compile
@@ -303,15 +305,23 @@ reference:
     - SIMBA
     - GridSearchTeleprompter
     - BetterTogether
-    - ReAnchor
     - Teleprompter
 
+  - title: Grid search
+    desc: Try combinations of request settings, instructions and templates.
+    contents:
+    - optimize_grid
+    - module_trials
+    - module_metrics
+    - module_parameters
+
   - title: Experimental optimizers
-    desc: Compose optimizers, or let an agent run optimization experiments.
+    desc: Compose optimizers, tune calibrated decision rules, or let an agent run experiments.
     contents:
     - Omni
     - AutoResearch
     - MetaHarness
+    - ReAnchor
 
   - title: Inspect optimization results
     desc: See what an optimizer changed and reuse the result.
@@ -324,14 +334,6 @@ reference:
     - config_diff
     - apply_best_config
     - export_module_code
-
-  - title: Grid search
-    desc: Try combinations of request settings, instructions and templates.
-    contents:
-    - optimize_grid
-    - module_trials
-    - module_metrics
-    - module_parameters
 
   - title: Calibrated decisions
     desc: >
@@ -376,11 +378,6 @@ reference:
     - pin_vitals_log
     - use_dsprrr_template
     - validate_workflow
-
-  - title: Program graphs
-    desc: Inspect, freeze and transform the modules inside a program.
-    contents:
-    - module-graph
 
   - title: vitals
     desc: Evaluate modules with the vitals package.

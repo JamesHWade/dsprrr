@@ -39,10 +39,10 @@ for classification, or a number for regression, unless you give a
 chat (see \code{\link[=dsp_configure]{dsp_configure()}}); a fitted model makes no model calls until
 it predicts.
 
-Known issue: the engine is registered without parsnip's encoding
-information, so \code{parsnip::fit()} and \code{parsnip::fit_xy()} currently fail
-with "no applicable method for 'filter'". Until that is fixed, the
-specification cannot be fitted through parsnip, workflows or tune.
+Use \code{\link[parsnip:fit_xy]{parsnip::fit_xy()}} (or \code{workflows::add_variables()}) rather than a
+formula when predictors are free-text character columns: R's formula
+interface converts character columns to factors with fixed training levels,
+which rejects unseen text at prediction time.
 }
 \examples{
 \dontshow{if (rlang::is_installed("parsnip")) withAutoprint(\{ # examplesIf}

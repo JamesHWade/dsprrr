@@ -71,21 +71,32 @@ The program is copied before it runs, so its traces are not changed. With
 also reports the spread of the per-epoch mean scores.
 }
 \examples{
+add_one <- module_fn(
+  "x -> answer",
+  function(x) list(answer = as.character(as.numeric(x) + 1))
+)
+dataset <- data.frame(x = c("1", "2"), answer = c("2", "3"))
+result <- eval_program(
+  add_one,
+  dataset,
+  metric = metric_exact_match(field = "answer")
+)
+result@mean_score
+result@examples
+
 \dontrun{
 qa <- module(signature("question -> answer"))
-dataset <- data.frame(
+qa_data <- data.frame(
   question = c("What is 2+2?", "What is 3+3?"),
   answer = c("4", "6")
 )
 
-result <- eval_program(
+eval_program(
   qa,
-  dataset,
+  qa_data,
   metric = metric_exact_match(field = "answer"),
   .llm = ellmer::chat_openai(model = "gpt-6-luna")
 )
-result@mean_score
-result@examples
 }
 }
 \seealso{

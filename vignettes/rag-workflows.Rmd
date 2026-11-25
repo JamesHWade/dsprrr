@@ -1,5 +1,9 @@
 ---
 title: "Retrieval-augmented generation"
+description: >
+  Ground answers in your own documents using rag_module() with a custom R
+  retriever or a ragnar store, build agentic search with ragnar_tool(), and
+  evaluate retrieval quality.
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Retrieval-augmented generation}
@@ -17,11 +21,17 @@ knitr::opts_chunk$set(
 )
 ```
 
-A retrieval-augmented generation (RAG) module looks up passages related to
-its input and adds them to the prompt before the model answers. This page
-shows how to build one with your own retriever or a ragnar store, how to let
-an agent search when it needs to, how to evaluate the result, and what
-happens when retrieval fails.
+A retrieval-augmented generation (RAG) workflow looks up passages related to a
+question and feeds them to the model before it answers. dsprrr supports two
+patterns:
+
+| Pattern | How it works | Best for |
+|---|---|---|
+| `rag_module()` | Always retrieves once before a single model call | Fast, predictable lookup over a document store |
+| `react()` + `ragnar_tool()` | The model decides when to search and can issue multiple queries | Multi-part questions or rephrased searches |
+
+This page walks through both patterns—with a plain R retriever and with a
+`ragnar` store—then shows how to evaluate answers and handle retrieval errors.
 
 ## Use your own retriever
 
@@ -88,18 +98,22 @@ result$metadata$retrieved_context
 ```
 
 For each call, `rag_module()` takes the query from the first input named
-`query`, `question`, `text`, `input` or `prompt` (otherwise the first string
+`query`, `question`, `text`, `input`, or `prompt` (otherwise the first string
 input), calls `retriever(query, k = k)`, numbers the passages `[1]`, `[2]`,
 and appends them to the prompt under a `relevant_context:` heading. Rename the
-heading with `context_format`. The module fills in the context itself, so the
-signature only needs the question. Structured results keep the `query` and
-the `retrieved_context` in `metadata`.
+heading with `context_format`.
+
+Do **not** declare `relevant_context` in the signature: `rag_module()` appends
+it automatically, and listing it as an input writes the retrieved text into the
+prompt twice. Structured results keep the `query` and `retrieved_context` in
+`metadata`.
 
 ## Use a ragnar store
 
-[ragnar](https://ragnar.tidyverse.org/) stores documents as chunks with
-embeddings in DuckDB. Create a store with an embedding function, insert
-chunked documents, and build the search index:
+[ragnar](https://ragnar.tidyverse.org/) is an optional package
+(`install.packages("ragnar")`) that stores documents as chunks with embeddings
+in DuckDB. Create a store with an embedding function, insert chunked documents,
+and build the search index:
 
 ```{r ragnar-store}
 store <- ragnar::ragnar_store_create(
@@ -132,9 +146,12 @@ and merges the results, so a store can return more than `k` passages.
 
 ## Let an agent search
 
-A RAG module retrieves once, using its input as the query. An agent can
-search several times and rephrase its queries. `ragnar_tool()` turns a store
-into an ellmer tool for `react()`:
+A `rag_module()` retrieves once using the full input as one query. For
+multi-part questions—like asking about *both* express delivery timing and the
+return window in one sentence—a `react()` agent (see
+[Choose a module type](advanced-modules.html)) can issue two focused searches
+and combine what it finds. `ragnar_tool()` turns a store into an ellmer tool
+for `react()`:
 
 ```{r ragnar-tool}
 search_policies <- ragnar_tool(
@@ -208,14 +225,17 @@ mentions_key_fact(
 )
 ```
 
-```{r evaluate-key-fact}
-evaluate(faq, faq_tests, metric = mentions_key_fact, .llm = llm)
+```r
+res <- evaluate(faq, faq_tests, metric = mentions_key_fact, .llm = llm)
+res$metadata[[4]]$retrieved_context # inspect what the retriever returned for row 4
 ```
 
 The last row has no matching policy, so it tests whether the module admits
-that it does not know. When a score is low, look at the retrieved context
-before changing the prompt: a wrong answer from the right passages and a
-wrong answer from the wrong passages need different fixes.
+that it does not know. When a score is low, inspect `res$metadata[[i]]$retrieved_context`
+before changing the prompt: a wrong answer from the right passages and a wrong
+answer from the wrong passages need different fixes. If you want an explicit,
+tunable gate that refuses when no passage answers the query, see
+[A calibrated retrieval gate](calibrated-decisions.html#a-calibrated-retrieval-gate).
 
 ## When retrieval fails
 

@@ -16,7 +16,7 @@ Other modules are rejected before any request; use \code{\link[=run]{run()}} for
 omitted.}
 
 \item{.history}{Explicit conversation history is not supported by async
-streaming; use synchronous \code{\link[=run]{run()}} for scalar root ReAct continuation.}
+streaming; use synchronous \code{\link[=run]{run()}} for scalar root ReAct or RLM continuation.}
 }
 \value{
 An async generator that yields the response text in chunks.

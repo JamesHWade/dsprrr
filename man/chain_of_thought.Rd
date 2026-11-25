@@ -46,9 +46,8 @@ contracts do not preserve these turns.
 }
 \description{
 \code{chain_of_thought()} creates a prediction module with one of three
-reasoning modes. The default, \code{"rationale"}, keeps the existing behavior:
-it adds a \code{reasoning} output field before the requested fields. \code{"plan"}
-adds a short, explicit \code{plan} field before the requested fields. \code{"native"}
+reasoning modes. The default, \code{"rationale"}, adds a \code{reasoning} output field
+before the requested fields. \code{"plan"} adds a short, explicit \code{plan} field before the requested fields. \code{"native"}
 keeps the signature unchanged and exposes provider-supplied reasoning
 metadata when the provider records it in ellmer turns.
 }

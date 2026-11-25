@@ -25,6 +25,7 @@ params:
 ```{r setup}
 #| include: false
 library(dsprrr)
+library(rlang)
 library(tibble)
 library(dplyr)
 library(ggplot2)
@@ -84,34 +85,48 @@ if (has_targets && is.null(eval_results)) {
 ```{r module-config}
 #| label: display-module-config
 if (!is.null(module_config)) {
-  cat("**Module Type:**", module_config$metadata$module_type, "\n\n")
-  cat("**Created:**", format(module_config$metadata$created_at), "\n\n")
-  cat("**dsprrr Version:**", module_config$metadata$dsprrr_version, "\n\n")
+  root <- if (!is.null(module_config$graph) && !is.null(module_config$root)) {
+    module_config$graph$nodes[[module_config$root]]
+  } else {
+    module_config
+  }
+  module_type <- root$class %||% module_config$metadata$module_type %||% "Unknown"
+  dsprrr_ver <- module_config$metadata$packages$dsprrr %||%
+    module_config$metadata$dsprrr_version %||%
+    "Unknown"
+
+  cat("**Module Type:**", module_type, "\n\n")
+  cat("**Created:**", format(module_config$metadata$created_at %||% NA), "\n\n")
+  cat("**dsprrr Version:**", dsprrr_ver, "\n\n")
 
   # Signature
   cat("### Signature\n\n")
   cat("**Inputs:**\n")
-  for (inp in module_config$signature$inputs) {
+  for (inp in root$signature$inputs) {
     cat("-", inp$name)
-    if (!is.null(inp$description) && inp$description != "") {
+    if (!is.null(inp$description) && nzchar(inp$description)) {
       cat(":", inp$description)
     }
     cat("\n")
   }
-  cat("\n**Instructions:**\n\n> ", module_config$signature$instructions, "\n")
+  cat("\n**Instructions:**\n\n> ", root$signature$instructions %||% "", "\n")
 
   # Optimization status
-  if (isTRUE(module_config$optimization$compiled)) {
+  opt <- root$optimization %||% list()
+  if (isTRUE(opt$compiled)) {
     cat("\n### Optimization Results\n\n")
     cat("**Status:** Compiled\n\n")
-    cat("**Best Score:**", round(module_config$optimization$best_score, 4), "\n\n")
-    cat("**Number of Trials:**", module_config$optimization$n_trials, "\n\n")
+    if (!is.null(opt$best_score) && !is.na(opt$best_score)) {
+      cat("**Best Score:**", round(opt$best_score, 4), "\n\n")
+    }
+    if (!is.null(opt$n_trials)) {
+      cat("**Number of Trials:**", opt$n_trials, "\n\n")
+    }
 
-    if (!is.null(module_config$optimization$best_params)) {
+    if (!is.null(opt$best_params) && length(opt$best_params) > 0) {
       cat("**Best Parameters:**\n\n")
-      for (param in names(module_config$optimization$best_params)) {
-        cat("-", param, "=",
-            as.character(module_config$optimization$best_params[[param]]), "\n")
+      for (param in names(opt$best_params)) {
+        cat("-", param, "=", as.character(opt$best_params[[param]]), "\n")
       }
     }
   } else {
@@ -172,7 +187,12 @@ if (!is.null(traces_data)) {
   cat("### Usage Summary\n\n")
   cat("- **Total Requests:**", summary$n_traces, "\n")
   cat("- **Total Tokens:**", format(summary$total_tokens, big.mark = ","), "\n")
-  cat("- **Total Cost:** $", format(summary$total_cost, digits = 4), "\n")
+  cost_label <- if (is.null(summary$total_cost) || is.na(summary$total_cost)) {
+    "Unknown"
+  } else {
+    paste0("$", format(summary$total_cost, digits = 4))
+  }
+  cat("- **Total Cost:**", cost_label, "\n")
   cat("- **Total Time:**", round(summary$total_latency_ms / 1000, 2), "seconds\n\n")
 
   cat("### Performance\n\n")

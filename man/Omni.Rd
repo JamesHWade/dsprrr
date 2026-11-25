@@ -60,6 +60,8 @@ candidate throughout, so an explorer or continuation that makes things
 worse cannot replace a better program.
 }
 \details{
+\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
+
 Omni adapts the explore, pick-best and continue pattern of the Omni
 meta-optimizer in the \href{https://github.com/gepa-ai/gepa}{GEPA project},
 described in the
@@ -90,10 +92,10 @@ tp <- Omni(
     bootstrap = BootstrapFewShotWithRandomSearch(metric = metric),
     gepa = GEPA(metric = metric, population_size = 4L, generations = 2L)
   ),
-  continuation = GEPA(
+  continuation = SIMBA(
     metric = metric,
-    population_size = 4L,
-    generations = 2L
+    bsize = 2L,
+    max_steps = 2L
   )
 )
 tp

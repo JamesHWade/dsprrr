@@ -16,8 +16,8 @@
 #'
 #' Candidate evaluation uses the chat passed to [compile()] as `.llm`.
 #' Reflection proposals use `.reflection_llm`, also passed to [compile()]. If
-#' `.reflection_llm` is omitted, an explicitly supplied `.llm` remains the
-#' compatibility fallback for reflection. Mutable GEPA searches require one
+#' `.reflection_llm` is omitted, an explicitly supplied `.llm` is used for
+#' reflection as well. Mutable GEPA searches require one
 #' of these chats; GEPA reports a configuration error instead of silently
 #' appending a fixed instruction suffix when no reflection chat is available.
 #'

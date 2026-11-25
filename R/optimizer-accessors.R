@@ -235,8 +235,19 @@ apply_best_config <- function(
 #' @family optimization results
 #'
 #' @examples
+#' log <- TrialLog$new(optimizer_name = "demo")
+#' program <- module_fn("x -> answer", function(x) list(answer = toupper(x)))
+#' data <- data.frame(x = c("a", "b"), answer = c("A", "B"))
+#' result <- eval_program(program, data, metric_exact_match(field = "answer"))
+#' log$add_trial(complete_trial(create_trial("demo"), result))
+#' top_trials(log, k = 1L)
+#'
 #' \dontrun{
 #' classifier <- module(signature("text -> sentiment"))
+#' devset <- data.frame(
+#'   text = c("Great!", "Terrible."),
+#'   sentiment = c("positive", "negative")
+#' )
 #' optimize_grid(
 #'   classifier,
 #'   data = devset,
@@ -245,9 +256,6 @@ apply_best_config <- function(
 #'   .llm = ellmer::chat_openai(model = "gpt-6-luna")
 #' )
 #' top_trials(classifier, k = 2L)
-#'
-#' # Trials saved by an optimizer's `log_dir`
-#' top_trials(load_trial_log("logs/my-run"), k = 10L)
 #' }
 top_trials <- function(x, k = 5L, objective = c("maximize", "minimize")) {
   UseMethod("top_trials")

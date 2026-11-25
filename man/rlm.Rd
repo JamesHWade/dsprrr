@@ -79,6 +79,9 @@ package and Posit's \code{mcp-repl} executable. Pass \code{.runner} or
 optimization or control over the runner's lifetime, create an
 \code{\link[=rlm_module]{rlm_module()}} instead.
 }
+\details{
+\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
+}
 \examples{
 \dontrun{
 result <- rlm(

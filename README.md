@@ -28,7 +28,13 @@ tuned on examples instead of by hand.
 
 ## Installation
 
-dsprrr is not on CRAN yet. Install the development version from GitHub:
+Install dsprrr from CRAN:
+
+``` r
+install.packages("dsprrr")
+```
+
+Or install the development version from GitHub:
 
 ``` r
 # install.packages("pak")

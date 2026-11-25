@@ -130,6 +130,8 @@ harness_common_properties <- function() {
 
 #' AutoResearch: let an agent run optimization experiments
 #'
+#' `r lifecycle::badge("experimental")`
+#'
 #' @description
 #' `AutoResearch()` hands the search to a research agent. In a loop, the agent
 #' forms a hypothesis, may test ideas in sandboxed R code, proposes an edit to
@@ -195,6 +197,12 @@ harness_common_properties <- function() {
 #' research
 #'
 #' \dontrun{
+#' program <- module(signature("question -> answer"))
+#' trainset <- data.frame(
+#'   question = c("Capital of France?", "Capital of Peru?"),
+#'   answer = c("Paris", "Lima")
+#' )
+#' valset <- data.frame(question = "Capital of Japan?", answer = "Tokyo")
 #' compiled <- compile(
 #'   program,
 #'   research,
@@ -217,6 +225,8 @@ AutoResearch <- S7::new_class(
 )
 
 #' Meta-Harness: fresh proposer sessions over a candidate frontier
+#'
+#' `r lifecycle::badge("experimental")`
 #'
 #' @description
 #' `MetaHarness()` runs an outer optimization loop that starts a fresh
@@ -265,6 +275,12 @@ AutoResearch <- S7::new_class(
 #' harness
 #'
 #' \dontrun{
+#' program <- module(signature("question -> answer"))
+#' trainset <- data.frame(
+#'   question = c("Capital of France?", "Capital of Peru?"),
+#'   answer = c("Paris", "Lima")
+#' )
+#' valset <- data.frame(question = "Capital of Japan?", answer = "Tokyo")
 #' compiled <- compile(
 #'   program,
 #'   harness,

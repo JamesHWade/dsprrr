@@ -20,7 +20,7 @@
 #'   - `.llm`: an ellmer Chat for the program's calls (see [run()]).
 #'   - `.reflection_llm`: for [GEPA()], the ellmer Chat used to propose
 #'     instruction and Flex source changes. If omitted, an explicitly
-#'     supplied `.llm` is also used for reflection for compatibility. GEPA
+#'     supplied `.llm` is also used for reflection. GEPA
 #'     errors before evaluation when a mutable search has no reflection Chat.
 #'   - `.trace_context`: a named, JSON-compatible list copied into the
 #'     metadata and traces of the calls made while compiling.
@@ -60,7 +60,8 @@
 #'   compile(
 #'     BootstrapFewShot(
 #'       metric = metric_exact_match(field = "sentiment"),
-#'       max_bootstrapped_demos = 2L
+#'       max_bootstrapped_demos = 2L,
+#'       max_labeled_demos = 0L
 #'     ),
 #'     trainset,
 #'     .llm = ellmer::chat_openai(model = "gpt-6-luna")

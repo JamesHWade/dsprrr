@@ -46,8 +46,8 @@
   }
 }
 
-// Home page: highlight the first example
-.contents > .sourceCode:first-of-type {
+// Home page: highlight the main example
+.template-home #example .sourceCode {
   border-left: 4px solid var(--bs-primary);
   border-radius: var(--bs-border-radius);
 }

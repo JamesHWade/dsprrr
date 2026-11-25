@@ -21,10 +21,10 @@ knitr::opts_chunk$set(
 
 No optimizer wins on every task. Demo selection may be the decisive lever for
 one module, while instruction search or reflective mutation wins for another.
-`Omni()` runs several teleprompters from the same seed program, scores every
-result with one validation metric, and hands the strongest candidate to a
-fresh continuation optimizer. This page shows how to configure it, budget it
-fairly, and read what it did.
+`Omni()` *(experimental)* runs several teleprompters from the same seed
+program, scores every result with one validation metric, and hands the
+strongest candidate to a fresh continuation optimizer. This page shows how to
+configure it, budget it fairly, and read what it did.
 
 The design follows the
 [`omni` meta-optimizer](https://gepa.dev/blog/2026/07/22/optimize-anything-omni/)
@@ -125,10 +125,12 @@ rather than its position in the list.
 
 Choose a continuation that can edit an already compiled program, because
 unless the seed wins, the continuation starts from an explorer's output.
-`COPRO()`, `SIMBA()` and `BootstrapFewShotWithRandomSearch()` can. `GEPA()`,
-`AutoResearch()` and `MetaHarness()` leave compiled modules alone: as a
-continuation, GEPA returns the winner unchanged and the two harnesses fail, in
-which case Omni keeps the exploration winner. Use those three as explorers.
+`COPRO()`, `SIMBA()`, and `BootstrapFewShotWithRandomSearch()` can. `GEPA()`,
+`AutoResearch()`, and `MetaHarness()` respect compiled module boundaries in
+`named_parameters()` and leave already-compiled modules untouched: as a
+continuation, GEPA returns the winner unchanged and the two harnesses error
+(in which case Omni keeps the exploration winner). Use those three as
+explorers instead.
 
 To pass compile-time arguments to one optimizer, name it. These arguments
 cannot replace Omni's own `program`, `trainset`, `valset` or `.llm`:
@@ -188,11 +190,19 @@ standalone candidate at a similar total budget, not merely that Omni won.
 The result stores one row for the baseline, each explorer, and the
 continuation:
 
-```{r}
+```r
 omni_result <- optimization_result(compiled)$extensions$omni
 
 candidates <- omni_result$candidate_programs
 candidates[, c("phase", "optimizer", "score", "selected", "error")]
+#> # A tibble: 5 x 5
+#>   phase        optimizer    score selected error
+#>   <chr>        <chr>        <dbl> <lgl>    <chr>
+#> 1 baseline     seed         0.62  FALSE    NA
+#> 2 exploration  demos        0.74  FALSE    NA
+#> 3 exploration  instructions 0.78  FALSE    NA
+#> 4 exploration  reflection   0.81  FALSE    NA
+#> 5 continuation SIMBA        0.85  TRUE     NA
 ```
 
 The `program_config` list-column holds each candidate module's `config` list,

@@ -32,7 +32,7 @@ NULL
 #' @param .control An optional [react_async_control()] for cooperative
 #'   cancellation and progress reporting. Supported only for [react()] modules.
 #' @param .history Explicit conversation history is not supported by async
-#'   execution; use synchronous [run()] for scalar root ReAct continuation.
+#'   execution; use synchronous [run()] for scalar root ReAct or RLM continuation.
 #'
 #' @details
 #' Prediction modules call ellmer's `chat_structured_async()` directly. These
@@ -652,7 +652,7 @@ run_factory_interpreter_async <- function(module, inputs, .llm = NULL) {
 #' @param .llm An ellmer Chat; see [run()] for how it is chosen when
 #'   omitted.
 #' @param .history Explicit conversation history is not supported by async
-#'   streaming; use synchronous [run()] for scalar root ReAct continuation.
+#'   streaming; use synchronous [run()] for scalar root ReAct or RLM continuation.
 #'
 #' @details
 #' The generator comes from ellmer's `Chat$stream_async()`. The call does not
@@ -762,7 +762,7 @@ stream_listener <- function(field, callback) {
 #' @param on_status A function called with a list for each progress event
 #'   (see below), or `NULL`.
 #' @param .history Explicit conversation history is not supported by streaming;
-#'   use synchronous [run()] for scalar root ReAct continuation.
+#'   use synchronous [run()] for scalar root ReAct or RLM continuation.
 #'
 #' @details
 #' ## Streaming

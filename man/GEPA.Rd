@@ -94,8 +94,8 @@ combined and rewritten again. GEPA can also rewrite the complete source of a
 
 Candidate evaluation uses the chat passed to \code{\link[=compile]{compile()}} as \code{.llm}.
 Reflection proposals use \code{.reflection_llm}, also passed to \code{\link[=compile]{compile()}}. If
-\code{.reflection_llm} is omitted, an explicitly supplied \code{.llm} remains the
-compatibility fallback for reflection. Mutable GEPA searches require one
+\code{.reflection_llm} is omitted, an explicitly supplied \code{.llm} is used for
+reflection as well. Mutable GEPA searches require one
 of these chats; GEPA reports a configuration error instead of silently
 appending a fixed instruction suffix when no reflection chat is available.
 }

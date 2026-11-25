@@ -28,7 +28,7 @@ set has fewer rows, all of them are used.}
 take the first \code{k} rows.}
 
 \item{seed}{Integer seed for the random draw (default \code{123L}). It is passed
-to \code{\link[=set.seed]{set.seed()}}, which also resets the session's random number stream.}
+to \code{\link[base:set.seed]{base::set.seed()}}, which also resets the session's random number stream.}
 }
 \value{
 A \code{LabeledFewShot} object to pass to \code{\link[=compile]{compile()}}.

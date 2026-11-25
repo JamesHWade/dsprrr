@@ -132,7 +132,7 @@ outputs. Opaque \code{TypeJsonSchema} outputs are rejected when the module is
 created, because they cannot be checked in the repair loop.
 
 \code{reasoning_mode} changes the action predictor, not the declared final
-output. \code{"rationale"} preserves the existing \code{reasoning} and \code{code} action
+output. \code{"rationale"} uses \code{reasoning} and \code{code} action
 fields. \code{"native"} requests code only and records provider-supplied
 \code{ContentThinking} blocks in \code{get_metadata()} when they are present; the
 structured metadata also has \code{native_reasoning_action_indices}, aligned

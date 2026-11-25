@@ -46,6 +46,13 @@ The pin is a list with \code{traces} (from \code{\link[=export_traces]{export_tr
 flags). A module without traces is not pinned; a warning is raised instead.
 }
 \examples{
+\dontshow{if (rlang::is_installed("pins")) withAutoprint(\{ # examplesIf}
+board <- pins::board_temp()
+shout <- module_fn("text -> out", function(text) list(out = toupper(text)))
+run(shout, text = "hello")
+pin_trace(board, "shout-traces", shout, include_outputs = TRUE)
+pins::pin_read(board, "shout-traces")$summary
+
 \dontrun{
 board <- pins::board_folder("pins")
 classifier <- module(signature("text -> sentiment"))
@@ -64,6 +71,7 @@ pin_trace(
 )
 pins::pin_read(board, "sentiment-traces")$summary
 }
+\dontshow{\}) # examplesIf}
 }
 \seealso{
 Other persistence:
