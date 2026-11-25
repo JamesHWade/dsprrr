@@ -14,3 +14,28 @@ local_private_storage_dir <- function(.local_envir = parent.frame()) {
   withr::defer(unlink(path, recursive = TRUE), envir = .local_envir)
   path
 }
+
+checkpoint_fixture <- function(path, control = NULL) {
+  program <- module(signature("x -> y"))
+  metric <- metric_exact_match(field = "y")
+  data <- data.frame(x = c("a", "b"), y = c("a", "b"))
+  if (is.null(control)) {
+    control <- optimizer_control(checkpoint_path = path)
+  }
+  context <- optimizer_checkpoint_begin(
+    "FixtureOptimizer",
+    1L,
+    program,
+    data,
+    metric,
+    config = list(population_size = 2L),
+    control = control,
+    initial_state = list(index = 0L)
+  )
+  list(
+    context = context,
+    program = program,
+    metric = metric,
+    data = data
+  )
+}

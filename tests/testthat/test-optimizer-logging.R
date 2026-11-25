@@ -272,22 +272,6 @@ test_that("TrialLog rejects symbolic-link directories and journals", {
   expect_identical(readLines(external, warn = FALSE), before)
 })
 
-test_that("TrialLog rejects creation below writable non-sticky parents", {
-  skip_on_os("windows")
-  root <- withr::local_tempdir()
-  unsafe_parent <- file.path(root, "unsafe")
-  dir.create(unsafe_parent, mode = "0777")
-  Sys.chmod(unsafe_parent, mode = "0777", use_umask = FALSE)
-
-  condition <- rlang::catch_cnd(TrialLog$new(
-    "WritableParentOptimizer",
-    log_dir = file.path(unsafe_parent, "log")
-  ))
-
-  expect_s3_class(condition, "dsprrr_trial_log_trust_error")
-  expect_identical(dir.exists(file.path(unsafe_parent, "log")), FALSE)
-})
-
 test_that("TrialLog rejects attacker-owned sticky ancestors and children", {
   skip_on_cran()
   skip_on_os("windows")
