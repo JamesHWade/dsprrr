@@ -47,6 +47,7 @@ test_that("MIPROv2 validates properties", {
 })
 
 test_that("MIPROv2 runs end-to-end with auto=light", {
+  skip_on_cran()
   sig <- Signature(
     inputs = list(input(name = "question", type = "string")),
     output_type = ellmer::type_string(),

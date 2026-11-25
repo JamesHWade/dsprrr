@@ -2915,11 +2915,15 @@ test_that("evaluate() epochs after the first get fresh responses", {
   data <- tibble::tibble(question = c("a", "b"), answer = c("ok", "ok"))
   metric <- metric_exact_match(field = "answer")
 
-  evaluate(mod, data, metric = metric, .llm = chat, epochs = 3L)
+  suppressWarnings(
+    evaluate(mod, data, metric = metric, .llm = chat, epochs = 3L)
+  )
   expect_equal(calls$n, 6L)
 
   # Repeating the evaluation replays every epoch from the cache
-  evaluate(mod, data, metric = metric, .llm = chat, epochs = 3L)
+  suppressWarnings(
+    evaluate(mod, data, metric = metric, .llm = chat, epochs = 3L)
+  )
   expect_equal(calls$n, 6L)
 
   # A single-epoch evaluation shares the first epoch's cache entries

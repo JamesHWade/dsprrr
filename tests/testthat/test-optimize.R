@@ -326,6 +326,8 @@ test_that("optimize_grid() best_params can be saved", {
   )
 
   expect_null(attr(mod$state$best_params, "out.attrs"))
+  metrics <- expect_no_warning(module_metrics(mod))
+  expect_identical(nrow(metrics), 2L)
   path <- withr::local_tempfile(fileext = ".rds")
   expect_no_error(save_program(mod, path))
 })

@@ -685,9 +685,10 @@ module_metrics <- function(
   }
 
   rows <- vector("list", nrow(trials))
+  has_evaluation <- "evaluation" %in% names(trials)
 
   for (i in seq_len(nrow(trials))) {
-    eval <- trials$evaluation[[i]]
+    eval <- if (has_evaluation) trials$evaluation[[i]] else NULL
     scores <- eval$scores %||% numeric()
     score_mean <- eval$mean_score %||%
       if (length(scores)) mean(scores, na.rm = TRUE) else trials$score[[i]]

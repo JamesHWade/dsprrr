@@ -218,6 +218,7 @@ test_that("GEPA checkpoint writes retain nullable schema fields", {
 })
 
 test_that("checkpointed GEPA completes and terminal resume makes no calls", {
+  skip_on_cran()
   mocks <- gepa_resume_test_mocks()
   testthat::local_mocked_bindings(
     eval_program = mocks$eval_program,
@@ -264,6 +265,7 @@ test_that("checkpointed GEPA completes and terminal resume makes no calls", {
 })
 
 test_that("checkpointed GEPA isolates a configured default Chat during real eval", {
+  skip_on_cran()
   gepa_resume_test_disable_cache()
   proposal_calls <- new.env(parent = emptyenv())
   proposal_calls$n <- 0L
@@ -356,6 +358,7 @@ test_that("checkpointed GEPA isolates a configured default Chat during real eval
 })
 
 test_that("checkpointed GEPA isolates attached Chats for every evaluation row", {
+  skip_on_cran()
   gepa_resume_test_disable_cache()
   mocks <- gepa_resume_test_mocks()
   task_requests <- new.env(parent = emptyenv())
@@ -427,6 +430,7 @@ test_that("checkpointed GEPA isolates attached Chats for every evaluation row", 
 })
 
 test_that("checkpointed GEPA isolates mixed pipeline Chats per row", {
+  skip_on_cran()
   gepa_resume_test_disable_cache()
   mocks <- gepa_resume_test_mocks()
   task_requests <- new.env(parent = emptyenv())
@@ -507,6 +511,7 @@ test_that("checkpointed GEPA isolates mixed pipeline Chats per row", {
 })
 
 test_that("checkpointed GEPA preserves attached Chat precedence", {
+  skip_on_cran()
   mocks <- gepa_resume_test_mocks()
   defaults <- new.env(parent = emptyenv())
   defaults$chat <- NULL
@@ -611,6 +616,7 @@ test_that("checkpointed GEPA preserves attached Chat precedence", {
 })
 
 test_that("checkpointed reflection evidence respects metric_threshold", {
+  skip_on_cran()
   capture <- new.env(parent = emptyenv())
   capture$examples <- list()
   testthat::local_mocked_bindings(
@@ -698,6 +704,7 @@ test_that("checkpointed reflection evidence respects metric_threshold", {
 })
 
 test_that("checkpointed GEPA resumes a partial second metric", {
+  skip_on_cran()
   mocks <- gepa_resume_test_mocks()
   testthat::local_mocked_bindings(
     eval_program = mocks$eval_program,
@@ -827,6 +834,7 @@ test_that("checkpointed GEPA resumes a partial second metric", {
 })
 
 test_that("checkpointed GEPA resumes partial discovery rows", {
+  skip_on_cran()
   mocks <- gepa_resume_test_mocks()
   testthat::local_mocked_bindings(
     eval_program = mocks$eval_program,
@@ -874,6 +882,7 @@ test_that("checkpointed GEPA resumes partial discovery rows", {
 })
 
 test_that("checkpointed GEPA resumes an already committed proposal", {
+  skip_on_cran()
   mocks <- gepa_resume_test_mocks()
   testthat::local_mocked_bindings(
     eval_program = mocks$eval_program,
@@ -925,6 +934,7 @@ test_that("checkpointed GEPA resumes an already committed proposal", {
 })
 
 test_that("checkpointed GEPA retains planned generation decisions and RNG", {
+  skip_on_cran()
   mocks <- gepa_resume_test_mocks()
   testthat::local_mocked_bindings(
     eval_program = mocks$eval_program,
@@ -1052,6 +1062,7 @@ test_that("checkpointed GEPA retains planned generation decisions and RNG", {
 })
 
 test_that("checkpointed GEPA resumes after a durable validation row", {
+  skip_on_cran()
   mocks <- gepa_resume_test_mocks()
   testthat::local_mocked_bindings(
     eval_program = mocks$eval_program,
@@ -1104,6 +1115,7 @@ test_that("checkpointed GEPA resumes after a durable validation row", {
 })
 
 test_that("checkpointed GEPA preserves NULL predictions across resume", {
+  skip_on_cran()
   mocks <- gepa_resume_test_mocks()
   testthat::local_mocked_bindings(
     eval_program = function(program, dataset, metric, .llm = NULL, ...) {
@@ -1193,6 +1205,7 @@ test_that("checkpointed GEPA rejects unsupported selectors before calls", {
 })
 
 test_that("checkpointed GEPA validates identity and closed state before work", {
+  skip_on_cran()
   mocks <- gepa_resume_test_mocks()
   testthat::local_mocked_bindings(
     eval_program = mocks$eval_program,
@@ -1261,6 +1274,7 @@ test_that("checkpointed GEPA validates identity and closed state before work", {
 })
 
 test_that("checkpointed GEPA rejects tampered scores and winners before work", {
+  skip_on_cran()
   mocks <- gepa_resume_test_mocks()
   testthat::local_mocked_bindings(
     eval_program = mocks$eval_program,
@@ -1354,6 +1368,7 @@ test_that("checkpointed GEPA rejects tampered scores and winners before work", {
 })
 
 test_that("checkpointed GEPA rejects opaque and stateful Chats before work", {
+  skip_on_cran()
   mocks <- gepa_resume_test_mocks()
   testthat::local_mocked_bindings(
     eval_program = mocks$eval_program,
@@ -1387,6 +1402,7 @@ test_that("checkpointed GEPA rejects opaque and stateful Chats before work", {
 })
 
 test_that("checkpointed GEPA refreshes partial summaries at record commits", {
+  skip_on_cran()
   mocks <- gepa_resume_test_mocks()
   testthat::local_mocked_bindings(
     eval_program = mocks$eval_program,
@@ -1624,6 +1640,7 @@ test_that("checkpointed GEPA refreshes partial summaries at record commits", {
 })
 
 test_that("checkpointed GEPA rejects empty validation data before work", {
+  skip_on_cran()
   mocks <- gepa_resume_test_mocks()
   write_calls <- new.env(parent = emptyenv())
   write_calls$n <- 0L
@@ -1714,6 +1731,7 @@ test_that("checkpointed GEPA rejects empty validation data before work", {
 })
 
 test_that("checkpointed GEPA rejects infinite metric rows before persistence", {
+  skip_on_cran()
   gepa_resume_test_disable_cache()
   mocks <- gepa_resume_test_mocks()
   write_calls <- new.env(parent = emptyenv())
