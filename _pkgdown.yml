@@ -11,10 +11,11 @@ template:
     code_font: {google: "Fira Code"}
 
 home:
-  title: "dsprrr: typed, testable LLM programs in R"
+  title: "dsprrr: program, evaluate, and optimize LLMs in R"
   description: >
-    Declare LLM tasks in R with typed inputs and outputs, measure them with
-    metrics, and improve their instructions and examples with your data.
+    Program LLMs in R instead of hand-tuning prompt strings: declare typed
+    signatures, swap reasoning and tool-use modules, evaluate with metrics,
+    and optimize prompts with your data.
 
 navbar:
   structure:
