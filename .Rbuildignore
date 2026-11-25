@@ -45,3 +45,4 @@
 ^inst/shiny-demo/components\.json$
 ^inst/shiny-demo/r/\.posit$
 ^vignettes/articles$
+^research$
