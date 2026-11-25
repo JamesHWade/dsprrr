@@ -1,27 +1,187 @@
 // dsprrr custom styles
-// This file is processed by pkgdown and integrates with bslib
+// Processed by pkgdown and integrated with bslib (light + dark mode aware)
 
-// Home page: Signatures / Modules / Metrics / Optimizers rows
-.primitive-row {
-  padding: 1.25rem 0;
-  border-top: 1px solid var(--bs-border-color);
+// Hero section
+.hero-tagline {
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: var(--bs-emphasis-color);
+  letter-spacing: -0.015em;
+  margin-top: 0.25rem;
+  margin-bottom: 0.75rem;
+}
 
-  h3 {
-    color: var(--bs-primary);
-    font-weight: 600;
-    margin-top: 0;
+.hero-actions {
+  .btn-primary {
+    color: #fff;
+    font-weight: 500;
+    padding: 0.5rem 1.15rem;
+
+    &:hover,
+    &:focus {
+      color: #fff;
+    }
   }
 
-  // The bold lead-in on each row ("Declare the task.") reads as a tagline.
+  .btn-outline-secondary {
+    color: var(--bs-emphasis-color);
+    border-color: var(--bs-border-color);
+    font-weight: 500;
+    padding: 0.5rem 1.05rem;
+
+    &:hover,
+    &:focus {
+      color: var(--bs-emphasis-color);
+      background-color: var(--bs-tertiary-bg);
+      border-color: var(--bs-secondary-color);
+    }
+  }
+
+  .hero-link {
+    font-size: 0.95rem;
+    font-weight: 500;
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+// Before / After comparison cards
+.compare-card {
+  padding: 1.15rem 1.25rem;
+  border-radius: var(--bs-border-radius-lg);
+  border: 1px solid var(--bs-border-color);
+  background-color: var(--bs-tertiary-bg);
+
+  pre {
+    margin: 0.65rem 0 0.85rem;
+    font-size: 0.8rem;
+    overflow-x: auto;
+  }
+
+  ul {
+    margin-bottom: 0;
+    padding-left: 1.15rem;
+    font-size: 0.92rem;
+
+    li + li {
+      margin-top: 0.3rem;
+    }
+  }
+}
+
+.compare-badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  margin-bottom: 0.25rem;
+}
+
+.compare-before {
+  .compare-badge {
+    background-color: var(--bs-secondary-bg);
+    color: var(--bs-secondary-color);
+    border: 1px solid var(--bs-border-color);
+  }
+}
+
+.compare-after {
+  border-color: var(--bs-primary);
+  border-width: 1.5px;
+
+  .compare-badge {
+    background-color: var(--bs-primary);
+    color: #fff;
+  }
+}
+
+// 4-step R modeling loop cards
+.loop-card {
+  padding: 1rem 1.05rem;
+  border-radius: var(--bs-border-radius-lg);
+  border: 1px solid var(--bs-border-color);
+  background-color: var(--bs-body-bg);
+
+  .loop-step {
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--bs-primary);
+    margin-bottom: 0.2rem;
+  }
+
+  .loop-fn {
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+
+    code {
+      color: var(--bs-emphasis-color);
+      background: transparent;
+      padding: 0;
+    }
+  }
+
+  .loop-analogy {
+    font-size: 0.82rem;
+    color: var(--bs-secondary-color);
+    margin-bottom: 0.5rem;
+  }
+
+  .loop-desc {
+    font-size: 0.88rem;
+    margin-bottom: 0;
+    line-height: 1.45;
+  }
+}
+
+// Home page: Signatures / Modules / Pipelines / Metrics / Optimizers rows
+.primitive-row {
+  padding: 1.35rem 0;
+  border-top: 1px solid var(--bs-border-color);
+
+  p:has(> .step-pill) {
+    margin-bottom: 0.35rem;
+  }
+
+  .step-pill {
+    display: inline-block;
+    font-family: var(--bs-font-monospace);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--bs-primary);
+    background-color: var(--bs-tertiary-bg);
+    border: 1px solid var(--bs-border-color);
+    border-radius: 999px;
+    padding: 0.1rem 0.5rem;
+  }
+
+  h3 {
+    color: var(--bs-emphasis-color);
+    font-weight: 600;
+    margin-top: 0;
+    margin-bottom: 0.45rem;
+  }
+
+  // The bold lead-in on each row ("Declare the contract.") reads as a tagline.
   p > strong:first-child {
     display: block;
-    font-size: 1.05rem;
-    color: var(--bs-emphasis-color);
+    font-size: 1rem;
+    color: var(--bs-primary);
     margin-bottom: 0.25rem;
   }
 
   pre {
     margin-bottom: 0;
+    font-size: 0.82rem;
+    overflow-x: auto;
   }
 
   a[href$="html"] {
@@ -31,6 +191,74 @@
     &:hover {
       text-decoration: underline;
     }
+  }
+}
+
+// Ecosystem cards
+.eco-card {
+  padding: 0.95rem 1.05rem;
+  border-radius: var(--bs-border-radius);
+  border: 1px solid var(--bs-border-color);
+  background-color: var(--bs-tertiary-bg);
+
+  .eco-title {
+    font-weight: 600;
+    font-size: 0.98rem;
+    margin-bottom: 0.3rem;
+
+    a {
+      text-decoration: none;
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+  }
+
+  .eco-desc {
+    font-size: 0.87rem;
+    color: var(--bs-secondary-color);
+    margin-bottom: 0;
+    line-height: 1.45;
+  }
+}
+
+// Starting-path cards
+.path-card {
+  padding: 1.1rem 1.2rem;
+  border-radius: var(--bs-border-radius-lg);
+  border: 1px solid var(--bs-border-color);
+  border-left: 3.5px solid var(--bs-primary);
+  background-color: var(--bs-body-bg);
+
+  .path-kicker {
+    font-size: 0.76rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--bs-secondary-color);
+    margin-bottom: 0.2rem;
+  }
+
+  .path-title {
+    font-size: 1.02rem;
+    font-weight: 600;
+    margin-bottom: 0.35rem;
+
+    a {
+      text-decoration: none;
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+  }
+
+  .path-desc {
+    font-size: 0.88rem;
+    color: var(--bs-secondary-color);
+    margin-bottom: 0;
+    line-height: 1.45;
   }
 }
 
@@ -44,12 +272,6 @@
   tr:hover {
     background-color: var(--bs-tertiary-bg);
   }
-}
-
-// Home page: highlight the main example
-.template-home #example .sourceCode {
-  border-left: 4px solid var(--bs-primary);
-  border-radius: var(--bs-border-radius);
 }
 
 // Code blocks
