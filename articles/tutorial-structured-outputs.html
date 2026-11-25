@@ -17,6 +17,11 @@
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Tutorial 3: Extract structured data">
+<meta name="description" content="Extract multiple typed fields, arrays, nested records, and optional values from unstructured text into R lists and tibbles.
+">
+<meta property="og:description" content="Extract multiple typed fields, arrays, nested records, and optional values from unstructured text into R lists and tibbles.
+">
+<meta property="og:image" content="https://jameshwade.github.io/dsprrr/logo.svg">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -133,19 +138,20 @@
     
     
 <p>The classifier in <a href="tutorial-build-classifier.html">Tutorial
-2</a> returns one label per text. Extraction needs more: a headline and
-a sentiment, the people named in an article, the sender and action items
-of an email. By the end of this tutorial you can declare outputs like
-these and get them back as R lists and tibbles with a fixed shape.</p>
+2</a> returns one label per text. Real extraction tasks usually need
+more: a headline and a sentiment, the people named in an article, or the
+sender and action items of an email. This tutorial shows how to declare
+multi-field, array, nested, and optional outputs so they come back as
+typed R lists and tibbles.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/dsprrr" class="external-link">dsprrr</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ellmer.tidyverse.org" class="external-link">ellmer</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://tibble.tidyverse.org/" class="external-link">tibble</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">chat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-luna"</span><span class="op">)</span></span></code></pre></div>
-<p>The answers on this page were recorded with <code>gpt-4.1</code> and
-are replayed when the site is built, so <code>gpt-6-luna</code> may word
-them differently.</p>
+<p><em>Recorded outputs on the package website were captured with
+<code>gpt-4.1</code>; <code>gpt-6-luna</code> may word them
+differently.</em></p>
 <div class="section level2">
 <h2 id="return-several-fields">Return several fields<a class="anchor" aria-label="anchor" href="#return-several-fields"></a>
 </h2>
@@ -200,7 +206,8 @@ integer and the other two fields are character strings.</p>
 <div class="section level2">
 <h2 id="describe-fields-with-type_object">Describe fields with <code>type_object()</code><a class="anchor" aria-label="anchor" href="#describe-fields-with-type_object"></a>
 </h2>
-<p>The string notation cannot describe an output. For that, and for
+<p>The string notation names and types outputs, but it cannot attach
+descriptions to individual output fields. For field descriptions and
 nested records, build the output from ellmer types.
 <code><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_object()</a></code> takes one argument per field:</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
@@ -373,9 +380,9 @@ emails:</p>
 <span></span>
 <span><span class="va">triage</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span><span class="op">)</span></span></code></pre></div>
 <p>As in Tutorial 2, <code><a href="../reference/run_dataset.html">run_dataset()</a></code> returns a
-<code>result</code> list-column of named lists. Turn each record into a
-one-row tibble and bind them to get one row per email and a typed column
-per field:</p>
+<code>result</code> list-column of named lists alongside your original
+columns. When every output field is scalar, turn each record into a
+one-row tibble, bind the rows, and keep <code>id</code> attached:</p>
 <div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">emails</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
 <span>  id <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">3</span>,</span>
@@ -388,15 +395,20 @@ per field:</p>
 <span></span>
 <span><span class="va">results</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_dataset.html">run_dataset</a></span><span class="op">(</span><span class="va">triage</span>, <span class="va">emails</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">results</span><span class="op">$</span><span class="va">result</span> <span class="op">|&gt;</span></span>
+<span><span class="va">fields</span> <span class="op">&lt;-</span> <span class="va">results</span><span class="op">$</span><span class="va">result</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu">purrr</span><span class="fu">::</span><span class="fu"><a href="https://purrr.tidyverse.org/reference/map.html" class="external-link">map</a></span><span class="op">(</span><span class="va">as_tibble</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu">purrr</span><span class="fu">::</span><span class="fu"><a href="https://purrr.tidyverse.org/reference/list_c.html" class="external-link">list_rbind</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 3 × 4</span></span></span>
-<span><span class="co">#&gt;   category summary                            action_required suggested_response</span></span>
-<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>                              <span style="color: #949494; font-style: italic;">&lt;lgl&gt;</span>           <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>             </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> meeting  Meeting scheduled for tomorrow at… TRUE            reply_now         </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> fyi      Office closure on Monday due to t… FALSE           archive           </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> urgent   Server is down and immediate assi… TRUE            reply_now</span></span></code></pre></div>
+<span></span>
+<span><span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/as_tibble.html" class="external-link">as_tibble</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">cbind</a></span><span class="op">(</span><span class="va">results</span><span class="op">[</span><span class="st">"id"</span><span class="op">]</span>, <span class="va">fields</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 3 × 5</span></span></span>
+<span><span class="co">#&gt;      id category summary                      action_required suggested_response</span></span>
+<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>                        <span style="color: #949494; font-style: italic;">&lt;lgl&gt;</span>           <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>             </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span>     1 meeting  Meeting scheduled for tomor… TRUE            reply_now         </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span>     2 fyi      Office closure on Monday du… FALSE           archive           </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span>     3 urgent   Server is down and immediat… TRUE            reply_now</span></span></code></pre></div>
+<p>(<code><a href="https://tibble.tidyverse.org/reference/as_tibble.html" class="external-link">as_tibble()</a></code> assumes every field is length 1; if a
+record contains a <code><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_array()</a></code>, keep it as a list-column or
+unnest with <code><a href="https://tidyr.tidyverse.org/reference/unnest_wider.html" class="external-link">tidyr::unnest_wider()</a></code>.)</p>
 </div>
 <div class="section level2">
 <h2 id="allow-missing-values">Allow missing values<a class="anchor" aria-label="anchor" href="#allow-missing-values"></a>
@@ -420,9 +432,12 @@ return null for that field, and a null arrives in R as
 <span><span class="va">event_extractor</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">event_extractor</span>, text <span class="op">=</span> <span class="st">"The contract renews on 1 March 2027."</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
+<span><span class="co">#&gt; $event: "Contract renewal"</span></span>
+<span><span class="co">#&gt; $date:  "2027-03-01"</span></span>
 <span></span>
 <span><span class="va">coffee</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">event_extractor</span>, text <span class="op">=</span> <span class="st">"We should get coffee sometime."</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/NULL.html" class="external-link">is.null</a></span><span class="op">(</span><span class="va">coffee</span><span class="op">$</span><span class="va">date</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="https://rdrr.io/r/base/NULL.html" class="external-link">is.null</a></span><span class="op">(</span><span class="va">coffee</span><span class="op">$</span><span class="va">date</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
 <p>When the model leaves the date out, <code>coffee$date</code> is
 <code>NULL</code>, so test for it with <code><a href="https://rdrr.io/r/base/NULL.html" class="external-link">is.null()</a></code> before
 using it.</p>

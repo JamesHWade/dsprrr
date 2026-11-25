@@ -13,11 +13,10 @@ Candidate evaluation uses the chat passed to
 [`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md)
 as `.llm`. Reflection proposals use `.reflection_llm`, also passed to
 [`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md).
-If `.reflection_llm` is omitted, an explicitly supplied `.llm` remains
-the compatibility fallback for reflection. Mutable GEPA searches require
-one of these chats; GEPA reports a configuration error instead of
-silently appending a fixed instruction suffix when no reflection chat is
-available.
+If `.reflection_llm` is omitted, an explicitly supplied `.llm` is used
+for reflection as well. Mutable GEPA searches require one of these
+chats; GEPA reports a configuration error instead of silently appending
+a fixed instruction suffix when no reflection chat is available.
 
 ## Usage
 

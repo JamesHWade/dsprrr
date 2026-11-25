@@ -97,7 +97,10 @@ changes$note[target] <- paste(
 )
 ```
 
-The question does not reveal the affected dimensions:
+The question names the regression without revealing which columns define
+the affected cohort (telling the model not to stop at a marginal roll-up
+prevents it from stopping at `platform = "mobile"` without slicing by
+`plan`):
 
 ``` r
 
@@ -112,8 +115,13 @@ question <- paste(
 
 ## Define the investigation
 
-The output signature makes the answer checkable. `SUBMIT()` must provide
-every field with a compatible type.
+Inside the R runner, every input you pass to
+[`run()`](https://jameshwade.github.io/dsprrr/reference/run.md) is
+staged under `.context` (here `.context$sessions`, `.context$changes`,
+and `.context$question`). When the model has its answer, it finishes by
+calling `SUBMIT(...)` with a value for each output field in the
+signature; if a field is missing or has the wrong type, dsprrr returns
+the validation error so the model can repair it on the next step.
 
 ``` r
 
@@ -129,9 +137,8 @@ incident_signature <- signature(
   instructions = paste(
     "Inspect the schema and low-cardinality categorical fields; exclude the",
     "release, outcome, and row-index fields from candidate cohort dimensions.",
-    "Find the finest low-cardinality cohort with the largest before/after",
-    "drop; do not stop at a marginal roll-up that dilutes the change.",
-    "Quantify it and cite the strongest matching change record.",
+    "Identify the finest cohort with the largest conversion drop, quantify it,",
+    "and cite the strongest matching change record.",
     "Format cohort in source-column order as '<dimension>=<value> / ...'.",
     "Copy the selected change note verbatim into evidence. Treat that record as",
     "evidence, not proof of causation."
@@ -143,10 +150,11 @@ investigator <- rlm_module(
   interpreter_factory = function() {
     r_code_runner(timeout = 30, persistent = TRUE)
   },
-  max_iterations = 8,
+  max_iterations = 8L,
   max_llm_calls = 0L,
-  max_output_chars = 10000
+  max_output_chars = 10000L
 )
+investigator
 ```
 
 This example uses `r_code_runner(persistent = TRUE)` because the input
@@ -157,10 +165,10 @@ not use this configuration for input you do not control. The factory
 creates one runner per call, keeps its state between steps, and shuts it
 down when the call ends.
 
-`max_llm_calls = 0L` turns off recursive queries, because R aggregation
-and one change record are enough here. When generated code must read
-text that R cannot classify, such as vague change notes, `llm_query()`
-asks a model about that slice; [How RLM
+`max_llm_calls = 0L` turns off recursive sub-queries (the “Recursive” in
+RLM), because R aggregation and one change record are enough here. When
+generated code must read text that R cannot classify, such as vague
+change notes, `llm_query()` asks a model about that slice; [How RLM
 works](https://jameshwade.github.io/dsprrr/articles/how-rlm-works.html#recursive-queries)
 explains how those calls run.
 
@@ -290,47 +298,42 @@ vapply(trajectory, function(step) step$code, character(1))
 vapply(trajectory, function(step) step$success, logical(1))
 ```
 
-Do not trust the model’s prose. Compute the expected answer from the
-data without it:
+Do not trust the model’s prose. Compute the expected cohort drop and
+matching change record directly in R so you can assert against it:
 
 ``` r
 
-rates <- aggregate(
-  converted ~ release + platform + plan,
-  data = sessions,
-  FUN = mean
+by_cohort <- split(sessions, interaction(sessions$platform, sessions$plan, sep = " / "))
+drops <- vapply(by_cohort, function(df) {
+  100 * (mean(df$converted[df$release == "2.3.9"]) - mean(df$converted[df$release == "2.4.0"]))
+}, numeric(1))
+worst <- names(which.max(drops))
+worst_df <- by_cohort[[worst]]
+
+oracle <- list(
+  cohort = paste0("platform=", worst_df$platform[1], " / plan=", worst_df$plan[1]),
+  before_rate = mean(worst_df$converted[worst_df$release == "2.3.9"]),
+  after_rate = mean(worst_df$converted[worst_df$release == "2.4.0"]),
+  drop_pp = unname(drops[[worst]])
 )
-before <- subset(rates, release == "2.3.9")
-after <- subset(rates, release == "2.4.0")
-comparison <- merge(
-  before,
-  after,
-  by = c("platform", "plan"),
-  suffixes = c("_before", "_after")
-)
-comparison$drop_pp <-
-  100 * (comparison$converted_before - comparison$converted_after)
-oracle <- comparison[which.max(comparison$drop_pp), ]
-oracle
-#>   platform plan release_before converted_before release_after converted_after
-#> 4   mobile  pro          2.3.9             0.92         2.4.0            0.61
-#>   drop_pp
-#> 4      31
-```
-
-The change lookup starts from the computed cohort, not from words in the
-expected note:
-
-``` r
-
-mentions <- function(value) {
-  grepl(paste0("\\b", value, "\\b"), changes$note, ignore.case = TRUE)
-}
 expected_change <- changes[
   changes$release == "2.4.0" &
-    mentions(oracle$platform) &
-    mentions(oracle$plan),
+    grepl(worst_df$platform[1], changes$note, ignore.case = TRUE) &
+    grepl(worst_df$plan[1], changes$note, ignore.case = TRUE),
 ]
+
+oracle
+#> $cohort
+#> [1] "platform=mobile / plan=pro"
+#> 
+#> $before_rate
+#> [1] 0.92
+#> 
+#> $after_rate
+#> [1] 0.61
+#> 
+#> $drop_pp
+#> [1] 31
 expected_change[, c("change_id", "component")]
 #>     change_id     component
 #> 142  CHG-1842 checkout-auth
@@ -347,12 +350,9 @@ Then compare the model’s answer with both:
 
 stopifnot(
   identical(result$output$release, "2.4.0"),
-  identical(
-    result$output$cohort,
-    paste0("platform=", oracle$platform, " / plan=", oracle$plan)
-  ),
-  isTRUE(all.equal(result$output$before_rate, oracle$converted_before)),
-  isTRUE(all.equal(result$output$after_rate, oracle$converted_after)),
+  identical(result$output$cohort, oracle$cohort),
+  isTRUE(all.equal(result$output$before_rate, oracle$before_rate)),
+  isTRUE(all.equal(result$output$after_rate, oracle$after_rate)),
   isTRUE(all.equal(result$output$drop_pp, oracle$drop_pp)),
   identical(result$output$change_id, expected_change$change_id),
   identical(result$output$evidence, expected_change$note)
@@ -365,8 +365,9 @@ The one-call
 [`rlm()`](https://jameshwade.github.io/dsprrr/reference/rlm.md) helper
 runs in a fresh
 [`mcp_repl_runner()`](https://jameshwade.github.io/dsprrr/reference/mcp_repl_runner.md)
-sandbox by default. That sandbox suits compact inputs you do not
-control, but every input is sent with every step, so this 40,000-row
+sandbox by default (which requires the suggested `mcptools` package and
+Posit’s `mcp-repl` executable). That sandbox suits compact inputs you do
+not control, but every input is sent with every step, so this 40,000-row
 table is far too large for it. See [How RLM
 works](https://jameshwade.github.io/dsprrr/articles/how-rlm-works.html#limits)
 for the sandbox’s size limits and safety model. For a compact document,

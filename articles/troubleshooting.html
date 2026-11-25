@@ -17,6 +17,11 @@
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Troubleshooting">
+<meta name="description" content="Diagnose and fix common dsprrr setup, signature, module, run(), evaluation, concurrency, provider, and response-cache errors.
+">
+<meta property="og:description" content="Diagnose and fix common dsprrr setup, signature, module, run(), evaluation, concurrency, provider, and response-cache errors.
+">
+<meta property="og:image" content="https://jameshwade.github.io/dsprrr/logo.svg">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -136,6 +141,9 @@
 below it. The messages on this page are real: the page was built in an R
 session without API keys, and each error was produced with
 <code><a href="https://rdrr.io/r/base/try.html" class="external-link">try()</a></code> while rendering it.</p>
+<p><strong>Quick index:</strong> <a href="#check-your-setup-with-dsprrr_sitrep">Setup check</a> · <a href="#no-chat-or-api-key">No chat or API key</a> · <a href="#signature-errors">Signature errors</a> · <a href="#module-errors">Module errors</a> · <a href="#errors-when-calling-run"><code>run()</code> errors</a> · <a href="#evaluation-and-optimization-errors">Evaluation &amp;
+optimization</a> · <a href="#provider-errors">Provider, async &amp;
+timeouts</a> · <a href="#cache-problems">Cache problems</a> · <a href="#the-answer-is-wrong-or-empty">Wrong or empty answers</a></p>
 <div class="section level2">
 <h2 id="check-your-setup-with-dsprrr_sitrep">Check your setup with <code>dsprrr_sitrep()</code><a class="anchor" aria-label="anchor" href="#check-your-setup-with-dsprrr_sitrep"></a>
 </h2>
@@ -433,11 +441,12 @@ here too; compare “Signature expects” with “You provided”.</p>
 <span><span class="co">#&gt; <span style="color: #BB0000;">✖</span> These are not treated as signature fields.</span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Use `.concurrency` with `concurrency_control()`.</span></span></code></pre></div>
 <p>Arguments that start with a dot configure the call.
-<code><a href="../reference/run.html">run()</a></code> accepts <code>.llm</code>, <code>.cache</code>,
-<code>.concurrency</code>, <code>.return_format</code>,
-<code>.progress</code>, <code>.verbose</code>, <code>.show_prompt</code>
-and <code>.trace_context</code>; anything else is rejected rather than
-sent to the model as an input. Set temperature on the chat
+<code><a href="../reference/run.html">run()</a></code> accepts <code>.llm</code>, <code>.history</code>,
+<code>.cache</code>, <code>.concurrency</code>,
+<code>.return_format</code>, <code>.progress</code>,
+<code>.verbose</code>, <code>.show_prompt</code>, and
+<code>.trace_context</code>; anything else is rejected rather than sent
+to the model as an input. Set temperature on the chat
 (<code>ellmer::params(temperature = 0)</code>) or the module
 (<code>config = list(temperature = 0)</code>), and run batches in
 parallel with
@@ -527,9 +536,11 @@ the whole data row. <code><a href="../reference/metric_exact_match.html">metric_
 of the same name. Without <code>field</code> they look for exactly one
 name the output and the data share, and fail when there is none (here
 the column is called <code>label</code>) or more than one. Failed rows
-count as 0 in <code>mean_score</code>, so a score of 0 can mean the
-metric failed on every row; check <code>n_errors</code>. Rename the
-column and name the field, or write a metric that reads both:</p>
+count as 0 in <code>mean_score</code>, so a score of 0 can mean every
+row failed; inspect <code>result$n_errors</code> (the sum of
+<code>n_run_errors</code> and <code>n_metric_errors</code>) to see
+whether the model call or the metric errored. Rename the column and name
+the field, or write a metric that reads both:</p>
 <div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">reviews</span><span class="op">$</span><span class="va">sentiment</span> <span class="op">&lt;-</span> <span class="va">reviews</span><span class="op">$</span><span class="va">label</span></span>
 <span><span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span></span>
@@ -647,8 +658,10 @@ reasoning models can take longer; raise the limit:</p>
 <div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">options</a></span><span class="op">(</span>ellmer_timeout_s <span class="op">=</span> <span class="fl">600</span><span class="op">)</span></span></code></pre></div>
 <p>To stop slow rows in a batch instead, set a per-row limit. Finite
-timeouts need the mirai backend, which runs the module in worker
-processes, so attach the chat to the module instead of passing
+timeouts need the <code>mirai</code> backend, which runs the module in
+worker processes—and rejects explicit <code>.llm</code> arguments
+(<code>"The mirai backend requires .llm = NULL"</code>). Attach the chat
+to the module (or set a default chat) instead of passing
 <code>.llm</code>:</p>
 <div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">timed_qa</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span><span class="op">)</span>, chat <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
@@ -657,6 +670,32 @@ processes, so attach the chat to the module instead of passing
 <span>  <span class="va">questions</span>,</span>
 <span>  .concurrency <span class="op">=</span> <span class="fu"><a href="../reference/concurrency_control.html">concurrency_control</a></span><span class="op">(</span>backend <span class="op">=</span> <span class="st">"mirai"</span>, max_active <span class="op">=</span> <span class="fl">2L</span>, task_timeout <span class="op">=</span> <span class="fl">120</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="reasoning-model-rejects-temperature-or-top_p">Reasoning model rejects <code>temperature</code> or
+<code>top_p</code><a class="anchor" aria-label="anchor" href="#reasoning-model-rejects-temperature-or-top_p"></a>
+</h3>
+<p>Reasoning models such as <code>gpt-6-luna</code> reject
+<code>temperature</code> and <code>top_p</code> unless reasoning is
+turned off. Either pass <code>reasoning_effort = "none"</code> alongside
+<code>temperature</code>, or tune <code>reasoning_effort</code>
+instead:</p>
+<div class="sourceCode" id="cb29"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">chat</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span></span>
+<span>  model <span class="op">=</span> <span class="st">"gpt-6-luna"</span>,</span>
+<span>  params <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/params.html" class="external-link">params</a></span><span class="op">(</span>reasoning_effort <span class="op">=</span> <span class="st">"none"</span>, temperature <span class="op">=</span> <span class="fl">0</span><span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="this-chat-is-reserved-by-run_async-dsprrr_chat_busy">“This Chat is reserved by <code>run_async</code>”
+(<code>dsprrr_chat_busy</code>)<a class="anchor" aria-label="anchor" href="#this-chat-is-reserved-by-run_async-dsprrr_chat_busy"></a>
+</h3>
+<p><code><a href="../reference/run_async.html">run_async()</a></code> reserves a Chat until its promise settles so
+concurrent calls cannot overwrite each other’s turns. When launching
+overlapping async calls, give each call its own clone:</p>
+<div class="sourceCode" id="cb30"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">p1</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_async.html">run_async</a></span><span class="op">(</span><span class="va">qa</span>, question <span class="op">=</span> <span class="st">"Capital of Peru?"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">$</span><span class="fu">clone</span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">p2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_async.html">run_async</a></span><span class="op">(</span><span class="va">qa</span>, question <span class="op">=</span> <span class="st">"Capital of Japan?"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">$</span><span class="fu">clone</span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 </div>
 </div>
 <div class="section level2">
@@ -670,11 +709,14 @@ an earlier one (same model, parameters, prompt and output type) returns
 the stored answer, and the first cache hit in a session prints “Using
 cached LLM responses”. That is usually what you want, but not when you
 need a fresh sample or are measuring how answers vary.</p>
-<div class="sourceCode" id="cb29"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">qa</span>, question <span class="op">=</span> <span class="st">"Suggest a name for a cat."</span>, .llm <span class="op">=</span> <span class="va">chat</span>, .cache <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span> <span class="co"># this call</span></span>
-<span><span class="fu"><a href="../reference/clear_cache.html">clear_cache</a></span><span class="op">(</span><span class="op">)</span> <span class="co"># forget everything cached</span></span>
+<span><span class="fu"><a href="../reference/clear_cache.html">clear_cache</a></span><span class="op">(</span><span class="op">)</span> <span class="co"># clear active in-memory and initialized disk cache</span></span>
 <span><span class="fu"><a href="../reference/configure_cache.html">configure_cache</a></span><span class="op">(</span>enable <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span> <span class="co"># stop caching for this session</span></span></code></pre></div>
-<p>In CI, set the environment variable
+<p>In a fresh R session before any cached call has opened the disk tier,
+<code><a href="../reference/clear_cache.html">clear_cache()</a></code> only clears memory; to wipe an old disk cache
+right after restarting R, delete the cache folder reported by
+<code><a href="../reference/dsprrr_sitrep.html">dsprrr_sitrep()</a></code>. In CI, set the environment variable
 <code>DSPRRR_CACHE_ENABLED=false</code>. To sample several different
 answers on purpose, use <code><a href="../reference/best_of_n.html">best_of_n()</a></code>, which keeps its
 attempts apart in the cache.</p>
@@ -682,16 +724,16 @@ attempts apart in the cache.</p>
 <div class="section level3">
 <h3 id="disk-caching-is-unavailable-at">“Disk caching is unavailable at …”<a class="anchor" aria-label="anchor" href="#disk-caching-is-unavailable-at"></a>
 </h3>
-<div class="sourceCode" id="cb30"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">shared_dir</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"shared-cache"</span><span class="op">)</span></span>
+<div class="sourceCode" id="cb32"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">shared_dir</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span><span class="st">"shared-cache-"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/files2.html" class="external-link">dir.create</a></span><span class="op">(</span><span class="va">shared_dir</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/files2.html" class="external-link">Sys.chmod</a></span><span class="op">(</span><span class="va">shared_dir</span>, mode <span class="op">=</span> <span class="st">"0755"</span><span class="op">)</span> <span class="co"># readable by other accounts</span></span>
 <span><span class="fu"><a href="../reference/configure_cache.html">configure_cache</a></span><span class="op">(</span>disk_path <span class="op">=</span> <span class="va">shared_dir</span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/try.html" class="external-link">try</a></span><span class="op">(</span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">qa</span>, question <span class="op">=</span> <span class="st">"What is the capital of France?"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Warning: <span style="color: #BBBB00;">!</span> Disk caching is unavailable at <span style="color: #0000BB;">/tmp/Rtmp5E8AJE/shared-cache</span></span></span>
+<span><span class="co">#&gt; Warning: <span style="color: #BBBB00;">!</span> Disk caching is unavailable at <span style="color: #0000BB;">/tmp/RtmpmmyY1P/shared-cache-ae3b59657a30</span></span></span>
 <span><span class="co">#&gt; <span style="color: #BB0000;">✖</span> an existing private cache directory must have mode exactly 0700, but it is</span></span>
 <span><span class="co">#&gt;   755; restrict it yourself, then retry: chmod 700</span></span>
-<span><span class="co">#&gt;   '/tmp/Rtmp5E8AJE/shared-cache'</span></span>
+<span><span class="co">#&gt;   '/tmp/RtmpmmyY1P/shared-cache-ae3b59657a30'</span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Falling back to memory-only caching for this session.</span></span>
 <span><span class="co">#&gt; <span style="color: #555555;">This warning is displayed once per session.</span></span></span>
 <span><span class="co">#&gt; Error in openai_key() : Can't find env var `OPENAI_API_KEY`.</span></span></code></pre></div>
@@ -706,7 +748,7 @@ On Windows, dsprrr cannot check these permissions and relies on the ACLs
 of the per-user cache directory.</p>
 <p>Run the <code>chmod</code> command from the warning, or restrict the
 directory from R:</p>
-<div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb33"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">cache_dir</span> <span class="op">&lt;-</span> <span class="fu">tools</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/tools/userdir.html" class="external-link">R_user_dir</a></span><span class="op">(</span><span class="st">"dsprrr"</span>, <span class="st">"cache"</span><span class="op">)</span> <span class="co"># or Sys.getenv("DSPRRR_CACHE_PATH")</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/files2.html" class="external-link">Sys.chmod</a></span><span class="op">(</span><span class="va">cache_dir</span>, mode <span class="op">=</span> <span class="st">"0700"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/files2.html" class="external-link">Sys.chmod</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.files.html" class="external-link">list.files</a></span><span class="op">(</span><span class="va">cache_dir</span>, full.names <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>, mode <span class="op">=</span> <span class="st">"0600"</span><span class="op">)</span></span></code></pre></div>
@@ -724,7 +766,7 @@ trusted accounts can write,
 </h2>
 <p>When a call succeeds but the answer is off, look at what the model
 received:</p>
-<div class="sourceCode" id="cb32"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb34"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/get_last_prompt.html">get_last_prompt</a></span><span class="op">(</span><span class="op">)</span> <span class="co"># prompt, response, model, tokens and cost of the last call</span></span>
 <span><span class="fu"><a href="../reference/inspect_history.html">inspect_history</a></span><span class="op">(</span>n <span class="op">=</span> <span class="fl">5</span><span class="op">)</span> <span class="co"># a tibble of the last five calls</span></span>
 <span><span class="fu"><a href="../reference/export_traces.html">export_traces</a></span><span class="op">(</span><span class="va">qa</span>, include_prompts <span class="op">=</span> <span class="cn">TRUE</span>, include_outputs <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> <span class="co"># every call of one module</span></span></code></pre></div>

@@ -17,9 +17,9 @@
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="How RLM works">
-<meta name="description" content="What happens during an RLM call: where the inputs live, what the model sees, where its code runs, how answers are checked, and the limits that apply.
+<meta name="description" content="What happens during an RLM call: where the inputs live, what the model sees, reasoning modes, recursive and multimodal queries, multi-turn history, where code runs, and the limits that apply.
 ">
-<meta property="og:description" content="What happens during an RLM call: where the inputs live, what the model sees, where its code runs, how answers are checked, and the limits that apply.
+<meta property="og:description" content="What happens during an RLM call: where the inputs live, what the model sees, reasoning modes, recursive and multimodal queries, multi-turn history, where code runs, and the limits that apply.
 ">
 <meta property="og:image" content="https://jameshwade.github.io/dsprrr/logo.svg">
 </head>
@@ -129,8 +129,6 @@
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
       <img src="../logo.svg" class="logo" alt=""><h1>How RLM works</h1>
-                        <h4 data-toc-skip class="author">James H.
-Wade</h4>
             
       
       <small class="dont-index">Source: <a href="https://github.com/JamesHWade/dsprrr/blob/main/vignettes/articles/how-rlm-works.Rmd" class="external-link"><code>vignettes/articles/how-rlm-works.Rmd</code></a></small>
@@ -247,6 +245,14 @@ afterwards, even when the call fails. Creating the module does not start
 a runner:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/dsprrr" class="external-link">dsprrr</a></span><span class="op">)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Attaching package: 'dsprrr'</span></span>
+<span><span class="co">#&gt; The following object is masked from 'package:stats':</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;     step</span></span>
+<span><span class="co">#&gt; The following object is masked from 'package:methods':</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;     signature</span></span>
 <span></span>
 <span><span class="co"># Sandboxed: a short policy text you did not write</span></span>
 <span><span class="va">reviewer</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/rlm_module.html">rlm_module</a></span><span class="op">(</span></span>
@@ -282,16 +288,25 @@ pass <code>.runner</code> or <code>.interpreter_factory</code>.</p>
 <div class="section level2">
 <h2 id="one-call-step-by-step">One call, step by step<a class="anchor" aria-label="anchor" href="#one-call-step-by-step"></a>
 </h2>
+<pre class="text"><code>Host R session (dsprrr + LLM chats + tools)        Runner (.context + R code)
+-------------------------------------------        --------------------------
+1. Stage inputs into .context -------------------&gt; .context$sessions, ...
+2. Ask model for next R step (previews only)
+3. Send generated R code ------------------------&gt; Execute code; keep variables
+   &lt;-- bounded stdout / error / llm_query() ------ (pause &amp; replay for host
+   &lt;-- SUBMIT(field = value, ...) ----------------  queries or host tools)
+4. Validate typed SUBMIT() -&gt; return output</code></pre>
 <ol style="list-style-type: decimal">
 <li>dsprrr loads each input into the runner as
 <code>.context$&lt;name&gt;</code>. For <code>analyst</code> these are
-<code>.context$sessions</code>, <code>.context$changes</code> and
+<code>.context$sessions</code>, <code>.context$changes</code>, and
 <code>.context$question</code>.</li>
-<li>The first prompt lists each input’s class, size, declared type and a
-preview of at most 1,000 characters (for a data frame, its
+<li>The first prompt lists each input’s class, size, declared type, and
+a preview of at most 1,000 characters (for a data frame, its
 <code><a href="https://rdrr.io/r/utils/str.html" class="external-link">str()</a></code>), the output fields, and the helper functions
 below.</li>
-<li>The model returns its reasoning and one block of R code, such as
+<li>The model returns one block of R code (plus a rationale or plan
+depending on <code>reasoning_mode</code>), such as
 <code>str(.context$sessions)</code>. The runner executes it, and
 variables persist to the next step.</li>
 <li>The printed result, cut to <code>max_output_chars</code>, is added
@@ -316,19 +331,19 @@ predictor produces the outputs from the steps so far.</li>
 </tr></thead>
 <tbody>
 <tr class="odd">
-<td><code>peek(x, start, end)</code></td>
+<td><code>peek(var, start, end)</code></td>
 <td>Characters <code>start</code> to <code>end</code> of a string, or
 elements of a vector</td>
 </tr>
 <tr class="even">
-<td><code>search(x, pattern)</code></td>
-<td>All matches of a regular expression in <code>x</code>
+<td><code>search(var, pattern)</code></td>
+<td>All matches of a regular expression in <code>var</code>
 </td>
 </tr>
 <tr class="odd">
 <td><code>llm_query(query, context_slice)</code></td>
-<td>Asks the sub-model one question about a string and returns the
-answer</td>
+<td>Asks the sub-model one question about a string or multimodal slice
+and returns the answer</td>
 </tr>
 <tr class="even">
 <td><code>llm_query_batched(queries, slices)</code></td>
@@ -341,16 +356,38 @@ order</td>
 </tr>
 </tbody>
 </table>
+<div class="section level3">
+<h3 id="action-reasoning-modes">Action reasoning modes<a class="anchor" aria-label="anchor" href="#action-reasoning-modes"></a>
+</h3>
+<p><code>rlm_module(reasoning_mode = ...)</code> and
+<code>rlm(.reasoning_mode = ...)</code> control how each action step
+reasons before writing code:</p>
+<ul>
+<li>
+<code>"rationale"</code> (default): the action predictor outputs a
+<code>reasoning</code> field and a <code>code</code> field.</li>
+<li>
+<code>"plan"</code>: replaces <code>reasoning</code> with a concise
+<code>plan</code> field and <code>code</code>.</li>
+<li>
+<code>"native"</code>: asks for <code>code</code> only and exposes
+provider-supplied thinking blocks in
+<code>get_metadata(result)$native_reasoning</code> (with action indices
+in <code>native_reasoning_action_indices</code>) on structured scalar
+calls. Batch, async, and streaming routes reject <code>"native"</code>
+mode before any provider calls run.</li>
+</ul>
 <p><a href="tutorial-rlm-dsprrr.html">Investigate a regression with
 RLM</a> shows a complete trajectory for a module like
 <code>analyst</code>.</p>
+</div>
 </div>
 <div class="section level2">
 <h2 id="recursive-queries">Recursive queries<a class="anchor" aria-label="anchor" href="#recursive-queries"></a>
 </h2>
 <p><code>llm_query()</code> reads like a function call, but the model
 call happens in your R session, not in the runner:</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">notes</span> <span class="op">&lt;-</span> <span class="va">.context</span><span class="op">$</span><span class="va">changes</span><span class="op">$</span><span class="va">note</span><span class="op">[</span><span class="va">.context</span><span class="op">$</span><span class="va">changes</span><span class="op">$</span><span class="va">release</span> <span class="op">==</span> <span class="st">"2.4.0"</span><span class="op">]</span></span>
 <span><span class="va">suspects</span> <span class="op">&lt;-</span> <span class="fu">llm_query</span><span class="op">(</span></span>
 <span>  <span class="st">"Which of these change notes could lower mobile checkout conversion?"</span>,</span>
@@ -373,6 +410,49 @@ and <code>max_llm_calls = 0</code> removes both query helpers. In
 <code>llm_query_batched()</code>, a provider error for one question
 comes back as an <code>"[ERROR] ..."</code> string in its position; any
 other failure ends the call.</p>
+<p><code>context_slice</code> also accepts ordered lists of JSON-native
+text and image records (<code>list(type = "text", text = ...)</code>,
+<code>list(type = "image_url", url = "https://...")</code>, or
+<code>list(type = "image_base64", mime_type = "image/png", data = ...)</code>),
+so guest code can ask <code>sub_lm</code> about remote HTTPS images (up
+to 2,048-byte URLs without credentials) or inline base64 images (up to
+524,288 bytes and the runner’s control-frame bound) without needing
+<code>ellmer</code> inside the runner. Local file paths and PDF records
+are rejected explicitly.</p>
+</div>
+<div class="section level2">
+<h2 id="multi-turn-follow-up-with--history">Multi-turn follow-up with <code>.history</code><a class="anchor" aria-label="anchor" href="#multi-turn-follow-up-with--history"></a>
+</h2>
+<p>Scalar <code><a href="../reference/run.html">run()</a></code> calls with
+<code>.return_format = "structured"</code> accept a portable
+<code>.history</code> (from <code><a href="../reference/accessors.html">get_history()</a></code> on a prior RLM
+result, or <code><a href="../reference/load_history.html">load_history()</a></code>), so a follow-up question can
+build on prior findings:</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">first</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
+<span>  <span class="va">analyst</span>,</span>
+<span>  sessions <span class="op">=</span> <span class="va">sessions</span>,</span>
+<span>  changes <span class="op">=</span> <span class="va">changes</span>,</span>
+<span>  question <span class="op">=</span> <span class="st">"Which cohort saw the largest drop in 2.4.0?"</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-luna"</span><span class="op">)</span>,</span>
+<span>  .return_format <span class="op">=</span> <span class="st">"structured"</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">followup</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
+<span>  <span class="va">analyst</span>,</span>
+<span>  sessions <span class="op">=</span> <span class="va">sessions</span>,</span>
+<span>  changes <span class="op">=</span> <span class="va">changes</span>,</span>
+<span>  question <span class="op">=</span> <span class="st">"Check whether desktop pro changed at all."</span>,</span>
+<span>  .history <span class="op">=</span> <span class="fu"><a href="../reference/accessors.html">get_history</a></span><span class="op">(</span><span class="va">first</span><span class="op">)</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-luna"</span><span class="op">)</span>,</span>
+<span>  .return_format <span class="op">=</span> <span class="st">"structured"</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>RLM history carries bounded textual summaries of prior steps and
+complete final outputs (up to 100 exchanges, 1,000 steps, and 128 KiB
+total), not live R variables. It requires an
+<code>interpreter_factory</code> so each turn starts in a fresh
+interpreter, cannot be mixed with ReAct histories, and is rejected by
+dataset, async, and streaming entry points.</p>
 </div>
 <div class="section level2">
 <h2 id="typed-submission">Typed submission<a class="anchor" aria-label="anchor" href="#typed-submission"></a>
@@ -380,7 +460,7 @@ other failure ends the call.</p>
 <p>The signature decides what <code>SUBMIT()</code> accepts. For
 <code>"logs -&gt; error_count: int, severity: enum('low', 'high'), evidence: list[str]"</code>,
 generated code submits named values:</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">SUBMIT</span><span class="op">(</span></span>
 <span>  error_count <span class="op">=</span> <span class="fl">7L</span>,</span>
 <span>  severity <span class="op">=</span> <span class="st">"high"</span>,</span>
@@ -398,7 +478,7 @@ is rejected when the module is created because RLM cannot check it.</p>
 </h2>
 <p>Ask for the structured result to keep the trajectory with the
 answer:</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
 <span>  <span class="va">analyst</span>,</span>
 <span>  sessions <span class="op">=</span> <span class="va">sessions</span>,</span>
@@ -482,23 +562,6 @@ smaller values</td>
 <td>1,000</td>
 <td>RLM, any runner</td>
 <td>The call ends with an error</td>
-</tr>
-<tr class="even">
-<td>Sandbox code from an agent</td>
-<td>12,000 characters</td>
-<td>
-<code><a href="../reference/AutoResearch.html">AutoResearch()</a></code> and <code><a href="../reference/MetaHarness.html">MetaHarness()</a></code>
-</td>
-<td>The action is rejected without running</td>
-</tr>
-<tr class="odd">
-<td>Sandbox result shown to the agent</td>
-<td>4,000 characters</td>
-<td>
-<code><a href="../reference/AutoResearch.html">AutoResearch()</a></code> and <code><a href="../reference/MetaHarness.html">MetaHarness()</a></code>
-</td>
-<td>Truncated and marked <code>[truncated]</code>
-</td>
 </tr>
 </tbody>
 </table>

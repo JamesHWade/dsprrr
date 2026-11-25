@@ -45,8 +45,8 @@ LabeledFewShot(
 - seed:
 
   Integer seed for the random draw (default `123L`). It is passed to
-  [`set.seed()`](https://rdrr.io/r/base/Random.html), which also resets
-  the session's random number stream.
+  [`base::set.seed()`](https://rdrr.io/r/base/Random.html), which also
+  resets the session's random number stream.
 
 ## Value
 

@@ -43,7 +43,8 @@ in a different way.
 
 ## Compose programs
 
-Chain modules, retry them with a reward, or combine several answers.
+Chain modules, retry them with a reward, combine answers, or transform
+program graphs.
 
 - [`` `%>>%` ``](https://jameshwade.github.io/dsprrr/reference/pipeline.md)
   [`pipeline()`](https://jameshwade.github.io/dsprrr/reference/pipeline.md)
@@ -66,6 +67,16 @@ Chain modules, retry them with a reward, or combine several answers.
   : Pick the first successful ensemble output
 - [`reduce_best_by_metric()`](https://jameshwade.github.io/dsprrr/reference/reduce_best_by_metric.md)
   : Pick the ensemble output that scores best against a known answer
+- [`module_graph()`](https://jameshwade.github.io/dsprrr/reference/module-graph.md)
+  [`named_modules()`](https://jameshwade.github.io/dsprrr/reference/module-graph.md)
+  [`named_parameters()`](https://jameshwade.github.io/dsprrr/reference/module-graph.md)
+  [`map_modules()`](https://jameshwade.github.io/dsprrr/reference/module-graph.md)
+  [`replace_module()`](https://jameshwade.github.io/dsprrr/reference/module-graph.md)
+  [`freeze_modules()`](https://jameshwade.github.io/dsprrr/reference/module-graph.md)
+  [`is_module_frozen()`](https://jameshwade.github.io/dsprrr/reference/module-graph.md)
+  [`set_module_lm()`](https://jameshwade.github.io/dsprrr/reference/module-graph.md)
+  [`module_children()`](https://jameshwade.github.io/dsprrr/reference/module-graph.md)
+  : Inspect and transform nested programs
 
 ## Programs that run code
 
@@ -191,8 +202,8 @@ Score a program on labeled data with a metric.
 ## Optimize with compile()
 
 Optimizers, which dsprrr calls teleprompters, tune a program’s
-demonstrations, instructions or decision rules against a metric. The
-“Choose an optimizer” article compares them.
+demonstrations or instructions against a metric. The “Choose an
+optimizer” article compares them.
 
 - [`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md)
   : Optimize a program with a teleprompter
@@ -216,15 +227,26 @@ demonstrations, instructions or decision rules against a metric. The
   : Grid search over instructions and demos
 - [`BetterTogether()`](https://jameshwade.github.io/dsprrr/reference/BetterTogether.md)
   : BetterTogether: run several optimizers in sequence
-- [`ReAnchor()`](https://jameshwade.github.io/dsprrr/reference/ReAnchor.md)
-  **\[experimental\]** : ReAnchor: calibrate decision outputs against a
-  metric
 - [`Teleprompter()`](https://jameshwade.github.io/dsprrr/reference/Teleprompter.md)
   : Arguments shared by all optimizers
 
+## Grid search
+
+Try combinations of request settings, instructions and templates.
+
+- [`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md)
+  : Grid search over module settings
+- [`module_trials()`](https://jameshwade.github.io/dsprrr/reference/module_trials.md)
+  : Summarize grid search trials
+- [`module_metrics()`](https://jameshwade.github.io/dsprrr/reference/module_metrics.md)
+  : Per-trial rows from a grid search
+- [`module_parameters()`](https://jameshwade.github.io/dsprrr/reference/module_parameters.md)
+  : Build a tidymodels parameter set for a module
+
 ## Experimental optimizers
 
-Compose optimizers, or let an agent run optimization experiments.
+Compose optimizers, tune calibrated decision rules, or let an agent run
+experiments.
 
 - [`Omni()`](https://jameshwade.github.io/dsprrr/reference/Omni.md) :
   Omni: explore with several optimizers, then continue from the best
@@ -232,6 +254,9 @@ Compose optimizers, or let an agent run optimization experiments.
   : AutoResearch: let an agent run optimization experiments
 - [`MetaHarness()`](https://jameshwade.github.io/dsprrr/reference/MetaHarness.md)
   : Meta-Harness: fresh proposer sessions over a candidate frontier
+- [`ReAnchor()`](https://jameshwade.github.io/dsprrr/reference/ReAnchor.md)
+  **\[experimental\]** : ReAnchor: calibrate decision outputs against a
+  metric
 
 ## Inspect optimization results
 
@@ -255,19 +280,6 @@ See what an optimizer changed and reuse the result.
   : Copy optimized settings to another module
 - [`export_module_code()`](https://jameshwade.github.io/dsprrr/reference/export_module_code.md)
   : Export a program as standalone R code
-
-## Grid search
-
-Try combinations of request settings, instructions and templates.
-
-- [`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md)
-  : Grid search over module settings
-- [`module_trials()`](https://jameshwade.github.io/dsprrr/reference/module_trials.md)
-  : Summarize grid search trials
-- [`module_metrics()`](https://jameshwade.github.io/dsprrr/reference/module_metrics.md)
-  : Per-trial rows from a grid search
-- [`module_parameters()`](https://jameshwade.github.io/dsprrr/reference/module_parameters.md)
-  : Build a tidymodels parameter set for a module
 
 ## Calibrated decisions
 
@@ -349,21 +361,6 @@ Save programs, pin them to a board, and start a workflow project.
   : Copy a workflow template into a project
 - [`validate_workflow()`](https://jameshwade.github.io/dsprrr/reference/validate_workflow.md)
   : Check a module and its data before a run
-
-## Program graphs
-
-Inspect, freeze and transform the modules inside a program.
-
-- [`module_graph()`](https://jameshwade.github.io/dsprrr/reference/module-graph.md)
-  [`named_modules()`](https://jameshwade.github.io/dsprrr/reference/module-graph.md)
-  [`named_parameters()`](https://jameshwade.github.io/dsprrr/reference/module-graph.md)
-  [`map_modules()`](https://jameshwade.github.io/dsprrr/reference/module-graph.md)
-  [`replace_module()`](https://jameshwade.github.io/dsprrr/reference/module-graph.md)
-  [`freeze_modules()`](https://jameshwade.github.io/dsprrr/reference/module-graph.md)
-  [`is_module_frozen()`](https://jameshwade.github.io/dsprrr/reference/module-graph.md)
-  [`set_module_lm()`](https://jameshwade.github.io/dsprrr/reference/module-graph.md)
-  [`module_children()`](https://jameshwade.github.io/dsprrr/reference/module-graph.md)
-  : Inspect and transform nested programs
 
 ## vitals
 

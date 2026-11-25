@@ -1,12 +1,24 @@
 # Tutorial 1: Your first LLM call
 
-By the end of this tutorial you can describe a task as a signature, run
-it against a language model, and get the answer back as an R value of
-the type you asked for: a string, a number, a label or `TRUE`/`FALSE`.
+Calling a language model from R usually starts with string interpolation
+and ends with regular expressions to clean up the reply. dsprrr flips
+that around: you declare a task’s inputs and typed outputs as a
+*signature*, and dsprrr writes the prompt, sends a schema to the model,
+and returns an R value of the type you asked for—a string, a number, a
+fixed label, or `TRUE`/`FALSE`.
 
 ## Set up
 
-Install dsprrr from GitHub. pak installs ellmer from CRAN along with it.
+Install dsprrr from CRAN (this installs
+[ellmer](https://ellmer.tidyverse.org) along with it):
+
+``` r
+
+install.packages("dsprrr")
+```
+
+To install the development version from GitHub instead (source builds
+require a C compiler):
 
 ``` r
 
@@ -14,13 +26,11 @@ Install dsprrr from GitHub. pak installs ellmer from CRAN along with it.
 pak::pak("JamesHWade/dsprrr")
 ```
 
-Installing from source requires a C compiler: Rtools on Windows, Xcode
-Command Line Tools on macOS, or your Linux distribution’s build tools.
-
-The tutorials use OpenAI. Add `OPENAI_API_KEY=<your key>` to your
-`.Renviron` file and restart R;
+The tutorials use OpenAI. Open your `.Renviron` file (for example with
+`usethis::edit_r_environ()`), add `OPENAI_API_KEY=<your key>`, and
+restart R.
 [`dsprrr_sitrep()`](https://jameshwade.github.io/dsprrr/reference/dsprrr_sitrep.md)
-then reports which API keys it can see.
+confirms which API keys dsprrr can see.
 
 ``` r
 
@@ -37,7 +47,10 @@ chat <- chat_openai(model = "gpt-6-luna")
 ```
 
 The answers on this page were recorded with `gpt-4.1` and are replayed
-when the site is built, so `gpt-6-luna` may word them differently.
+when the site is built, so `gpt-6-luna` may word them differently (and
+offline CRAN vignettes omit recorded outputs—see the [package
+website](https://jameshwade.github.io/dsprrr/articles/tutorial-hello-world.html)
+to read them inline).
 
 Any other ellmer chat, such as
 [`chat_anthropic()`](https://ellmer.tidyverse.org/reference/chat_anthropic.html),

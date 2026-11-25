@@ -51,6 +51,14 @@ when the call fails. Creating the module does not start a runner:
 ``` r
 
 library(dsprrr)
+#> 
+#> Attaching package: 'dsprrr'
+#> The following object is masked from 'package:stats':
+#> 
+#>     step
+#> The following object is masked from 'package:methods':
+#> 
+#>     signature
 
 # Sandboxed: a short policy text you did not write
 reviewer <- rlm_module(
@@ -90,16 +98,27 @@ unless you pass `.runner` or `.interpreter_factory`.
 
 ## One call, step by step
 
+``` text
+Host R session (dsprrr + LLM chats + tools)        Runner (.context + R code)
+-------------------------------------------        --------------------------
+1. Stage inputs into .context -------------------> .context$sessions, ...
+2. Ask model for next R step (previews only)
+3. Send generated R code ------------------------> Execute code; keep variables
+   <-- bounded stdout / error / llm_query() ------ (pause & replay for host
+   <-- SUBMIT(field = value, ...) ----------------  queries or host tools)
+4. Validate typed SUBMIT() -> return output
+```
+
 1.  dsprrr loads each input into the runner as `.context$<name>`. For
-    `analyst` these are `.context$sessions`, `.context$changes` and
+    `analyst` these are `.context$sessions`, `.context$changes`, and
     `.context$question`.
-2.  The first prompt lists each input’s class, size, declared type and a
-    preview of at most 1,000 characters (for a data frame, its
+2.  The first prompt lists each input’s class, size, declared type, and
+    a preview of at most 1,000 characters (for a data frame, its
     [`str()`](https://rdrr.io/r/utils/str.html)), the output fields, and
     the helper functions below.
-3.  The model returns its reasoning and one block of R code, such as
-    `str(.context$sessions)`. The runner executes it, and variables
-    persist to the next step.
+3.  The model returns one block of R code (plus a rationale or plan
+    depending on `reasoning_mode`), such as `str(.context$sessions)`.
+    The runner executes it, and variables persist to the next step.
 4.  The printed result, cut to `max_output_chars`, is added to the next
     prompt together with every earlier step’s code and output.
 5.  The loop ends at the first valid `SUBMIT()`. If `max_iterations`
@@ -109,11 +128,25 @@ unless you pass `.runner` or `.interpreter_factory`.
 
 | Helper | What it does |
 |----|----|
-| `peek(x, start, end)` | Characters `start` to `end` of a string, or elements of a vector |
-| `search(x, pattern)` | All matches of a regular expression in `x` |
-| `llm_query(query, context_slice)` | Asks the sub-model one question about a string and returns the answer |
+| `peek(var, start, end)` | Characters `start` to `end` of a string, or elements of a vector |
+| `search(var, pattern)` | All matches of a regular expression in `var` |
+| `llm_query(query, context_slice)` | Asks the sub-model one question about a string or multimodal slice and returns the answer |
 | `llm_query_batched(queries, slices)` | Asks several independent questions; answers come back in input order |
 | `SUBMIT(...)` | Ends the loop with the output fields |
+
+### Action reasoning modes
+
+`rlm_module(reasoning_mode = ...)` and `rlm(.reasoning_mode = ...)`
+control how each action step reasons before writing code:
+
+- `"rationale"` (default): the action predictor outputs a `reasoning`
+  field and a `code` field.
+- `"plan"`: replaces `reasoning` with a concise `plan` field and `code`.
+- `"native"`: asks for `code` only and exposes provider-supplied
+  thinking blocks in `get_metadata(result)$native_reasoning` (with
+  action indices in `native_reasoning_action_indices`) on structured
+  scalar calls. Batch, async, and streaming routes reject `"native"`
+  mode before any provider calls run.
 
 [Investigate a regression with
 RLM](https://jameshwade.github.io/dsprrr/articles/tutorial-rlm-dsprrr.md)
@@ -152,6 +185,54 @@ in a batch, and `max_llm_calls = 0` removes both query helpers. In
 `llm_query_batched()`, a provider error for one question comes back as
 an `"[ERROR] ..."` string in its position; any other failure ends the
 call.
+
+`context_slice` also accepts ordered lists of JSON-native text and image
+records (`list(type = "text", text = ...)`,
+`list(type = "image_url", url = "https://...")`, or
+`list(type = "image_base64", mime_type = "image/png", data = ...)`), so
+guest code can ask `sub_lm` about remote HTTPS images (up to 2,048-byte
+URLs without credentials) or inline base64 images (up to 524,288 bytes
+and the runner’s control-frame bound) without needing `ellmer` inside
+the runner. Local file paths and PDF records are rejected explicitly.
+
+## Multi-turn follow-up with `.history`
+
+Scalar [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md)
+calls with `.return_format = "structured"` accept a portable `.history`
+(from
+[`get_history()`](https://jameshwade.github.io/dsprrr/reference/accessors.md)
+on a prior RLM result, or
+[`load_history()`](https://jameshwade.github.io/dsprrr/reference/load_history.md)),
+so a follow-up question can build on prior findings:
+
+``` r
+
+first <- run(
+  analyst,
+  sessions = sessions,
+  changes = changes,
+  question = "Which cohort saw the largest drop in 2.4.0?",
+  .llm = ellmer::chat_openai(model = "gpt-6-luna"),
+  .return_format = "structured"
+)
+
+followup <- run(
+  analyst,
+  sessions = sessions,
+  changes = changes,
+  question = "Check whether desktop pro changed at all.",
+  .history = get_history(first),
+  .llm = ellmer::chat_openai(model = "gpt-6-luna"),
+  .return_format = "structured"
+)
+```
+
+RLM history carries bounded textual summaries of prior steps and
+complete final outputs (up to 100 exchanges, 1,000 steps, and 128 KiB
+total), not live R variables. It requires an `interpreter_factory` so
+each turn starts in a fresh interpreter, cannot be mixed with ReAct
+histories, and is rejected by dataset, async, and streaming entry
+points.
 
 ## Typed submission
 
@@ -224,8 +305,6 @@ start, its connection breaks) end the call with an error.
 | One request to mcp-repl: the step’s code plus its serialized `.context` | 7,000 bytes, gzip-compressed when larger | RLM steps, executable Flex steps and harness sandbox actions in [`mcp_repl_runner()`](https://jameshwade.github.io/dsprrr/reference/mcp_repl_runner.md) | Rejected before it runs; in RLM the model sees the error |
 | One message back from the runner: an RLM `SUBMIT()`, `llm_query()` or tool request, or a Flex predictor or tool call | 3,000 bytes, encoded | RLM and executable Flex in [`mcp_repl_runner()`](https://jameshwade.github.io/dsprrr/reference/mcp_repl_runner.md) | The step fails; in RLM the model sees the error and can retry with smaller values |
 | Tool calls in one step | 1,000 | RLM, any runner | The call ends with an error |
-| Sandbox code from an agent | 12,000 characters | [`AutoResearch()`](https://jameshwade.github.io/dsprrr/reference/AutoResearch.md) and [`MetaHarness()`](https://jameshwade.github.io/dsprrr/reference/MetaHarness.md) | The action is rejected without running |
-| Sandbox result shown to the agent | 4,000 characters | [`AutoResearch()`](https://jameshwade.github.io/dsprrr/reference/AutoResearch.md) and [`MetaHarness()`](https://jameshwade.github.io/dsprrr/reference/MetaHarness.md) | Truncated and marked `[truncated]` |
 
 The request limit is the one you will meet. In RLM, `.context` holds
 every input, and RLM’s own helper code already takes about 4,700 of the

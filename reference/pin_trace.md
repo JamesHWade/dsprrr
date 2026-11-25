@@ -75,6 +75,32 @@ Other persistence:
 ## Examples
 
 ``` r
+board <- pins::board_temp()
+shout <- module_fn("text -> out", function(text) list(out = toupper(text)))
+run(shout, text = "hello")
+#> $out
+#> [1] "HELLO"
+#> 
+pin_trace(board, "shout-traces", shout, include_outputs = TRUE)
+#> Creating new version '20261125T015355Z-aa8bf'
+#> Writing to pin 'shout-traces'
+#> ✔ Pinned 1 trace: "shout-traces"
+#> ℹ Total tokens: 0
+pins::pin_read(board, "shout-traces")$summary
+#> 
+#> ── Module Trace Summary ──
+#> 
+#> ── Usage Metrics 
+#> • 1 request
+#> • 0 total tokens
+#> • Input/Output ratio: NA
+#> • Total cost: $NA
+#> 
+#> ── Performance 
+#> • Average latency: 0ms
+#> • Total time: 0s
+#> • Tokens/request: NaN
+
 if (FALSE) { # \dontrun{
 board <- pins::board_folder("pins")
 classifier <- module(signature("text -> sentiment"))

@@ -128,22 +128,26 @@
 <img src="logo.svg" class="logo" alt=""><h1 id="dsprrr-">dsprrr <a class="anchor" aria-label="anchor" href="#dsprrr-"></a>
 </h1>
 </div>
-<p>dsprrr lets you write LLM features in R as small programs instead of prompt strings. You declare a task’s inputs and typed outputs; dsprrr builds the prompt, calls the model, and returns an R list with the types you asked for. Once you have labeled examples, you can score the program with a metric and let an optimizer tune its instructions and few-shot examples against that score.</p>
-<p>The design follows <a href="https://dspy.ai" class="external-link">DSPy</a>. Model calls go through <a href="https://ellmer.tidyverse.org" class="external-link">ellmer</a>, so any provider ellmer supports works. dsprrr is experimental and not yet on CRAN; the API may still change.</p>
+<p>dsprrr lets you write LLM features in R as small programs instead of prompt strings. You declare a task’s inputs and typed outputs; dsprrr builds the prompt, calls the model through <a href="https://ellmer.tidyverse.org" class="external-link">ellmer</a>, and returns an R list with the types you asked for. Once you have labeled examples, you can score the program with a metric and let an optimizer tune its instructions and few-shot examples against that score.</p>
+<p>If you have a prompt that already works and no data to measure it against, plain ellmer is enough. dsprrr earns its keep when you want typed outputs across many inputs, a score you can track, or a prompt tuned on examples instead of by hand. The design follows <a href="https://dspy.ai" class="external-link">DSPy</a>, and any provider ellmer supports works.</p>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h2>
+<p>Install the released version from CRAN:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"dsprrr"</span><span class="op">)</span></span></code></pre></div>
+<p>Or install the development version from GitHub:</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># install.packages("pak")</span></span>
 <span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"JamesHWade/dsprrr"</span><span class="op">)</span></span></code></pre></div>
-<p>Installing from source requires a C compiler: Rtools on Windows, Xcode Command Line Tools on macOS, or your Linux distribution’s build tools.</p>
+<p>Installing from source requires a C compiler (Rtools on Windows, Xcode Command Line Tools on macOS, or your Linux distribution’s build tools); the compiled helper preserves exact filesystem identities for safe persistence.</p>
 <p>You also need credentials for a model provider, for example <code>OPENAI_API_KEY</code> in your <code>.Renviron</code>.</p>
 </div>
 <div class="section level2">
 <h2 id="example">Example<a class="anchor" aria-label="anchor" href="#example"></a>
 </h2>
 <p>A signature names the inputs and outputs of a task. <code><a href="reference/module.html">module()</a></code> turns it into something you can run.</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/dsprrr" class="external-link">dsprrr</a></span><span class="op">)</span></span>
 <span><span class="va">chat</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-luna"</span><span class="op">)</span></span>
 <span></span>
@@ -174,7 +178,7 @@
 <p><a href="articles/concepts-signatures-modules.html">How dsprrr works →</a></p>
 </div>
 <div class="col-md-7">
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/signature.html">signature</a></span><span class="op">(</span></span>
 <span>  <span class="st">"ticket -&gt; urgency: enum('low', 'high'), team: string"</span>,</span>
 <span>  instructions <span class="op">=</span> <span class="st">"Route the support ticket."</span></span>
@@ -189,16 +193,16 @@
 <p><a href="articles/advanced-modules.html">Choose a module type →</a></p>
 </div>
 <div class="col-md-7">
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">route</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span><span class="op">)</span>            <span class="co"># one call</span></span>
-<span><span class="va">route</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/chain_of_thought.html">chain_of_thought</a></span><span class="op">(</span><span class="va">sig</span><span class="op">)</span>  <span class="co"># reason, then answer</span></span>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">route</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span><span class="op">)</span>                <span class="co"># one call</span></span>
+<span><span class="va">route_cot</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/chain_of_thought.html">chain_of_thought</a></span><span class="op">(</span><span class="va">sig</span><span class="op">)</span>  <span class="co"># reason, then answer</span></span>
 <span></span>
 <span><span class="va">lookup</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/tool.html" class="external-link">tool</a></span><span class="op">(</span></span>
 <span>  <span class="kw">function</span><span class="op">(</span><span class="va">query</span><span class="op">)</span> <span class="st">"Duplicate charges are refunded by billing."</span>,</span>
 <span>  description <span class="op">=</span> <span class="st">"Look up support policy"</span>,</span>
 <span>  arguments <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>query <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
-<span><span class="va">route</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/react.html">react</a></span><span class="op">(</span><span class="va">sig</span>, tools <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">lookup</span><span class="op">)</span><span class="op">)</span>  <span class="co"># call tools as needed</span></span></code></pre></div>
+<span><span class="va">route_agent</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/react.html">react</a></span><span class="op">(</span><span class="va">sig</span>, tools <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">lookup</span><span class="op">)</span><span class="op">)</span>  <span class="co"># call tools as needed</span></span></code></pre></div>
 </div>
 </div>
 <div class="row align-items-center g-4 my-4 primitive-row">
@@ -209,7 +213,7 @@
 <p><a href="articles/concepts-why-metrics-matter.html">Metrics and evaluation →</a></p>
 </div>
 <div class="col-md-7">
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tickets</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
 <span>  ticket <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
 <span>    <span class="st">"I was charged twice for my order"</span>,</span>
@@ -234,14 +238,15 @@
 <div class="section level3 col-md-5">
 <h3 id="optimizers">Optimizers<a class="anchor" aria-label="anchor" href="#optimizers"></a>
 </h3>
-<p><strong>Improve it with data.</strong> <code><a href="reference/compile.html">compile()</a></code> returns a new module whose instructions or examples were chosen to raise the metric on your training rows. Check the result on rows it did not see.</p>
+<p><strong>Improve it with data.</strong> <code><a href="reference/compile.html">compile()</a></code> returns a new module whose examples or instructions were tuned to raise the metric on your training rows. Check the result on rows it did not see.</p>
 <p><a href="articles/compilation-optimization.html">Compile and optimize →</a></p>
 </div>
 <div class="col-md-7">
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">optimizer</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/BootstrapFewShot.html">BootstrapFewShot</a></span><span class="op">(</span></span>
 <span>  metric <span class="op">=</span> <span class="fu"><a href="reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"urgency"</span><span class="op">)</span>,</span>
-<span>  max_bootstrapped_demos <span class="op">=</span> <span class="fl">4L</span></span>
+<span>  max_bootstrapped_demos <span class="op">=</span> <span class="fl">2L</span>,</span>
+<span>  max_labeled_demos <span class="op">=</span> <span class="fl">0L</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">split</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/split_dataset.html">split_dataset</a></span><span class="op">(</span><span class="va">tickets</span>, prop <span class="op">=</span> <span class="fl">0.5</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
@@ -301,8 +306,8 @@
 </tr>
 </tbody>
 </table>
-<p>Some features are experimental: <code><a href="reference/rlm_module.html">rlm_module()</a></code> lets a model explore a large R object by writing code (<a href="articles/how-rlm-works.html">How RLM works</a>), <code><a href="reference/flex.html">flex()</a></code> lets GEPA rewrite a whole program (<a href="articles/flex-optimization.html">Flex</a>), and <code><a href="reference/Omni.html">Omni()</a></code> and the agentic harnesses compose optimizers (<a href="articles/omni-meta-optimization.html">Omni</a>, <a href="articles/agentic-optimization-harnesses.html">agentic harnesses</a>).</p>
-<p>dsprrr is inspired by <a href="https://dspy.ai" class="external-link">DSPy</a> from Stanford NLP. It builds on <a href="https://ellmer.tidyverse.org" class="external-link">ellmer</a> for model access and bridges to <a href="https://vitals.tidyverse.org" class="external-link">vitals</a> for evaluation.</p>
+<p>Some features are experimental: <code><a href="reference/rlm_module.html">rlm_module()</a></code> lets a model explore a large R object by writing code (<a href="articles/how-rlm-works.html">How RLM works</a>), <code><a href="reference/flex.html">flex()</a></code> lets GEPA rewrite a whole program (<a href="articles/flex-optimization.html">Flex</a>), <code><a href="reference/with_decisions.html">with_decisions()</a></code> and <code><a href="reference/ReAnchor.html">ReAnchor()</a></code> calibrate probability-backed decision thresholds (<a href="articles/calibrated-decisions.html">Calibrated decisions</a>), and <code><a href="reference/Omni.html">Omni()</a></code> and the agentic harnesses compose optimizers (<a href="articles/omni-meta-optimization.html">Omni</a>, <a href="articles/agentic-optimization-harnesses.html">agentic harnesses</a>).</p>
+<p>dsprrr is experimental; the API may change. It is inspired by <a href="https://dspy.ai" class="external-link">DSPy</a> from Stanford NLP, builds on <a href="https://ellmer.tidyverse.org" class="external-link">ellmer</a> for model access, and bridges to <a href="https://vitals.tidyverse.org" class="external-link">vitals</a> for evaluation.</p>
 </div>
 </div>
   </main><aside class="col-md-3"><div class="links">

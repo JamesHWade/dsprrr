@@ -86,8 +86,9 @@ variants are scored on it and the demonstrations are drawn from all of
 `trainset` are held out for scoring and the demonstrations come from the
 remaining rows. The drawn demonstrations replace any the module already
 had. The split and the draw use R's random number generator without a
-fixed seed, so call [`set.seed()`](https://rdrr.io/r/base/Random.html)
-first for reproducible results.
+fixed seed, so call
+[`base::set.seed()`](https://rdrr.io/r/base/Random.html) first for
+reproducible results.
 
 The search runs
 [`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md)

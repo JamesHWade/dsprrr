@@ -57,7 +57,8 @@ gather_package_info <- function(pkg_path = ".") {
   )
 }
 
-# "." from the package root, ".." from the vignettes folder
+# Point `pkg_root` at any local source package directory ("." from a package
+# root, ".." when knitting from vignettes/)
 pkg_root <- if (file.exists("DESCRIPTION")) "." else ".."
 info <- gather_package_info(pkg_root)
 info$title
@@ -207,10 +208,14 @@ examples_mod
 
 ## Run it
 
-`analyze_package()` passes each stage’s fields to the next.
+`analyze_package()` passes each stage’s fields to the next. Notice that
+it reuses one `llm` chat across all four stages intentionally, so later
+stages see the earlier conversation turns (contrast [Build a text
+adventure](https://jameshwade.github.io/dsprrr/articles/text-adventure.md),
+which clones the chat to keep calls isolated). Because
 [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md) treats
-an input longer than one as a batch, one call per element, so vectors
-and tables are collapsed to single strings on the way:
+an input longer than one as a batch, vectors and tables are collapsed to
+single strings on the way:
 
 ``` r
 
@@ -265,9 +270,10 @@ analyze_package <- function(info, llm = chat_openai(model = "gpt-6-luna")) {
 The writer’s output type is a bare
 [`type_string()`](https://ellmer.tidyverse.org/reference/type_boolean.html),
 so [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md)
-returns the text itself. Here is the file gpt-4.1 wrote for dsprrr when
-this article was recorded, in January 2026; the code now uses
-gpt-6-luna, whose file will read differently:
+returns the text itself. *Recorded outputs on the [package
+website](https://jameshwade.github.io/dsprrr/articles/llms-txt.html)
+were captured with `gpt-4.1`; `gpt-6-luna` will write different wording,
+and offline CRAN vignettes omit the recorded output.*
 
 ``` r
 
@@ -360,17 +366,21 @@ cat(llms_txt)
 
 ## Check the examples
 
-The prose is plausible. The Common Workflow code is not:
-[`module()`](https://jameshwade.github.io/dsprrr/reference/module.md)
-has no `task` argument,
-[`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md)
-needs a teleprompter,
-[`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md)
-has no `trainset` argument, and
-[`evaluate()`](https://jameshwade.github.io/dsprrr/reference/evaluate.md)
-takes `data`, not `dataset`. Look back at the printed `examples_mod`:
-the examples stage gets function names and a purpose statement, but no
-argument lists, so the model guesses them.
+In the recorded run, the prose is plausible—but the generated **Common
+Workflow** code block hallucinates the API:
+
+``` r
+
+# Typical hallucinated lines from the recorded first run:
+mod <- module(sig, task = "qa")          # module() has no `task` argument
+opt <- compile(mod, trainset)            # compile() requires a teleprompter
+optimize_grid(mod, trainset = data, ...) # optimize_grid() takes `data`, not `trainset`
+evaluate(mod, dataset = test, ...)       # evaluate() takes `data`, not `dataset`
+```
+
+Look back at the printed `examples_mod`: the examples stage gets
+function names and a purpose statement, but no argument lists, so the
+model guesses them.
 
 Reading every generated example for mistakes like these doesn’t scale.
 Running them does. `run_block()` evaluates one code block in a fresh R
@@ -408,17 +418,18 @@ example_problems <- function(md) {
   problems[grepl("^No default Chat", problems)] <- NA
   problems
 }
-
-example_problems(llms_txt)
 ```
 
-    #> [1] NA                                                                          
-    #> [2] "`module()` creates standard prediction modules and does not accept `task`."
+``` r
 
-The Quick Start runs as far as
-[`run()`](https://jameshwade.github.io/dsprrr/reference/run.md), which
-is as far as it can get without a model. The Common Workflow stops at
-its first mistake.
+example_problems(llms_txt)
+#> [1] NA                                                                          
+#> [2] "`module()` creates standard prediction modules and does not accept `task`."
+```
+
+In the recorded run, the Quick Start runs cleanly as far as
+[`run()`](https://jameshwade.github.io/dsprrr/reference/run.md) (`NA`),
+while the Common Workflow stops at its first invented argument.
 
 One sample says little, so here is a second run of the same program:
 
@@ -430,8 +441,8 @@ example_problems(second_run)
 #> [2] "Missing required inputs: \033[32mquestion\033[39m"
 ```
 
-Different text, same kind of failure: this time the intermediate example
-passes a whole tibble to
+Different wording, same kind of failure: in the recorded second run, the
+intermediate example passes a whole tibble to
 [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md)
 (`run(qa_mod, test_data)`), which expects named inputs. Rerunning until
 an example happens to work is not a fix. The program needs to show the
@@ -495,7 +506,9 @@ llms_program <- pipeline(
 )
 ```
 
-The package name stops at the first step, so R adds the heading:
+Because `notes` does not emit `pkg_name`—and pipelines forward only the
+previous step’s outputs—R prepends the `# dsprrr` heading when writing
+the file:
 
 ``` r
 
@@ -566,7 +579,10 @@ evaluate(tuned, dsprrr_facts, metric = examples_run, .llm = llm)$mean_score
 
 [`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md)
 returns a new program and leaves `llms_program` unchanged, so you can
-score both on packages that were not in the training set before
-choosing. [Compile and
+compare both on packages outside the training set before deploying. That
+is the full dsprrr pattern in miniature: replace a brittle multi-prompt
+script with a pipeline, grade its outputs with executable R checks, and
+let an optimizer harvest passing examples across every step. [Compile
+and
 optimize](https://jameshwade.github.io/dsprrr/articles/compilation-optimization.md)
 covers the other optimizers and how to choose between them.

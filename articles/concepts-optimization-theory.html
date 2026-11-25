@@ -17,6 +17,11 @@
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="How optimization works">
+<meta name="description" content="What dsprrr optimizers search over, how metrics and data splits guide them, why winning validation scores are optimistic, and where model calls go.
+">
+<meta property="og:description" content="What dsprrr optimizers search over, how metrics and data splits guide them, why winning validation scores are optimistic, and where model calls go.
+">
+<meta property="og:image" content="https://jameshwade.github.io/dsprrr/logo.svg">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -179,10 +184,11 @@ producing candidates:</p>
 </tr>
 <tr class="even">
 <td>Instructions or templates</td>
-<td>Variants that you write</td>
+<td>Variants that you write, or an agent proposing edits across leaf
+modules</td>
 <td>
-<code>GridSearchTeleprompter</code>,
-<code><a href="../reference/optimize_grid.html">optimize_grid()</a></code>
+<code>GridSearchTeleprompter</code>, <code><a href="../reference/optimize_grid.html">optimize_grid()</a></code>,
+<code><a href="../reference/AutoResearch.html">AutoResearch()</a></code>, <code><a href="../reference/MetaHarness.html">MetaHarness()</a></code>
 </td>
 </tr>
 <tr class="odd">
@@ -205,15 +211,16 @@ appended rules)</td>
 <tr class="even">
 <td>Request settings, such as reasoning effort or temperature</td>
 <td>A grid that you define</td>
-<td><code><a href="../reference/optimize_grid.html">optimize_grid()</a></code></td>
+<td>
+<code><a href="../reference/optimize_grid.html">optimize_grid()</a></code>,
+<code>GridSearchTeleprompter</code>
+</td>
 </tr>
 <tr class="odd">
 <td>The program’s source</td>
-<td>A model rewriting it</td>
+<td>A model rewriting a <code><a href="../reference/flex.html">flex()</a></code> program</td>
 <td>
-<code>GEPA</code> on <code><a href="../reference/flex.html">flex()</a></code> modules,
-<code><a href="../reference/AutoResearch.html">AutoResearch()</a></code>, <code><a href="../reference/MetaHarness.html">MetaHarness()</a></code>
-</td>
+<code>GEPA</code> on <code><a href="../reference/flex.html">flex()</a></code> modules</td>
 </tr>
 </tbody>
 </table>
@@ -235,11 +242,13 @@ numbers that are never sent to the model: the threshold that turns a
 probability into <code>TRUE</code>, or the weights that pick an option.
 It records probabilities once and fits the numbers without further
 calls. At the other end, GEPA can treat a whole <code><a href="../reference/flex.html">flex()</a></code>
-program as one candidate and rewrite its source; see <a href="flex-optimization.html">Flex: optimize a whole program</a>.</p>
+program as one candidate and rewrite its source; see <a href="https://jameshwade.github.io/dsprrr/articles/flex-optimization.html">Flex:
+optimize a whole program</a>.</p>
 <p>Request settings, such as <code>reasoning_effort</code> or
-<code>temperature</code>, are searched only by
-<code><a href="../reference/optimize_grid.html">optimize_grid()</a></code>. Reasoning models such as gpt-6-luna reject
-<code>temperature</code> while they reason, so sweep
+<code>temperature</code>, are searched with <code><a href="../reference/optimize_grid.html">optimize_grid()</a></code>
+(or as columns in <code>GridSearchTeleprompter</code>’s
+<code>variants</code>). Reasoning models such as <code>gpt-6-luna</code>
+reject <code>temperature</code> while they reason, so sweep
 <code>reasoning_effort</code> with them, or turn reasoning off
 (<code>reasoning_effort = "none"</code>) before sweeping
 <code>temperature</code>.</p>
@@ -307,7 +316,8 @@ from the rest</td>
 <tr class="even">
 <td>
 <code>COPRO</code>, <code>MIPROv2</code>, <code>SIMBA</code>,
-<code>GEPA</code>
+<code>GEPA</code>, <code>AutoResearch</code>,
+<code>MetaHarness</code>
 </td>
 <td>Score candidates on <code>trainset</code> itself</td>
 </tr>
@@ -356,19 +366,22 @@ candidates compared:</p>
 <span><span class="co">#&gt; 3           20            0.88</span></span>
 <span><span class="co">#&gt; 4          100            0.93</span></span></code></pre></div>
 <p>None of these candidates is better than the others, yet the best of
-20 looks far better than 70%. Optimizers that compare many candidates on
-the same rows, such as <code>MIPROv2</code>, <code>GEPA</code> and
-<code>BootstrapFewShotWithRandomSearch</code>, report this inflated
-number as <code>best_score</code>. More validation rows shrink the
-effect, and a score on test rows that no step has seen removes it. The
-same holds for your own comparisons: if you try ten optimizers and keep
-the best, score the winner again on fresh rows.</p>
+20 looks far better than 70% (<code><a href="https://rdrr.io/r/stats/Binomial.html" class="external-link">rbinom()</a></code> models independent
+candidate errors; shared validation rows correlate mistakes and
+shrink—but do not remove—this winner’s curse). Optimizers that compare
+many candidates on the same rows, such as <code>MIPROv2</code>,
+<code>GEPA</code>, and <code>BootstrapFewShotWithRandomSearch</code>,
+report this inflated number as <code>best_score</code>. More validation
+rows shrink the effect, and a score on test rows that no step has seen
+removes it. The same holds for your own comparisons: if you try ten
+optimizers and keep the best, score the winner again on fresh rows.</p>
 <p>Two other effects push in the same direction. Training rows reach the
 prompt, as demos, as examples shown to the rewriting model, and in
-<code>SIMBA</code>’s fallback rules, so duplicates or near-duplicates
-between the splits inflate every score. Keep the splits disjoint. And a
-test set that you score after every change slowly turns into a
-validation set; score it once per decision.</p>
+<code>SIMBA</code>’s fallback rules (when <code>prompt_model</code> is
+<code>NULL</code>), so duplicates or near-duplicates between the splits
+inflate every score. Keep the splits disjoint. And a test set that you
+score after every change slowly turns into a validation set; score it
+once per decision.</p>
 </div>
 <div class="section level2">
 <h2 id="where-the-model-calls-go">Where the model calls go<a class="anchor" aria-label="anchor" href="#where-the-model-calls-go"></a>
@@ -409,8 +422,9 @@ candidates</td>
 <code>COPRO</code> with the defaults, <code>breadth = 10L</code> and
 <code>depth = 3L</code>
 </td>
-<td>Up to 30 × 50 = 1,500, plus 50 for the baseline and at least 200 to
-find failures</td>
+<td>Up to 30 × 50 = 1,500, plus 50 for the baseline and 20 to 80 to scan
+for failures (20 training rows initially, plus 20 after each improving
+round)</td>
 </tr>
 <tr class="odd">
 <td>

@@ -154,10 +154,12 @@ the model’s own self-report.
 The numeric settings are never sent to the model, so they are not part
 of the request or the cache key. Moving a threshold therefore re-decodes
 cached evidence at no cost, as long as the rest of the specification
-stays the same.
+stays the same. For instance, raising `urgent`’s threshold to `0.8` cuts
+false-alarm pages to on-call engineers, while down-weighting `account`
+to `0.5` reins in over-routing to that queue.
 [`with_decisions()`](https://jameshwade.github.io/dsprrr/reference/with_decisions.md)
 replaces a field’s whole specification, so repeat anything you want to
-keep, here the criteria for `urgent`:
+keep—here the criteria for `urgent`:
 
 ``` r
 
@@ -212,7 +214,9 @@ trainset
 #> 4 How do I export my data to CSV?                 FALSE
 ```
 
-A real `trainset` needs many more rows; `valset` has the same columns.
+A real `trainset` needs many more rows; `valset` (optional) has the same
+columns. Here we pass `fields = "urgent"` because `trainset` only labels
+`urgent`, leaving `severity` and `team` untouched:
 
 ``` r
 
@@ -222,7 +226,7 @@ tuned <- compile(
   triage,
   ReAnchor(metric = urgent_metric, fields = "urgent"),
   trainset,
-  valset = valset,
+  # valset = valset, # optional held-out tibble with the same columns
   .llm = llm
 )
 
@@ -234,10 +238,10 @@ A `ReAnchor` compilation runs in four steps:
 
 1.  Baseline: it runs the module once on the training rows and scores
     it.
-2.  Evidence: it enables evidence decoding for every compatible output
-    and records each row’s probabilities. Fields you configured are used
-    as is. Described `type_boolean()` and `type_enum()` fields without a
-    decision become
+2.  Evidence: it enables evidence decoding for every targeted compatible
+    output (controlled by `fields`, defaulting to all) and records each
+    row’s probabilities. Fields you configured are used as is. Described
+    `type_boolean()` and `type_enum()` fields without a decision become
     [`decision_bool()`](https://jameshwade.github.io/dsprrr/reference/decision_types.md)
     and
     [`decision_choice()`](https://jameshwade.github.io/dsprrr/reference/decision_types.md).
@@ -261,14 +265,17 @@ scored, never fitted on.
 
 Because fitting reuses recorded evidence, a `ReAnchor` compilation costs
 about two passes over the training set (one if every field was already a
-decision) plus up to two passes over `valset`: one before fitting, and
-one after if the fit is accepted.
+decision) plus one pass over `valset`—with the response cache enabled,
+re-scoring `valset` after acceptance re-decodes the cached evidence at
+no extra API cost.
 
 ## A calibrated retrieval gate
 
-Decisions compose with ordinary R code. A common pattern is a Boolean
-gate (“does any passage answer this?”) next to a Choice over candidate
-IDs, so code can refuse to answer when nothing fits:
+Decisions compose with ordinary R code and [retrieval-augmented
+generation](https://jameshwade.github.io/dsprrr/articles/rag-workflows.md).
+A common pattern is a Boolean gate (“does any passage answer this?”)
+next to a Choice over candidate IDs, so code can refuse to answer when
+nothing fits:
 
 ``` r
 

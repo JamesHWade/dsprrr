@@ -96,8 +96,9 @@ settings are left unchanged and a warning is raised.
 
 Give the candidates as `grid`, a data frame with one row per candidate,
 or as `parameters`, which is expanded into a grid: a named list is
-crossed with [`expand.grid()`](https://rdrr.io/r/base/expand.grid.html),
-and a tidymodels parameter set (see
+crossed with
+[`base::expand.grid()`](https://rdrr.io/r/base/expand.grid.html), and a
+tidymodels parameter set (see
 [`module_parameters()`](https://jameshwade.github.io/dsprrr/reference/module_parameters.md))
 is expanded with
 [`dials::grid_regular()`](https://dials.tidymodels.org/reference/grid_regular.html)

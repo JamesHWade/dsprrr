@@ -112,20 +112,37 @@ Other optimizer building blocks:
 ## Examples
 
 ``` r
+add_one <- module_fn(
+  "x -> answer",
+  function(x) list(answer = as.character(as.numeric(x) + 1))
+)
+dataset <- data.frame(x = c("1", "2"), answer = c("2", "3"))
+result <- eval_program(
+  add_one,
+  dataset,
+  metric = metric_exact_match(field = "answer")
+)
+result@mean_score
+#> [1] 1
+result@examples
+#> # A tibble: 2 × 7
+#>   row_id score error predicted        feedback program_trace  input_x
+#>    <int> <dbl> <chr> <list>           <chr>    <list>         <chr>  
+#> 1      1     1 NA    <named list [1]> NA       <dsprrr__ [7]> 1      
+#> 2      2     1 NA    <named list [1]> NA       <dsprrr__ [7]> 2      
+
 if (FALSE) { # \dontrun{
 qa <- module(signature("question -> answer"))
-dataset <- data.frame(
+qa_data <- data.frame(
   question = c("What is 2+2?", "What is 3+3?"),
   answer = c("4", "6")
 )
 
-result <- eval_program(
+eval_program(
   qa,
-  dataset,
+  qa_data,
   metric = metric_exact_match(field = "answer"),
   .llm = ellmer::chat_openai(model = "gpt-6-luna")
 )
-result@mean_score
-result@examples
 } # }
 ```

@@ -17,6 +17,11 @@
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Quick reference">
+<meta name="description" content="Copyable snippets for everyday dsprrr tasks: model setup, signatures, module constructors, running, evaluation, teleprompters, inspection, caching, and saving programs.
+">
+<meta property="og:description" content="Copyable snippets for everyday dsprrr tasks: model setup, signatures, module constructors, running, evaluation, teleprompters, inspection, caching, and saving programs.
+">
+<meta property="og:image" content="https://jameshwade.github.io/dsprrr/logo.svg">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -169,7 +174,8 @@ look up the message in <a href="troubleshooting.html">Troubleshooting</a>.</p>
 <code><a href="../reference/run.html">run()</a></code>, <code><a href="../reference/run_dataset.html">run_dataset()</a></code>,
 <code><a href="../reference/run_async.html">run_async()</a></code>, <code><a href="../reference/run_stream.html">run_stream()</a></code>
 </td>
-<td>a named list, a tibble, a promise, the final output</td>
+<td>a named list (or bare value for bare ellmer types), a tibble, a
+promise, the final output</td>
 </tr>
 <tr class="even">
 <td>Score it</td>
@@ -388,32 +394,45 @@ also ignores arguments it does not know, so a misspelled
 </tr>
 <tr class="even">
 <td><code>chain_of_thought(sig)</code></td>
-<td>the model should reason first; adds a <code>reasoning</code>
-output</td>
+<td>the model should reason first (<code>"rationale"</code>,
+<code>"plan"</code>, or <code>"native"</code>)</td>
 </tr>
 <tr class="odd">
 <td><code>multi_chain_comparison(sig, M = 3L)</code></td>
 <td>several reasoning attempts are compared and merged</td>
 </tr>
 <tr class="even">
+<td><code>rag_module(sig, retriever = f)</code></td>
+<td>retrieve passages from R or a <code>ragnar</code> store before
+answering</td>
+</tr>
+<tr class="odd">
 <td><code>react(sig, tools = list(...))</code></td>
 <td>the model calls R functions as tools</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>program_of_thought(sig, interpreter_factory = r_code_runner)</code></td>
 <td>the model writes R code whose result answers the question</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>code_act(sig, tools = list(...), interpreter_factory = r_code_runner)</code></td>
 <td>tools and R code in one agent</td>
 </tr>
-<tr class="odd">
-<td><code>rlm_module(sig, interpreter_factory = ...)</code></td>
-<td>the model explores large inputs in an R session</td>
-</tr>
 <tr class="even">
+<td>
+<code>rlm_module(sig, interpreter_factory = ...)</code> /
+<code>rlm(...)</code>
+</td>
+<td>experimental: the model explores large inputs in an R session</td>
+</tr>
+<tr class="odd">
 <td><code>flex(sig)</code></td>
 <td>experimental: an optimizer may rewrite the whole program</td>
+</tr>
+<tr class="even">
+<td><code>with_decisions(mod, ...)</code></td>
+<td>experimental: probability-backed boolean/enum thresholds and
+weights</td>
 </tr>
 <tr class="odd">
 <td><code>module_fn(sig, forward)</code></td>
@@ -446,6 +465,7 @@ output</td>
 </table>
 <p><code><a href="../reference/module.html">module()</a></code> takes a <code>Signature</code> object; the
 other constructors also accept a signature string. <a href="advanced-modules.html">Choose a module type</a> compares them.</p>
+<p>Prediction and tool modules:</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">qa</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">cot</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/chain_of_thought.html">chain_of_thought</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span><span class="op">)</span></span>
@@ -457,11 +477,12 @@ other constructors also accept a signature string. <a href="advanced-modules.htm
 <span>  description <span class="op">=</span> <span class="st">"Get today's weather for a city."</span>,</span>
 <span>  arguments <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>city <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span><span class="st">"City name"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
-<span><span class="va">agent</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/react.html">react</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span>, tools <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">weather_tool</span><span class="op">)</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># r_code_runner() (needs callr) runs code in a separate R process.</span></span>
-<span><span class="co"># It is not a sandbox: use it only with trusted input.</span></span>
-<span><span class="va">pot</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/program_of_thought.html">program_of_thought</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span>, interpreter_factory <span class="op">=</span> <span class="va">r_code_runner</span><span class="op">)</span></span>
+<span><span class="va">agent</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/react.html">react</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span>, tools <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">weather_tool</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p>Code-running modules (<code><a href="../reference/r_code_runner.html">r_code_runner()</a></code> needs
+<code>callr</code> and is not a sandbox; use only with trusted
+input):</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">pot</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/program_of_thought.html">program_of_thought</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span>, interpreter_factory <span class="op">=</span> <span class="va">r_code_runner</span><span class="op">)</span></span>
 <span><span class="va">actor</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/code_act.html">code_act</a></span><span class="op">(</span></span>
 <span>  <span class="st">"question -&gt; answer"</span>,</span>
 <span>  tools <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">weather_tool</span><span class="op">)</span>,</span>
@@ -470,9 +491,10 @@ other constructors also accept a signature string. <a href="advanced-modules.htm
 <span><span class="va">analyst</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/rlm_module.html">rlm_module</a></span><span class="op">(</span></span>
 <span>  <span class="st">"document, question -&gt; answer"</span>,</span>
 <span>  interpreter_factory <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="fu"><a href="../reference/r_code_runner.html">r_code_runner</a></span><span class="op">(</span>persistent <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">word_count</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module_fn.html">module_fn</a></span><span class="op">(</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>Wrappers, custom functions, and experimental <code><a href="../reference/flex.html">flex()</a></code>:</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">word_count</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module_fn.html">module_fn</a></span><span class="op">(</span></span>
 <span>  <span class="st">"text -&gt; n_words: int"</span>,</span>
 <span>  <span class="kw">function</span><span class="op">(</span><span class="va">text</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>n_words <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/lengths.html" class="external-link">lengths</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/strsplit.html" class="external-link">strsplit</a></span><span class="op">(</span><span class="va">text</span>, <span class="st">"\\s+"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
@@ -489,10 +511,7 @@ other constructors also accept a signature string. <a href="advanced-modules.htm
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fu"><a href="../reference/assertions.html">assert_output</a></span><span class="op">(</span><span class="op">~</span> <span class="fu"><a href="https://rdrr.io/r/base/nchar.html" class="external-link">nchar</a></span><span class="op">(</span><span class="va">.x</span><span class="op">$</span><span class="va">answer</span><span class="op">)</span> <span class="op">&lt;=</span> <span class="fl">100</span>, <span class="st">"Keep the answer under 100 characters."</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">program</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/flex.html">flex</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Warning: `flex()` is experimental and its module source schema may change</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> The default source is declarative JSON; executable R source requires an</span></span>
-<span><span class="co">#&gt;   explicit interpreter factory.</span></span></code></pre></div>
+<span><span class="va">program</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/warning.html" class="external-link">suppressWarnings</a></span><span class="op">(</span><span class="fu"><a href="../reference/flex.html">flex</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p>Pipelines pass outputs forward by name. The first step receives the
 pipeline inputs; every later step receives only the previous step’s
 outputs plus the fixed inputs given to <code><a href="../reference/step.html">step()</a></code>. In
@@ -500,7 +519,7 @@ outputs plus the fixed inputs given to <code><a href="../reference/step.html">st
 step’s inputs. <code>select</code> keeps only the named output fields of
 a step. See <a href="chaining-modules.html">Chain modules into
 pipelines</a>.</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">summarize</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"article -&gt; summary"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">headline</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"summary -&gt; headline"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">news</span> <span class="op">&lt;-</span> <span class="va">summarize</span> <span class="op"><a href="../reference/pipeline.html">%&gt;&gt;%</a></span> <span class="va">headline</span> <span class="co"># `summary` flows into the second step</span></span>
@@ -515,17 +534,17 @@ pipelines</a>.</p>
 <div class="section level2">
 <h2 id="run">Run<a class="anchor" aria-label="anchor" href="#run"></a>
 </h2>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">reviews</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
 <span>  text <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"I love it"</span>, <span class="st">"Arrived broken"</span>, <span class="st">"Great value"</span>, <span class="st">"Not great, returned it"</span><span class="op">)</span>,</span>
 <span>  sentiment <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"positive"</span>, <span class="st">"negative"</span>, <span class="st">"positive"</span>, <span class="st">"negative"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">classifier</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span></span>
 <span>  <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"text -&gt; sentiment: enum('positive', 'negative', 'neutral')"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># One call returns a named list</span></span>
+<span><span class="co"># One call returns a named list (or bare value for bare ellmer output types)</span></span>
 <span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">classifier</span>, text <span class="op">=</span> <span class="st">"I love it"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
 <span><span class="va">result</span><span class="op">$</span><span class="va">sentiment</span></span>
 <span></span>
@@ -552,9 +571,11 @@ pipelines</a>.</p>
 <span>  .llm <span class="op">=</span> <span class="va">chat</span>,</span>
 <span>  listeners <span class="op">=</span> <span class="fu"><a href="../reference/stream_listener.html">stream_listener</a></span><span class="op">(</span><span class="st">"answer"</span>, \<span class="op">(</span><span class="va">chunk</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="va">chunk</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p>Token streaming needs the coro package and a module with a single
-string output; other modules run normally and the listener fires once
-with the full value.</p>
+<p>Token streaming needs the <code>coro</code> package and a
+<code><a href="../reference/module.html">module()</a></code> with a single string output; prediction modules
+with multiple or non-string outputs run normally and fire the listener
+once with the full value (other module types error on single-string
+listeners when <code>coro</code> is installed).</p>
 </div>
 <div class="section level2">
 <h2 id="evaluate">Evaluate<a class="anchor" aria-label="anchor" href="#evaluate"></a>
@@ -562,7 +583,7 @@ with the full value.</p>
 <p>A metric is called as <code>metric(prediction, expected)</code>. Most
 built-in metrics compare one field, and <code>field</code> names both
 the output field and the data column:</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">prediction</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>sentiment <span class="op">=</span> <span class="st">"positive"</span>, answer <span class="op">=</span> <span class="st">"Paris is the capital of France."</span><span class="op">)</span></span>
 <span><span class="va">expected</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>sentiment <span class="op">=</span> <span class="st">"Positive"</span>, answer <span class="op">=</span> <span class="st">"Paris, France"</span><span class="op">)</span></span>
 <span></span>
@@ -579,14 +600,14 @@ the output field and the data column:</p>
 <p>Inside <code><a href="../reference/evaluate.html">evaluate()</a></code>, <code>prediction</code> is the run
 result and <code>expected</code> is the data row, so a custom metric
 reads fields from both:</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">within_one_star</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">prediction</span>, <span class="va">expected</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="va">prediction</span><span class="op">$</span><span class="va">stars</span> <span class="op">-</span> <span class="va">expected</span><span class="op">$</span><span class="va">stars</span><span class="op">)</span> <span class="op">&lt;=</span> <span class="fl">1</span></span>
 <span><span class="op">}</span></span>
 <span><span class="fu">within_one_star</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>stars <span class="op">=</span> <span class="fl">4L</span><span class="op">)</span>, <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span>stars <span class="op">=</span> <span class="fl">5L</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
 <p>A <code><a href="../reference/module_fn.html">module_fn()</a></code> baseline scores without a model:</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">keyword_baseline</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module_fn.html">module_fn</a></span><span class="op">(</span><span class="st">"text -&gt; sentiment"</span>, <span class="kw">function</span><span class="op">(</span><span class="va">text</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">positive</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grepl</a></span><span class="op">(</span><span class="st">"love|great"</span>, <span class="va">text</span>, ignore.case <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>sentiment <span class="op">=</span> <span class="kw">if</span> <span class="op">(</span><span class="va">positive</span><span class="op">)</span> <span class="st">"positive"</span> <span class="kw">else</span> <span class="st">"negative"</span><span class="op">)</span></span>
@@ -600,7 +621,7 @@ reads fields from both:</p>
 <span><span class="co">#&gt; [1] 0.75</span></span>
 <span><span class="va">baseline</span><span class="op">$</span><span class="va">scores</span></span>
 <span><span class="co">#&gt; [1] 1 1 1 0</span></span></code></pre></div>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span></span>
 <span>  <span class="va">classifier</span>,</span>
 <span>  <span class="va">reviews</span>,</span>
@@ -620,18 +641,20 @@ vitals</a>.</p>
 </h2>
 <p><code>trainset</code> below is a data frame with the same columns as
 <code>reviews</code>, usually a few dozen rows or more.</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># compile() returns a new module; `classifier` is unchanged</span></span>
 <span><span class="va">few_shot</span> <span class="op">&lt;-</span> <span class="va">classifier</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="fu"><a href="../reference/LabeledFewShot.html">LabeledFewShot</a></span><span class="op">(</span>k <span class="op">=</span> <span class="fl">4L</span><span class="op">)</span>, <span class="va">trainset</span><span class="op">)</span></span>
 <span><span class="va">bootstrapped</span> <span class="op">&lt;-</span> <span class="va">classifier</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span></span>
 <span>    <span class="fu"><a href="../reference/BootstrapFewShot.html">BootstrapFewShot</a></span><span class="op">(</span></span>
 <span>      metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"sentiment"</span><span class="op">)</span>,</span>
-<span>      max_bootstrapped_demos <span class="op">=</span> <span class="fl">4L</span></span>
+<span>      max_bootstrapped_demos <span class="op">=</span> <span class="fl">4L</span>,</span>
+<span>      max_labeled_demos <span class="op">=</span> <span class="fl">0L</span> <span class="co"># required when trainset has &lt;= 16 rows</span></span>
 <span>    <span class="op">)</span>,</span>
 <span>    <span class="va">trainset</span>,</span>
 <span>    .llm <span class="op">=</span> <span class="va">chat</span></span>
 <span>  <span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">bootstrapped</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># optimize_grid() changes the module in place</span></span>
 <span><span class="fu"><a href="../reference/optimize_grid.html">optimize_grid</a></span><span class="op">(</span></span>
@@ -719,7 +742,7 @@ candidates</td>
 <td><code>Omni</code></td>
 <td>experimental: explores several teleprompters and continues from the
 best</td>
-<td><code>Omni(metric = m, explorers = list(...), continuation = GEPA(metric = m))</code></td>
+<td><code>Omni(metric = m, explorers = list(a = ..., b = ...), continuation = SIMBA(metric = m))</code></td>
 </tr>
 <tr class="even">
 <td><code>ReAnchor</code></td>
@@ -731,13 +754,13 @@ best</td>
 </table>
 <p><a href="advanced-optimization.html">Choose an optimizer</a> explains
 when to use each. The experimental <code><a href="../reference/AutoResearch.html">AutoResearch()</a></code> and
-<code><a href="../reference/MetaHarness.html">MetaHarness()</a></code> are covered in <a href="agentic-optimization-harnesses.html">Agentic optimization
-harnesses</a>.</p>
+<code><a href="../reference/MetaHarness.html">MetaHarness()</a></code> are covered in <a href="https://jameshwade.github.io/dsprrr/articles/agentic-optimization-harnesses.html">Agentic
+optimization harnesses</a>.</p>
 </div>
 <div class="section level2">
 <h2 id="inspect">Inspect<a class="anchor" aria-label="anchor" href="#inspect"></a>
 </h2>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/get_last_prompt.html">get_last_prompt</a></span><span class="op">(</span><span class="op">)</span> <span class="co"># the last prompt and response, with model, tokens and cost</span></span>
 <span><span class="fu"><a href="../reference/inspect_history.html">inspect_history</a></span><span class="op">(</span>n <span class="op">=</span> <span class="fl">5</span><span class="op">)</span> <span class="co"># a tibble of the last five calls</span></span>
 <span><span class="fu"><a href="../reference/summarize_traces.html">summarize_traces</a></span><span class="op">(</span><span class="va">classifier</span><span class="op">)</span> <span class="co"># calls, tokens, cost and latency for one module</span></span>
@@ -751,18 +774,18 @@ harnesses</a>.</p>
 <p>Identical requests (same model, parameters, prompt and output type)
 are answered from a memory and disk cache. The first cache hit in a
 session prints “Using cached LLM responses”.</p>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/configure_cache.html">configure_cache</a></span><span class="op">(</span>enable_disk <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span> <span class="co"># memory only, for this session</span></span>
 <span><span class="fu"><a href="../reference/cache_stats.html">cache_stats</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ── dsprrr Cache Statistics</span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">•</span> Hit rate: 0%</span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">•</span> Hits: 0</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">•</span> Misses: 0</span></span>
-<span><span class="fu"><a href="../reference/clear_cache.html">clear_cache</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<span><span class="co">#&gt; <span style="color: #00BBBB;">•</span> Misses: 0</span></span></code></pre></div>
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">qa</span>, question <span class="op">=</span> <span class="st">"Suggest a name for a cat."</span>, .llm <span class="op">=</span> <span class="va">chat</span>, .cache <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span> <span class="co"># one call</span></span>
-<span><span class="fu"><a href="../reference/configure_cache.html">configure_cache</a></span><span class="op">(</span>enable <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span> <span class="co"># the rest of the session</span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/clear_cache.html">clear_cache</a></span><span class="op">(</span><span class="op">)</span> <span class="co"># clear active cache</span></span>
+<span><span class="fu"><a href="../reference/configure_cache.html">configure_cache</a></span><span class="op">(</span>enable <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span> <span class="co"># disable for the rest of the session</span></span></code></pre></div>
 <p>In CI, set the environment variable
 <code>DSPRRR_CACHE_ENABLED=false</code>. The disk cache holds prompts
 and responses, so dsprrr uses it only when the directory is private to
@@ -772,7 +795,7 @@ rejected.</p>
 <div class="section level2">
 <h2 id="save-and-reload">Save and reload<a class="anchor" aria-label="anchor" href="#save-and-reload"></a>
 </h2>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/program-artifact.html">save_program</a></span><span class="op">(</span><span class="va">few_shot</span>, <span class="st">"sentiment-classifier.rds"</span><span class="op">)</span></span>
 <span><span class="va">classifier</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/program-artifact.html">load_program</a></span><span class="op">(</span><span class="st">"sentiment-classifier.rds"</span><span class="op">)</span></span>
 <span></span>

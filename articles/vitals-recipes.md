@@ -4,9 +4,11 @@
 LLM applications: a `Task` runs a solver over a dataset, grades each
 answer with a scorer, and writes a log you can browse. This page shows
 how to evaluate a dsprrr module as a vitals solver, choose a scorer,
-read the results, and use vitals scorers as dsprrr metrics. The code
-uses `gpt-6-luna`; the outputs below are recorded responses from
-`gpt-4o-mini`, replayed when the site is built.
+read the results, and use vitals scorers as dsprrr metrics. *The code
+uses `gpt-6-luna`; recorded outputs on the [package
+website](https://jameshwade.github.io/dsprrr/articles/vitals-recipes.html)
+come from `gpt-4o-mini` and are omitted in offline CRAN vignette
+builds.*
 
 ``` r
 
@@ -47,10 +49,10 @@ task <- as_vitals_task(
 
 task$eval()
 #> ℹ Solving
-#> ✔ Solving [1.5s]
+#> ✔ Solving [1.8s]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [64ms]
+#> ✔ Scoring [77ms]
 #> 
 task$get_samples()
 #> # A tibble: 2 × 9
@@ -121,10 +123,10 @@ test_task <- as_vitals_task(
 
 test_task$eval()
 #> ℹ Solving
-#> ✔ Solving [630ms]
+#> ✔ Solving [840ms]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [50ms]
+#> ✔ Scoring [67ms]
 #> 
 
 test_task$get_samples()[c("target", "result", "score")]
@@ -184,10 +186,10 @@ task <- as_vitals_task(
 
 task$eval()
 #> ℹ Solving
-#> ✔ Solving [620ms]
+#> ✔ Solving [818ms]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [208ms]
+#> ✔ Scoring [274ms]
 #> 
 task$get_samples()
 #> # A tibble: 2 × 10
@@ -225,10 +227,10 @@ task <- as_vitals_task(
 
 task$eval()
 #> ℹ Solving
-#> ✔ Solving [615ms]
+#> ✔ Solving [814ms]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [46ms]
+#> ✔ Scoring [60ms]
 #> 
 task$get_samples()
 #> # A tibble: 2 × 9
@@ -274,10 +276,10 @@ task <- as_vitals_task(
 
 task$eval()
 #> ℹ Solving
-#> ✔ Solving [1.5s]
+#> ✔ Solving [2s]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [91ms]
+#> ✔ Scoring [116ms]
 #> 
 
 samples <- task$get_samples()
@@ -342,16 +344,16 @@ for (name in c("basic", "cot")) {
   results[[name]] <- mean(task$get_samples()$score == "C")
 }
 #> ℹ Solving
-#> ✔ Solving [623ms]
+#> ✔ Solving [874ms]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [173ms]
+#> ✔ Scoring [220ms]
 #> 
 #> ℹ Solving
-#> ✔ Solving [686ms]
+#> ✔ Solving [832ms]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [202ms]
+#> ✔ Scoring [259ms]
 #> 
 
 tibble(variant = names(results), accuracy = unlist(results))
@@ -403,10 +405,10 @@ task <- as_vitals_task(
 
 task$eval()
 #> ℹ Solving
-#> ✔ Solving [2.5s]
+#> ✔ Solving [3.3s]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [141ms]
+#> ✔ Scoring [184ms]
 #> 
 
 scores <- task$get_samples()
@@ -433,8 +435,9 @@ to run rows in parallel. Concurrent rows skip dsprrr’s response cache.
 
 [`as_vitals_solver()`](https://jameshwade.github.io/dsprrr/reference/as_vitals_solver.md)
 wraps a module as a vitals solver, for when you want to call
-`Task$new()` directly. A module whose only input is named `input` reads
-vitals’ `input` column as is; for other or multiple inputs, use
+`Task$new()` directly. Any single-input module reads vitals’ `input`
+column directly (even when the signature names the input something else,
+such as `question`); for modules with multiple inputs, use
 [`as_vitals_task()`](https://jameshwade.github.io/dsprrr/reference/as_vitals_task.md),
 which packs them into that column for you.
 
@@ -505,6 +508,17 @@ exist too, but they currently show the grader the prediction as R list
 syntax and no question unless the data has an `input` column; for model
 grading, use
 [`model_graded_qa()`](https://vitals.tidyverse.org/reference/scorer_model.html)
-in a vitals Task as shown above. For how metrics drive optimization, see
-[Metrics and
-evaluation](https://jameshwade.github.io/dsprrr/articles/concepts-why-metrics-matter.md).
+in a vitals Task as shown above.
+
+## See also
+
+- [`as_vitals_samples()`](https://jameshwade.github.io/dsprrr/reference/as_vitals_samples.md),
+  [`as_vitals_cost()`](https://jameshwade.github.io/dsprrr/reference/as_vitals_cost.md),
+  [`as_dsprrr_traces()`](https://jameshwade.github.io/dsprrr/reference/as_dsprrr_traces.md),
+  and
+  [`pin_vitals_log()`](https://jameshwade.github.io/dsprrr/reference/pin_vitals_log.md)
+  convert samples, costs, and traces between `dsprrr` and `vitals` (or
+  persist evaluation results to a `pins` board).
+- [Metrics and
+  evaluation](https://jameshwade.github.io/dsprrr/articles/concepts-why-metrics-matter.md)
+  covers how metrics and sample sizes drive optimization.

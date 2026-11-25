@@ -3,11 +3,11 @@
 No optimizer wins on every task. Demo selection may be the decisive
 lever for one module, while instruction search or reflective mutation
 wins for another.
-[`Omni()`](https://jameshwade.github.io/dsprrr/reference/Omni.md) runs
-several teleprompters from the same seed program, scores every result
-with one validation metric, and hands the strongest candidate to a fresh
-continuation optimizer. This page shows how to configure it, budget it
-fairly, and read what it did.
+[`Omni()`](https://jameshwade.github.io/dsprrr/reference/Omni.md)
+*(experimental)* runs several teleprompters from the same seed program,
+scores every result with one validation metric, and hands the strongest
+candidate to a fresh continuation optimizer. This page shows how to
+configure it, budget it fairly, and read what it did.
 
 The design follows the [`omni`
 meta-optimizer](https://gepa.dev/blog/2026/07/22/optimize-anything-omni/)
@@ -112,15 +112,18 @@ strategy rather than its position in the list.
 Choose a continuation that can edit an already compiled program, because
 unless the seed wins, the continuation starts from an explorer’s output.
 [`COPRO()`](https://jameshwade.github.io/dsprrr/reference/COPRO.md),
-[`SIMBA()`](https://jameshwade.github.io/dsprrr/reference/SIMBA.md) and
+[`SIMBA()`](https://jameshwade.github.io/dsprrr/reference/SIMBA.md), and
 [`BootstrapFewShotWithRandomSearch()`](https://jameshwade.github.io/dsprrr/reference/BootstrapFewShotWithRandomSearch.md)
 can. [`GEPA()`](https://jameshwade.github.io/dsprrr/reference/GEPA.md),
-[`AutoResearch()`](https://jameshwade.github.io/dsprrr/reference/AutoResearch.md)
+[`AutoResearch()`](https://jameshwade.github.io/dsprrr/reference/AutoResearch.md),
 and
 [`MetaHarness()`](https://jameshwade.github.io/dsprrr/reference/MetaHarness.md)
-leave compiled modules alone: as a continuation, GEPA returns the winner
-unchanged and the two harnesses fail, in which case Omni keeps the
-exploration winner. Use those three as explorers.
+respect compiled module boundaries in
+[`named_parameters()`](https://jameshwade.github.io/dsprrr/reference/module-graph.md)
+and leave already-compiled modules untouched: as a continuation, GEPA
+returns the winner unchanged and the two harnesses error (in which case
+Omni keeps the exploration winner). Use those three as explorers
+instead.
 
 To pass compile-time arguments to one optimizer, name it. These
 arguments cannot replace Omni’s own `program`, `trainset`, `valset` or
@@ -191,6 +194,14 @@ omni_result <- optimization_result(compiled)$extensions$omni
 
 candidates <- omni_result$candidate_programs
 candidates[, c("phase", "optimizer", "score", "selected", "error")]
+#> # A tibble: 5 x 5
+#>   phase        optimizer    score selected error
+#>   <chr>        <chr>        <dbl> <lgl>    <chr>
+#> 1 baseline     seed         0.62  FALSE    NA
+#> 2 exploration  demos        0.74  FALSE    NA
+#> 3 exploration  instructions 0.78  FALSE    NA
+#> 4 exploration  reflection   0.81  FALSE    NA
+#> 5 continuation SIMBA        0.85  TRUE     NA
 ```
 
 The `program_config` list-column holds each candidate module’s `config`

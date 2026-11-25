@@ -123,7 +123,8 @@ treat every value as one context object whatever its length; use
 
 <dt id="arg--history">.history<a class="anchor" aria-label="anchor" href="#arg--history"></a></dt>
 <dd><p>A <code>dsprrr_history</code> from <code><a href="conversation_history.html">conversation_history()</a></code> or
-<code><a href="load_history.html">load_history()</a></code>. The default <code>NULL</code> keeps existing Chat behavior. A
+<code><a href="load_history.html">load_history()</a></code>. With <code>NULL</code> (the default), <code>run()</code> uses the Chat's
+current turns unchanged. A
 non-<code>NULL</code> history is supported for scalar root <code><a href="react.html">react()</a></code> and
 <code><a href="rlm_module.html">rlm_module()</a></code> calls and requires <code>.return_format = "structured"</code>; the
 result carries the new history in <code>metadata$conversation_history</code>.

@@ -1,12 +1,11 @@
 # Compile and optimize
 
 [`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md)
-runs an optimizer, called a teleprompter, over a module and a set of
-labeled examples, and returns a copy of the module with new demos or
-instructions. This guide goes through one complete run: define the task,
-the labeled data and the metric, compile with two teleprompters, score
-the result on rows the optimizer never saw, check what changed, and save
-the compiled module.
+runs an optimizer—called a *teleprompter*—over a module and a set of
+labeled examples, and returns a new copy of the module with tuned demos
+or instructions. This guide walks through one complete run: define the
+task, data, and metric, compile with two teleprompters, score the result
+on held-out rows, inspect what changed, and save the compiled module.
 
 ## Setup
 
@@ -22,11 +21,12 @@ search_llm <- chat_openai(
 )
 ```
 
-`llm` runs and scores the module. `search_llm` thinks less, which makes
-it cheaper, and is used only while searching. The output on this page
-was recorded with `gpt-5-mini` (runs) and `gpt-4o-mini` (search) and is
-replayed when the site is built, so `gpt-6-luna` may give different
-answers and scores.
+`llm` runs and scores the module; `search_llm` uses lower reasoning
+effort to keep the search cheaper. *Recorded outputs on the [package
+website](https://jameshwade.github.io/dsprrr/articles/compilation-optimization.html)
+were captured with `gpt-5-mini` (runs) and `gpt-4o-mini` (search);
+`gpt-6-luna` may give different answers and scores, and offline CRAN
+vignettes omit recorded outputs.*
 
 ## Task, data and metric
 
@@ -105,8 +105,8 @@ category_metric(
 This metric checks the category only. The evaluation below shows what
 that leaves out.
 
-Before compiling anything, score the module as it is. That baseline is
-the number a compiled module has to beat:
+On your own data, score the uncompiled module first so you have a
+baseline to beat:
 
 ``` r
 
@@ -165,9 +165,9 @@ attaches `k` demos drawn from the training rows.
 email_variants <- data.frame(
   id = c("professional", "friendly", "analytical"),
   instructions_suffix = c(
-    ". Use professional business judgment.",
-    ". Consider customer satisfaction and relationship.",
-    ". Analyze linguistic patterns and intent markers."
+    "Use professional business judgment.",
+    "Consider customer satisfaction and relationship.",
+    "Analyze linguistic patterns and intent markers."
   )
 )
 
@@ -242,18 +242,19 @@ tibble::tibble(
 #> 3 Your team went above and beyond. Thank you! low      low
 ```
 
-Both misses are priorities. Neither the metric nor the demos covered
-priority, so the search had no way to improve it: an optimizer improves
-only what its metric measures. Compare `results$mean_score` with the
-baseline from before, on the same rows, and keep the compiled module
-only if it wins there.
+In the recorded run, both misses are priorities. Neither the metric nor
+the demos covered priority, so the search had no way to improve it: an
+optimizer improves only what its metric measures. Always compare
+`results$mean_score` against your uncompiled baseline on the same
+held-out rows, and keep the compiled module only if it wins there.
 
 ## Inspect what changed
 
 [`optimization_result()`](https://jameshwade.github.io/dsprrr/reference/optimization_result.md)
-reports the same fields for every optimizer: `best_score`,
-`best_params`, `trials`, `lineage`, `budget`, `stop_reason`, and
-optimizer-specific details under `extensions`.
+returns a uniform contract across every optimizer, including `status`,
+`baseline_score`, `best_score`, `best_params`, `trials`, `lineage`,
+`budget`, `stop_reason`, and optimizer-specific details under
+`extensions`:
 
 ``` r
 
@@ -357,13 +358,21 @@ bootstrapped <- email_classifier |>
 ```
 
 [`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md)
-always returns a copy. To tune settings such as reasoning effort on the
-module itself, use
+always returns a copy. To tune settings such as `reasoning_effort` on
+the module itself, use
 [`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md),
-which updates the module in place ([Tutorial
-5](https://jameshwade.github.io/dsprrr/articles/tutorial-optimize-your-module.md)
-walks through it).
+which updates the module in place.
 
-[Choose an
-optimizer](https://jameshwade.github.io/dsprrr/articles/advanced-optimization.md)
-compares the eleven teleprompters and shows how to call each one.
+## Where to go next
+
+- [Choose an
+  optimizer](https://jameshwade.github.io/dsprrr/articles/advanced-optimization.md)
+  compares all built-in teleprompters and shows how to call each one.
+- [Tutorial 5: Optimize a
+  module](https://jameshwade.github.io/dsprrr/articles/tutorial-optimize-your-module.md)
+  walks through
+  [`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md).
+- [How optimization
+  works](https://jameshwade.github.io/dsprrr/articles/concepts-optimization-theory.md)
+  explains the trade-offs behind search budgets, overfitting, and
+  validation splits.

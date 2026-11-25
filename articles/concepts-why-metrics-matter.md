@@ -119,38 +119,48 @@ confident_match(list(sentiment = "positive", confidence = 0.6), row)
 #> [1] FALSE
 ```
 
-### Trace-aware metrics
+### Feedback and trace-aware metrics
 
-Sometimes output correctness is not enough. You may also need to score
-whether the program used tools, stayed within an execution policy, or
-produced a useful trajectory for a reflective optimizer.
+Reflective optimizers such as
+[`GEPA()`](https://jameshwade.github.io/dsprrr/reference/GEPA.md) can
+learn faster when a metric explains *why* a prediction missed. Wrap a
+two-argument metric in
+[`metric_with_feedback()`](https://jameshwade.github.io/dsprrr/reference/metric_with_feedback.md)
+to return `list(score = ..., feedback = ...)`.
+
+When output correctness alone is not enough—for instance, you also want
+to penalize runaway token budgets, check tool calls, or verify a
+trajectory—use
 [`metric_with_trace()`](https://jameshwade.github.io/dsprrr/reference/metric_with_trace.md)
-marks a three-argument metric that receives a program-trace envelope:
+to receive a third `program_trace` argument:
 
 ``` r
 
-metric <- metric_with_trace(
+budget_metric <- metric_with_trace(
   function(prediction, expected, program_trace) {
     correct <- identical(prediction$sentiment, expected$sentiment)
+    tokens <- program_trace$metadata$total_tokens %||% 0L
+    over_budget <- tokens > 500L
     list(
-      score = as.numeric(correct),
-      feedback = paste(
-        "Evaluation status:",
-        program_trace$status,
-        "- events:",
-        length(program_trace$events)
-      )
+      score = if (correct && !over_budget) 1 else if (correct) 0.5 else 0,
+      feedback = if (over_budget) {
+        paste("Correct label, but used", tokens, "tokens (budget: 500).")
+      } else if (!correct) {
+        paste("Expected", expected$sentiment, "but got", prediction$sentiment)
+      } else {
+        "Correct and within token budget."
+      }
     )
   },
   field = "sentiment"
 )
 ```
 
-The envelope contains `row_id`, `epoch`, `status`, ordered module
-`events`, and per-row `metadata`. The metric may return a scalar score
-or `list(score = ..., feedback = ...)`, so the same function can guide
-reflective optimizers. Ordinary two-argument metrics continue to work
-unchanged.
+Passing `field = "sentiment"` tells downstream optimizers such as
+[`GEPA()`](https://jameshwade.github.io/dsprrr/reference/GEPA.md) which
+output field the metric targets. The `program_trace` envelope contains
+`row_id`, `epoch`, `status`, ordered module `events`, and per-row
+`metadata`. Ordinary two-argument metrics continue to work unchanged.
 
 Trace events can contain prompts, inputs, and model responses. Treat
 them as potentially sensitive when storing or exporting evaluation
@@ -232,6 +242,12 @@ That number is the one to beat.
 
 ### 3. Measure every change
 
+With a vague instruction, `mod_v1` often replies in full sentences such
+as `"The capital of France is Paris."`, which scores 0 on exact match
+against `"Paris"`. Adding a length constraint (`mod_v2`) and a worked
+example (`mod_v3`) lets you measure whether each tweak actually moves
+the score:
+
 ``` r
 
 concise_sig <- append_instructions(base_sig, "Use at most five words.")
@@ -240,7 +256,7 @@ v2 <- evaluate(mod_v2, eval_data, metric, .llm = llm)
 
 mod_v3 <- mod_v2$copy()
 mod_v3$demos <- list(
-  list(inputs = list(question = "What is 3+3?"), output = "6")
+  list(inputs = list(question = "What is 3+3?"), output = list(answer = "6"))
 )
 v3 <- evaluate(mod_v3, eval_data, metric, .llm = llm)
 

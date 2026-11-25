@@ -15,7 +15,7 @@ library(dsprrr)
 |----|----|----|
 | Describe the task | [`signature()`](https://jameshwade.github.io/dsprrr/reference/signature.md) | a `Signature` |
 | Build a program | [`module()`](https://jameshwade.github.io/dsprrr/reference/module.md), [`chain_of_thought()`](https://jameshwade.github.io/dsprrr/reference/chain_of_thought.md), [`react()`](https://jameshwade.github.io/dsprrr/reference/react.md), … | a module |
-| Run it | [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md), [`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md), [`run_async()`](https://jameshwade.github.io/dsprrr/reference/run_async.md), [`run_stream()`](https://jameshwade.github.io/dsprrr/reference/run_stream.md) | a named list, a tibble, a promise, the final output |
+| Run it | [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md), [`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md), [`run_async()`](https://jameshwade.github.io/dsprrr/reference/run_async.md), [`run_stream()`](https://jameshwade.github.io/dsprrr/reference/run_stream.md) | a named list (or bare value for bare ellmer types), a tibble, a promise, the final output |
 | Score it | [`evaluate()`](https://jameshwade.github.io/dsprrr/reference/evaluate.md) with a metric | a list with `mean_score`, `scores`, `n_errors` |
 | Improve it | [`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md) with a teleprompter | a new module (the input is unchanged) |
 |  | [`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md) | the same module, changed in place |
@@ -149,13 +149,15 @@ review_sig <- signature(
 | Constructor | Use it when |
 |----|----|
 | `module(sig)` | one structured prediction per call |
-| `chain_of_thought(sig)` | the model should reason first; adds a `reasoning` output |
+| `chain_of_thought(sig)` | the model should reason first (`"rationale"`, `"plan"`, or `"native"`) |
 | `multi_chain_comparison(sig, M = 3L)` | several reasoning attempts are compared and merged |
+| `rag_module(sig, retriever = f)` | retrieve passages from R or a `ragnar` store before answering |
 | `react(sig, tools = list(...))` | the model calls R functions as tools |
 | `program_of_thought(sig, interpreter_factory = r_code_runner)` | the model writes R code whose result answers the question |
 | `code_act(sig, tools = list(...), interpreter_factory = r_code_runner)` | tools and R code in one agent |
-| `rlm_module(sig, interpreter_factory = ...)` | the model explores large inputs in an R session |
+| `rlm_module(sig, interpreter_factory = ...)` / `rlm(...)` | experimental: the model explores large inputs in an R session |
 | `flex(sig)` | experimental: an optimizer may rewrite the whole program |
+| `with_decisions(mod, ...)` | experimental: probability-backed boolean/enum thresholds and weights |
 | `module_fn(sig, forward)` | plain R code with the module interface |
 | `best_of_n(mod, N = 5L, reward_fn = f)` | sample several answers and keep the one with the highest reward |
 | `refine(mod, N = 3L, reward_fn = f)` | retry with feedback until the reward passes |
@@ -168,6 +170,8 @@ takes a `Signature` object; the other constructors also accept a
 signature string. [Choose a module
 type](https://jameshwade.github.io/dsprrr/articles/advanced-modules.md)
 compares them.
+
+Prediction and tool modules:
 
 ``` r
 
@@ -182,9 +186,14 @@ weather_tool <- ellmer::tool(
   arguments = list(city = ellmer::type_string("City name"))
 )
 agent <- react("question -> answer", tools = list(weather_tool))
+```
 
-# r_code_runner() (needs callr) runs code in a separate R process.
-# It is not a sandbox: use it only with trusted input.
+Code-running modules
+([`r_code_runner()`](https://jameshwade.github.io/dsprrr/reference/r_code_runner.md)
+needs `callr` and is not a sandbox; use only with trusted input):
+
+``` r
+
 pot <- program_of_thought("question -> answer", interpreter_factory = r_code_runner)
 actor <- code_act(
   "question -> answer",
@@ -195,6 +204,12 @@ analyst <- rlm_module(
   "document, question -> answer",
   interpreter_factory = function() r_code_runner(persistent = TRUE)
 )
+```
+
+Wrappers, custom functions, and experimental
+[`flex()`](https://jameshwade.github.io/dsprrr/reference/flex.md):
+
+``` r
 
 word_count <- module_fn(
   "text -> n_words: int",
@@ -213,10 +228,7 @@ checked <- with_assertions(
   list(assert_output(~ nchar(.x$answer) <= 100, "Keep the answer under 100 characters."))
 )
 
-program <- flex("question -> answer")
-#> Warning: `flex()` is experimental and its module source schema may change
-#> ℹ The default source is declarative JSON; executable R source requires an
-#>   explicit interpreter factory.
+program <- suppressWarnings(flex("question -> answer"))
 ```
 
 Pipelines pass outputs forward by name. The first step receives the
@@ -258,7 +270,7 @@ classifier <- module(
   signature("text -> sentiment: enum('positive', 'negative', 'neutral')")
 )
 
-# One call returns a named list
+# One call returns a named list (or bare value for bare ellmer output types)
 result <- run(classifier, text = "I love it", .llm = chat)
 result$sentiment
 
@@ -287,9 +299,12 @@ run_stream(
 )
 ```
 
-Token streaming needs the coro package and a module with a single string
-output; other modules run normally and the listener fires once with the
-full value.
+Token streaming needs the `coro` package and a
+[`module()`](https://jameshwade.github.io/dsprrr/reference/module.md)
+with a single string output; prediction modules with multiple or
+non-string outputs run normally and fire the listener once with the full
+value (other module types error on single-string listeners when `coro`
+is installed).
 
 ## Evaluate
 
@@ -384,11 +399,13 @@ bootstrapped <- classifier |>
   compile(
     BootstrapFewShot(
       metric = metric_exact_match(field = "sentiment"),
-      max_bootstrapped_demos = 4L
+      max_bootstrapped_demos = 4L,
+      max_labeled_demos = 0L # required when trainset has <= 16 rows
     ),
     trainset,
     .llm = chat
   )
+optimization_result(bootstrapped)
 
 # optimize_grid() changes the module in place
 optimize_grid(
@@ -423,7 +440,7 @@ programs.
 | `SIMBA` | rules and demos learned from hard examples (simplified) | `SIMBA(metric = m, max_steps = 4L)` |
 | `GEPA` | instructions or Flex source, by reflecting on failures; reads [`metric_with_feedback()`](https://jameshwade.github.io/dsprrr/reference/metric_with_feedback.md) feedback | `GEPA(metric = m, generations = 5L)` |
 | `BetterTogether` | runs several teleprompters in sequence | `BetterTogether(metric = m, p = BootstrapFewShot(metric = m), g = GEPA(metric = m), default_strategy = "p -> g")` |
-| `Omni` | experimental: explores several teleprompters and continues from the best | `Omni(metric = m, explorers = list(...), continuation = GEPA(metric = m))` |
+| `Omni` | experimental: explores several teleprompters and continues from the best | `Omni(metric = m, explorers = list(a = ..., b = ...), continuation = SIMBA(metric = m))` |
 | `ReAnchor` | experimental: fits the thresholds, cuts and weights of [`with_decisions()`](https://jameshwade.github.io/dsprrr/reference/with_decisions.md) outputs | `ReAnchor(metric = m)` |
 
 [Choose an
@@ -433,7 +450,7 @@ explains when to use each. The experimental
 and
 [`MetaHarness()`](https://jameshwade.github.io/dsprrr/reference/MetaHarness.md)
 are covered in [Agentic optimization
-harnesses](https://jameshwade.github.io/dsprrr/articles/agentic-optimization-harnesses.md).
+harnesses](https://jameshwade.github.io/dsprrr/articles/agentic-optimization-harnesses.html).
 
 ## Inspect
 
@@ -464,13 +481,13 @@ cache_stats()
 #> • Hit rate: 0%
 #> • Hits: 0
 #> • Misses: 0
-clear_cache()
 ```
 
 ``` r
 
 run(qa, question = "Suggest a name for a cat.", .llm = chat, .cache = FALSE) # one call
-configure_cache(enable = FALSE) # the rest of the session
+clear_cache() # clear active cache
+configure_cache(enable = FALSE) # disable for the rest of the session
 ```
 
 In CI, set the environment variable `DSPRRR_CACHE_ENABLED=false`. The

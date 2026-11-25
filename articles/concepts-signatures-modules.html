@@ -17,6 +17,11 @@
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="How dsprrr works">
+<meta name="description" content="The core mental model behind dsprrr: immutable S7 signatures, stateful R6 modules, the five-function lifecycle, and when plain prompting is still enough.
+">
+<meta property="og:description" content="The core mental model behind dsprrr: immutable S7 signatures, stateful R6 modules, the five-function lifecycle, and when plain prompting is still enough.
+">
+<meta property="og:image" content="https://jameshwade.github.io/dsprrr/logo.svg">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -171,9 +176,8 @@ task, <code><a href="../reference/compile.html">compile()</a></code> fits the pr
 <span><span class="va">chat</span><span class="op">$</span><span class="fu">chat</span><span class="op">(</span></span>
 <span>  <span class="st">"Is this review positive, negative or neutral? The battery died after a week."</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p>The reply is a sentence you have to parse, the wording is frozen
-inside the string, and you have no measure of how often it is right. The
-same task in dsprrr:</p>
+<p>That call returns free-form prose that you have to parse, with the
+wording hard-coded inside the string. The same task in dsprrr:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">classify</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
 <span>  <span class="st">"review -&gt; sentiment: enum('positive', 'negative', 'neutral')"</span>,</span>
@@ -209,8 +213,9 @@ it:</p>
 <span></span>
 <span><span class="va">before</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span><span class="va">classify</span>, <span class="va">splits</span><span class="op">$</span><span class="va">val</span>, <span class="va">metric</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
 <span></span>
+<span><span class="co"># LabeledFewShot copies training rows into demos without making any model calls</span></span>
 <span><span class="va">tuned</span> <span class="op">&lt;-</span> <span class="va">classify</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="fu"><a href="../reference/LabeledFewShot.html">LabeledFewShot</a></span><span class="op">(</span>k <span class="op">=</span> <span class="fl">3L</span><span class="op">)</span>, <span class="va">splits</span><span class="op">$</span><span class="va">train</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="fu"><a href="../reference/LabeledFewShot.html">LabeledFewShot</a></span><span class="op">(</span>k <span class="op">=</span> <span class="fl">3L</span><span class="op">)</span>, <span class="va">splits</span><span class="op">$</span><span class="va">train</span><span class="op">)</span></span>
 <span><span class="va">after</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span><span class="va">tuned</span>, <span class="va">splits</span><span class="op">$</span><span class="va">val</span>, <span class="va">metric</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>before <span class="op">=</span> <span class="va">before</span><span class="op">$</span><span class="va">mean_score</span>, after <span class="op">=</span> <span class="va">after</span><span class="op">$</span><span class="va">mean_score</span><span class="op">)</span></span></code></pre></div>
@@ -292,7 +297,7 @@ parts that vary between versions of the program:</p>
 </tr>
 <tr class="even">
 <td><code>mod$demos</code></td>
-<td>Few-shot examples</td>
+<td>Few-shot examples (on prediction modules)</td>
 <td>
 <code><a href="../reference/compile.html">compile()</a></code> with <code><a href="../reference/LabeledFewShot.html">LabeledFewShot()</a></code> or
 <code><a href="../reference/BootstrapFewShot.html">BootstrapFewShot()</a></code>
@@ -345,7 +350,8 @@ and response.</p>
 <div class="section level2">
 <h2 id="running-evaluating-and-compiling">Running, evaluating and compiling<a class="anchor" aria-label="anchor" href="#running-evaluating-and-compiling"></a>
 </h2>
-<p>Five functions cover the life of a module:</p>
+<p>Five functions cover the full
+lifecycle—<code>signature() |&gt; module() |&gt; run() |&gt; evaluate() |&gt; compile()</code>:</p>
 <table class="table">
 <colgroup>
 <col width="25%">

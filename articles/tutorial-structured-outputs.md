@@ -2,10 +2,11 @@
 
 The classifier in [Tutorial
 2](https://jameshwade.github.io/dsprrr/articles/tutorial-build-classifier.md)
-returns one label per text. Extraction needs more: a headline and a
-sentiment, the people named in an article, the sender and action items
-of an email. By the end of this tutorial you can declare outputs like
-these and get them back as R lists and tibbles with a fixed shape.
+returns one label per text. Real extraction tasks usually need more: a
+headline and a sentiment, the people named in an article, or the sender
+and action items of an email. This tutorial shows how to declare
+multi-field, array, nested, and optional outputs so they come back as
+typed R lists and tibbles.
 
 ``` r
 
@@ -16,8 +17,8 @@ library(tibble)
 chat <- chat_openai(model = "gpt-6-luna")
 ```
 
-The answers on this page were recorded with `gpt-4.1` and are replayed
-when the site is built, so `gpt-6-luna` may word them differently.
+*Recorded outputs on the package website were captured with `gpt-4.1`;
+`gpt-6-luna` may word them differently.*
 
 ## Return several fields
 
@@ -81,8 +82,9 @@ is an integer and the other two fields are character strings.
 
 ## Describe fields with `type_object()`
 
-The string notation cannot describe an output. For that, and for nested
-records, build the output from ellmer types.
+The string notation names and types outputs, but it cannot attach
+descriptions to individual output fields. For field descriptions and
+nested records, build the output from ellmer types.
 [`type_object()`](https://ellmer.tidyverse.org/reference/type_boolean.html)
 takes one argument per field:
 
@@ -285,9 +287,9 @@ triage <- module(sig)
 
 As in Tutorial 2,
 [`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md)
-returns a `result` list-column of named lists. Turn each record into a
-one-row tibble and bind them to get one row per email and a typed column
-per field:
+returns a `result` list-column of named lists alongside your original
+columns. When every output field is scalar, turn each record into a
+one-row tibble, bind the rows, and keep `id` attached:
 
 ``` r
 
@@ -302,16 +304,24 @@ emails <- tibble(
 
 results <- run_dataset(triage, emails, .llm = chat)
 
-results$result |>
+fields <- results$result |>
   purrr::map(as_tibble) |>
   purrr::list_rbind()
-#> # A tibble: 3 × 4
-#>   category summary                            action_required suggested_response
-#>   <chr>    <chr>                              <lgl>           <chr>             
-#> 1 meeting  Meeting scheduled for tomorrow at… TRUE            reply_now         
-#> 2 fyi      Office closure on Monday due to t… FALSE           archive           
-#> 3 urgent   Server is down and immediate assi… TRUE            reply_now
+
+tibble::as_tibble(cbind(results["id"], fields))
+#> # A tibble: 3 × 5
+#>      id category summary                      action_required suggested_response
+#>   <int> <chr>    <chr>                        <lgl>           <chr>             
+#> 1     1 meeting  Meeting scheduled for tomor… TRUE            reply_now         
+#> 2     2 fyi      Office closure on Monday du… FALSE           archive           
+#> 3     3 urgent   Server is down and immediat… TRUE            reply_now
 ```
+
+([`as_tibble()`](https://tibble.tidyverse.org/reference/as_tibble.html)
+assumes every field is length 1; if a record contains a
+[`type_array()`](https://ellmer.tidyverse.org/reference/type_boolean.html),
+keep it as a list-column or unnest with
+[`tidyr::unnest_wider()`](https://tidyr.tidyverse.org/reference/unnest_wider.html).)
 
 ## Allow missing values
 
@@ -335,9 +345,12 @@ sig <- signature(
 event_extractor <- module(sig)
 
 run(event_extractor, text = "The contract renews on 1 March 2027.", .llm = chat)
+#> $event: "Contract renewal"
+#> $date:  "2027-03-01"
 
 coffee <- run(event_extractor, text = "We should get coffee sometime.", .llm = chat)
 is.null(coffee$date)
+#> [1] TRUE
 ```
 
 When the model leaves the date out, `coffee$date` is `NULL`, so test for

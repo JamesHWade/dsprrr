@@ -17,6 +17,11 @@
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Use dsprrr with tidymodels">
+<meta name="description" content="Score dsprrr predictions with yardstick, build tuning grids with dials, and wrap zero-shot modules in the llm_predict() parsnip model specification.
+">
+<meta property="og:description" content="Score dsprrr predictions with yardstick, build tuning grids with dials, and wrap zero-shot modules in the llm_predict() parsnip model specification.
+">
+<meta property="og:image" content="https://jameshwade.github.io/dsprrr/logo.svg">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -132,19 +137,20 @@
 
     
     
-<p>This page shows how dsprrr fits with tidymodels today: score module
-output with yardstick, and build grids for <code><a href="../reference/optimize_grid.html">optimize_grid()</a></code>
-with dials. It also explains what the parsnip model
-<code><a href="../reference/llm_predict.html">llm_predict()</a></code> does, and why it can’t be fitted yet.</p>
+<p>dsprrr integrates with tidymodels in three places: scoring module
+predictions with <code>yardstick</code>, building parameter grids for
+<code><a href="../reference/optimize_grid.html">optimize_grid()</a></code> with <code>dials</code>, and wrapping
+zero-shot prediction modules in the <code><a href="../reference/llm_predict.html">llm_predict()</a></code>
+<code>parsnip</code> model specification.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/dsprrr" class="external-link">dsprrr</a></span><span class="op">)</span></span></code></pre></div>
 <div class="section level2">
 <h2 id="score-predictions-with-yardstick">Score predictions with yardstick<a class="anchor" aria-label="anchor" href="#score-predictions-with-yardstick"></a>
 </h2>
 <p>Run the module over a data frame with <code><a href="../reference/run_dataset.html">run_dataset()</a></code>,
-which keeps every column and adds a <code>result</code> list column.
+which keeps every column and adds a <code>result</code> list-column.
 Turn the predicted field into a factor with the truth’s levels, and any
-yardstick metric works:</p>
+<code>yardstick</code> metric works:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/tidymodels/yardstick" class="external-link">yardstick</a></span><span class="op">)</span></span>
 <span></span>
@@ -174,16 +180,17 @@ yardstick metric works:</p>
 <span><span class="fu"><a href="https://yardstick.tidymodels.org/reference/conf_mat.html" class="external-link">conf_mat</a></span><span class="op">(</span><span class="va">scored</span>, truth <span class="op">=</span> <span class="va">sentiment</span>, estimate <span class="op">=</span> <span class="va">.pred_class</span><span class="op">)</span></span></code></pre></div>
 <p>A row whose call failed holds <code>NA</code> in <code>result</code>,
 hence the <code><a href="https://rdrr.io/r/base/list.html" class="external-link">is.list()</a></code> check. Setting <code>levels</code>
-matters: yardstick refuses a prediction factor whose levels differ from
-the truth’s, which happens whenever some class is never predicted.</p>
+matters: <code>yardstick</code> refuses a prediction factor whose levels
+differ from the truth’s, which happens whenever some class is never
+predicted.</p>
 </div>
 <div class="section level2">
 <h2 id="build-grids-with-dials">Build grids with dials<a class="anchor" aria-label="anchor" href="#build-grids-with-dials"></a>
 </h2>
-<p><code><a href="../reference/temperature.html">temperature()</a></code>, <code><a href="../reference/top_p.html">top_p()</a></code> and
-<code><a href="../reference/reasoning_effort.html">reasoning_effort()</a></code> are dials parameter objects.
-<code><a href="../reference/temperature.html">temperature()</a></code> and <code><a href="../reference/top_p.html">top_p()</a></code> default to the range
-0 to 1:</p>
+<p><code><a href="../reference/temperature.html">temperature()</a></code>, <code><a href="../reference/top_p.html">top_p()</a></code>, and
+<code><a href="../reference/reasoning_effort.html">reasoning_effort()</a></code> are <code>dials</code> parameter objects
+(<code><a href="../reference/temperature.html">temperature()</a></code> and <code><a href="../reference/top_p.html">top_p()</a></code> default to
+<code>[0, 1]</code>):</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/temperature.html">temperature</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Temperature (quantitative)</span></span>
@@ -199,10 +206,33 @@ the truth’s, which happens whenever some class is never predicted.</p>
 <span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span>         0  </span></span>
 <span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span>         0.5</span></span>
 <span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span>         1</span></span></code></pre></div>
-<p><code><a href="../reference/optimize_grid.html">optimize_grid()</a></code> takes such a grid directly, or a
-<code><a href="https://dials.tidymodels.org/reference/parameters.html" class="external-link">dials::parameters()</a></code> set to build one from. It tries each
-row on the data and keeps the best settings in the module:</p>
+<p><code><a href="../reference/module_parameters.html">module_parameters()</a></code> suggests a <code>dials</code>
+parameter set for a module, swapping
+<code>temperature</code>/<code>top_p</code> for
+<code>reasoning_effort</code> when <code>model</code> looks like a
+reasoning model (pass <code>include</code> to pick only the knobs you
+want):</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">classify</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"text -&gt; sentiment: enum('negative', 'neutral', 'positive')"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">knobs</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"temperature"</span>, <span class="st">"top_p"</span>, <span class="st">"reasoning_effort"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/module_parameters.html">module_parameters</a></span><span class="op">(</span><span class="va">classify</span>, model <span class="op">=</span> <span class="st">"claude-sonnet-4-5"</span>, include <span class="op">=</span> <span class="va">knobs</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Collection of 2 parameters for tuning</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;   identifier        type    object</span></span>
+<span><span class="co">#&gt;  temperature temperature dparam[+]</span></span>
+<span><span class="co">#&gt;        top_p       top_p dparam[+]</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="fu"><a href="../reference/module_parameters.html">module_parameters</a></span><span class="op">(</span><span class="va">classify</span>, model <span class="op">=</span> <span class="st">"gpt-6-luna"</span>, include <span class="op">=</span> <span class="va">knobs</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Collection of 1 parameters for tuning</span></span>
+<span><span class="co">#&gt;        identifier             type    object</span></span>
+<span><span class="co">#&gt;  reasoning_effort reasoning_effort dparam[+]</span></span>
+<span><span class="co">#&gt; </span></span></code></pre></div>
+<p><code><a href="../reference/optimize_grid.html">optimize_grid()</a></code> accepts a <code>dials</code> grid
+directly, or a <code><a href="https://dials.tidymodels.org/reference/parameters.html" class="external-link">dials::parameters()</a></code> set to build one from.
+It evaluates each row and keeps the best settings on the module:</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/optimize_grid.html">optimize_grid</a></span><span class="op">(</span></span>
 <span>  <span class="va">classify</span>,</span>
 <span>  data <span class="op">=</span> <span class="va">reviews</span>,</span>
@@ -215,19 +245,23 @@ row on the data and keeps the best settings in the module:</p>
 <span>  <span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/module_trials.html">module_trials</a></span><span class="op">(</span><span class="va">classify</span><span class="op">)</span></span></code></pre></div>
-<p><code>module_parameters(classify)</code> suggests a parameter set for
-a module. To tune how much a reasoning model thinks, use a
-<code><a href="../reference/reasoning_effort.html">reasoning_effort()</a></code> grid instead; see <a href="models-and-providers.html">Models, providers and
+<p>To tune how much a reasoning model thinks instead, sweep a
+<code><a href="../reference/reasoning_effort.html">reasoning_effort()</a></code> grid; see <a href="models-and-providers.html">Models, providers and
 streaming</a>.</p>
 </div>
 <div class="section level2">
 <h2 id="the-parsnip-model">The parsnip model<a class="anchor" aria-label="anchor" href="#the-parsnip-model"></a>
 </h2>
-<p>When parsnip is loaded, dsprrr registers a model type,
-<code><a href="../reference/llm_predict.html">llm_predict()</a></code>, with the engine <code>"dsprrr"</code> for
+<p>When <code>parsnip</code> is loaded, dsprrr registers a model type,
+<code><a href="../reference/llm_predict.html">llm_predict()</a></code>, with the <code>"dsprrr"</code> engine for
 classification and regression:</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/tidymodels/parsnip" class="external-link">parsnip</a></span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">reviews</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
+<span>  text <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Arrived broken."</span>, <span class="st">"Works great."</span>, <span class="st">"It's a chair."</span><span class="op">)</span>,</span>
+<span>  sentiment <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"negative"</span>, <span class="st">"positive"</span>, <span class="st">"neutral"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">spec</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/llm_predict.html">llm_predict</a></span><span class="op">(</span></span>
 <span>  mode <span class="op">=</span> <span class="st">"classification"</span>,</span>
@@ -235,31 +269,49 @@ classification and regression:</p>
 <span>  temperature <span class="op">=</span> <span class="fl">0</span></span>
 <span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://parsnip.tidymodels.org/reference/set_engine.html" class="external-link">set_engine</a></span><span class="op">(</span><span class="st">"dsprrr"</span><span class="op">)</span></span>
-<span><span class="va">spec</span></span>
+<span></span>
+<span><span class="va">fitted</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://generics.r-lib.org/reference/fit_xy.html" class="external-link">fit_xy</a></span><span class="op">(</span><span class="va">spec</span>, x <span class="op">=</span> <span class="va">reviews</span><span class="op">[</span><span class="st">"text"</span><span class="op">]</span>, y <span class="op">=</span> <span class="va">reviews</span><span class="op">$</span><span class="va">sentiment</span><span class="op">)</span></span>
+<span><span class="va">fitted</span></span>
+<span><span class="co">#&gt; parsnip model object</span></span>
+<span><span class="co">#&gt; ── <span style="font-weight: bold;">PredictModule</span> ──</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; ── LLM Predict Model Specification</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">Mode</span>: classification</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">Engine</span>: dsprrr</span></span></code></pre></div>
-<p>Fitting this model does not learn from the training data. The
-engine’s fit step builds a zero-shot module from <code>signature</code>
-(or, without one, from the predictor names and the outcome’s distinct
-values, such as
-<code>text -&gt; output: enum('negative', 'positive')</code>), puts
-<code>temperature</code> and <code>top_p</code> in the module’s config,
-and records the predictor names. The training rows are not used as
-examples. <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code> then runs the module on
-<code>new_data</code> with the default Chat, so call
-<code><a href="../reference/get_default_chat.html">set_default_chat()</a></code> first. It returns
-<code>.pred_class</code> for classification, as a factor with only the
-levels that were predicted, or <code>.pred</code> for regression.</p>
-<p>With parsnip 1.6.0, <code><a href="https://generics.r-lib.org/reference/fit.html" class="external-link">fit()</a></code> and <code><a href="https://generics.r-lib.org/reference/fit_xy.html" class="external-link">fit_xy()</a></code> on
-this specification currently stop with “no applicable method for
-‘filter’ applied to an object of class”NULL”“, because the engine
-registers no predictor encoding. The same failure stops
-<code><a href="https://tune.tidymodels.org/reference/tune_grid.html" class="external-link">tune::tune_grid()</a></code> and workflows, which fit models through
-these functions. Until that is fixed, the module and
-<code><a href="../reference/run_dataset.html">run_dataset()</a></code> approach at the top of this page gives the
-same zero-shot predictions.</p>
+<span><span class="co">#&gt; ── Signature</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ── <span style="font-weight: bold;">Signature</span> ──</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ── Inputs</span></span>
+<span><span class="co">#&gt; • <span style="color: #00BB00;">text</span>: <span style="color: #0000BB;">"string"</span> - Input: text</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ── Output</span></span>
+<span><span class="co">#&gt; Type: <span style="color: #0000BB;">"object(sentiment: enum(negative, neutral, positive))"</span></span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ── Instructions</span></span>
+<span><span class="co">#&gt; Given the fields `text`, produce the fields `sentiment`.</span></span></code></pre></div>
+<p>Fitting builds a zero-shot module from <code>signature</code> (or,
+without one, derives it from the predictor names and outcome levels),
+stores <code>temperature</code> and <code>top_p</code> in the module’s
+config, and makes no model calls. Use <code><a href="https://generics.r-lib.org/reference/fit_xy.html" class="external-link">fit_xy()</a></code> (or
+<code><a href="https://workflows.tidymodels.org/reference/add_variables.html" class="external-link">workflows::add_variables()</a></code>) rather than a formula for
+free-text columns: R’s formula interface converts character predictors
+into factors with fixed training levels, which rejects unseen text at
+prediction time.</p>
+<p><code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code> runs the module on <code>new_data</code> using
+the default Chat (set with <code><a href="../reference/get_default_chat.html">set_default_chat()</a></code> or
+<code><a href="../reference/with_lm.html">local_lm()</a></code>) and returns <code>.pred_class</code>
+(preserving the training factor’s levels) or <code>.pred</code>:</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/get_default_chat.html">set_default_chat</a></span><span class="op">(</span></span>
+<span>  <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span></span>
+<span>    model <span class="op">=</span> <span class="st">"gpt-6-luna"</span>,</span>
+<span>    params <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/params.html" class="external-link">params</a></span><span class="op">(</span>reasoning_effort <span class="op">=</span> <span class="st">"none"</span><span class="op">)</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">fitted</span>, new_data <span class="op">=</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span>text <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Best purchase ever!"</span>, <span class="st">"Total junk."</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">#&gt; # A tibble: 2 x 1</span></span>
+<span><span class="co">#&gt;   .pred_class</span></span>
+<span><span class="co">#&gt;   &lt;fct&gt;</span></span>
+<span><span class="co">#&gt; 1 positive</span></span>
+<span><span class="co">#&gt; 2 negative</span></span></code></pre></div>
 <p>For evaluation with graded or repeated samples, see <a href="vitals-recipes.html">Evaluate with vitals</a>.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

@@ -17,6 +17,11 @@
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Tutorial 6: Save and reuse a module">
+<meta name="description" content="Save a compiled module to disk with save_program() or share versioned copies on a pins board, restore it in a new session, and export execution traces.
+">
+<meta property="og:description" content="Save a compiled module to disk with save_program() or share versioned copies on a pins board, restore it in a new session, and export execution traces.
+">
+<meta property="og:image" content="https://jameshwade.github.io/dsprrr/logo.svg">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -132,25 +137,24 @@
 
     
     
-<p>Compiling a module, as in Tutorials 4 and 5, produces demos and
-instructions that you do not want to recompute in every R session. By
-the end of this tutorial you can save a compiled module’s configuration
-to a <a href="https://pins.rstudio.com" class="external-link">pins</a> board, restore it as a
-working module, and export the traces the module records as it runs.</p>
+<p>Compiling a module produces demos, instructions, and tuned settings
+that you do not want to recompute every time R restarts. This tutorial
+shows how to save a compiled module to disk with
+<code><a href="../reference/program-artifact.html">save_program()</a></code>, share versioned copies on a <a href="https://pins.rstudio.com" class="external-link">pins</a> board, restore it cleanly in a
+new session, and inspect the traces it records as it runs.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/dsprrr" class="external-link">dsprrr</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ellmer.tidyverse.org" class="external-link">ellmer</a></span><span class="op">)</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://pins.rstudio.com/" class="external-link">pins</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">chat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-luna"</span><span class="op">)</span></span></code></pre></div>
-<p>The answers on this page were recorded with <code>gpt-4.1</code> and
-are replayed when the site is built, so <code>gpt-6-luna</code> may word
-them differently.</p>
+<p><em>Recorded outputs on the package website were captured with
+<code>gpt-4.1</code>; <code>gpt-6-luna</code> may answer slightly
+differently.</em></p>
 <div class="section level2">
 <h2 id="compile-a-module">Compile a module<a class="anchor" aria-label="anchor" href="#compile-a-module"></a>
 </h2>
-<p>This is the sentiment classifier from Tutorial 5, compiled with
-<code>LabeledFewShot</code> on nine short reviews:</p>
+<p>Start from the sentiment classifier in Tutorial 5, compiled offline
+with <code><a href="../reference/LabeledFewShot.html">LabeledFewShot()</a></code>:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
 <span>  <span class="st">"review -&gt; sentiment: enum('positive', 'negative', 'neutral')"</span>,</span>
@@ -170,47 +174,73 @@ them differently.</p>
 <span>  <span class="st">"Fine I guess."</span>,    <span class="st">"neutral"</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">classifier</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="fu"><a href="../reference/LabeledFewShot.html">LabeledFewShot</a></span><span class="op">(</span>k <span class="op">=</span> <span class="fl">3L</span><span class="op">)</span>, <span class="va">trainset</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">classifier</span>, review <span class="op">=</span> <span class="st">"This product is fantastic!"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
+<span><span class="va">classifier</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="fu"><a href="../reference/LabeledFewShot.html">LabeledFewShot</a></span><span class="op">(</span>k <span class="op">=</span> <span class="fl">3L</span><span class="op">)</span>, <span class="va">trainset</span><span class="op">)</span></span></code></pre></div>
+<p>Verify that the compiled classifier runs:</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">classifier</span>, review <span class="op">=</span> <span class="st">"This product is fantastic!"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
 <span><span class="co">#&gt; $sentiment</span></span>
 <span><span class="co">#&gt; [1] "positive"</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="save-the-configuration">Save the configuration<a class="anchor" aria-label="anchor" href="#save-the-configuration"></a>
+<h2 id="save-to-a-file">Save to a file<a class="anchor" aria-label="anchor" href="#save-to-a-file"></a>
 </h2>
-<p><code><a href="../reference/pin_module_config.html">pin_module_config()</a></code> writes the module’s signature,
-demos, settings and optimization results to a pins board. The board here
-is a temporary folder, which R deletes when the session ends:</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">board</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://pins.rstudio.com/reference/board_folder.html" class="external-link">board_temp</a></span><span class="op">(</span><span class="op">)</span></span>
+<p>The simplest persistence path needs no extra packages:
+<code><a href="../reference/program-artifact.html">save_program()</a></code> writes a validated, versioned program
+artifact (signatures, demos, config, and optimization state) to an
+<code>.rds</code> file, and <code><a href="../reference/program-artifact.html">load_program()</a></code> rebuilds it in
+any later session. <code><a href="../reference/program-artifact.html">program_artifact_id()</a></code> returns its
+SHA-256 content identity:</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">artifact_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".rds"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/program-artifact.html">save_program</a></span><span class="op">(</span><span class="va">classifier</span>, <span class="va">artifact_path</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">loaded</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/program-artifact.html">load_program</a></span><span class="op">(</span><span class="va">artifact_path</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="va">loaded</span><span class="op">$</span><span class="va">demos</span>, <span class="va">classifier</span><span class="op">$</span><span class="va">demos</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] TRUE</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="fu"><a href="../reference/program-artifact.html">program_artifact_id</a></span><span class="op">(</span><span class="va">loaded</span><span class="op">)</span>, <span class="fu"><a href="../reference/program-artifact.html">program_artifact_id</a></span><span class="op">(</span><span class="va">classifier</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
+<p>The chat is intentionally not stored in the artifact—credentials
+never touch disk—so pass <code>.llm</code> (or configure a default chat)
+when you run the restored module:</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">loaded</span>, review <span class="op">=</span> <span class="st">"Worst product ever!"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
+<span><span class="co">#&gt; $sentiment</span></span>
+<span><span class="co">#&gt; [1] "negative"</span></span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="share-versions-with-pins">Share versions with <code>pins</code><a class="anchor" aria-label="anchor" href="#share-versions-with-pins"></a>
+</h2>
+<p>When you want version history or shared team storage (such as S3,
+Google Cloud Storage, or Posit Connect),
+<code><a href="../reference/pin_module_config.html">pin_module_config()</a></code> writes the same program artifact to a
+<code>pins</code> board. The board below is a temporary folder that R
+deletes when the session ends:</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">board</span> <span class="op">&lt;-</span> <span class="fu">pins</span><span class="fu">::</span><span class="fu"><a href="https://pins.rstudio.com/reference/board_folder.html" class="external-link">board_temp</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="../reference/pin_module_config.html">pin_module_config</a></span><span class="op">(</span><span class="va">board</span>, <span class="st">"sentiment-classifier"</span>, <span class="va">classifier</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Creating new version '20261124T014028Z-b863c'</span></span>
+<span><span class="co">#&gt; Creating new version '20261125T015712Z-74a0f'</span></span>
 <span><span class="co">#&gt; Writing to pin 'sentiment-classifier'</span></span>
 <span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Pinned program artifact: <span style="color: #0000BB;">"sentiment-classifier"</span></span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Root module: <span style="color: #0000BB;">&lt;PredictModule&gt;</span></span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Graph nodes: <span style="color: #0000BB;">1</span></span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Compiled: <span style="color: #0000BB;">TRUE</span></span></span></code></pre></div>
 <p>For real use, pick a board that outlives the session:</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">board</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://pins.rstudio.com/reference/board_folder.html" class="external-link">board_local</a></span><span class="op">(</span><span class="op">)</span> <span class="co"># a folder in your user data directory</span></span>
-<span><span class="va">board</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://pins.rstudio.com/reference/board_folder.html" class="external-link">board_folder</a></span><span class="op">(</span><span class="st">"pins"</span><span class="op">)</span> <span class="co"># or a folder in your project</span></span></code></pre></div>
-<p>Shared boards such as <code><a href="https://pins.rstudio.com/reference/board_connect.html" class="external-link">board_connect()</a></code>,
-<code><a href="https://pins.rstudio.com/reference/board_s3.html" class="external-link">board_s3()</a></code> and <code><a href="https://pins.rstudio.com/reference/board_gcs.html" class="external-link">board_gcs()</a></code> work the same way
-and let other people load your module. Each call to
-<code><a href="../reference/pin_module_config.html">pin_module_config()</a></code> with the same name saves a new version:
-<code>pin_versions(board, "sentiment-classifier")</code> lists them, and
-<code>pin_read(board, "sentiment-classifier", version = )</code> reads
-an older one.</p>
-</div>
-<div class="section level2">
-<h2 id="restore-it">Restore it<a class="anchor" aria-label="anchor" href="#restore-it"></a>
-</h2>
-<p>In a new session, connect to the same board, read the pin and rebuild
-the module:</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">config</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://pins.rstudio.com/reference/pin_read.html" class="external-link">pin_read</a></span><span class="op">(</span><span class="va">board</span>, <span class="st">"sentiment-classifier"</span><span class="op">)</span></span>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">board</span> <span class="op">&lt;-</span> <span class="fu">pins</span><span class="fu">::</span><span class="fu"><a href="https://pins.rstudio.com/reference/board_folder.html" class="external-link">board_local</a></span><span class="op">(</span><span class="op">)</span>   <span class="co"># a folder in your user data directory</span></span>
+<span><span class="va">board</span> <span class="op">&lt;-</span> <span class="fu">pins</span><span class="fu">::</span><span class="fu"><a href="https://pins.rstudio.com/reference/board_folder.html" class="external-link">board_folder</a></span><span class="op">(</span><span class="st">"pins"</span><span class="op">)</span> <span class="co"># or a folder in your project</span></span></code></pre></div>
+<p>Shared boards such as <code><a href="https://pins.rstudio.com/reference/board_connect.html" class="external-link">pins::board_connect()</a></code>,
+<code><a href="https://pins.rstudio.com/reference/board_s3.html" class="external-link">pins::board_s3()</a></code>, and <code><a href="https://pins.rstudio.com/reference/board_gcs.html" class="external-link">pins::board_gcs()</a></code> work
+the same way. Each call to <code><a href="../reference/pin_module_config.html">pin_module_config()</a></code> with the
+same name saves a new version:
+<code>pins::pin_versions(board, "sentiment-classifier")</code> lists
+them, and
+<code>pins::pin_read(board, "sentiment-classifier", version = "&lt;id&gt;")</code>
+reads an older one.</p>
+<p>In a new session, connect to the same board, read the pin, and
+rebuild the module:</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">config</span> <span class="op">&lt;-</span> <span class="fu">pins</span><span class="fu">::</span><span class="fu"><a href="https://pins.rstudio.com/reference/pin_read.html" class="external-link">pin_read</a></span><span class="op">(</span><span class="va">board</span>, <span class="st">"sentiment-classifier"</span><span class="op">)</span></span>
 <span><span class="va">restored</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/restore_module_config.html">restore_module_config</a></span><span class="op">(</span><span class="va">config</span><span class="op">)</span></span>
 <span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Restored program artifact</span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Root module: <span style="color: #0000BB;">&lt;PredictModule&gt;</span></span></span>
@@ -218,78 +248,20 @@ the module:</p>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="va">restored</span><span class="op">$</span><span class="va">demos</span>, <span class="va">classifier</span><span class="op">$</span><span class="va">demos</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
-<p>The chat is not part of the saved configuration, so pass
-<code>.llm</code> when you run the restored module:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">restored</span>, review <span class="op">=</span> <span class="st">"Worst product ever!"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span></code></pre></div>
-<p><code><a href="../reference/restore_module_config.html">restore_module_config()</a></code> reads only the artifact format
-of the installed dsprrr (version 6 in the message above), so keep the
-code that compiled the module: if a dsprrr upgrade changes the format,
-compile and pin again. A module that holds R functions or tools also
+<p><code><a href="../reference/restore_module_config.html">restore_module_config()</a></code> and <code><a href="../reference/program-artifact.html">load_program()</a></code>
+read the current artifact format (version 6), so keep the code that
+compiled the module: if a future dsprrr release updates the format,
+compile and save again. A module that holds R functions or tools also
 needs a <code>registry</code> when you save and restore it; see
-<code><a href="../reference/pin_module_config.html">pin_module_config()</a></code>. To use a saved module in a targets
-pipeline or a Quarto report, see <a href="orchestration.html">Run dsprrr
-in pipelines</a>.</p>
-</div>
-<div class="section level2">
-<h2 id="keep-a-reviewed-version">Keep a reviewed version<a class="anchor" aria-label="anchor" href="#keep-a-reviewed-version"></a>
-</h2>
-<p>A pin keeps every version you save. To also record which version a
-person approved for production, and what it was compiled from, keep the
-program in <a href="https://jameshwade.github.io/graft/" class="external-link">graft</a>. Save
-the whole program with <code><a href="../reference/program-artifact.html">save_program()</a></code>, store it with its
-training examples as evidence, and accept it for a purpose:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">store</span> <span class="op">&lt;-</span> <span class="fu">graft</span><span class="fu">::</span><span class="fu">graft_store</span><span class="op">(</span><span class="st">"programs"</span>, create <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
-<span><span class="va">id</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/program-artifact.html">program_artifact_id</a></span><span class="op">(</span><span class="va">classifier</span><span class="op">)</span></span>
-<span><span class="va">path</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/program-artifact.html">save_program</a></span><span class="op">(</span><span class="va">classifier</span>, <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".rds"</span><span class="op">)</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">examples</span> <span class="op">&lt;-</span> <span class="fu">graft</span><span class="fu">::</span><span class="fu">graft_save</span><span class="op">(</span></span>
-<span>  <span class="va">store</span>,</span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">as.character</a></span><span class="op">(</span><span class="fu">jsonlite</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/jsonlite/man/fromJSON.html" class="external-link">toJSON</a></span><span class="op">(</span><span class="va">trainset</span><span class="op">)</span><span class="op">)</span>,</span>
-<span>  id <span class="op">=</span> <span class="st">"sentiment:trainset"</span>,</span>
-<span>  media_type <span class="op">=</span> <span class="st">"application/json"</span></span>
-<span><span class="op">)</span></span>
-<span><span class="va">program</span> <span class="op">&lt;-</span> <span class="fu">graft</span><span class="fu">::</span><span class="fu">graft_save_file</span><span class="op">(</span></span>
-<span>  <span class="va">store</span>,</span>
-<span>  <span class="va">path</span>,</span>
-<span>  id <span class="op">=</span> <span class="st">"sentiment:program"</span>,</span>
-<span>  dependencies <span class="op">=</span> <span class="va">examples</span></span>
-<span><span class="op">)</span></span>
-<span><span class="fu">graft</span><span class="fu">::</span><span class="fu">graft_accept</span><span class="op">(</span></span>
-<span>  <span class="va">store</span>,</span>
-<span>  <span class="va">program</span>,</span>
-<span>  stream <span class="op">=</span> <span class="st">"sentiment-classifier"</span>,</span>
-<span>  expected <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  key <span class="op">=</span> <span class="va">id</span>,</span>
-<span>  actor <span class="op">=</span> <span class="st">"reviewer"</span>,</span>
-<span>  reason <span class="op">=</span> <span class="st">"Checked its evaluation on held-out reviews"</span>,</span>
-<span>  purpose <span class="op">=</span> <span class="st">"production"</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p>In production, load whichever program is accepted now:</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">recall</span> <span class="op">&lt;-</span> <span class="fu">graft</span><span class="fu">::</span><span class="fu">graft_recall</span><span class="op">(</span></span>
-<span>  <span class="va">store</span>,</span>
-<span>  stream <span class="op">=</span> <span class="st">"sentiment-classifier"</span>,</span>
-<span>  purpose <span class="op">=</span> <span class="st">"production"</span>,</span>
-<span>  eligible <span class="op">=</span> <span class="cn">TRUE</span></span>
-<span><span class="op">)</span></span>
-<span><span class="va">path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".rds"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/readBin.html" class="external-link">writeBin</a></span><span class="op">(</span><span class="va">recall</span><span class="op">@</span><span class="va">roots</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">@</span><span class="va">bytes</span>, <span class="va">path</span><span class="op">)</span></span>
-<span><span class="va">production</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/program-artifact.html">load_program</a></span><span class="op">(</span><span class="va">path</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="fu"><a href="../reference/program-artifact.html">program_artifact_id</a></span><span class="op">(</span><span class="va">production</span><span class="op">)</span>, <span class="va">id</span><span class="op">)</span></span></code></pre></div>
-<p>The ID from <code><a href="../reference/program-artifact.html">program_artifact_id()</a></code> is also recorded in
-every call’s metadata and trace, so a trace points to the exact program
-that was reviewed. graft keeps each acceptance, and any later
-withdrawal, in the stream’s history.</p>
+<code><a href="../reference/program-artifact.html">?program_artifact</a></code>. For automated <code>targets</code>
+pipelines, Quarto reports, and approval workflows, see <a href="orchestration.html">Run dsprrr in pipelines</a>.</p>
 </div>
 <div class="section level2">
 <h2 id="save-and-inspect-traces">Save and inspect traces<a class="anchor" aria-label="anchor" href="#save-and-inspect-traces"></a>
 </h2>
 <p>A module records a trace for each call it makes, with token counts,
-latency, cost and model. Run the module a few times, then pin its traces
-next to the configuration:</p>
+latency, cost, and model. Run the module a few times, then pin its
+traces next to the configuration:</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">classifier</span>, review <span class="op">=</span> <span class="st">"Great product!"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
 <span><span class="co">#&gt; $sentiment</span></span>
@@ -301,8 +273,10 @@ next to the configuration:</p>
 <span><span class="co">#&gt; $sentiment</span></span>
 <span><span class="co">#&gt; [1] "neutral"</span></span>
 <span></span>
-<span><span class="fu"><a href="../reference/pin_trace.html">pin_trace</a></span><span class="op">(</span><span class="va">board</span>, <span class="st">"sentiment-traces"</span>, <span class="va">classifier</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Creating new version '20261124T014029Z-598de'</span></span>
+<span><span class="kw">if</span> <span class="op">(</span><span class="va">has_pins</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="fu"><a href="../reference/pin_trace.html">pin_trace</a></span><span class="op">(</span><span class="va">board</span>, <span class="st">"sentiment-traces"</span>, <span class="va">classifier</span><span class="op">)</span></span>
+<span><span class="op">}</span></span>
+<span><span class="co">#&gt; Creating new version '20261125T015714Z-1444f'</span></span>
 <span><span class="co">#&gt; Writing to pin 'sentiment-traces'</span></span>
 <span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Pinned 4 traces: <span style="color: #0000BB;">"sentiment-traces"</span></span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Total tokens: 941</span></span></code></pre></div>
@@ -313,20 +287,57 @@ one row per call, including the call made right after compiling:</p>
 <span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 4 × 11</span></span></span>
 <span><span class="co">#&gt;     timestamp latency_ms input_tokens cached_input_tokens output_tokens</span></span>
 <span><span class="co">#&gt;         <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>        <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>               <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>         <span style="color: #949494; font-style: italic;">&lt;int&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> <span style="text-decoration: underline;">1</span>795<span style="text-decoration: underline;">484</span>428.       883.          101                   0             7</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> <span style="text-decoration: underline;">1</span>795<span style="text-decoration: underline;">484</span>429.       359.          200                   0             7</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> <span style="text-decoration: underline;">1</span>795<span style="text-decoration: underline;">484</span>429.       320.          271                   0             7</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span> <span style="text-decoration: underline;">1</span>795<span style="text-decoration: underline;">484</span>430.       322.          341                   0             7</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> <span style="text-decoration: underline;">1</span>795<span style="text-decoration: underline;">571</span>832.       982.          101                   0             7</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> <span style="text-decoration: underline;">1</span>795<span style="text-decoration: underline;">571</span>833.       495.          200                   0             7</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> <span style="text-decoration: underline;">1</span>795<span style="text-decoration: underline;">571</span>834.       417.          271                   0             7</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span> <span style="text-decoration: underline;">1</span>795<span style="text-decoration: underline;">571</span>835.       430.          341                   0             7</span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># ℹ 6 more variables: total_tokens &lt;int&gt;, cost &lt;dbl&gt;, model &lt;chr&gt;,</span></span></span>
 <span><span class="co">#&gt; <span style="color: #949494;">#   prompt_length &lt;int&gt;, program_artifact_id &lt;chr&gt;, trace_context &lt;list&gt;</span></span></span></code></pre></div>
-<p>The tibble leaves out prompts and responses, so you can share it
-without exposing the text your module handled. Add them with
-<code>include_prompts = TRUE</code> and
-<code>include_outputs = TRUE</code>; <code><a href="../reference/pin_trace.html">pin_trace()</a></code> takes the
-same two arguments. <code>summarize_traces(classifier)</code> totals the
-tokens, cost and latency.</p>
-<p>That completes the tutorials; <a href="compilation-optimization.html">Compile and optimize</a> and <a href="advanced-optimization.html">Choose an optimizer</a> take
-optimization further.</p>
+<p>The tibble leaves out prompts and responses by default, so you can
+share token and latency logs without exposing user text. Pass
+<code>include_prompts = TRUE</code> or
+<code>include_outputs = TRUE</code> (to <code><a href="../reference/export_traces.html">export_traces()</a></code> or
+<code><a href="../reference/pin_trace.html">pin_trace()</a></code>) when you need them. For a quick rollup of
+calls, tokens, and spend:</p>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/summarize_traces.html">summarize_traces</a></span><span class="op">(</span><span class="va">classifier</span><span class="op">)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ── <span style="font-weight: bold;">Module Trace Summary</span> ──</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ── Usage Metrics</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">•</span> 4 requests</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">•</span> 941 total tokens</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">•</span> Input/Output ratio: 0.03</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">•</span> Total cost: $0.0001053</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ── Performance</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">•</span> Average latency: 580.8ms</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">•</span> Total time: 2.32s</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">•</span> Tokens/request: 235.2</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ── Models Used</span></span>
+<span><span class="co">#&gt; gpt-6-luna: 4 requests</span></span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="where-to-go-next">Where to go next<a class="anchor" aria-label="anchor" href="#where-to-go-next"></a>
+</h2>
+<p>Across these six tutorials you have walked the full dsprrr loop:
+declare a <code><a href="../reference/signature.html">signature()</a></code>, wrap it in <code><a href="../reference/module.html">module()</a></code>,
+run it on vectors and data frames, score it with
+<code><a href="../reference/evaluate.html">evaluate()</a></code>, improve it with <code><a href="../reference/compile.html">compile()</a></code> or
+<code><a href="../reference/optimize_grid.html">optimize_grid()</a></code>, and save the result for reuse. From
+here:</p>
+<ul>
+<li>
+<strong>Need reasoning, tools, or multi-step workflows?</strong>
+Read <a href="advanced-modules.html">Choose a module type</a> and <a href="chaining-modules.html">Chain modules into pipelines</a>.</li>
+<li>
+<strong>Want stronger optimizers than grid search?</strong> Read <a href="compilation-optimization.html">Compile and optimize</a> and <a href="advanced-optimization.html">Choose an optimizer</a>.</li>
+<li>
+<strong>Running dsprrr inside <code>targets</code> or
+Quarto?</strong> Read <a href="orchestration.html">Run dsprrr in
+pipelines</a>.</li>
+</ul>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

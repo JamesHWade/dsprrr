@@ -105,7 +105,7 @@ as_ellmer_tool(
 
   - `"return"`: a `dsprrr_tool_error` condition carrying the error
     description in `$payload` is signalled, which a
-    [`withCallingHandlers()`](https://rdrr.io/r/base/conditions.html)
+    [`base::withCallingHandlers()`](https://rdrr.io/r/base/conditions.html)
     handler can inspect.
 
 - trace_context:

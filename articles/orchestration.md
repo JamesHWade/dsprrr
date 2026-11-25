@@ -40,19 +40,25 @@ together:
 | `optimized_module` | A copy of the module tuned by [`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md) over `temperature` |
 | `evaluation_results` | [`evaluate()`](https://jameshwade.github.io/dsprrr/reference/evaluate.md) on the test data |
 | `pins_board`, `pinned_config`, `pinned_evaluation` | A versioned `pins::board_folder("pins")` holding the optimized module and the evaluation |
-| `pinned_traces` | Meant to pin traces; it writes nothing for now, because the stored module has no recorded traces |
+| `pinned_traces` | Pins the evaluation traces collected from `evaluation_results` |
 | `summary_stats`, `summary_json` | A summary list, also written to `outputs/summary.json` |
 
 `llm_client` calls Claude Sonnet 4.5 through
 [`ellmer::chat_anthropic()`](https://ellmer.tidyverse.org/reference/chat_anthropic.html).
 Set the `DSPRRR_MODEL` environment variable for another Claude model.
 For any other Chat, set a factory near the top of `_targets.R`; it
-receives the model name:
+receives the model name. Because the template sweeps `temperature` in
+`optimized_module`, pass `reasoning_effort = "none"` when using a
+reasoning model such as `gpt-6-luna` (or edit `optimized_module` to
+sweep `reasoning_effort` instead):
 
 ``` r
 
 options(dsprrr.targets.llm_factory = function(model) {
-  ellmer::chat_openai(model = "gpt-6-luna")
+  ellmer::chat_openai(
+    model = "gpt-6-luna",
+    params = ellmer::params(reasoning_effort = "none")
+  )
 })
 ```
 
@@ -86,13 +92,11 @@ render it with the Quarto CLI, overriding parameters with `-P`:
 quarto render report.qmd -P eval_name:sentiment-eval-results
 ```
 
-Treat the report as a starting point. It needs R 4.4 or later (it uses
-`%||%` without loading rlang), and its evaluation section (mean score,
-score distribution, predictions) is the part that works today. The
-module section expects an older pin layout and prints empty fields, and
-the trace sections stay empty while `pinned_traces` writes nothing. To
-render the report as part of the pipeline, uncomment the `tar_quarto()`
-target (from tarchetypes) at the end of `_targets.R`.
+Treat the report as a starting point you can customize for your own
+metrics and plots—it summarizes the pinned module artifact, evaluation
+scores, predictions, and execution traces. To render the report
+automatically as part of the pipeline, uncomment the `tar_quarto()`
+target (from `tarchetypes`) near the end of `_targets.R`.
 
 ## Check inputs before a run
 
@@ -144,14 +148,21 @@ It does not look at column types, the Chat or API keys, and it does not
 read or write the board. Stop a script early with
 `if (!check$valid) stop("Workflow validation failed")`.
 
-## Keep evaluation results
+## Keep evaluation results and audit approvals
 
+Three `pins` helpers cover the artifacts a pipeline produces:
+[`pin_module_config()`](https://jameshwade.github.io/dsprrr/reference/pin_module_config.md)
+saves the compiled program,
+[`pin_trace()`](https://jameshwade.github.io/dsprrr/reference/pin_trace.md)
+saves call traces, and
 [`pin_vitals_log()`](https://jameshwade.github.io/dsprrr/reference/pin_vitals_log.md)
 stores an
 [`evaluate()`](https://jameshwade.github.io/dsprrr/reference/evaluate.md)
 result (mean score, per-row scores, predictions) with basic module
-information. Despite the name, it doesn’t accept a vitals `Task`; vitals
-writes its own logs (see [Evaluate with
+metadata. Despite its name,
+[`pin_vitals_log()`](https://jameshwade.github.io/dsprrr/reference/pin_vitals_log.md)
+does not accept a vitals `Task`; vitals writes its own logs (see
+[Evaluate with
 vitals](https://jameshwade.github.io/dsprrr/articles/vitals-recipes.md)).
 
 ``` r
@@ -169,19 +180,77 @@ pins::pin_read(board, "sentiment-eval")$mean_score
 ```
 
 Each write to a versioned board adds a version; pass an id from
-`pin_versions()` to `pin_read(version = )` to read an older one. For
-shared storage, use another pins board, such as
+`pin_versions()` to `pin_read(version = "<id>")` to read an older one.
+For shared storage, use another pins board, such as
 `pins::board_s3("my-bucket", prefix = "dsprrr/")` or
 [`pins::board_connect()`](https://pins.rstudio.com/reference/board_connect.html).
 
+### Optional: record human approvals with `graft`
+
+A pins board tracks every version you write. If your deployment process
+also requires recording *which* version a human approved for
+production—and the training data it came from—you can store
+[`save_program()`](https://jameshwade.github.io/dsprrr/reference/program-artifact.md)
+artifacts in the optional GitHub package
+[graft](https://jameshwade.github.io/graft/) (not on CRAN):
+
+``` r
+
+# Requires optional package: pak::pak("JamesHWade/graft")
+store <- graft::graft_store("programs", create = TRUE)
+id <- program_artifact_id(classify)
+path <- save_program(classify, tempfile(fileext = ".rds"))
+
+examples <- graft::graft_save(
+  store,
+  as.character(jsonlite::toJSON(reviews)),
+  id = "sentiment:trainset",
+  media_type = "application/json"
+)
+program <- graft::graft_save_file(
+  store,
+  path,
+  id = "sentiment:program",
+  dependencies = examples
+)
+graft::graft_accept(
+  store,
+  program,
+  stream = "sentiment-classifier",
+  expected = NULL,
+  key = id,
+  actor = "reviewer",
+  reason = "Verified on held-out reviews",
+  purpose = "production"
+)
+
+# Later, load whichever version is accepted for production:
+recall <- graft::graft_recall(
+  store,
+  stream = "sentiment-classifier",
+  purpose = "production",
+  eligible = TRUE
+)
+prod_path <- tempfile(fileext = ".rds")
+writeBin(recall@roots[[1]]@bytes, prod_path)
+production <- load_program(prod_path)
+```
+
+Because
+[`program_artifact_id()`](https://jameshwade.github.io/dsprrr/reference/program-artifact.md)
+is also recorded in every call’s metadata and trace, production logs
+link straight back to the approved artifact.
+
 ## Control concurrency and cost
 
-Batch calls run one row at a time unless you pass a
+Inside a batch job or `targets` step, running rows sequentially can
+become the bottleneck. Batch calls run one row at a time unless you pass
+a
 [`concurrency_control()`](https://jameshwade.github.io/dsprrr/reference/concurrency_control.md)
 to `.concurrency` in
 [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md),
 [`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md),
-[`evaluate()`](https://jameshwade.github.io/dsprrr/reference/evaluate.md)
+[`evaluate()`](https://jameshwade.github.io/dsprrr/reference/evaluate.md),
 or
 [`as_vitals_task()`](https://jameshwade.github.io/dsprrr/reference/as_vitals_task.md):
 
@@ -231,10 +300,8 @@ and
 results; an unknown price stays `NA` rather than counting as free.
 [`session_cost()`](https://jameshwade.github.io/dsprrr/reference/session_cost.md)
 sums dsprrr’s prompt history, which keeps the last 100 calls (raise the
-limit with `options(dsprrr.prompt_history_max = )`). Calls made on the
-ellmer backend currently enter that history without tokens or cost, so
-its totals read `NA` after such a batch. To keep a module’s call
-records, `pin_trace(board, name, module)` pins them; add
+limit with `options(dsprrr.prompt_history_max = )`). To keep a module’s
+call records, `pin_trace(board, name, module)` pins them; add
 `include_prompts = TRUE` and `include_outputs = TRUE` to keep the text
 as well.
 

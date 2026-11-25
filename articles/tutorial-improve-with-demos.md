@@ -1,11 +1,15 @@
 # Tutorial 4: Improve with examples
 
-A module can return the right shape and still pick the wrong answer. By
-the end of this tutorial you can measure how often a support-ticket
-classifier is right, add worked examples (demos) to its prompt by hand
-or with `LabeledFewShot`, and check with
+A module can return the right shape and still pick the wrong answer.
+When your instructions leave gray areas—does a damaged-in-transit item
+belong to `shipping` or `billing`?—the fastest fix is often to show the
+model a few worked examples (*demos*). In this tutorial, you will score
+a support-ticket classifier against labeled data, attach demos by hand
+and with
+[`LabeledFewShot()`](https://jameshwade.github.io/dsprrr/reference/LabeledFewShot.md),
+and check with
 [`evaluate()`](https://jameshwade.github.io/dsprrr/reference/evaluate.md)
-whether they helped.
+whether accuracy actually moved.
 
 ``` r
 
@@ -15,9 +19,8 @@ library(ellmer)
 chat <- chat_openai(model = "gpt-6-luna")
 ```
 
-The answers on this page were recorded with `gpt-5-mini` and are
-replayed when the site is built, so `gpt-6-luna` may word them
-differently.
+*Recorded outputs on the package website were captured with
+`gpt-5-mini`; `gpt-6-luna` may answer slightly differently.*
 
 ## A ticket classifier
 
@@ -94,15 +97,12 @@ tickets[predicted != tickets$category, ]
 #> # ℹ 2 variables: ticket <chr>, category <chr>
 ```
 
-In the recorded run, gpt-5-mini labels all ten tickets correctly, so the
-list of misses is empty. That is the check to make before adding demos.
-Demos lengthen every prompt, and they can only help on tickets the model
-gets wrong, so with this baseline there is nothing for them to fix. When
-your baseline does miss tickets, read the misses: they tell you which
-kinds of ticket need an example.
-
-The rest of this tutorial adds demos anyway, to show how, and measures
-them on the same ten tickets.
+In the recorded run, `gpt-5-mini` labels all ten tickets correctly, so
+the list of misses is empty. That is a useful habit to build before
+tuning anything: demos lengthen every prompt and can only help where the
+baseline actually makes mistakes. On a real dataset with domain-specific
+routing rules, the misses tell you which edge cases need worked
+examples. Below we add demos anyway to walk through the mechanics.
 
 ## Add demos by hand
 
@@ -169,12 +169,15 @@ cat(get_last_prompt()$prompt)
 
 ## Sample demos with `LabeledFewShot`
 
-`LabeledFewShot` builds demos from the rows of a labeled data frame
-instead. dsprrr calls objects like this teleprompters:
+[`LabeledFewShot()`](https://jameshwade.github.io/dsprrr/reference/LabeledFewShot.md)
+builds demos from the rows of a labeled data frame instead. dsprrr calls
+optimizers like this *teleprompters* (DSPy’s term for a prompt
+optimizer):
 [`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md)
 applies one to a module and returns a new module, leaving the original
-unchanged. Here the rows come from `tickets`, which is a shortcut with a
-cost, explained below.
+unchanged. Integer counts on teleprompters must be R integers (`3L`, not
+`3`). Here we draw from `tickets` as a compact shortcut—and see why you
+should split your data in practice below.
 
 ``` r
 

@@ -44,9 +44,9 @@ write_trials_jsonl(trials, path)
 trials <- read_trials_jsonl(path)
 trials[[1]]
 #> 
-#> ── Trial: trial_20261124_013811_ncnyz0 
+#> ── Trial: trial_20261125_015407_ncnyz0 
 #> • Status: pending
 #> Optimizer: my-search
 #> Params: k
-#> Started: 2026-11-24 01:38:11
+#> Started: 2026-11-25 01:54:07
 ```

@@ -1,10 +1,11 @@
 # Choose an optimizer
 
-dsprrr has eleven optimizers, called teleprompters. They differ in what
-they change in a module, how much labeled data they need, and how many
-model calls they spend. This page compares them and shows a short call
-for each. The workflow around them (baseline, held-out scores, saving)
-is covered in [Compile and
+dsprrr ships eleven core optimizers—called *teleprompters*—plus three
+experimental meta/agentic harnesses described at the bottom. They differ
+in what they change in a module, how much labeled data they need, and
+how many model calls they spend. This page compares them and shows a
+short call for each. The workflow around them (baseline, held-out
+scores, saving) is covered in [Compile and
 optimize](https://jameshwade.github.io/dsprrr/articles/compilation-optimization.md),
 and the ideas behind them in [How optimization
 works](https://jameshwade.github.io/dsprrr/articles/concepts-optimization-theory.md).
@@ -19,14 +20,14 @@ validation rows.
 | `LabeledFewShot` | Demos, copied from training rows | `k` labeled rows | None | You want a quick first improvement |
 | `BootstrapFewShot` | Demos, from the module’s own passing outputs | More rows than `max_labeled_demos` | Up to T minus `max_labeled_demos` per round | Demos should show complete outputs, or the program is a pipeline |
 | `BootstrapFewShotWithRandomSearch` | Demos, the best of several sets | `trainset` and `valset` | Several bootstrap runs, plus `num_candidate_programs` × V | You can pay to compare demo sets |
-| `KNNFewShot` | Demos, picked for each input by similarity | A varied labeled pool | None; one embedding call per run | Inputs vary widely and similar examples help most |
+| `KNNFewShot` | Demos, picked for each input by similarity | A varied labeled pool | No chat calls (embeds T once); one embedding call per run | Inputs vary widely and similar examples help most |
 | `GridSearchTeleprompter` | Instructions or templates that you write, plus demos | `valset`, or a fifth of `trainset` | Variants × V | You have a few specific wordings to compare |
-| `COPRO` | Instructions, rewritten by a model | `trainset` and `valset` | About `breadth` × `depth` × V, plus passes over T | The instructions are the weak point |
+| `COPRO` | Instructions, rewritten by a model | `trainset` and `valset` | About `breadth` × `depth` × V, plus failure scans of up to 20 rows of T | The instructions are the weak point |
 | `MIPROv2` | Demos and instructions together | `trainset` and `valset` | Bootstrap runs, then 20, 50 or 100 trials (see below) | You want both searched on a fixed trial budget |
 | `SIMBA` | Demos and rules from hard examples | `trainset` and `valset` | Per step, `num_candidates` × `bsize` + V | A few kinds of input keep failing |
 | `GEPA` | Instructions, or a whole [`flex()`](https://jameshwade.github.io/dsprrr/reference/flex.md) program | `trainset` and `valset` | `generations` × `population_size` × (V + T), plus rewrites | Your metric can say why an output is wrong |
 | `BetterTogether` | Whatever its steps change | `valset`, or 10% of `trainset` | Its steps, plus V per step | You want to chain optimizers and keep the best stage |
-| `ReAnchor` | Decision thresholds, cuts and weights; never the prompt | Two or more rows | 2 × T, plus 2 × V with a `valset` | Yes/no or label decisions are miscalibrated |
+| `ReAnchor` *(experimental)* | Decision thresholds, cuts and weights; never the prompt | Two or more rows | 2 × T, plus up to 2 × V with a `valset` | Yes/no or label decisions are miscalibrated |
 
 Every optimizer except `LabeledFewShot` and `KNNFewShot` requires
 `metric`. `COPRO`, `MIPROv2`, `SIMBA` and `GEPA` score candidates on
@@ -65,7 +66,9 @@ triage <- module(signature(
 
 metric <- metric_exact_match(field = "team")
 
-# Three rows show the shape; a real run needs dozens or more
+# Abbreviated 3-row sketch showing the column shape.
+# In practice, pass dozens or hundreds of rows so the parameter sizes below
+# (k = 4L, bsize = 16L, max_labeled_demos = 4L) have room to work.
 tickets <- tibble::tibble(
   ticket = c(
     "I was charged twice for my subscription this month.",
@@ -125,7 +128,7 @@ bootstrapped <- triage |>
     BootstrapFewShot(
       metric = metric,
       max_bootstrapped_demos = 4L,
-      max_labeled_demos = 2L
+      max_labeled_demos = 0L
     ),
     trainset,
     .llm = llm
@@ -237,13 +240,13 @@ most `eval_sample_size` rows) and the demos come from the rest.
 
 ## COPRO
 
-`COPRO` rewrites the instructions. It first runs the module on every
-training row to find failures. Each of `depth` rounds then asks
+`COPRO` rewrites the instructions. It first scores up to 20 random
+training rows to find failures. Each of `depth` rounds then asks
 `prompt_model` (by default the task chat) for `breadth` new versions of
 the current best instructions, showing it up to three failed rows. Each
 version is scored on `valset`, and the best one replaces the current
 instructions if it scores higher. After each round that improves the
-score, the training rows are checked again for failures.
+score, up to 20 training rows are checked again for failures.
 
 ``` r
 
@@ -272,11 +275,11 @@ versions that append a short summary of the input and output fields and
 one of five fixed tips, such as “Be concise and accurate.” No model
 writes new instructions.
 
-Each trial scores one combination. A UCB1 bandit picks it: untried
-combinations first, then those with a high mean score or few trials.
-Most trials score a small random batch of training rows; every few
-trials, a full pass over `valset` checks the current pick, and the best
-fully scored combination wins.
+Each trial scores one combination. An upper-confidence-bound (UCB1)
+bandit picks it: untried combinations first, then those with a high mean
+score or few trials. Most trials score a small random batch of training
+rows; every few trials, a full pass over `valset` checks the current
+pick, and the best fully scored combination wins.
 
 ``` r
 
@@ -302,7 +305,9 @@ default); with fewer, it returns the module unchanged, with status
 `"partial"`. `num_candidates` applies only with `auto = NULL`, where it
 sets both the number of trials and the number of instruction variants
 (at most six). `task_model` runs the module during the search in place
-of `.llm`. For a program with nested predictors, such as an RLM,
+of `.llm`. For a program with nested predictors, such as a recursive
+language model ([How RLM
+works](https://jameshwade.github.io/dsprrr/articles/how-rlm-works.html)),
 `MIPROv2` tunes each predictor’s instructions and requires
 `max_bootstrapped_demos = 0L`.
 
@@ -348,14 +353,13 @@ least one validation row become parents. A child takes each part of the
 program whole from one parent or the other, so crossover never splices
 text. With probability `mutation_rate`, the reflection Chat
 (`.reflection_llm`) rewrites the child’s instructions after reading its
-parent’s failed training rows; `.llm` evaluates the candidates. When
-`.reflection_llm` is omitted, an explicitly supplied `.llm` remains the
-compatibility fallback for both roles.
+parent’s failed training rows; `.llm` evaluates the candidates. If you
+omit `.reflection_llm`, GEPA uses `.llm` for reflection as well.
 
-For a complete offline run with separate train, validation and holdout
-data, feedback, candidate lineage and budget accounting, see [A GEPA
+For a complete offline run with separate train, validation, and holdout
+data, feedback, candidate lineage, and budget accounting, see [A GEPA
 learning
-journey](https://jameshwade.github.io/dsprrr/articles/gepa-learning-journey.md).
+journey](https://jameshwade.github.io/dsprrr/articles/gepa-learning-journey.html).
 
 GEPA reads textual feedback when the metric returns it, which makes the
 rewrites more specific.
@@ -405,7 +409,7 @@ at once, and parents then also come from the Pareto front. For
 [`flex()`](https://jameshwade.github.io/dsprrr/reference/flex.md)
 programs, GEPA can rewrite the program’s source itself; see [Flex:
 optimize a whole
-program](https://jameshwade.github.io/dsprrr/articles/flex-optimization.md).
+program](https://jameshwade.github.io/dsprrr/articles/flex-optimization.html).
 
 ## BetterTogether
 
@@ -472,15 +476,15 @@ explains decision outputs.
 Three experimental teleprompters build on the ones above.
 [`Omni()`](https://jameshwade.github.io/dsprrr/reference/Omni.md) runs
 several teleprompters from the same start, compares them on one
-validation set and continues from the winner; see [Compose optimizers
+validation set, and continues from the winner; see [Compose optimizers
 with
-Omni](https://jameshwade.github.io/dsprrr/articles/omni-meta-optimization.md).
+Omni](https://jameshwade.github.io/dsprrr/articles/omni-meta-optimization.html).
 [`AutoResearch()`](https://jameshwade.github.io/dsprrr/reference/AutoResearch.md)
 and
 [`MetaHarness()`](https://jameshwade.github.io/dsprrr/reference/MetaHarness.md)
 let a model propose program edits in a sandbox while dsprrr scores them;
 see [Agentic optimization
-harnesses](https://jameshwade.github.io/dsprrr/articles/agentic-optimization-harnesses.md).
+harnesses](https://jameshwade.github.io/dsprrr/articles/agentic-optimization-harnesses.html).
 
 ## Combining compiled modules
 
@@ -503,15 +507,17 @@ run(voted, ticket = "I was billed after cancelling.", .llm = llm)
 type](https://jameshwade.github.io/dsprrr/articles/advanced-modules.md)
 covers ensembles and the other reducers.
 
-## Budgets, logs and seeds
+## Budgets, checkpoints, logs, and seeds
+
+### Budgets
 
 `BootstrapFewShot`, `BootstrapFewShotWithRandomSearch`, `COPRO`,
-`MIPROv2`, `SIMBA` and `GEPA` accept `control = optimizer_control(...)`
+`MIPROv2`, `SIMBA`, and `GEPA` accept `control = optimizer_control(...)`
 in
 [`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md).
-It caps calls, tokens, cost or time. When a cap is reached, the
-optimizer stops and returns the best module found so far, with status
-`"partial"`:
+It caps calls, tokens, cost, or elapsed time. When a cap is reached—or
+when a cost/token cap is set and usage cannot be measured—the optimizer
+stops and returns the best module found so far with status `"partial"`:
 
 ``` r
 
@@ -528,34 +534,38 @@ optimization_result(capped)$status
 optimization_result(capped)$stop_reason
 ```
 
-A cost or token cap also stops the run when usage cannot be measured.
-`BootstrapFewShot` and `MIPROv2` can resume an interrupted run: give
-[`optimizer_control()`](https://jameshwade.github.io/dsprrr/reference/optimizer_control.md)
-a `checkpoint_path`, then compile again with `resume = TRUE` and the
-same module, data, metric and settings.
-`BootstrapFewShotWithRandomSearch`, `COPRO` and `SIMBA` refuse
-`resume = TRUE`.
+### Checkpoints and resume
 
-`GEPA` also supports checkpoint resume for sequential `round_robin`
-searches over plain `Predict` leaves and built-in predictor pipelines
-with plain-data predictions. Flex modules, other selectors, custom
-module types, custom Chats, Chats with tools, and non-empty initial Chat
-histories are not supported by this resume path. Completed proposals and
-evaluation rows are retained, but a provider request interrupted before
-its result is committed may run again after a crash. See
-[`GEPA()`](https://jameshwade.github.io/dsprrr/reference/GEPA.md) for
-the full checkpoint contract.
-
-The same six teleprompters take `log_dir` and append one record per
-trial to `trials.jsonl` in that directory.
-`load_trial_log(log_dir)$as_tibble()` reads the log back as a tibble.
-When you also pass `control`, set `log_dir` in
+Pass `checkpoint_path` in
 [`optimizer_control()`](https://jameshwade.github.io/dsprrr/reference/optimizer_control.md)
-as well, because a `control` object replaces the teleprompter’s own
-`log_dir` in every optimizer except `BootstrapFewShot`.
+and re-run
+[`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md)
+with `resume = TRUE` (and the same module, data, metric, and settings)
+to continue an interrupted run:
+
+- **Supported:** `BootstrapFewShot`, `MIPROv2`, and `GEPA` (sequential
+  `round_robin` searches over plain prediction modules and built-in
+  pipelines; see
+  [`?GEPA`](https://jameshwade.github.io/dsprrr/reference/GEPA.md) for
+  the full resume contract).
+- **Not supported:** `BootstrapFewShotWithRandomSearch`, `COPRO`, and
+  `SIMBA` reject `resume = TRUE`.
+
+### Trial logs
+
+The same six teleprompters accept `log_dir` and append one record per
+trial to `trials.jsonl` in that directory;
+`load_trial_log(log_dir)$as_tibble()` reads it back. When you also pass
+`control`, set `log_dir` inside
+[`optimizer_control()`](https://jameshwade.github.io/dsprrr/reference/optimizer_control.md)
+as well, because `control` overrides the teleprompter’s own `log_dir` in
+every optimizer except `BootstrapFewShot`.
+
+### Seeds
 
 `LabeledFewShot`, `BootstrapFewShotWithRandomSearch`, `COPRO`,
-`MIPROv2`, `SIMBA`, `GEPA` and `BetterTogether` take a `seed` for their
-own sampling. `GridSearchTeleprompter` uses R’s global generator, and
-`BootstrapFewShot` tries rows in order. No seed makes the model’s
-answers repeatable.
+`MIPROv2`, `SIMBA`, `GEPA`, and `BetterTogether` accept a `seed` for
+their own sampling. `GridSearchTeleprompter` uses R’s global generator
+([`set.seed()`](https://rdrr.io/r/base/Random.html)), and
+`BootstrapFewShot` visits rows in order. No seed makes LLM responses
+deterministic across API calls.

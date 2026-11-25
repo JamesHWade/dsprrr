@@ -152,6 +152,16 @@ sig <- signature(
 )
 matcher <- module(sig) |> with_decisions(match = decision_bool())
 
+trainset <- data.frame(
+  a = c("Widget Pro", "Widget Pro"),
+  b = c("Widget Pro v1", "Gadget Mini"),
+  match = c(TRUE, FALSE)
+)
+valset <- data.frame(
+  a = "Widget Pro",
+  b = "Widget Pro Edition",
+  match = TRUE
+)
 tuned <- compile(
   matcher,
   ReAnchor(metric = metric_exact_match(field = "match")),

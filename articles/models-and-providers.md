@@ -1,11 +1,11 @@
 # Models, providers and streaming
 
 dsprrr sends every request through an
-[ellmer](https://ellmer.tidyverse.org) `Chat`, so it works with any
-provider ellmer supports. This page shows how to pick the Chat a call
-uses, set provider parameters, call reasoning models, send images,
-expose a module as a tool, change timeouts, and get results
-asynchronously or as a stream.
+[ellmer](https://ellmer.tidyverse.org) `Chat`, so any provider ellmer
+supports works. This guide covers three areas: configuring the Chat,
+parameters, reasoning models, and image inputs; embedding modules inside
+ellmer tools and agent runtimes; and controlling timeouts, async
+promises, and streaming output.
 
 ``` r
 
@@ -109,11 +109,16 @@ change when you use one:
   including a grid tried by
   [`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md).
   Either way it reaches OpenAI as `reasoning.effort`.
-- The reasoning is not part of the result.
+- By default,
   [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md)
-  returns the signature’s output fields; use
+  returns only the signature’s output fields. To inspect the model’s
+  reasoning, use
   [`chain_of_thought()`](https://jameshwade.github.io/dsprrr/reference/chain_of_thought.md)
-  if you want a `reasoning` field.
+  with `mode = "rationale"` (adds a `reasoning` field), `mode = "plan"`
+  (adds a short `plan` field), or `mode = "native"` with
+  `.return_format = "structured"` (keeps the signature unchanged and
+  exposes provider-supplied thinking blocks in
+  `get_metadata(result)$native_reasoning`).
 
 ``` r
 
@@ -225,17 +230,18 @@ assistant$register_tool(sentiment_tool)
 assistant$chat("Is this review positive? 'I love this product!'")
 ```
 
-`output = "json"` hands the result back as JSON text. The default,
-`"auto"`, returns an R list, which ellmer 0.5.0 converts with a
-deprecation warning.
+Pass `output = "json"` so the tool returns JSON text cleanly to ellmer
+(the default `"auto"` returns an R list, which triggers a conversion
+warning in ellmer 0.5.0).
 
 A prediction module’s tool is marked read-only and closed-world, because
 it only sends its inputs to its Chat’s provider. Agent runtimes that
-check tool annotations use this:
-[deputy](https://jameshwade.github.io/deputy/), for example, runs the
-tool in its default `"standard"` permission mode without web access, and
-in `"readonly"` mode when you list it in `tool_allowlist`. Tools from
-modules that can run your functions or tools, such as
+check tool annotations use this: the
+[deputy](https://jameshwade.github.io/deputy/) R agent runtime, for
+example, runs the tool in its default `"standard"` permission mode
+without web access, and in `"readonly"` mode when you list it in
+`tool_allowlist`. Tools from modules that can run your functions or
+tools, such as
 [`module_fn()`](https://jameshwade.github.io/dsprrr/reference/module_fn.md)
 or [`react()`](https://jameshwade.github.io/dsprrr/reference/react.md),
 carry no annotations unless you pass them.
@@ -316,18 +322,33 @@ run_async(
 Promises resolve when R is idle: at the console, in Shiny, or in a
 script after `while (!later::loop_empty()) later::run_now()`.
 [`run_async()`](https://jameshwade.github.io/dsprrr/reference/run_async.md)
-calls the provider directly, so it skips the response cache and records
-no trace. It accepts modules built with
-[`module()`](https://jameshwade.github.io/dsprrr/reference/module.md) or
-[`chain_of_thought()`](https://jameshwade.github.io/dsprrr/reference/chain_of_thought.md);
-[`react()`](https://jameshwade.github.io/dsprrr/reference/react.md) and
-most other specialized modules raise an error. Give each concurrent call
-its own Chat, because ellmer reads each answer from the Chat’s last turn
-and calls sharing a Chat can swap answers. For many inputs, a batch
+skips the response cache, supports `.return_format = "structured"`, and
+records canonical success and failure traces (including
+`.trace_context`). It works with
+[`module()`](https://jameshwade.github.io/dsprrr/reference/module.md),
+[`chain_of_thought()`](https://jameshwade.github.io/dsprrr/reference/chain_of_thought.md),
+[`react()`](https://jameshwade.github.io/dsprrr/reference/react.md)
+(including progress callbacks and cooperative cancellation via
+`.control = react_async_control()`), and factory-backed code runners
+([`program_of_thought()`](https://jameshwade.github.io/dsprrr/reference/program_of_thought.md),
+[`code_act()`](https://jameshwade.github.io/dsprrr/reference/code_act.md),
+[`rlm_module()`](https://jameshwade.github.io/dsprrr/reference/rlm_module.md)
+with `interpreter_factory`, which run with tracing off). Each resolved
+Chat stays reserved until its promise settles—overlapping calls on the
+same Chat fail immediately with `dsprrr_chat_busy`, so pass
+`chat$clone()` when launching concurrent calls. For many inputs, a batch
 [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md) with
 `.concurrency` is simpler.
 
 ## Streaming
+
+Use
+[`run_stream()`](https://jameshwade.github.io/dsprrr/reference/run_stream.md)
+when you want per-field callbacks, pipeline status events, or a
+structured return value; use
+[`stream_async()`](https://jameshwade.github.io/dsprrr/reference/stream_async.md)
+when you want a raw `coro` text generator (for example, streaming prose
+into a Shiny UI).
 
 [`run_stream()`](https://jameshwade.github.io/dsprrr/reference/run_stream.md)
 passes output to callbacks as it arrives. Attach a
@@ -346,18 +367,31 @@ run_stream(
 )
 ```
 
-When the signature has one string output and the coro package is
-installed, dsprrr asks for plain text and hands each chunk to the
-listener; the full text becomes the field’s value. Otherwise the module
-runs normally and the listener fires once with the finished value.
+When the module is a
+[`module()`](https://jameshwade.github.io/dsprrr/reference/module.md)
+with a single string output and the `coro` package is installed, dsprrr
+streams plain text chunks to the listener and collects the full text as
+the field’s value. Multi-field or non-string prediction modules run
+normally and fire the listener once with the finished value; attaching a
+single-string listener to a non-prediction module (such as
+[`module_fn()`](https://jameshwade.github.io/dsprrr/reference/module_fn.md)
+or [`react()`](https://jameshwade.github.io/dsprrr/reference/react.md))
+errors when `coro` is installed, and `chain_of_thought(mode = "native")`
+is rejected.
 [`run_stream()`](https://jameshwade.github.io/dsprrr/reference/run_stream.md)
-returns the result invisibly, skips the cache and records no trace. An
-`on_status` callback receives step and field events, one set per step
-for a pipeline.
+returns the result invisibly, skips the cache, and records no trace. An
+`on_status` callback receives step and field events—one set per step for
+a pipeline.
 
 [`stream_async()`](https://jameshwade.github.io/dsprrr/reference/stream_async.md)
-returns a coro async generator of text chunks, not a promise. Read it
-inside [`coro::async()`](https://coro.r-lib.org/reference/async.html):
+returns a `coro` async generator of plain, unstructured text chunks
+(signature output types are not applied;
+[`chain_of_thought()`](https://jameshwade.github.io/dsprrr/reference/chain_of_thought.md)
+`"plan"` and `"native"` modes are rejected, and cache/traces are
+skipped). Read it inside
+[`coro::async()`](https://coro.r-lib.org/reference/async.html) (in a
+non-interactive script, pump the event loop with
+[`later::run_now()`](https://later.r-lib.org/reference/run_now.html)):
 
 ``` r
 

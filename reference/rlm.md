@@ -116,6 +116,10 @@ With `.return_format = "simple"` (the default), a named list with the
 signature's outputs. With `.return_format = "structured"`, a
 `dsprrr_result` with `output`, `chat` and `metadata`.
 
+## Details
+
+**\[experimental\]**
+
 ## See also
 
 Other program constructors:

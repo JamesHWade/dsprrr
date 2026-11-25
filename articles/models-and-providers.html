@@ -17,6 +17,11 @@
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Models, providers and streaming">
+<meta name="description" content="Configure ellmer Chats, provider parameters, reasoning models, multimodal inputs, tool/agent integrations, timeouts, async promises, and streaming.
+">
+<meta property="og:description" content="Configure ellmer Chats, provider parameters, reasoning models, multimodal inputs, tool/agent integrations, timeouts, async promises, and streaming.
+">
+<meta property="og:image" content="https://jameshwade.github.io/dsprrr/logo.svg">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -132,11 +137,11 @@
 
     
     
-<p>dsprrr sends every request through an <a href="https://ellmer.tidyverse.org" class="external-link">ellmer</a> <code>Chat</code>, so it
-works with any provider ellmer supports. This page shows how to pick the
-Chat a call uses, set provider parameters, call reasoning models, send
-images, expose a module as a tool, change timeouts, and get results
-asynchronously or as a stream.</p>
+<p>dsprrr sends every request through an <a href="https://ellmer.tidyverse.org" class="external-link">ellmer</a> <code>Chat</code>, so any
+provider ellmer supports works. This guide covers three areas:
+configuring the Chat, parameters, reasoning models, and image inputs;
+embedding modules inside ellmer tools and agent runtimes; and
+controlling timeouts, async promises, and streaming output.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/dsprrr" class="external-link">dsprrr</a></span><span class="op">)</span></span></code></pre></div>
 <div class="section level2">
@@ -260,9 +265,14 @@ the Chat (<code>ellmer::params(reasoning_effort = )</code>) or in a
 module’s <code>config</code>, including a grid tried by
 <code><a href="../reference/optimize_grid.html">optimize_grid()</a></code>. Either way it reaches OpenAI as
 <code>reasoning.effort</code>.</li>
-<li>The reasoning is not part of the result. <code><a href="../reference/run.html">run()</a></code> returns
-the signature’s output fields; use <code><a href="../reference/chain_of_thought.html">chain_of_thought()</a></code> if
-you want a <code>reasoning</code> field.</li>
+<li>By default, <code><a href="../reference/run.html">run()</a></code> returns only the signature’s output
+fields. To inspect the model’s reasoning, use
+<code><a href="../reference/chain_of_thought.html">chain_of_thought()</a></code> with <code>mode = "rationale"</code>
+(adds a <code>reasoning</code> field), <code>mode = "plan"</code> (adds
+a short <code>plan</code> field), or <code>mode = "native"</code> with
+<code>.return_format = "structured"</code> (keeps the signature
+unchanged and exposes provider-supplied thinking blocks in
+<code>get_metadata(result)$native_reasoning</code>).</li>
 </ul>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">solver</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"problem -&gt; answer: int"</span><span class="op">)</span><span class="op">)</span></span>
@@ -353,16 +363,16 @@ calls it:</p>
 <span><span class="va">assistant</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-luna"</span><span class="op">)</span></span>
 <span><span class="va">assistant</span><span class="op">$</span><span class="fu">register_tool</span><span class="op">(</span><span class="va">sentiment_tool</span><span class="op">)</span></span>
 <span><span class="va">assistant</span><span class="op">$</span><span class="fu">chat</span><span class="op">(</span><span class="st">"Is this review positive? 'I love this product!'"</span><span class="op">)</span></span></code></pre></div>
-<p><code>output = "json"</code> hands the result back as JSON text. The
-default, <code>"auto"</code>, returns an R list, which ellmer 0.5.0
-converts with a deprecation warning.</p>
+<p>Pass <code>output = "json"</code> so the tool returns JSON text
+cleanly to ellmer (the default <code>"auto"</code> returns an R list,
+which triggers a conversion warning in ellmer 0.5.0).</p>
 <p>A prediction module’s tool is marked read-only and closed-world,
 because it only sends its inputs to its Chat’s provider. Agent runtimes
-that check tool annotations use this: <a href="https://jameshwade.github.io/deputy/" class="external-link">deputy</a>, for example,
-runs the tool in its default <code>"standard"</code> permission mode
-without web access, and in <code>"readonly"</code> mode when you list it
-in <code>tool_allowlist</code>. Tools from modules that can run your
-functions or tools, such as <code><a href="../reference/module_fn.html">module_fn()</a></code> or
+that check tool annotations use this: the <a href="https://jameshwade.github.io/deputy/" class="external-link">deputy</a> R agent runtime,
+for example, runs the tool in its default <code>"standard"</code>
+permission mode without web access, and in <code>"readonly"</code> mode
+when you list it in <code>tool_allowlist</code>. Tools from modules that
+can run your functions or tools, such as <code><a href="../reference/module_fn.html">module_fn()</a></code> or
 <code><a href="../reference/react.html">react()</a></code>, carry no annotations unless you pass them.</p>
 </div>
 <div class="section level2">
@@ -427,18 +437,28 @@ list <code><a href="../reference/run.html">run()</a></code> would return:</p>
 <span>  <span class="fu"><a href="https://rstudio.github.io/promises/reference/then.html" class="external-link">then</a></span><span class="op">(</span>\<span class="op">(</span><span class="va">result</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">answer</span>, <span class="st">"\n"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p>Promises resolve when R is idle: at the console, in Shiny, or in a
 script after <code>while (!later::loop_empty()) later::run_now()</code>.
-<code><a href="../reference/run_async.html">run_async()</a></code> calls the provider directly, so it skips the
-response cache and records no trace. It accepts modules built with
-<code><a href="../reference/module.html">module()</a></code> or <code><a href="../reference/chain_of_thought.html">chain_of_thought()</a></code>;
-<code><a href="../reference/react.html">react()</a></code> and most other specialized modules raise an error.
-Give each concurrent call its own Chat, because ellmer reads each answer
-from the Chat’s last turn and calls sharing a Chat can swap answers. For
-many inputs, a batch <code><a href="../reference/run.html">run()</a></code> with <code>.concurrency</code>
-is simpler.</p>
+<code><a href="../reference/run_async.html">run_async()</a></code> skips the response cache, supports
+<code>.return_format = "structured"</code>, and records canonical
+success and failure traces (including <code>.trace_context</code>). It
+works with <code><a href="../reference/module.html">module()</a></code>, <code><a href="../reference/chain_of_thought.html">chain_of_thought()</a></code>,
+<code><a href="../reference/react.html">react()</a></code> (including progress callbacks and cooperative
+cancellation via <code>.control = react_async_control()</code>), and
+factory-backed code runners (<code><a href="../reference/program_of_thought.html">program_of_thought()</a></code>,
+<code><a href="../reference/code_act.html">code_act()</a></code>, <code><a href="../reference/rlm_module.html">rlm_module()</a></code> with
+<code>interpreter_factory</code>, which run with tracing off). Each
+resolved Chat stays reserved until its promise settles—overlapping calls
+on the same Chat fail immediately with <code>dsprrr_chat_busy</code>, so
+pass <code>chat$clone()</code> when launching concurrent calls. For many
+inputs, a batch <code><a href="../reference/run.html">run()</a></code> with <code>.concurrency</code> is
+simpler.</p>
 </div>
 <div class="section level2">
 <h2 id="streaming">Streaming<a class="anchor" aria-label="anchor" href="#streaming"></a>
 </h2>
+<p>Use <code><a href="../reference/run_stream.html">run_stream()</a></code> when you want per-field callbacks,
+pipeline status events, or a structured return value; use
+<code><a href="../reference/stream_async.html">stream_async()</a></code> when you want a raw <code>coro</code> text
+generator (for example, streaming prose into a Shiny UI).</p>
 <p><code><a href="../reference/run_stream.html">run_stream()</a></code> passes output to callbacks as it arrives.
 Attach a <code><a href="../reference/stream_listener.html">stream_listener()</a></code> to an output field:</p>
 <div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
@@ -450,15 +470,24 @@ Attach a <code><a href="../reference/stream_listener.html">stream_listener()</a>
 <span>  .llm <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-luna"</span><span class="op">)</span>,</span>
 <span>  listeners <span class="op">=</span> <span class="fu"><a href="../reference/stream_listener.html">stream_listener</a></span><span class="op">(</span><span class="st">"essay"</span>, \<span class="op">(</span><span class="va">chunk</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="va">chunk</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p>When the signature has one string output and the coro package is
-installed, dsprrr asks for plain text and hands each chunk to the
-listener; the full text becomes the field’s value. Otherwise the module
-runs normally and the listener fires once with the finished value.
-<code><a href="../reference/run_stream.html">run_stream()</a></code> returns the result invisibly, skips the cache
+<p>When the module is a <code><a href="../reference/module.html">module()</a></code> with a single string
+output and the <code>coro</code> package is installed, dsprrr streams
+plain text chunks to the listener and collects the full text as the
+field’s value. Multi-field or non-string prediction modules run normally
+and fire the listener once with the finished value; attaching a
+single-string listener to a non-prediction module (such as
+<code><a href="../reference/module_fn.html">module_fn()</a></code> or <code><a href="../reference/react.html">react()</a></code>) errors when
+<code>coro</code> is installed, and
+<code>chain_of_thought(mode = "native")</code> is rejected.
+<code><a href="../reference/run_stream.html">run_stream()</a></code> returns the result invisibly, skips the cache,
 and records no trace. An <code>on_status</code> callback receives step
-and field events, one set per step for a pipeline.</p>
-<p><code><a href="../reference/stream_async.html">stream_async()</a></code> returns a coro async generator of text
-chunks, not a promise. Read it inside <code><a href="https://coro.r-lib.org/reference/async.html" class="external-link">coro::async()</a></code>:</p>
+and field events—one set per step for a pipeline.</p>
+<p><code><a href="../reference/stream_async.html">stream_async()</a></code> returns a <code>coro</code> async
+generator of plain, unstructured text chunks (signature output types are
+not applied; <code><a href="../reference/chain_of_thought.html">chain_of_thought()</a></code> <code>"plan"</code> and
+<code>"native"</code> modes are rejected, and cache/traces are skipped).
+Read it inside <code><a href="https://coro.r-lib.org/reference/async.html" class="external-link">coro::async()</a></code> (in a non-interactive script,
+pump the event loop with <code><a href="https://later.r-lib.org/reference/run_now.html" class="external-link">later::run_now()</a></code>):</p>
 <div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/r-lib/coro" class="external-link">coro</a></span><span class="op">)</span></span>
 <span><span class="va">chunks</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/stream_async.html">stream_async</a></span><span class="op">(</span></span>

@@ -83,6 +83,8 @@ An `Omni` object to pass to
 
 ## Details
 
+**\[experimental\]**
+
 Omni adapts the explore, pick-best and continue pattern of the Omni
 meta-optimizer in the [GEPA project](https://github.com/gepa-ai/gepa),
 described in the [GEPA Omni
@@ -138,17 +140,17 @@ tp <- Omni(
     bootstrap = BootstrapFewShotWithRandomSearch(metric = metric),
     gepa = GEPA(metric = metric, population_size = 4L, generations = 2L)
   ),
-  continuation = GEPA(
+  continuation = SIMBA(
     metric = metric,
-    population_size = 4L,
-    generations = 2L
+    bsize = 2L,
+    max_steps = 2L
   )
 )
 tp
 #> 
 #> ── Omni Teleprompter 
 #> Explorers: bootstrap and gepa
-#> Continuation: <dsprrr::GEPA>
+#> Continuation: <dsprrr::SIMBA>
 #> Validation split: 0.1
 #> Parallel exploration: FALSE
 

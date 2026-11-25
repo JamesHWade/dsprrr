@@ -38,8 +38,8 @@ run(module, ..., .history = NULL)
   [`conversation_history()`](https://jameshwade.github.io/dsprrr/reference/conversation_history.md)
   or
   [`load_history()`](https://jameshwade.github.io/dsprrr/reference/load_history.md).
-  The default `NULL` keeps existing Chat behavior. A non-`NULL` history
-  is supported for scalar root
+  With `NULL` (the default), `run()` uses the Chat's current turns
+  unchanged. A non-`NULL` history is supported for scalar root
   [`react()`](https://jameshwade.github.io/dsprrr/reference/react.md)
   and
   [`rlm_module()`](https://jameshwade.github.io/dsprrr/reference/rlm_module.md)

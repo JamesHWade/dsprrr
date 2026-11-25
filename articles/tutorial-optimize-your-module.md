@@ -1,14 +1,16 @@
 # Tutorial 5: Optimize a module
 
-[Tutorial
-4](https://jameshwade.github.io/dsprrr/articles/tutorial-improve-with-demos.md)
-compared versions of a module by hand. dsprrr can run that comparison
-for you: give it candidate configurations, labeled data and a metric,
-and it scores every candidate and keeps the best. By the end of this
-tutorial you can search instruction variants with
-[`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md),
-search instructions and demos together with `GridSearchTeleprompter`,
-and check the result on reviews the search never saw.
+In [Tutorial
+4](https://jameshwade.github.io/dsprrr/articles/tutorial-improve-with-demos.md),
+you compared three versions of a classifier by hand. Once you have
+several instruction ideas, demo counts, or model settings to test, doing
+that manually gets tedious fast. Give dsprrr a set of candidates,
+labeled data, and a metric, and it runs the experiment for you—scoring
+every candidate with
+[`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md)
+or
+[`GridSearchTeleprompter()`](https://jameshwade.github.io/dsprrr/reference/GridSearchTeleprompter.md)
+and keeping the winner for a final check on held-out test data.
 
 ``` r
 
@@ -18,9 +20,8 @@ library(ellmer)
 chat <- chat_openai(model = "gpt-6-luna")
 ```
 
-The answers on this page were recorded with `gpt-5-mini` and are
-replayed when the site is built, so `gpt-6-luna` may word them
-differently.
+*Recorded outputs on the package website were captured with
+`gpt-5-mini`; `gpt-6-luna` may answer slightly differently.*
 
 ## A classifier and two datasets
 
@@ -85,12 +86,12 @@ baseline_results$scores
 #> [1] 1 1 1 1
 ```
 
-In the recorded run, gpt-5-mini labels all four test reviews correctly,
-so here a search can at best match the baseline. Four reviews are too
-few to rank configurations anyway: each is worth 25 percentage points,
-and one changed answer can reverse a comparison. The datasets in this
-tutorial are small to keep it cheap; when the choice matters, test on
-dozens to hundreds of labeled rows.
+In the recorded run, `gpt-5-mini` labels all four test reviews
+correctly, so here a search can at best match the baseline. Four reviews
+are too few to rank configurations anyway: each is worth 25 percentage
+points, and one changed answer can reverse a comparison. The datasets in
+this tutorial are small to keep the walkthrough cheap; when the choice
+matters, test on dozens to hundreds of labeled rows.
 
 ## Search instruction variants
 
@@ -119,37 +120,46 @@ optimize_grid(
   .llm = chat
 )
 
-module_trials(classifier)
+optimization_result(classifier)$trials
+#> # A tibble: 3 x 6
+#>   trial_id parameters        score n_evaluated n_errors total_cost
+#>      <int> <list>            <dbl>       <int>    <int>      <dbl>
+#> 1        1 <named list [1]>    1.0          10        0     0.0012
+#> 2        2 <named list [1]>    1.0          10        0     0.0013
+#> 3        3 <named list [1]>    0.9          10        0     0.0013
 ```
 
 Each candidate runs on all ten training reviews, 30 calls in total.
 [`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md)
 changes `classifier` in place.
 [`module_trials()`](https://jameshwade.github.io/dsprrr/reference/module_trials.md)
-returns a one-row summary with the best score, the best parameters and a
-`trials` list-column; `optimization_result(classifier)$trials` has one
-row per candidate, with its score and cost.
+returns a one-row summary with the best score, the best parameters, and
+a `trials` list-column; `optimization_result(classifier)$trials` unpacks
+that into one row per candidate, with its score and cost.
 
 When `parameters` names several settings,
 [`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md)
 tries every combination, so the number of calls is the product of the
 numbers of values, times the number of rows. Settings you can search for
-a Predict module include:
+a module created with
+[`module()`](https://jameshwade.github.io/dsprrr/reference/module.md)
+include:
 
 | Setting | What it changes |
 |----|----|
 | `instructions` | Replaces the signature’s instructions. |
 | `instructions_suffix` | Appends text to the signature’s instructions. |
 | `template` | The glue string that lays out the inputs, such as `"Review: {review}"`. |
-| `reasoning_effort` | How much a reasoning model such as gpt-6-luna thinks before answering (`"none"` to `"max"`). |
-| `temperature`, `top_p` | Sampling settings sent to the model. gpt-6-luna accepts them only with `reasoning_effort = "none"`. |
+| `reasoning_effort` | How much a reasoning model such as `gpt-6-luna` thinks before answering (`"none"` to `"max"`). |
+| `temperature`, `top_p` | Sampling settings sent to the model. `gpt-6-luna` accepts them only with `reasoning_effort = "none"`. |
 
 ## Search instructions and demos together
 
-`GridSearchTeleprompter` combines an instruction search with the demos
-of Tutorial 4: it attaches `k` demos sampled from the training data,
-scores each instruction variant with those demos in place, and keeps the
-best variant. Like other teleprompters it works through
+[`GridSearchTeleprompter()`](https://jameshwade.github.io/dsprrr/reference/GridSearchTeleprompter.md)
+combines an instruction search with the demos of Tutorial 4: it attaches
+`k` demos sampled from the training data, scores each instruction
+variant with those demos in place, and keeps the best variant. Like
+other teleprompters it works through
 [`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md),
 which returns a new module and leaves the one you pass in unchanged:
 
@@ -174,12 +184,14 @@ set.seed(2026)
 optimized <- compile(module(sig), tp, trainset, .llm = chat)
 
 optimization_result(optimized)$best_params$id
+#> [1] "concise"
 ```
 
 Unless you pass `valset` to
 [`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md),
-`GridSearchTeleprompter` scores the variants on a random 20% of
-`trainset` (two reviews here) and draws the demos from the rest.
+[`GridSearchTeleprompter()`](https://jameshwade.github.io/dsprrr/reference/GridSearchTeleprompter.md)
+scores the variants on a random 20% of `trainset` (two reviews here) and
+draws the demos from the rest.
 [`set.seed()`](https://rdrr.io/r/base/Random.html) makes that split
 repeatable. Two reviews cannot tell three variants apart, so give it a
 larger `valset` when you have the data.
@@ -196,11 +208,12 @@ test_results <- evaluate(
 )
 
 test_results$mean_score
+#> [1] 1
 ```
 
 Compare `test_results$mean_score` with `baseline_results$mean_score`. A
 configuration that wins on the training reviews but not on the test set
-has fitted those particular reviews rather than the task.
+has overfit the training reviews rather than improving on the task.
 
 Each candidate costs a full pass over its data: the instruction grid
 above makes 30 calls and the teleprompter 6. The `total_cost` column of

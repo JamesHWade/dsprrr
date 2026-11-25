@@ -134,7 +134,7 @@ use one. It may also be given as the fourth argument.</p></li>
 <li><p><code>.llm</code>: an ellmer Chat for the program's calls (see <code><a href="run.html">run()</a></code>).</p></li>
 <li><p><code>.reflection_llm</code>: for <code><a href="GEPA.html">GEPA()</a></code>, the ellmer Chat used to propose
 instruction and Flex source changes. If omitted, an explicitly
-supplied <code>.llm</code> is also used for reflection for compatibility. GEPA
+supplied <code>.llm</code> is also used for reflection. GEPA
 errors before evaluation when a mutable search has no reflection Chat.</p></li>
 <li><p><code>.trace_context</code>: a named, JSON-compatible list copied into the
 metadata and traces of the calls made while compiling.</p></li>
@@ -204,7 +204,8 @@ already compiled works but gives a warning.</p>
 <span class="r-in"><span>  <span class="fu">compile</span><span class="op">(</span></span></span>
 <span class="r-in"><span>    <span class="fu"><a href="BootstrapFewShot.html">BootstrapFewShot</a></span><span class="op">(</span></span></span>
 <span class="r-in"><span>      metric <span class="op">=</span> <span class="fu"><a href="metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"sentiment"</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>      max_bootstrapped_demos <span class="op">=</span> <span class="fl">2L</span></span></span>
+<span class="r-in"><span>      max_bootstrapped_demos <span class="op">=</span> <span class="fl">2L</span>,</span></span>
+<span class="r-in"><span>      max_labeled_demos <span class="op">=</span> <span class="fl">0L</span></span></span>
 <span class="r-in"><span>    <span class="op">)</span>,</span></span>
 <span class="r-in"><span>    <span class="va">trainset</span>,</span></span>
 <span class="r-in"><span>    .llm <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-luna"</span><span class="op">)</span></span></span>

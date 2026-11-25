@@ -52,9 +52,8 @@ chat$chat(
 )
 ```
 
-The reply is a sentence you have to parse, the wording is frozen inside
-the string, and you have no measure of how often it is right. The same
-task in dsprrr:
+That call returns free-form prose that you have to parse, with the
+wording hard-coded inside the string. The same task in dsprrr:
 
 ``` r
 
@@ -96,8 +95,9 @@ metric <- metric_exact_match(field = "sentiment")
 
 before <- evaluate(classify, splits$val, metric, .llm = chat)
 
+# LabeledFewShot copies training rows into demos without making any model calls
 tuned <- classify |>
-  compile(LabeledFewShot(k = 3L), splits$train, .llm = chat)
+  compile(LabeledFewShot(k = 3L), splits$train)
 after <- evaluate(tuned, splits$val, metric, .llm = chat)
 
 c(before = before$mean_score, after = after$mean_score)
@@ -178,7 +178,7 @@ that vary between versions of the program:
 | Field | Holds | Changed by |
 |----|----|----|
 | `mod$signature` | The interface | Optimizers that tune instructions swap in a new signature |
-| `mod$demos` | Few-shot examples | [`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md) with [`LabeledFewShot()`](https://jameshwade.github.io/dsprrr/reference/LabeledFewShot.md) or [`BootstrapFewShot()`](https://jameshwade.github.io/dsprrr/reference/BootstrapFewShot.md) |
+| `mod$demos` | Few-shot examples (on prediction modules) | [`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md) with [`LabeledFewShot()`](https://jameshwade.github.io/dsprrr/reference/LabeledFewShot.md) or [`BootstrapFewShot()`](https://jameshwade.github.io/dsprrr/reference/BootstrapFewShot.md) |
 | `mod$config` | Settings such as `temperature` | You, or [`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md) |
 | `mod$chat` | An optional ellmer chat for this module | You, via `module(sig, chat = ...)` |
 | `mod$state` | Traces and optimization results | [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md), [`evaluate()`](https://jameshwade.github.io/dsprrr/reference/evaluate.md) and optimizers |
@@ -213,7 +213,8 @@ prints the most recent prompt and response.
 
 ## Running, evaluating and compiling
 
-Five functions cover the life of a module:
+Five functions cover the full
+lifecycle—`signature() |> module() |> run() |> evaluate() |> compile()`:
 
 | Function | What it does | Returns | Changes the module |
 |----|----|----|----|

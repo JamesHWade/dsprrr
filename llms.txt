@@ -2,17 +2,28 @@
 
 dsprrr lets you write LLM features in R as small programs instead of
 prompt strings. You declare a task’s inputs and typed outputs; dsprrr
-builds the prompt, calls the model, and returns an R list with the types
-you asked for. Once you have labeled examples, you can score the program
-with a metric and let an optimizer tune its instructions and few-shot
-examples against that score.
+builds the prompt, calls the model through
+[ellmer](https://ellmer.tidyverse.org), and returns an R list with the
+types you asked for. Once you have labeled examples, you can score the
+program with a metric and let an optimizer tune its instructions and
+few-shot examples against that score.
 
-The design follows [DSPy](https://dspy.ai). Model calls go through
-[ellmer](https://ellmer.tidyverse.org), so any provider ellmer supports
-works. dsprrr is experimental and not yet on CRAN; the API may still
-change.
+If you have a prompt that already works and no data to measure it
+against, plain ellmer is enough. dsprrr earns its keep when you want
+typed outputs across many inputs, a score you can track, or a prompt
+tuned on examples instead of by hand. The design follows
+[DSPy](https://dspy.ai), and any provider ellmer supports works.
 
 ## Installation
+
+Install the released version from CRAN:
+
+``` r
+
+install.packages("dsprrr")
+```
+
+Or install the development version from GitHub:
 
 ``` r
 
@@ -20,8 +31,10 @@ change.
 pak::pak("JamesHWade/dsprrr")
 ```
 
-Installing from source requires a C compiler: Rtools on Windows, Xcode
-Command Line Tools on macOS, or your Linux distribution’s build tools.
+Installing from source requires a C compiler (Rtools on Windows, Xcode
+Command Line Tools on macOS, or your Linux distribution’s build tools);
+the compiled helper preserves exact filesystem identities for safe
+persistence.
 
 You also need credentials for a model provider, for example
 `OPENAI_API_KEY` in your `.Renviron`.
@@ -88,15 +101,15 @@ as tools.
 
 ``` r
 
-route <- module(sig)            # one call
-route <- chain_of_thought(sig)  # reason, then answer
+route <- module(sig)                # one call
+route_cot <- chain_of_thought(sig)  # reason, then answer
 
 lookup <- ellmer::tool(
   function(query) "Duplicate charges are refunded by billing.",
   description = "Look up support policy",
   arguments = list(query = ellmer::type_string())
 )
-route <- react(sig, tools = list(lookup))  # call tools as needed
+route_agent <- react(sig, tools = list(lookup))  # call tools as needed
 ```
 
 ### Metrics
@@ -134,7 +147,7 @@ scores$mean_score
 
 **Improve it with data.**
 [`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md)
-returns a new module whose instructions or examples were chosen to raise
+returns a new module whose examples or instructions were tuned to raise
 the metric on your training rows. Check the result on rows it did not
 see.
 
@@ -145,7 +158,8 @@ see.
 
 optimizer <- BootstrapFewShot(
   metric = metric_exact_match(field = "urgency"),
-  max_bootstrapped_demos = 4L
+  max_bootstrapped_demos = 2L,
+  max_labeled_demos = 0L
 )
 
 split <- split_dataset(tickets, prop = 0.5, seed = 1)
@@ -180,15 +194,21 @@ works](https://jameshwade.github.io/dsprrr/articles/how-rlm-works.md)),
 [`flex()`](https://jameshwade.github.io/dsprrr/reference/flex.md) lets
 GEPA rewrite a whole program
 ([Flex](https://jameshwade.github.io/dsprrr/articles/flex-optimization.md)),
+[`with_decisions()`](https://jameshwade.github.io/dsprrr/reference/with_decisions.md)
+and
+[`ReAnchor()`](https://jameshwade.github.io/dsprrr/reference/ReAnchor.md)
+calibrate probability-backed decision thresholds ([Calibrated
+decisions](https://jameshwade.github.io/dsprrr/articles/calibrated-decisions.md)),
 and [`Omni()`](https://jameshwade.github.io/dsprrr/reference/Omni.md)
 and the agentic harnesses compose optimizers
 ([Omni](https://jameshwade.github.io/dsprrr/articles/omni-meta-optimization.md),
 [agentic
 harnesses](https://jameshwade.github.io/dsprrr/articles/agentic-optimization-harnesses.md)).
 
-dsprrr is inspired by [DSPy](https://dspy.ai) from Stanford NLP. It
-builds on [ellmer](https://ellmer.tidyverse.org) for model access and
-bridges to [vitals](https://vitals.tidyverse.org) for evaluation.
+dsprrr is experimental; the API may change. It is inspired by
+[DSPy](https://dspy.ai) from Stanford NLP, builds on
+[ellmer](https://ellmer.tidyverse.org) for model access, and bridges to
+[vitals](https://vitals.tidyverse.org) for evaluation.
 
 # Package index
 
@@ -235,7 +255,8 @@ in a different way.
 
 ## Compose programs
 
-Chain modules, retry them with a reward, or combine several answers.
+Chain modules, retry them with a reward, combine answers, or transform
+program graphs.
 
 - [`` `%>>%` ``](https://jameshwade.github.io/dsprrr/reference/pipeline.md)
   [`pipeline()`](https://jameshwade.github.io/dsprrr/reference/pipeline.md)
@@ -258,6 +279,16 @@ Chain modules, retry them with a reward, or combine several answers.
   : Pick the first successful ensemble output
 - [`reduce_best_by_metric()`](https://jameshwade.github.io/dsprrr/reference/reduce_best_by_metric.md)
   : Pick the ensemble output that scores best against a known answer
+- [`module_graph()`](https://jameshwade.github.io/dsprrr/reference/module-graph.md)
+  [`named_modules()`](https://jameshwade.github.io/dsprrr/reference/module-graph.md)
+  [`named_parameters()`](https://jameshwade.github.io/dsprrr/reference/module-graph.md)
+  [`map_modules()`](https://jameshwade.github.io/dsprrr/reference/module-graph.md)
+  [`replace_module()`](https://jameshwade.github.io/dsprrr/reference/module-graph.md)
+  [`freeze_modules()`](https://jameshwade.github.io/dsprrr/reference/module-graph.md)
+  [`is_module_frozen()`](https://jameshwade.github.io/dsprrr/reference/module-graph.md)
+  [`set_module_lm()`](https://jameshwade.github.io/dsprrr/reference/module-graph.md)
+  [`module_children()`](https://jameshwade.github.io/dsprrr/reference/module-graph.md)
+  : Inspect and transform nested programs
 
 ## Programs that run code
 
@@ -383,8 +414,8 @@ Score a program on labeled data with a metric.
 ## Optimize with compile()
 
 Optimizers, which dsprrr calls teleprompters, tune a program’s
-demonstrations, instructions or decision rules against a metric. The
-“Choose an optimizer” article compares them.
+demonstrations or instructions against a metric. The “Choose an
+optimizer” article compares them.
 
 - [`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md)
   : Optimize a program with a teleprompter
@@ -408,15 +439,26 @@ demonstrations, instructions or decision rules against a metric. The
   : Grid search over instructions and demos
 - [`BetterTogether()`](https://jameshwade.github.io/dsprrr/reference/BetterTogether.md)
   : BetterTogether: run several optimizers in sequence
-- [`ReAnchor()`](https://jameshwade.github.io/dsprrr/reference/ReAnchor.md)
-  **\[experimental\]** : ReAnchor: calibrate decision outputs against a
-  metric
 - [`Teleprompter()`](https://jameshwade.github.io/dsprrr/reference/Teleprompter.md)
   : Arguments shared by all optimizers
 
+## Grid search
+
+Try combinations of request settings, instructions and templates.
+
+- [`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md)
+  : Grid search over module settings
+- [`module_trials()`](https://jameshwade.github.io/dsprrr/reference/module_trials.md)
+  : Summarize grid search trials
+- [`module_metrics()`](https://jameshwade.github.io/dsprrr/reference/module_metrics.md)
+  : Per-trial rows from a grid search
+- [`module_parameters()`](https://jameshwade.github.io/dsprrr/reference/module_parameters.md)
+  : Build a tidymodels parameter set for a module
+
 ## Experimental optimizers
 
-Compose optimizers, or let an agent run optimization experiments.
+Compose optimizers, tune calibrated decision rules, or let an agent run
+experiments.
 
 - [`Omni()`](https://jameshwade.github.io/dsprrr/reference/Omni.md) :
   Omni: explore with several optimizers, then continue from the best
@@ -424,6 +466,9 @@ Compose optimizers, or let an agent run optimization experiments.
   : AutoResearch: let an agent run optimization experiments
 - [`MetaHarness()`](https://jameshwade.github.io/dsprrr/reference/MetaHarness.md)
   : Meta-Harness: fresh proposer sessions over a candidate frontier
+- [`ReAnchor()`](https://jameshwade.github.io/dsprrr/reference/ReAnchor.md)
+  **\[experimental\]** : ReAnchor: calibrate decision outputs against a
+  metric
 
 ## Inspect optimization results
 
@@ -447,19 +492,6 @@ See what an optimizer changed and reuse the result.
   : Copy optimized settings to another module
 - [`export_module_code()`](https://jameshwade.github.io/dsprrr/reference/export_module_code.md)
   : Export a program as standalone R code
-
-## Grid search
-
-Try combinations of request settings, instructions and templates.
-
-- [`optimize_grid()`](https://jameshwade.github.io/dsprrr/reference/optimize_grid.md)
-  : Grid search over module settings
-- [`module_trials()`](https://jameshwade.github.io/dsprrr/reference/module_trials.md)
-  : Summarize grid search trials
-- [`module_metrics()`](https://jameshwade.github.io/dsprrr/reference/module_metrics.md)
-  : Per-trial rows from a grid search
-- [`module_parameters()`](https://jameshwade.github.io/dsprrr/reference/module_parameters.md)
-  : Build a tidymodels parameter set for a module
 
 ## Calibrated decisions
 
@@ -542,21 +574,6 @@ Save programs, pin them to a board, and start a workflow project.
 - [`validate_workflow()`](https://jameshwade.github.io/dsprrr/reference/validate_workflow.md)
   : Check a module and its data before a run
 
-## Program graphs
-
-Inspect, freeze and transform the modules inside a program.
-
-- [`module_graph()`](https://jameshwade.github.io/dsprrr/reference/module-graph.md)
-  [`named_modules()`](https://jameshwade.github.io/dsprrr/reference/module-graph.md)
-  [`named_parameters()`](https://jameshwade.github.io/dsprrr/reference/module-graph.md)
-  [`map_modules()`](https://jameshwade.github.io/dsprrr/reference/module-graph.md)
-  [`replace_module()`](https://jameshwade.github.io/dsprrr/reference/module-graph.md)
-  [`freeze_modules()`](https://jameshwade.github.io/dsprrr/reference/module-graph.md)
-  [`is_module_frozen()`](https://jameshwade.github.io/dsprrr/reference/module-graph.md)
-  [`set_module_lm()`](https://jameshwade.github.io/dsprrr/reference/module-graph.md)
-  [`module_children()`](https://jameshwade.github.io/dsprrr/reference/module-graph.md)
-  : Inspect and transform nested programs
-
 ## vitals
 
 Evaluate modules with the vitals package.
@@ -636,16 +653,43 @@ module; each one builds on the last.
 
 - [Tutorial 1: Your first LLM
   call](https://jameshwade.github.io/dsprrr/articles/tutorial-hello-world.md):
+
+  Declare a task with signature(), turn it into a module, and get typed
+  R values—strings, numbers, labels, and booleans—back from an LLM.
+
 - [Tutorial 2: Build a
   classifier](https://jameshwade.github.io/dsprrr/articles/tutorial-build-classifier.md):
+
+  Scale a sentiment classifier from a single review to vectors and data
+  frames with run_dataset(), steer borderline cases with instructions,
+  and describe inputs with input().
+
 - [Tutorial 3: Extract structured
   data](https://jameshwade.github.io/dsprrr/articles/tutorial-structured-outputs.md):
+
+  Extract multiple typed fields, arrays, nested records, and optional
+  values from unstructured text into R lists and tibbles.
+
 - [Tutorial 4: Improve with
   examples](https://jameshwade.github.io/dsprrr/articles/tutorial-improve-with-demos.md):
+
+  Score a classifier against labeled data with evaluate(), attach worked
+  examples by hand or with LabeledFewShot(), and check whether they
+  help.
+
 - [Tutorial 5: Optimize a
   module](https://jameshwade.github.io/dsprrr/articles/tutorial-optimize-your-module.md):
+
+  Search instruction variants, settings, and few-shot demos
+  automatically with optimize_grid() and GridSearchTeleprompter(), then
+  evaluate on a held-out test set.
+
 - [Tutorial 6: Save and reuse a
   module](https://jameshwade.github.io/dsprrr/articles/tutorial-deploy-to-production.md):
+
+  Save a compiled module to disk with save_program() or share versioned
+  copies on a pins board, restore it in a new session, and export
+  execution traces.
 
 ### Projects
 
@@ -653,6 +697,10 @@ Longer worked examples on a realistic task.
 
 - [Generate an llms.txt
   file](https://jameshwade.github.io/dsprrr/articles/llms-txt.md):
+
+  Build a multi-stage dsprrr program that writes an llms.txt summary for
+  an R package, executes its generated R examples in callr as a metric,
+  and improves it with BootstrapFewShot().
 
 - [Investigate a regression with
   RLM](https://jameshwade.github.io/dsprrr/articles/tutorial-rlm-dsprrr.md):
@@ -663,18 +711,41 @@ Longer worked examples on a realistic task.
 - [Build a text
   adventure](https://jameshwade.github.io/dsprrr/articles/text-adventure.md):
 
+  Build an interactive console text adventure in R where dsprrr modules
+  invent rooms, referee risky actions with calibrated probability
+  thresholds, and narrate outcomes that you can score with metrics.
+
 ### Build
 
 Pick a module type, compose modules, and add retrieval or decisions.
 
 - [Choose a module
   type](https://jameshwade.github.io/dsprrr/articles/advanced-modules.md):
+
+  Compare dsprrr’s module constructors—prediction, chain-of-thought,
+  retry wrappers, ensembles, ReAct tools, RAG, code execution, and
+  custom functions—on one shared task.
+
 - [Chain modules into
   pipelines](https://jameshwade.github.io/dsprrr/articles/chaining-modules.md):
+
+  Connect modules into multi-step pipelines with pipeline(), step(), and
+  %\>\>%, control field flow with map and select, inspect step traces,
+  and compile pipelines jointly.
+
 - [Retrieval-augmented
   generation](https://jameshwade.github.io/dsprrr/articles/rag-workflows.md):
+
+  Ground answers in your own documents using rag_module() with a custom
+  R retriever or a ragnar store, build agentic search with
+  ragnar_tool(), and evaluate retrieval quality.
+
 - [Calibrated
   decisions](https://jameshwade.github.io/dsprrr/articles/calibrated-decisions.md):
+
+  Turn boolean and enum outputs into probability-backed decisions with
+  with_decisions(), inspect the evidence behind each call, and fit
+  thresholds or weights with ReAnchor().
 
 ### Measure and improve
 
@@ -683,18 +754,30 @@ Evaluate modules and optimize them with data.
 - [Compile and
   optimize](https://jameshwade.github.io/dsprrr/articles/compilation-optimization.md):
 
+  Walk through a full optimization run: define a task and metric,
+  compile with LabeledFewShot and GridSearchTeleprompter, evaluate on
+  held-out data, inspect what changed, and save the result.
+
 - [Choose an
   optimizer](https://jameshwade.github.io/dsprrr/articles/advanced-optimization.md):
+
+  Compare dsprrr’s teleprompters by what they optimize, data
+  requirements, and model-call cost, with runnable call templates and
+  budget/checkpoint options.
 
 - [A GEPA learning
   journey](https://jameshwade.github.io/dsprrr/articles/gepa-learning-journey.md):
 
-  Run a deterministic, offline GEPA search with separate training,
-  validation and holdout data, then inspect feedback, lineage and
-  budget.
+  Follow one complete GEPA optimization run—baseline failures, textual
+  feedback, reflective prompt rewrites, candidate lineage, holdout
+  check, and budget accounting.
 
 - [Evaluate with
   vitals](https://jameshwade.github.io/dsprrr/articles/vitals-recipes.md):
+
+  Evaluate dsprrr modules as vitals tasks and solvers, compare variants
+  across epochs, browse vitals logs, and wrap vitals scorers as dsprrr
+  metrics.
 
 ### Run
 
@@ -702,11 +785,29 @@ Configure models and run dsprrr in larger workflows.
 
 - [Models, providers and
   streaming](https://jameshwade.github.io/dsprrr/articles/models-and-providers.md):
+
+  Configure ellmer Chats, provider parameters, reasoning models,
+  multimodal inputs, tool/agent integrations, timeouts, async promises,
+  and streaming.
+
 - [Run dsprrr in
   pipelines](https://jameshwade.github.io/dsprrr/articles/orchestration.md):
+
+  Run dsprrr inside targets workflows and Quarto reports, validate
+  inputs before execution, pin evaluation logs and traces, and control
+  batch concurrency and cost.
+
 - [Use dsprrr with
   tidymodels](https://jameshwade.github.io/dsprrr/articles/tidymodels-integration.md):
+
+  Score dsprrr predictions with yardstick, build tuning grids with
+  dials, and wrap zero-shot modules in the llm_predict() parsnip model
+  specification.
+
 - [Troubleshooting](https://jameshwade.github.io/dsprrr/articles/troubleshooting.md):
+
+  Diagnose and fix common dsprrr setup, signature, module, run(),
+  evaluation, concurrency, provider, and response-cache errors.
 
 ### Concepts
 
@@ -715,21 +816,37 @@ How dsprrr works and why, and how it maps to DSPy.
 - [How dsprrr
   works](https://jameshwade.github.io/dsprrr/articles/concepts-signatures-modules.md):
 
+  The core mental model behind dsprrr: immutable S7 signatures, stateful
+  R6 modules, the five-function lifecycle, and when plain prompting is
+  still enough.
+
 - [Metrics and
   evaluation](https://jameshwade.github.io/dsprrr/articles/concepts-why-metrics-matter.md):
+
+  Turn subjective prompt checks into reproducible numbers: how dsprrr
+  calls metrics, built-in and trace-aware metrics, evaluate(), epochs,
+  and sample-size pitfalls.
 
 - [How optimization
   works](https://jameshwade.github.io/dsprrr/articles/concepts-optimization-theory.md):
 
+  What dsprrr optimizers search over, how metrics and data splits guide
+  them, why winning validation scores are optimistic, and where model
+  calls go.
+
 - [dsprrr for DSPy
   users](https://jameshwade.github.io/dsprrr/articles/dspy-comparison.md):
+
+  Translate your DSPy mental model to R: side-by-side examples, module
+  and optimizer comparisons against DSPy 3.5.0, infrastructure mapping,
+  and roadmap gaps.
 
 - [How RLM
   works](https://jameshwade.github.io/dsprrr/articles/how-rlm-works.md):
 
   What happens during an RLM call: where the inputs live, what the model
-  sees, where its code runs, how answers are checked, and the limits
-  that apply.
+  sees, reasoning modes, recursive and multimodal queries, multi-turn
+  history, where code runs, and the limits that apply.
 
 ### Experimental
 
@@ -739,7 +856,7 @@ Features whose interfaces may change.
   program](https://jameshwade.github.io/dsprrr/articles/flex-optimization.md):
 
   Start with declarative JSON, then use executable Flex when
-  optimization needs deterministic logic or selected tools.
+  optimization needs deterministic R logic or selected host tools.
 
 - [Compose optimizers with
   Omni](https://jameshwade.github.io/dsprrr/articles/omni-meta-optimization.md):
@@ -750,9 +867,9 @@ Features whose interfaces may change.
 - [Agentic optimization
   harnesses](https://jameshwade.github.io/dsprrr/articles/agentic-optimization-harnesses.md):
 
-  Run bounded AutoResearch and MetaHarness journeys against an offline,
-  two-step evidence-answer program, then inspect validation, holdout,
-  budget, and candidate lineage.
+  Compare AutoResearch() and MetaHarness() on a two-step pipeline, see
+  how dsprrr enforces editable paths, budgets, and sandboxing, and
+  configure live runs.
 
 ### Reference
 
@@ -760,3 +877,7 @@ Quick lookup.
 
 - [Quick
   reference](https://jameshwade.github.io/dsprrr/articles/cheatsheet.md):
+
+  Copyable snippets for everyday dsprrr tasks: model setup, signatures,
+  module constructors, running, evaluation, teleprompters, inspection,
+  caching, and saving programs.

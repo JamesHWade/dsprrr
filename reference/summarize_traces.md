@@ -40,6 +40,29 @@ Other inspection:
 ## Examples
 
 ``` r
+shout <- module_fn(
+  "text -> out",
+  function(text) list(out = toupper(text))
+)
+run(shout, text = "hello")
+#> $out
+#> [1] "HELLO"
+#> 
+summarize_traces(shout)
+#> 
+#> ── Module Trace Summary ──
+#> 
+#> ── Usage Metrics 
+#> • 1 request
+#> • 0 total tokens
+#> • Input/Output ratio: NA
+#> • Total cost: $NA
+#> 
+#> ── Performance 
+#> • Average latency: 0ms
+#> • Total time: 0s
+#> • Tokens/request: NaN
+
 if (FALSE) { # \dontrun{
 qa <- module(signature("question -> answer"))
 run(qa, question = "What is 2 + 2?", .llm = ellmer::chat_openai(model = "gpt-6-luna"))

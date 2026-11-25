@@ -55,7 +55,7 @@ run_stream(
   Explicit conversation history is not supported by streaming; use
   synchronous
   [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md) for
-  scalar root ReAct continuation.
+  scalar root ReAct or RLM continuation.
 
 ## Value
 

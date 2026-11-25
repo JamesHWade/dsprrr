@@ -53,13 +53,13 @@ the module on the new data with the default chat (see
 [`dsp_configure()`](https://jameshwade.github.io/dsprrr/reference/dsp_configure.md));
 a fitted model makes no model calls until it predicts.
 
-Known issue: the engine is registered without parsnip's encoding
-information, so
-[`parsnip::fit()`](https://generics.r-lib.org/reference/fit.html) and
+Use
 [`parsnip::fit_xy()`](https://generics.r-lib.org/reference/fit_xy.html)
-currently fail with "no applicable method for 'filter'". Until that is
-fixed, the specification cannot be fitted through parsnip, workflows or
-tune.
+(or
+[`workflows::add_variables()`](https://workflows.tidymodels.org/reference/add_variables.html))
+rather than a formula when predictors are free-text character columns:
+R's formula interface converts character columns to factors with fixed
+training levels, which rejects unseen text at prediction time.
 
 ## See also
 

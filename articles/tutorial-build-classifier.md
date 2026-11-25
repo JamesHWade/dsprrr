@@ -1,10 +1,13 @@
 # Tutorial 2: Build a classifier
 
-You will build a sentiment classifier and run it three ways: on one
-text, on a vector of texts, and on a data frame with
-[`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md).
-It uses the signature syntax from [Tutorial
-1](https://jameshwade.github.io/dsprrr/articles/tutorial-hello-world.md).
+Classifying one review is easy; classifying a whole column of
+reviews—and deciding what to do with borderline ones—is where modules
+pay off. Picking up from [Tutorial
+1](https://jameshwade.github.io/dsprrr/articles/tutorial-hello-world.md),
+this tutorial runs a sentiment classifier on a single text, a character
+vector, and a data frame with
+[`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md),
+then shows how instructions and input descriptions steer the model.
 
 ``` r
 
@@ -14,12 +17,13 @@ library(ellmer)
 chat <- chat_openai(model = "gpt-6-luna")
 ```
 
-The answers on this page were recorded with `gpt-4.1` and are replayed
-when the site is built, so `gpt-6-luna` may word them differently.
+*Recorded outputs on the package website were captured with `gpt-4.1`;
+`gpt-6-luna` may answer slightly differently.*
 
 ## Define the classifier
 
-Start from the sentiment signature in Tutorial 1 and print the module:
+Start from the sentiment signature in Tutorial 1 and print the module (a
+*prediction module*, `PredictModule`):
 
 ``` r
 
@@ -45,9 +49,9 @@ classifier
 #> Given the fields `text`, produce the fields `sentiment`.
 ```
 
-The printout shows the inputs, the output type and the instructions that
-start every prompt. This signature has no instructions of its own, so
-dsprrr wrote a default from the field names.
+The printout shows the inputs, the output type, and the instructions
+that start every prompt. This signature has no instructions of its own,
+so dsprrr wrote a default from the field names.
 
 ## Classify one text
 
@@ -105,9 +109,10 @@ purrr::map_chr(sentiments, "sentiment")
 ```
 
 Each element is still its own request to the model, and by default they
-are sent one after another.
-[`concurrency_control()`](https://jameshwade.github.io/dsprrr/reference/concurrency_control.md)
-lets several run at once.
+are sent one after another. Passing
+`.concurrency = concurrency_control(...)` lets several requests run at
+once (see [Run dsprrr in
+pipelines](https://jameshwade.github.io/dsprrr/articles/orchestration.md)).
 
 ## Add instructions
 
@@ -124,7 +129,9 @@ sig <- signature(
 classifier2 <- module(sig)
 ```
 
-The new module takes the same inputs, one at a time or as a vector:
+The new module takes the same inputs—one at a time, as a vector, or on
+borderline cases like
+`"The service was terrible but the food was amazing."`:
 
 ``` r
 
@@ -199,8 +206,10 @@ the tokens they used.
 
 A signature can also be built from
 [`input()`](https://jameshwade.github.io/dsprrr/reference/input.md)
-objects and an ellmer type. An input’s description becomes its heading
-in the prompt, in place of the input’s name:
+objects and an ellmer output type such as
+[`ellmer::type_enum()`](https://ellmer.tidyverse.org/reference/type_boolean.html).
+An input’s description is added as a `#` heading above that field in the
+prompt:
 
 ``` r
 
@@ -220,6 +229,17 @@ run(
   .llm = chat
 )
 #> [1] "positive"
+```
+
+You can inspect the exact prompt that was sent:
+
+``` r
+
+cat(get_last_prompt()$prompt)
+#> Classify the customer sentiment.
+#> 
+#> # Customer review to classify
+#> review_text: Five stars! Would buy again!
 ```
 
 The output type here is a bare

@@ -25,8 +25,9 @@ library(ellmer)
 
 ## Rooms as data
 
-The game starts somewhere and never needs a map drawn in advance.
-Whenever the player reaches a new place, a module describes it:
+The game starts at a storm-swept jetty and invents the island as you
+explore it. Whenever the player reaches a new place, a module describes
+it:
 
 ``` r
 
@@ -79,9 +80,9 @@ works. A plain
 output would make the model answer yes or no, and the only way to make
 it stricter would be to reword the prompt.
 [`with_decisions()`](https://jameshwade.github.io/dsprrr/reference/with_decisions.md)
-changes the question: the model reports the probability that the action
-succeeds, and dsprrr compares it with a threshold that stays in R (see
-[Calibrated
+(experimental) changes the question: the model reports the probability
+that the action succeeds, and dsprrr compares it with a threshold that
+stays in R (see [Calibrated
 decisions](https://jameshwade.github.io/dsprrr/articles/calibrated-decisions.md)).
 
 ``` r
@@ -143,9 +144,12 @@ narrate <- module(signature(
 
 ## The game loop
 
-`play()` keeps the state in plain R objects. `go` and `take` are handled
-in R without a model call; any other command goes to the referee and
-then the narrator.
+`play()` keeps the state in plain R objects. `go`, `take`, and
+`inventory` are handled in R without a model call; any other command
+goes to the referee and then the narrator. Passing `referee` as an
+argument lets you swap in `strict_check` (or a calibrated referee from
+[`ReAnchor()`](https://jameshwade.github.io/dsprrr/reference/ReAnchor.md)
+below) without touching the loop:
 
 ``` r
 
@@ -154,7 +158,10 @@ match_one <- function(text, options) {
   if (nzchar(text) && length(hits) > 0) hits[[1]] else NA_character_
 }
 
-play <- function(llm = chat_openai(model = "gpt-6-luna")) {
+play <- function(
+  llm = chat_openai(model = "gpt-6-luna"),
+  referee = skill_check
+) {
   if (!interactive()) stop("play() needs an interactive R session.")
   # A fresh copy of the chat per call: the model sees only what is passed in.
   ask <- function(mod, ...) run(mod, ..., .llm = llm$clone())
@@ -180,6 +187,10 @@ play <- function(llm = chat_openai(model = "gpt-6-luna")) {
     cmd <- trimws(readline("> "))
     if (cmd == "quit") break
     if (!nzchar(cmd)) next
+    if (cmd %in% c("i", "inventory")) {
+      cat("Carrying:", toString(inventory), "\n")
+      next
+    }
     if (startsWith(cmd, "go ")) {
       to <- match_one(substring(cmd, 4), here$exits)
       if (is.na(to)) {
@@ -195,6 +206,7 @@ play <- function(llm = chat_openai(model = "gpt-6-luna")) {
       if (!is.na(item)) {
         inventory <- c(inventory, item)
         rooms[[place]]$items <- setdiff(here$items, item)
+        cat("Taken:", item, "\n")
         next
       }
     }
@@ -203,7 +215,7 @@ play <- function(llm = chat_openai(model = "gpt-6-luna")) {
       place, ". ", here$description, " Items: ", toString(here$items)
     )
     verdict <- ask(
-      skill_check,
+      referee,
       action = cmd, scene = scene, inventory = toString(inventory),
       .return_format = "structured"
     )
@@ -228,11 +240,38 @@ play <- function(llm = chat_openai(model = "gpt-6-luna")) {
 }
 ```
 
-Start a game with:
+Start a game (or try the stricter referee with
+`play(referee = strict_check)`):
 
 ``` r
 
 play()
+```
+
+An interactive session looks like this:
+
+``` text
+THE JETTY
+Salt spray lashes the slick timber planks as the supply boat disappears into
+the squall. Ahead, a stone path winds toward the dark lighthouse tower.
+Exits: stone path, boathouse, the supply boat
+You see: coil of rope, rusted padlock key
+
+> take key
+Taken: rusted padlock key
+
+> go boathouse
+
+BOATHOUSE
+Tilted shutters rattle over a half-rotted dory and a heavy sea chest wedged
+beneath the workbench.
+Exits: the jetty, cliff stairs
+You see: oilskin coat
+
+> force open the sea chest with the rusted key
+[referee: 68% likely, success]
+The rusted teeth catch on the second turn and the padlock gives with a dry
+snap. Inside, wrapped in tarred canvas, lies the keeper's logbook.
 ```
 
 Each call gets its own copy of the chat, so the model knows only what
@@ -253,10 +292,10 @@ shows exactly what it was sent.
 The referee is a classifier, so you can grade it. Write down rulings you
 consider fair, score the module, and let
 [`ReAnchor()`](https://jameshwade.github.io/dsprrr/reference/ReAnchor.md)
-fit the threshold against them. It runs the module over the rulings
-once, tries thresholds against the recorded probabilities without
-calling the model again, and keeps a new threshold only if it scores
-better on held-out folds. The prompt does not change.
+(experimental) fit the threshold against them. It runs the module over
+the rulings once, tries thresholds against the recorded probabilities
+without calling the model again, and keeps a new threshold only if it
+scores better on held-out folds. The prompt does not change.
 
 ``` r
 
@@ -296,8 +335,8 @@ disagree. A metric counts how often that happens:
 ``` r
 
 keeps_items_honest <- function(prediction, expected) {
-  here <- strsplit(expected$items_here, ", ")[[1]]
-  all(prediction$gained %in% here)
+  here <- tolower(strsplit(expected$items_here, ", ")[[1]])
+  all(tolower(prediction$gained) %in% here)
 }
 
 keeps_items_honest(

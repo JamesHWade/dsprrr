@@ -17,6 +17,11 @@
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Run dsprrr in pipelines">
+<meta name="description" content="Run dsprrr inside targets workflows and Quarto reports, validate inputs before execution, pin evaluation logs and traces, and control batch concurrency and cost.
+">
+<meta property="og:description" content="Run dsprrr inside targets workflows and Quarto reports, validate inputs before execution, pin evaluation logs and traces, and control batch concurrency and cost.
+">
+<meta property="og:image" content="https://jameshwade.github.io/dsprrr/logo.svg">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -201,8 +206,9 @@ optimized module and the evaluation</td>
 </tr>
 <tr class="odd">
 <td><code>pinned_traces</code></td>
-<td>Meant to pin traces; it writes nothing for now, because the stored
-module has no recorded traces</td>
+<td>Pins the evaluation traces collected from
+<code>evaluation_results</code>
+</td>
 </tr>
 <tr class="even">
 <td>
@@ -218,10 +224,17 @@ module has no recorded traces</td>
 <code><a href="https://ellmer.tidyverse.org/reference/chat_anthropic.html" class="external-link">ellmer::chat_anthropic()</a></code>. Set the <code>DSPRRR_MODEL</code>
 environment variable for another Claude model. For any other Chat, set a
 factory near the top of <code>_targets.R</code>; it receives the model
-name:</p>
+name. Because the template sweeps <code>temperature</code> in
+<code>optimized_module</code>, pass
+<code>reasoning_effort = "none"</code> when using a reasoning model such
+as <code>gpt-6-luna</code> (or edit <code>optimized_module</code> to
+sweep <code>reasoning_effort</code> instead):</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">options</a></span><span class="op">(</span>dsprrr.targets.llm_factory <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">model</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-luna"</span><span class="op">)</span></span>
+<span>  <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span></span>
+<span>    model <span class="op">=</span> <span class="st">"gpt-6-luna"</span>,</span>
+<span>    params <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/params.html" class="external-link">params</a></span><span class="op">(</span>reasoning_effort <span class="op">=</span> <span class="st">"none"</span><span class="op">)</span></span>
+<span>  <span class="op">)</span></span>
 <span><span class="op">}</span><span class="op">)</span></span></code></pre></div>
 <p>From the pipeline’s folder, run it and read results with targets:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
@@ -245,14 +258,12 @@ to the pin names the pipeline writes. After <code><a href="https://docs.ropensci
 render it with the Quarto CLI, overriding parameters with
 <code>-P</code>:</p>
 <div class="sourceCode" id="cb5"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="ex">quarto</span> render report.qmd <span class="at">-P</span> eval_name:sentiment-eval-results</span></code></pre></div>
-<p>Treat the report as a starting point. It needs R 4.4 or later (it
-uses <code>%||%</code> without loading rlang), and its evaluation
-section (mean score, score distribution, predictions) is the part that
-works today. The module section expects an older pin layout and prints
-empty fields, and the trace sections stay empty while
-<code>pinned_traces</code> writes nothing. To render the report as part
-of the pipeline, uncomment the <code>tar_quarto()</code> target (from
-tarchetypes) at the end of <code>_targets.R</code>.</p>
+<p>Treat the report as a starting point you can customize for your own
+metrics and plots—it summarizes the pinned module artifact, evaluation
+scores, predictions, and execution traces. To render the report
+automatically as part of the pipeline, uncomment the
+<code>tar_quarto()</code> target (from <code>tarchetypes</code>) near
+the end of <code>_targets.R</code>.</p>
 </div>
 <div class="section level2">
 <h2 id="check-inputs-before-a-run">Check inputs before a run<a class="anchor" aria-label="anchor" href="#check-inputs-before-a-run"></a>
@@ -299,11 +310,14 @@ not read or write the board. Stop a script early with
 <code>if (!check$valid) stop("Workflow validation failed")</code>.</p>
 </div>
 <div class="section level2">
-<h2 id="keep-evaluation-results">Keep evaluation results<a class="anchor" aria-label="anchor" href="#keep-evaluation-results"></a>
+<h2 id="keep-evaluation-results-and-audit-approvals">Keep evaluation results and audit approvals<a class="anchor" aria-label="anchor" href="#keep-evaluation-results-and-audit-approvals"></a>
 </h2>
-<p><code><a href="../reference/pin_vitals_log.html">pin_vitals_log()</a></code> stores an <code><a href="../reference/evaluate.html">evaluate()</a></code>
-result (mean score, per-row scores, predictions) with basic module
-information. Despite the name, it doesn’t accept a vitals
+<p>Three <code>pins</code> helpers cover the artifacts a pipeline
+produces: <code><a href="../reference/pin_module_config.html">pin_module_config()</a></code> saves the compiled program,
+<code><a href="../reference/pin_trace.html">pin_trace()</a></code> saves call traces, and
+<code><a href="../reference/pin_vitals_log.html">pin_vitals_log()</a></code> stores an <code><a href="../reference/evaluate.html">evaluate()</a></code> result
+(mean score, per-row scores, predictions) with basic module metadata.
+Despite its name, <code><a href="../reference/pin_vitals_log.html">pin_vitals_log()</a></code> does not accept a vitals
 <code>Task</code>; vitals writes its own logs (see <a href="vitals-recipes.html">Evaluate with vitals</a>).</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span></span>
@@ -317,19 +331,72 @@ information. Despite the name, it doesn’t accept a vitals
 <span><span class="fu">pins</span><span class="fu">::</span><span class="fu"><a href="https://pins.rstudio.com/reference/pin_versions.html" class="external-link">pin_versions</a></span><span class="op">(</span><span class="va">board</span>, <span class="st">"sentiment-eval"</span><span class="op">)</span></span>
 <span><span class="fu">pins</span><span class="fu">::</span><span class="fu"><a href="https://pins.rstudio.com/reference/pin_read.html" class="external-link">pin_read</a></span><span class="op">(</span><span class="va">board</span>, <span class="st">"sentiment-eval"</span><span class="op">)</span><span class="op">$</span><span class="va">mean_score</span></span></code></pre></div>
 <p>Each write to a versioned board adds a version; pass an id from
-<code>pin_versions()</code> to <code>pin_read(version = )</code> to read
-an older one. For shared storage, use another pins board, such as
+<code>pin_versions()</code> to
+<code>pin_read(version = "&lt;id&gt;")</code> to read an older one. For
+shared storage, use another pins board, such as
 <code>pins::board_s3("my-bucket", prefix = "dsprrr/")</code> or
 <code><a href="https://pins.rstudio.com/reference/board_connect.html" class="external-link">pins::board_connect()</a></code>.</p>
+<div class="section level3">
+<h3 id="optional-record-human-approvals-with-graft">Optional: record human approvals with <code>graft</code><a class="anchor" aria-label="anchor" href="#optional-record-human-approvals-with-graft"></a>
+</h3>
+<p>A pins board tracks every version you write. If your deployment
+process also requires recording <em>which</em> version a human approved
+for production—and the training data it came from—you can store
+<code><a href="../reference/program-artifact.html">save_program()</a></code> artifacts in the optional GitHub package <a href="https://jameshwade.github.io/graft/" class="external-link">graft</a> (not on CRAN):</p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Requires optional package: pak::pak("JamesHWade/graft")</span></span>
+<span><span class="va">store</span> <span class="op">&lt;-</span> <span class="fu">graft</span><span class="fu">::</span><span class="fu">graft_store</span><span class="op">(</span><span class="st">"programs"</span>, create <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span><span class="va">id</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/program-artifact.html">program_artifact_id</a></span><span class="op">(</span><span class="va">classify</span><span class="op">)</span></span>
+<span><span class="va">path</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/program-artifact.html">save_program</a></span><span class="op">(</span><span class="va">classify</span>, <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".rds"</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">examples</span> <span class="op">&lt;-</span> <span class="fu">graft</span><span class="fu">::</span><span class="fu">graft_save</span><span class="op">(</span></span>
+<span>  <span class="va">store</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">as.character</a></span><span class="op">(</span><span class="fu">jsonlite</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/jsonlite/man/fromJSON.html" class="external-link">toJSON</a></span><span class="op">(</span><span class="va">reviews</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  id <span class="op">=</span> <span class="st">"sentiment:trainset"</span>,</span>
+<span>  media_type <span class="op">=</span> <span class="st">"application/json"</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">program</span> <span class="op">&lt;-</span> <span class="fu">graft</span><span class="fu">::</span><span class="fu">graft_save_file</span><span class="op">(</span></span>
+<span>  <span class="va">store</span>,</span>
+<span>  <span class="va">path</span>,</span>
+<span>  id <span class="op">=</span> <span class="st">"sentiment:program"</span>,</span>
+<span>  dependencies <span class="op">=</span> <span class="va">examples</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu">graft</span><span class="fu">::</span><span class="fu">graft_accept</span><span class="op">(</span></span>
+<span>  <span class="va">store</span>,</span>
+<span>  <span class="va">program</span>,</span>
+<span>  stream <span class="op">=</span> <span class="st">"sentiment-classifier"</span>,</span>
+<span>  expected <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  key <span class="op">=</span> <span class="va">id</span>,</span>
+<span>  actor <span class="op">=</span> <span class="st">"reviewer"</span>,</span>
+<span>  reason <span class="op">=</span> <span class="st">"Verified on held-out reviews"</span>,</span>
+<span>  purpose <span class="op">=</span> <span class="st">"production"</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Later, load whichever version is accepted for production:</span></span>
+<span><span class="va">recall</span> <span class="op">&lt;-</span> <span class="fu">graft</span><span class="fu">::</span><span class="fu">graft_recall</span><span class="op">(</span></span>
+<span>  <span class="va">store</span>,</span>
+<span>  stream <span class="op">=</span> <span class="st">"sentiment-classifier"</span>,</span>
+<span>  purpose <span class="op">=</span> <span class="st">"production"</span>,</span>
+<span>  eligible <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">prod_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".rds"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/readBin.html" class="external-link">writeBin</a></span><span class="op">(</span><span class="va">recall</span><span class="op">@</span><span class="va">roots</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">@</span><span class="va">bytes</span>, <span class="va">prod_path</span><span class="op">)</span></span>
+<span><span class="va">production</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/program-artifact.html">load_program</a></span><span class="op">(</span><span class="va">prod_path</span><span class="op">)</span></span></code></pre></div>
+<p>Because <code><a href="../reference/program-artifact.html">program_artifact_id()</a></code> is also recorded in every
+call’s metadata and trace, production logs link straight back to the
+approved artifact.</p>
+</div>
 </div>
 <div class="section level2">
 <h2 id="control-concurrency-and-cost">Control concurrency and cost<a class="anchor" aria-label="anchor" href="#control-concurrency-and-cost"></a>
 </h2>
-<p>Batch calls run one row at a time unless you pass a
-<code><a href="../reference/concurrency_control.html">concurrency_control()</a></code> to <code>.concurrency</code> in
-<code><a href="../reference/run.html">run()</a></code>, <code><a href="../reference/run_dataset.html">run_dataset()</a></code>, <code><a href="../reference/evaluate.html">evaluate()</a></code>
-or <code><a href="../reference/as_vitals_task.html">as_vitals_task()</a></code>:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<p>Inside a batch job or <code>targets</code> step, running rows
+sequentially can become the bottleneck. Batch calls run one row at a
+time unless you pass a <code><a href="../reference/concurrency_control.html">concurrency_control()</a></code> to
+<code>.concurrency</code> in <code><a href="../reference/run.html">run()</a></code>,
+<code><a href="../reference/run_dataset.html">run_dataset()</a></code>, <code><a href="../reference/evaluate.html">evaluate()</a></code>, or
+<code><a href="../reference/as_vitals_task.html">as_vitals_task()</a></code>:</p>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">control</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/concurrency_control.html">concurrency_control</a></span><span class="op">(</span>backend <span class="op">=</span> <span class="st">"ellmer"</span>, max_active <span class="op">=</span> <span class="fl">8L</span>, max_errors <span class="op">=</span> <span class="fl">5L</span><span class="op">)</span></span>
 <span><span class="va">control</span></span>
 <span><span class="co">#&gt; &lt;dsprrr_concurrency_control&gt;</span></span>
@@ -384,7 +451,7 @@ mirai, then sequential</td>
 failures, and <code>cancel</code> decides whether running mirai tasks
 are stopped at a limit. In structured results, each row’s metadata
 records the backend that ran it.</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">results</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
 <span>  <span class="va">classify</span>,</span>
 <span>  text <span class="op">=</span> <span class="va">reviews</span><span class="op">$</span><span class="va">text</span>,</span>
@@ -400,9 +467,7 @@ and <code><a href="../reference/evaluate.html">evaluate()</a></code> results; an
 <code>NA</code> rather than counting as free.
 <code><a href="../reference/session_cost.html">session_cost()</a></code> sums dsprrr’s prompt history, which keeps
 the last 100 calls (raise the limit with
-<code>options(dsprrr.prompt_history_max = )</code>). Calls made on the
-ellmer backend currently enter that history without tokens or cost, so
-its totals read <code>NA</code> after such a batch. To keep a module’s
+<code>options(dsprrr.prompt_history_max = )</code>). To keep a module’s
 call records, <code>pin_trace(board, name, module)</code> pins them; add
 <code>include_prompts = TRUE</code> and
 <code>include_outputs = TRUE</code> to keep the text as well.</p>

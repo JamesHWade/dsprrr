@@ -64,7 +64,7 @@ run_async(
   Explicit conversation history is not supported by async execution; use
   synchronous
   [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md) for
-  scalar root ReAct continuation.
+  scalar root ReAct or RLM continuation.
 
 - .control:
 

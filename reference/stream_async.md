@@ -40,7 +40,7 @@ stream_async(module, ..., .llm = NULL, .history = NULL)
   Explicit conversation history is not supported by async streaming; use
   synchronous
   [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md) for
-  scalar root ReAct continuation.
+  scalar root ReAct or RLM continuation.
 
 ## Value
 

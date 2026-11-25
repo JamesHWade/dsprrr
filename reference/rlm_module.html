@@ -269,7 +269,7 @@ attempt.</p>
 outputs. Opaque <code>TypeJsonSchema</code> outputs are rejected when the module is
 created, because they cannot be checked in the repair loop.</p>
 <p><code>reasoning_mode</code> changes the action predictor, not the declared final
-output. <code>"rationale"</code> preserves the existing <code>reasoning</code> and <code>code</code> action
+output. <code>"rationale"</code> uses <code>reasoning</code> and <code>code</code> action
 fields. <code>"native"</code> requests code only and records provider-supplied
 <code>ContentThinking</code> blocks in <code><a href="accessors.html">get_metadata()</a></code> when they are present; the
 structured metadata also has <code>native_reasoning_action_indices</code>, aligned

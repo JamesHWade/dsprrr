@@ -7,8 +7,8 @@ combined and rewritten again. GEPA can also rewrite the complete source of a
 flex() module.
 Candidate evaluation uses the chat passed to compile() as .llm.
 Reflection proposals use .reflection_llm, also passed to compile(). If
-.reflection_llm is omitted, an explicitly supplied .llm remains the
-compatibility fallback for reflection. Mutable GEPA searches require one
+.reflection_llm is omitted, an explicitly supplied .llm is used for
+reflection as well. Mutable GEPA searches require one
 of these chats; GEPA reports a configuration error instead of silently
 appending a fixed instruction suffix when no reflection chat is available."><meta property="og:description" content="GEPA() improves a program's instructions by reflection. It scores a
 population of candidate programs, shows a model the rows a candidate got
@@ -18,8 +18,8 @@ combined and rewritten again. GEPA can also rewrite the complete source of a
 flex() module.
 Candidate evaluation uses the chat passed to compile() as .llm.
 Reflection proposals use .reflection_llm, also passed to compile(). If
-.reflection_llm is omitted, an explicitly supplied .llm remains the
-compatibility fallback for reflection. Mutable GEPA searches require one
+.reflection_llm is omitted, an explicitly supplied .llm is used for
+reflection as well. Mutable GEPA searches require one
 of these chats; GEPA reports a configuration error instead of silently
 appending a fixed instruction suffix when no reflection chat is available."><meta property="og:image" content="https://jameshwade.github.io/dsprrr/logo.svg"></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -121,8 +121,8 @@ combined and rewritten again. GEPA can also rewrite the complete source of a
 <code><a href="flex.html">flex()</a></code> module.</p>
 <p>Candidate evaluation uses the chat passed to <code><a href="compile.html">compile()</a></code> as <code>.llm</code>.
 Reflection proposals use <code>.reflection_llm</code>, also passed to <code><a href="compile.html">compile()</a></code>. If
-<code>.reflection_llm</code> is omitted, an explicitly supplied <code>.llm</code> remains the
-compatibility fallback for reflection. Mutable GEPA searches require one
+<code>.reflection_llm</code> is omitted, an explicitly supplied <code>.llm</code> is used for
+reflection as well. Mutable GEPA searches require one
 of these chats; GEPA reports a configuration error instead of silently
 appending a fixed instruction suffix when no reflection chat is available.</p>
     </div>

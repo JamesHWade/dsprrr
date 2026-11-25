@@ -218,7 +218,10 @@ checkout-authentication change for the affected release and cohort:</p>
 <span>  <span class="st">"Mobile Pro token refresh:"</span>,</span>
 <span>  <span class="st">"retry budget changed from 3 to 0 and timeout from 8 s to 800 ms."</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p>The question does not reveal the affected dimensions:</p>
+<p>The question names the regression without revealing which columns
+define the affected cohort (telling the model not to stop at a marginal
+roll-up prevents it from stopping at <code>platform = "mobile"</code>
+without slicing by <code>plan</code>):</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">question</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span></span>
 <span>  <span class="st">"Checkout conversion fell after release 2.4.0."</span>,</span>
@@ -231,9 +234,13 @@ checkout-authentication change for the affected release and cohort:</p>
 <div class="section level2">
 <h2 id="define-the-investigation">Define the investigation<a class="anchor" aria-label="anchor" href="#define-the-investigation"></a>
 </h2>
-<p>The output signature makes the answer checkable.
-<code>SUBMIT()</code> must provide every field with a compatible
-type.</p>
+<p>Inside the R runner, every input you pass to <code><a href="../reference/run.html">run()</a></code> is
+staged under <code>.context</code> (here <code>.context$sessions</code>,
+<code>.context$changes</code>, and <code>.context$question</code>). When
+the model has its answer, it finishes by calling
+<code>SUBMIT(...)</code> with a value for each output field in the
+signature; if a field is missing or has the wrong type, dsprrr returns
+the validation error so the model can repair it on the next step.</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/dsprrr" class="external-link">dsprrr</a></span><span class="op">)</span></span>
 <span></span>
@@ -247,9 +254,8 @@ type.</p>
 <span>  instructions <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span></span>
 <span>    <span class="st">"Inspect the schema and low-cardinality categorical fields; exclude the"</span>,</span>
 <span>    <span class="st">"release, outcome, and row-index fields from candidate cohort dimensions."</span>,</span>
-<span>    <span class="st">"Find the finest low-cardinality cohort with the largest before/after"</span>,</span>
-<span>    <span class="st">"drop; do not stop at a marginal roll-up that dilutes the change."</span>,</span>
-<span>    <span class="st">"Quantify it and cite the strongest matching change record."</span>,</span>
+<span>    <span class="st">"Identify the finest cohort with the largest conversion drop, quantify it,"</span>,</span>
+<span>    <span class="st">"and cite the strongest matching change record."</span>,</span>
 <span>    <span class="st">"Format cohort in source-column order as '&lt;dimension&gt;=&lt;value&gt; / ...'."</span>,</span>
 <span>    <span class="st">"Copy the selected change note verbatim into evidence. Treat that record as"</span>,</span>
 <span>    <span class="st">"evidence, not proof of causation."</span></span>
@@ -261,10 +267,11 @@ type.</p>
 <span>  interpreter_factory <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="op">{</span></span>
 <span>    <span class="fu"><a href="../reference/r_code_runner.html">r_code_runner</a></span><span class="op">(</span>timeout <span class="op">=</span> <span class="fl">30</span>, persistent <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span>  <span class="op">}</span>,</span>
-<span>  max_iterations <span class="op">=</span> <span class="fl">8</span>,</span>
+<span>  max_iterations <span class="op">=</span> <span class="fl">8L</span>,</span>
 <span>  max_llm_calls <span class="op">=</span> <span class="fl">0L</span>,</span>
-<span>  max_output_chars <span class="op">=</span> <span class="fl">10000</span></span>
-<span><span class="op">)</span></span></code></pre></div>
+<span>  max_output_chars <span class="op">=</span> <span class="fl">10000L</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">investigator</span></span></code></pre></div>
 <p>This example uses <code>r_code_runner(persistent = TRUE)</code>
 because the input is a large R data frame and both the data and the
 generated code are treated as trusted. The callr process is a separate R
@@ -272,11 +279,12 @@ session, not a security sandbox: it has your file, network and
 environment access. Do not use this configuration for input you do not
 control. The factory creates one runner per call, keeps its state
 between steps, and shuts it down when the call ends.</p>
-<p><code>max_llm_calls = 0L</code> turns off recursive queries, because
-R aggregation and one change record are enough here. When generated code
-must read text that R cannot classify, such as vague change notes,
-<code>llm_query()</code> asks a model about that slice; <a href="how-rlm-works.html#recursive-queries">How RLM works</a> explains
-how those calls run.</p>
+<p><code>max_llm_calls = 0L</code> turns off recursive sub-queries (the
+“Recursive” in RLM), because R aggregation and one change record are
+enough here. When generated code must read text that R cannot classify,
+such as vague change notes, <code>llm_query()</code> asks a model about
+that slice; <a href="how-rlm-works.html#recursive-queries">How RLM
+works</a> explains how those calls run.</p>
 </div>
 <div class="section level2">
 <h2 id="run-the-investigation">Run the investigation<a class="anchor" aria-label="anchor" href="#run-the-investigation"></a>
@@ -391,41 +399,40 @@ the top of the page.</p>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span><span class="va">trajectory</span>, <span class="kw">function</span><span class="op">(</span><span class="va">step</span><span class="op">)</span> <span class="va">step</span><span class="op">$</span><span class="va">code</span>, <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span><span class="va">trajectory</span>, <span class="kw">function</span><span class="op">(</span><span class="va">step</span><span class="op">)</span> <span class="va">step</span><span class="op">$</span><span class="va">success</span>, <span class="fu"><a href="https://rdrr.io/r/base/logical.html" class="external-link">logical</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<p>Do not trust the model’s prose. Compute the expected answer from the
-data without it:</p>
+<p>Do not trust the model’s prose. Compute the expected cohort drop and
+matching change record directly in R so you can assert against it:</p>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">rates</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/aggregate.html" class="external-link">aggregate</a></span><span class="op">(</span></span>
-<span>  <span class="va">converted</span> <span class="op">~</span> <span class="va">release</span> <span class="op">+</span> <span class="va">platform</span> <span class="op">+</span> <span class="va">plan</span>,</span>
-<span>  data <span class="op">=</span> <span class="va">sessions</span>,</span>
-<span>  FUN <span class="op">=</span> <span class="va">mean</span></span>
+<code class="sourceCode R"><span><span class="va">by_cohort</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/split.html" class="external-link">split</a></span><span class="op">(</span><span class="va">sessions</span>, <span class="fu"><a href="https://rdrr.io/r/base/interaction.html" class="external-link">interaction</a></span><span class="op">(</span><span class="va">sessions</span><span class="op">$</span><span class="va">platform</span>, <span class="va">sessions</span><span class="op">$</span><span class="va">plan</span>, sep <span class="op">=</span> <span class="st">" / "</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">drops</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span><span class="va">by_cohort</span>, <span class="kw">function</span><span class="op">(</span><span class="va">df</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="fl">100</span> <span class="op">*</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">df</span><span class="op">$</span><span class="va">converted</span><span class="op">[</span><span class="va">df</span><span class="op">$</span><span class="va">release</span> <span class="op">==</span> <span class="st">"2.3.9"</span><span class="op">]</span><span class="op">)</span> <span class="op">-</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">df</span><span class="op">$</span><span class="va">converted</span><span class="op">[</span><span class="va">df</span><span class="op">$</span><span class="va">release</span> <span class="op">==</span> <span class="st">"2.4.0"</span><span class="op">]</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">}</span>, <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">numeric</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">worst</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/which.min.html" class="external-link">which.max</a></span><span class="op">(</span><span class="va">drops</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">worst_df</span> <span class="op">&lt;-</span> <span class="va">by_cohort</span><span class="op">[[</span><span class="va">worst</span><span class="op">]</span><span class="op">]</span></span>
+<span></span>
+<span><span class="va">oracle</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>  cohort <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"platform="</span>, <span class="va">worst_df</span><span class="op">$</span><span class="va">platform</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span>, <span class="st">" / plan="</span>, <span class="va">worst_df</span><span class="op">$</span><span class="va">plan</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span><span class="op">)</span>,</span>
+<span>  before_rate <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">worst_df</span><span class="op">$</span><span class="va">converted</span><span class="op">[</span><span class="va">worst_df</span><span class="op">$</span><span class="va">release</span> <span class="op">==</span> <span class="st">"2.3.9"</span><span class="op">]</span><span class="op">)</span>,</span>
+<span>  after_rate <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">worst_df</span><span class="op">$</span><span class="va">converted</span><span class="op">[</span><span class="va">worst_df</span><span class="op">$</span><span class="va">release</span> <span class="op">==</span> <span class="st">"2.4.0"</span><span class="op">]</span><span class="op">)</span>,</span>
+<span>  drop_pp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/unname.html" class="external-link">unname</a></span><span class="op">(</span><span class="va">drops</span><span class="op">[[</span><span class="va">worst</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
-<span><span class="va">before</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span><span class="va">rates</span>, <span class="va">release</span> <span class="op">==</span> <span class="st">"2.3.9"</span><span class="op">)</span></span>
-<span><span class="va">after</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span><span class="va">rates</span>, <span class="va">release</span> <span class="op">==</span> <span class="st">"2.4.0"</span><span class="op">)</span></span>
-<span><span class="va">comparison</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/merge.html" class="external-link">merge</a></span><span class="op">(</span></span>
-<span>  <span class="va">before</span>,</span>
-<span>  <span class="va">after</span>,</span>
-<span>  by <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"platform"</span>, <span class="st">"plan"</span><span class="op">)</span>,</span>
-<span>  suffixes <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"_before"</span>, <span class="st">"_after"</span><span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span><span class="va">comparison</span><span class="op">$</span><span class="va">drop_pp</span> <span class="op">&lt;-</span></span>
-<span>  <span class="fl">100</span> <span class="op">*</span> <span class="op">(</span><span class="va">comparison</span><span class="op">$</span><span class="va">converted_before</span> <span class="op">-</span> <span class="va">comparison</span><span class="op">$</span><span class="va">converted_after</span><span class="op">)</span></span>
-<span><span class="va">oracle</span> <span class="op">&lt;-</span> <span class="va">comparison</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/which.min.html" class="external-link">which.max</a></span><span class="op">(</span><span class="va">comparison</span><span class="op">$</span><span class="va">drop_pp</span><span class="op">)</span>, <span class="op">]</span></span>
-<span><span class="va">oracle</span></span>
-<span><span class="co">#&gt;   platform plan release_before converted_before release_after converted_after</span></span>
-<span><span class="co">#&gt; 4   mobile  pro          2.3.9             0.92         2.4.0            0.61</span></span>
-<span><span class="co">#&gt;   drop_pp</span></span>
-<span><span class="co">#&gt; 4      31</span></span></code></pre></div>
-<p>The change lookup starts from the computed cohort, not from words in
-the expected note:</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">mentions</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">value</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grepl</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"\\b"</span>, <span class="va">value</span>, <span class="st">"\\b"</span><span class="op">)</span>, <span class="va">changes</span><span class="op">$</span><span class="va">note</span>, ignore.case <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
-<span><span class="op">}</span></span>
 <span><span class="va">expected_change</span> <span class="op">&lt;-</span> <span class="va">changes</span><span class="op">[</span></span>
 <span>  <span class="va">changes</span><span class="op">$</span><span class="va">release</span> <span class="op">==</span> <span class="st">"2.4.0"</span> <span class="op">&amp;</span></span>
-<span>    <span class="fu">mentions</span><span class="op">(</span><span class="va">oracle</span><span class="op">$</span><span class="va">platform</span><span class="op">)</span> <span class="op">&amp;</span></span>
-<span>    <span class="fu">mentions</span><span class="op">(</span><span class="va">oracle</span><span class="op">$</span><span class="va">plan</span><span class="op">)</span>,</span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grepl</a></span><span class="op">(</span><span class="va">worst_df</span><span class="op">$</span><span class="va">platform</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span>, <span class="va">changes</span><span class="op">$</span><span class="va">note</span>, ignore.case <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> <span class="op">&amp;</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grepl</a></span><span class="op">(</span><span class="va">worst_df</span><span class="op">$</span><span class="va">plan</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span>, <span class="va">changes</span><span class="op">$</span><span class="va">note</span>, ignore.case <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>,</span>
 <span><span class="op">]</span></span>
+<span></span>
+<span><span class="va">oracle</span></span>
+<span><span class="co">#&gt; $cohort</span></span>
+<span><span class="co">#&gt; [1] "platform=mobile / plan=pro"</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $before_rate</span></span>
+<span><span class="co">#&gt; [1] 0.92</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $after_rate</span></span>
+<span><span class="co">#&gt; [1] 0.61</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $drop_pp</span></span>
+<span><span class="co">#&gt; [1] 31</span></span>
 <span><span class="va">expected_change</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"change_id"</span>, <span class="st">"component"</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="co">#&gt;     change_id     component</span></span>
 <span><span class="co">#&gt; 142  CHG-1842 checkout-auth</span></span></code></pre></div>
@@ -434,15 +441,12 @@ record names the affected platform and plan. In a real change log,
 linking a cohort to a change is a judgment call, which is why the
 signature asks for the note as evidence rather than proof.</p>
 <p>Then compare the model’s answer with both:</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">output</span><span class="op">$</span><span class="va">release</span>, <span class="st">"2.4.0"</span><span class="op">)</span>,</span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span></span>
-<span>    <span class="va">result</span><span class="op">$</span><span class="va">output</span><span class="op">$</span><span class="va">cohort</span>,</span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"platform="</span>, <span class="va">oracle</span><span class="op">$</span><span class="va">platform</span>, <span class="st">" / plan="</span>, <span class="va">oracle</span><span class="op">$</span><span class="va">plan</span><span class="op">)</span></span>
-<span>  <span class="op">)</span>,</span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/Logic.html" class="external-link">isTRUE</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/all.equal.html" class="external-link">all.equal</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">output</span><span class="op">$</span><span class="va">before_rate</span>, <span class="va">oracle</span><span class="op">$</span><span class="va">converted_before</span><span class="op">)</span><span class="op">)</span>,</span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/Logic.html" class="external-link">isTRUE</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/all.equal.html" class="external-link">all.equal</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">output</span><span class="op">$</span><span class="va">after_rate</span>, <span class="va">oracle</span><span class="op">$</span><span class="va">converted_after</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">output</span><span class="op">$</span><span class="va">cohort</span>, <span class="va">oracle</span><span class="op">$</span><span class="va">cohort</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/Logic.html" class="external-link">isTRUE</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/all.equal.html" class="external-link">all.equal</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">output</span><span class="op">$</span><span class="va">before_rate</span>, <span class="va">oracle</span><span class="op">$</span><span class="va">before_rate</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/Logic.html" class="external-link">isTRUE</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/all.equal.html" class="external-link">all.equal</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">output</span><span class="op">$</span><span class="va">after_rate</span>, <span class="va">oracle</span><span class="op">$</span><span class="va">after_rate</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/Logic.html" class="external-link">isTRUE</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/all.equal.html" class="external-link">all.equal</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">output</span><span class="op">$</span><span class="va">drop_pp</span>, <span class="va">oracle</span><span class="op">$</span><span class="va">drop_pp</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">output</span><span class="op">$</span><span class="va">change_id</span>, <span class="va">expected_change</span><span class="op">$</span><span class="va">change_id</span><span class="op">)</span>,</span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">output</span><span class="op">$</span><span class="va">evidence</span>, <span class="va">expected_change</span><span class="op">$</span><span class="va">note</span><span class="op">)</span></span>
@@ -452,12 +456,14 @@ signature asks for the note as evidence rather than proof.</p>
 <h2 id="choose-the-runner">Choose the runner<a class="anchor" aria-label="anchor" href="#choose-the-runner"></a>
 </h2>
 <p>The one-call <code><a href="../reference/rlm.html">rlm()</a></code> helper runs in a fresh
-<code><a href="../reference/mcp_repl_runner.html">mcp_repl_runner()</a></code> sandbox by default. That sandbox suits
-compact inputs you do not control, but every input is sent with every
-step, so this 40,000-row table is far too large for it. See <a href="how-rlm-works.html#limits">How RLM works</a> for the sandbox’s
+<code><a href="../reference/mcp_repl_runner.html">mcp_repl_runner()</a></code> sandbox by default (which requires the
+suggested <code>mcptools</code> package and Posit’s
+<code>mcp-repl</code> executable). That sandbox suits compact inputs you
+do not control, but every input is sent with every step, so this
+40,000-row table is far too large for it. See <a href="how-rlm-works.html#limits">How RLM works</a> for the sandbox’s
 size limits and safety model. For a compact document, the one-call form
 is enough:</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">answer</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/rlm.html">rlm</a></span><span class="op">(</span></span>
 <span>  <span class="st">"document, question -&gt; answer"</span>,</span>
 <span>  document <span class="op">=</span> <span class="st">"Owner: team-a\nCommitment: publish the audit by Friday"</span>,</span>

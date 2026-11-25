@@ -200,7 +200,7 @@
       </dl></div><div class="section level2">
       <h2 id="compose-programs">Compose programs<a class="anchor" aria-label="anchor" href="#compose-programs"></a></h2>
 
-      <div class="section-desc"><p>Chain modules, retry them with a reward, or combine several answers.</p></div>
+      <div class="section-desc"><p>Chain modules, retry them with a reward, combine answers, or transform program graphs.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -276,6 +276,13 @@
 
         </dt>
         <dd>Pick the ensemble output that scores best against a known answer</dd>
+
+        <dt>
+
+          <code><a href="module-graph.html">module_graph()</a></code> <code><a href="module-graph.html">named_modules()</a></code> <code><a href="module-graph.html">named_parameters()</a></code> <code><a href="module-graph.html">map_modules()</a></code> <code><a href="module-graph.html">replace_module()</a></code> <code><a href="module-graph.html">freeze_modules()</a></code> <code><a href="module-graph.html">is_module_frozen()</a></code> <code><a href="module-graph.html">set_module_lm()</a></code> <code><a href="module-graph.html">module_children()</a></code>
+
+        </dt>
+        <dd>Inspect and transform nested programs</dd>
       </dl></div><div class="section level2">
       <h2 id="programs-that-run-code">Programs that run code<a class="anchor" aria-label="anchor" href="#programs-that-run-code"></a></h2>
 
@@ -618,7 +625,7 @@
       </dl></div><div class="section level2">
       <h2 id="optimize-with-compile-">Optimize with compile()<a class="anchor" aria-label="anchor" href="#optimize-with-compile-"></a></h2>
 
-      <div class="section-desc"><p>Optimizers, which dsprrr calls teleprompters, tune a program’s demonstrations, instructions or decision rules against a metric. The “Choose an optimizer” article compares them.</p></div>
+      <div class="section-desc"><p>Optimizers, which dsprrr calls teleprompters, tune a program’s demonstrations or instructions against a metric. The “Choose an optimizer” article compares them.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -704,21 +711,51 @@
 
         <dt>
 
-          <code><a href="ReAnchor.html">ReAnchor()</a></code>
-          <span class="badge lifecycle lifecycle-experimental">experimental</span>
-        </dt>
-        <dd>ReAnchor: calibrate decision outputs against a metric</dd>
-
-        <dt>
-
           <code><a href="Teleprompter.html">Teleprompter()</a></code>
 
         </dt>
         <dd>Arguments shared by all optimizers</dd>
       </dl></div><div class="section level2">
+      <h2 id="grid-search">Grid search<a class="anchor" aria-label="anchor" href="#grid-search"></a></h2>
+
+      <div class="section-desc"><p>Try combinations of request settings, instructions and templates.</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="optimize_grid.html">optimize_grid()</a></code>
+
+        </dt>
+        <dd>Grid search over module settings</dd>
+
+        <dt>
+
+          <code><a href="module_trials.html">module_trials()</a></code>
+
+        </dt>
+        <dd>Summarize grid search trials</dd>
+
+        <dt>
+
+          <code><a href="module_metrics.html">module_metrics()</a></code>
+
+        </dt>
+        <dd>Per-trial rows from a grid search</dd>
+
+        <dt>
+
+          <code><a href="module_parameters.html">module_parameters()</a></code>
+
+        </dt>
+        <dd>Build a tidymodels parameter set for a module</dd>
+      </dl></div><div class="section level2">
       <h2 id="experimental-optimizers">Experimental optimizers<a class="anchor" aria-label="anchor" href="#experimental-optimizers"></a></h2>
 
-      <div class="section-desc"><p>Compose optimizers, or let an agent run optimization experiments.</p></div>
+      <div class="section-desc"><p>Compose optimizers, tune calibrated decision rules, or let an agent run experiments.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -745,6 +782,13 @@
 
         </dt>
         <dd>Meta-Harness: fresh proposer sessions over a candidate frontier</dd>
+
+        <dt>
+
+          <code><a href="ReAnchor.html">ReAnchor()</a></code>
+          <span class="badge lifecycle lifecycle-experimental">experimental</span>
+        </dt>
+        <dd>ReAnchor: calibrate decision outputs against a metric</dd>
       </dl></div><div class="section level2">
       <h2 id="inspect-optimization-results">Inspect optimization results<a class="anchor" aria-label="anchor" href="#inspect-optimization-results"></a></h2>
 
@@ -810,43 +854,6 @@
 
         </dt>
         <dd>Export a program as standalone R code</dd>
-      </dl></div><div class="section level2">
-      <h2 id="grid-search">Grid search<a class="anchor" aria-label="anchor" href="#grid-search"></a></h2>
-
-      <div class="section-desc"><p>Try combinations of request settings, instructions and templates.</p></div>
-
-      <dl></dl></div><div class="section level2">
-
-
-
-
-      <dl><dt>
-
-          <code><a href="optimize_grid.html">optimize_grid()</a></code>
-
-        </dt>
-        <dd>Grid search over module settings</dd>
-
-        <dt>
-
-          <code><a href="module_trials.html">module_trials()</a></code>
-
-        </dt>
-        <dd>Summarize grid search trials</dd>
-
-        <dt>
-
-          <code><a href="module_metrics.html">module_metrics()</a></code>
-
-        </dt>
-        <dd>Per-trial rows from a grid search</dd>
-
-        <dt>
-
-          <code><a href="module_parameters.html">module_parameters()</a></code>
-
-        </dt>
-        <dd>Build a tidymodels parameter set for a module</dd>
       </dl></div><div class="section level2">
       <h2 id="calibrated-decisions">Calibrated decisions<a class="anchor" aria-label="anchor" href="#calibrated-decisions"></a></h2>
 
@@ -1065,22 +1072,6 @@
 
         </dt>
         <dd>Check a module and its data before a run</dd>
-      </dl></div><div class="section level2">
-      <h2 id="program-graphs">Program graphs<a class="anchor" aria-label="anchor" href="#program-graphs"></a></h2>
-
-      <div class="section-desc"><p>Inspect, freeze and transform the modules inside a program.</p></div>
-
-      <dl></dl></div><div class="section level2">
-
-
-
-
-      <dl><dt>
-
-          <code><a href="module-graph.html">module_graph()</a></code> <code><a href="module-graph.html">named_modules()</a></code> <code><a href="module-graph.html">named_parameters()</a></code> <code><a href="module-graph.html">map_modules()</a></code> <code><a href="module-graph.html">replace_module()</a></code> <code><a href="module-graph.html">freeze_modules()</a></code> <code><a href="module-graph.html">is_module_frozen()</a></code> <code><a href="module-graph.html">set_module_lm()</a></code> <code><a href="module-graph.html">module_children()</a></code>
-
-        </dt>
-        <dd>Inspect and transform nested programs</dd>
       </dl></div><div class="section level2">
       <h2 id="vitals">vitals<a class="anchor" aria-label="anchor" href="#vitals"></a></h2>
 

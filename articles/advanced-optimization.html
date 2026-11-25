@@ -17,6 +17,11 @@
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Choose an optimizer">
+<meta name="description" content="Compare dsprrr's teleprompters by what they optimize, data requirements, and model-call cost, with runnable call templates and budget/checkpoint options.
+">
+<meta property="og:description" content="Compare dsprrr's teleprompters by what they optimize, data requirements, and model-call cost, with runnable call templates and budget/checkpoint options.
+">
+<meta property="og:image" content="https://jameshwade.github.io/dsprrr/logo.svg">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -132,12 +137,14 @@
 
     
     
-<p>dsprrr has eleven optimizers, called teleprompters. They differ in
-what they change in a module, how much labeled data they need, and how
-many model calls they spend. This page compares them and shows a short
-call for each. The workflow around them (baseline, held-out scores,
-saving) is covered in <a href="compilation-optimization.html">Compile
-and optimize</a>, and the ideas behind them in <a href="concepts-optimization-theory.html">How optimization works</a>.</p>
+<p>dsprrr ships eleven core optimizers—called
+<em>teleprompters</em>—plus three experimental meta/agentic harnesses
+described at the bottom. They differ in what they change in a module,
+how much labeled data they need, and how many model calls they spend.
+This page compares them and shows a short call for each. The workflow
+around them (baseline, held-out scores, saving) is covered in <a href="compilation-optimization.html">Compile and optimize</a>, and the
+ideas behind them in <a href="concepts-optimization-theory.html">How
+optimization works</a>.</p>
 <div class="section level2">
 <h2 id="comparison">Comparison<a class="anchor" aria-label="anchor" href="#comparison"></a>
 </h2>
@@ -190,7 +197,7 @@ V</td>
 <td><code>KNNFewShot</code></td>
 <td>Demos, picked for each input by similarity</td>
 <td>A varied labeled pool</td>
-<td>None; one embedding call per run</td>
+<td>No chat calls (embeds T once); one embedding call per run</td>
 <td>Inputs vary widely and similar examples help most</td>
 </tr>
 <tr class="odd">
@@ -208,8 +215,8 @@ V</td>
 <td>
 <code>trainset</code> and <code>valset</code>
 </td>
-<td>About <code>breadth</code> × <code>depth</code> × V, plus passes
-over T</td>
+<td>About <code>breadth</code> × <code>depth</code> × V, plus failure
+scans of up to 20 rows of T</td>
 <td>The instructions are the weak point</td>
 </tr>
 <tr class="odd">
@@ -251,10 +258,12 @@ plus rewrites</td>
 <td>You want to chain optimizers and keep the best stage</td>
 </tr>
 <tr class="odd">
-<td><code>ReAnchor</code></td>
+<td>
+<code>ReAnchor</code> <em>(experimental)</em>
+</td>
 <td>Decision thresholds, cuts and weights; never the prompt</td>
 <td>Two or more rows</td>
-<td>2 × T, plus 2 × V with a <code>valset</code>
+<td>2 × T, plus up to 2 × V with a <code>valset</code>
 </td>
 <td>Yes/no or label decisions are miscalibrated</td>
 </tr>
@@ -295,7 +304,9 @@ the uncompiled module on held-out rows.</p>
 <span></span>
 <span><span class="va">metric</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metric_exact_match.html">metric_exact_match</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"team"</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Three rows show the shape; a real run needs dozens or more</span></span>
+<span><span class="co"># Abbreviated 3-row sketch showing the column shape.</span></span>
+<span><span class="co"># In practice, pass dozens or hundreds of rows so the parameter sizes below</span></span>
+<span><span class="co"># (k = 4L, bsize = 16L, max_labeled_demos = 4L) have room to work.</span></span>
 <span><span class="va">tickets</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
 <span>  ticket <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
 <span>    <span class="st">"I was charged twice for my subscription this month."</span>,</span>
@@ -345,7 +356,7 @@ the default settings: every row becomes a labeled demo. Lower
 <span>    <span class="fu"><a href="../reference/BootstrapFewShot.html">BootstrapFewShot</a></span><span class="op">(</span></span>
 <span>      metric <span class="op">=</span> <span class="va">metric</span>,</span>
 <span>      max_bootstrapped_demos <span class="op">=</span> <span class="fl">4L</span>,</span>
-<span>      max_labeled_demos <span class="op">=</span> <span class="fl">2L</span></span>
+<span>      max_labeled_demos <span class="op">=</span> <span class="fl">0L</span></span>
 <span>    <span class="op">)</span>,</span>
 <span>    <span class="va">trainset</span>,</span>
 <span>    .llm <span class="op">=</span> <span class="va">llm</span></span>
@@ -452,14 +463,14 @@ rest.</p>
 <div class="section level2">
 <h2 id="copro">COPRO<a class="anchor" aria-label="anchor" href="#copro"></a>
 </h2>
-<p><code>COPRO</code> rewrites the instructions. It first runs the
-module on every training row to find failures. Each of
-<code>depth</code> rounds then asks <code>prompt_model</code> (by
-default the task chat) for <code>breadth</code> new versions of the
-current best instructions, showing it up to three failed rows. Each
-version is scored on <code>valset</code>, and the best one replaces the
-current instructions if it scores higher. After each round that improves
-the score, the training rows are checked again for failures.</p>
+<p><code>COPRO</code> rewrites the instructions. It first scores up to
+20 random training rows to find failures. Each of <code>depth</code>
+rounds then asks <code>prompt_model</code> (by default the task chat)
+for <code>breadth</code> new versions of the current best instructions,
+showing it up to three failed rows. Each version is scored on
+<code>valset</code>, and the best one replaces the current instructions
+if it scores higher. After each round that improves the score, up to 20
+training rows are checked again for failures.</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">rewritten</span> <span class="op">&lt;-</span> <span class="va">triage</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span></span>
@@ -485,11 +496,11 @@ bootstrapped sets. The instruction variants are the original
 instructions plus versions that append a short summary of the input and
 output fields and one of five fixed tips, such as “Be concise and
 accurate.” No model writes new instructions.</p>
-<p>Each trial scores one combination. A UCB1 bandit picks it: untried
-combinations first, then those with a high mean score or few trials.
-Most trials score a small random batch of training rows; every few
-trials, a full pass over <code>valset</code> checks the current pick,
-and the best fully scored combination wins.</p>
+<p>Each trial scores one combination. An upper-confidence-bound (UCB1)
+bandit picks it: untried combinations first, then those with a high mean
+score or few trials. Most trials score a small random batch of training
+rows; every few trials, a full pass over <code>valset</code> checks the
+current pick, and the best fully scored combination wins.</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">mipro</span> <span class="op">&lt;-</span> <span class="va">triage</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span></span>
@@ -551,8 +562,9 @@ the module unchanged, with status <code>"partial"</code>.
 where it sets both the number of trials and the number of instruction
 variants (at most six). <code>task_model</code> runs the module during
 the search in place of <code>.llm</code>. For a program with nested
-predictors, such as an RLM, <code>MIPROv2</code> tunes each predictor’s
-instructions and requires <code>max_bootstrapped_demos = 0L</code>.</p>
+predictors, such as a recursive language model (<a href="https://jameshwade.github.io/dsprrr/articles/how-rlm-works.html">How
+RLM works</a>), <code>MIPROv2</code> tunes each predictor’s instructions
+and requires <code>max_bootstrapped_demos = 0L</code>.</p>
 </div>
 <div class="section level2">
 <h2 id="simba">SIMBA<a class="anchor" aria-label="anchor" href="#simba"></a>
@@ -598,11 +610,11 @@ whole from one parent or the other, so crossover never splices text.
 With probability <code>mutation_rate</code>, the reflection Chat
 (<code>.reflection_llm</code>) rewrites the child’s instructions after
 reading its parent’s failed training rows; <code>.llm</code> evaluates
-the candidates. When <code>.reflection_llm</code> is omitted, an
-explicitly supplied <code>.llm</code> remains the compatibility fallback
-for both roles.</p>
-<p>For a complete offline run with separate train, validation and
-holdout data, feedback, candidate lineage and budget accounting, see <a href="gepa-learning-journey.html">A GEPA learning journey</a>.</p>
+the candidates. If you omit <code>.reflection_llm</code>, GEPA uses
+<code>.llm</code> for reflection as well.</p>
+<p>For a complete offline run with separate train, validation, and
+holdout data, feedback, candidate lineage, and budget accounting, see <a href="https://jameshwade.github.io/dsprrr/articles/gepa-learning-journey.html">A
+GEPA learning journey</a>.</p>
 <p>GEPA reads textual feedback when the metric returns it, which makes
 the rewrites more specific. <code><a href="../reference/metric_with_feedback.html">metric_with_feedback()</a></code> marks
 such a metric:</p>
@@ -644,7 +656,8 @@ rewrites alone. That is why this example raises
 <code>mutation_rate</code> from its default of 0.1. A named list in
 <code>metrics</code> optimizes several objectives at once, and parents
 then also come from the Pareto front. For <code><a href="../reference/flex.html">flex()</a></code> programs,
-GEPA can rewrite the program’s source itself; see <a href="flex-optimization.html">Flex: optimize a whole program</a>.</p>
+GEPA can rewrite the program’s source itself; see <a href="https://jameshwade.github.io/dsprrr/articles/flex-optimization.html">Flex:
+optimize a whole program</a>.</p>
 </div>
 <div class="section level2">
 <h2 id="bettertogether">BetterTogether<a class="anchor" aria-label="anchor" href="#bettertogether"></a>
@@ -704,11 +717,12 @@ decision outputs.</p>
 </h2>
 <p>Three experimental teleprompters build on the ones above.
 <code><a href="../reference/Omni.html">Omni()</a></code> runs several teleprompters from the same start,
-compares them on one validation set and continues from the winner; see
-<a href="omni-meta-optimization.html">Compose optimizers with Omni</a>.
-<code><a href="../reference/AutoResearch.html">AutoResearch()</a></code> and <code><a href="../reference/MetaHarness.html">MetaHarness()</a></code> let a model
-propose program edits in a sandbox while dsprrr scores them; see <a href="agentic-optimization-harnesses.html">Agentic optimization
-harnesses</a>.</p>
+compares them on one validation set, and continues from the winner; see
+<a href="https://jameshwade.github.io/dsprrr/articles/omni-meta-optimization.html">Compose
+optimizers with Omni</a>. <code><a href="../reference/AutoResearch.html">AutoResearch()</a></code> and
+<code><a href="../reference/MetaHarness.html">MetaHarness()</a></code> let a model propose program edits in a
+sandbox while dsprrr scores them; see <a href="https://jameshwade.github.io/dsprrr/articles/agentic-optimization-harnesses.html">Agentic
+optimization harnesses</a>.</p>
 </div>
 <div class="section level2">
 <h2 id="combining-compiled-modules">Combining compiled modules<a class="anchor" aria-label="anchor" href="#combining-compiled-modules"></a>
@@ -727,14 +741,18 @@ so it needs no training data:</p>
 ensembles and the other reducers.</p>
 </div>
 <div class="section level2">
-<h2 id="budgets-logs-and-seeds">Budgets, logs and seeds<a class="anchor" aria-label="anchor" href="#budgets-logs-and-seeds"></a>
+<h2 id="budgets-checkpoints-logs-and-seeds">Budgets, checkpoints, logs, and seeds<a class="anchor" aria-label="anchor" href="#budgets-checkpoints-logs-and-seeds"></a>
 </h2>
+<div class="section level3">
+<h3 id="budgets">Budgets<a class="anchor" aria-label="anchor" href="#budgets"></a>
+</h3>
 <p><code>BootstrapFewShot</code>,
 <code>BootstrapFewShotWithRandomSearch</code>, <code>COPRO</code>,
-<code>MIPROv2</code>, <code>SIMBA</code> and <code>GEPA</code> accept
+<code>MIPROv2</code>, <code>SIMBA</code>, and <code>GEPA</code> accept
 <code>control = optimizer_control(...)</code> in <code><a href="../reference/compile.html">compile()</a></code>.
-It caps calls, tokens, cost or time. When a cap is reached, the
-optimizer stops and returns the best module found so far, with status
+It caps calls, tokens, cost, or elapsed time. When a cap is reached—or
+when a cost/token cap is set and usage cannot be measured—the optimizer
+stops and returns the best module found so far with status
 <code>"partial"</code>:</p>
 <div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">capped</span> <span class="op">&lt;-</span> <span class="va">triage</span> <span class="op">|&gt;</span></span>
@@ -748,38 +766,50 @@ optimizer stops and returns the best module found so far, with status
 <span></span>
 <span><span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">capped</span><span class="op">)</span><span class="op">$</span><span class="va">status</span></span>
 <span><span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">capped</span><span class="op">)</span><span class="op">$</span><span class="va">stop_reason</span></span></code></pre></div>
-<p>A cost or token cap also stops the run when usage cannot be measured.
-<code>BootstrapFewShot</code> and <code>MIPROv2</code> can resume an
-interrupted run: give <code><a href="../reference/optimizer_control.html">optimizer_control()</a></code> a
-<code>checkpoint_path</code>, then compile again with
-<code>resume = TRUE</code> and the same module, data, metric and
-settings. <code>BootstrapFewShotWithRandomSearch</code>,
-<code>COPRO</code> and <code>SIMBA</code> refuse
-<code>resume = TRUE</code>.</p>
-<p><code>GEPA</code> also supports checkpoint resume for sequential
-<code>round_robin</code> searches over plain <code>Predict</code> leaves
-and built-in predictor pipelines with plain-data predictions. Flex
-modules, other selectors, custom module types, custom Chats, Chats with
-tools, and non-empty initial Chat histories are not supported by this
-resume path. Completed proposals and evaluation rows are retained, but a
-provider request interrupted before its result is committed may run
-again after a crash. See <code><a href="../reference/GEPA.html">GEPA()</a></code> for the full checkpoint
-contract.</p>
-<p>The same six teleprompters take <code>log_dir</code> and append one
-record per trial to <code>trials.jsonl</code> in that directory.
-<code>load_trial_log(log_dir)$as_tibble()</code> reads the log back as a
-tibble. When you also pass <code>control</code>, set
-<code>log_dir</code> in <code><a href="../reference/optimizer_control.html">optimizer_control()</a></code> as well,
-because a <code>control</code> object replaces the teleprompter’s own
-<code>log_dir</code> in every optimizer except
-<code>BootstrapFewShot</code>.</p>
+</div>
+<div class="section level3">
+<h3 id="checkpoints-and-resume">Checkpoints and resume<a class="anchor" aria-label="anchor" href="#checkpoints-and-resume"></a>
+</h3>
+<p>Pass <code>checkpoint_path</code> in <code><a href="../reference/optimizer_control.html">optimizer_control()</a></code>
+and re-run <code><a href="../reference/compile.html">compile()</a></code> with <code>resume = TRUE</code> (and
+the same module, data, metric, and settings) to continue an interrupted
+run:</p>
+<ul>
+<li>
+<strong>Supported:</strong> <code>BootstrapFewShot</code>,
+<code>MIPROv2</code>, and <code>GEPA</code> (sequential
+<code>round_robin</code> searches over plain prediction modules and
+built-in pipelines; see <code><a href="../reference/GEPA.html">?GEPA</a></code> for the full resume
+contract).</li>
+<li>
+<strong>Not supported:</strong>
+<code>BootstrapFewShotWithRandomSearch</code>, <code>COPRO</code>, and
+<code>SIMBA</code> reject <code>resume = TRUE</code>.</li>
+</ul>
+</div>
+<div class="section level3">
+<h3 id="trial-logs">Trial logs<a class="anchor" aria-label="anchor" href="#trial-logs"></a>
+</h3>
+<p>The same six teleprompters accept <code>log_dir</code> and append one
+record per trial to <code>trials.jsonl</code> in that directory;
+<code>load_trial_log(log_dir)$as_tibble()</code> reads it back. When you
+also pass <code>control</code>, set <code>log_dir</code> inside
+<code><a href="../reference/optimizer_control.html">optimizer_control()</a></code> as well, because <code>control</code>
+overrides the teleprompter’s own <code>log_dir</code> in every optimizer
+except <code>BootstrapFewShot</code>.</p>
+</div>
+<div class="section level3">
+<h3 id="seeds">Seeds<a class="anchor" aria-label="anchor" href="#seeds"></a>
+</h3>
 <p><code>LabeledFewShot</code>,
 <code>BootstrapFewShotWithRandomSearch</code>, <code>COPRO</code>,
-<code>MIPROv2</code>, <code>SIMBA</code>, <code>GEPA</code> and
-<code>BetterTogether</code> take a <code>seed</code> for their own
-sampling. <code>GridSearchTeleprompter</code> uses R’s global generator,
-and <code>BootstrapFewShot</code> tries rows in order. No seed makes the
-model’s answers repeatable.</p>
+<code>MIPROv2</code>, <code>SIMBA</code>, <code>GEPA</code>, and
+<code>BetterTogether</code> accept a <code>seed</code> for their own
+sampling. <code>GridSearchTeleprompter</code> uses R’s global generator
+(<code><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed()</a></code>), and <code>BootstrapFewShot</code> visits rows
+in order. No seed makes LLM responses deterministic across API
+calls.</p>
+</div>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

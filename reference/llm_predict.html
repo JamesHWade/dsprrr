@@ -147,10 +147,10 @@ for classification, or a number for regression, unless you give a
 <code>signature</code>. Prediction runs the module on the new data with the default
 chat (see <code><a href="dsp_configure.html">dsp_configure()</a></code>); a fitted model makes no model calls until
 it predicts.</p>
-<p>Known issue: the engine is registered without parsnip's encoding
-information, so <code><a href="https://generics.r-lib.org/reference/fit.html" class="external-link">parsnip::fit()</a></code> and <code><a href="https://generics.r-lib.org/reference/fit_xy.html" class="external-link">parsnip::fit_xy()</a></code> currently fail
-with "no applicable method for 'filter'". Until that is fixed, the
-specification cannot be fitted through parsnip, workflows or tune.</p>
+<p>Use <code><a href="https://generics.r-lib.org/reference/fit_xy.html" class="external-link">parsnip::fit_xy()</a></code> (or <code><a href="https://workflows.tidymodels.org/reference/add_variables.html" class="external-link">workflows::add_variables()</a></code>) rather than a
+formula when predictors are free-text character columns: R's formula
+interface converts character columns to factors with fixed training levels,
+which rejects unseen text at prediction time.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>

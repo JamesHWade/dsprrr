@@ -17,6 +17,11 @@
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Compile and optimize">
+<meta name="description" content="Walk through a full optimization run: define a task and metric, compile with LabeledFewShot and GridSearchTeleprompter, evaluate on held-out data, inspect what changed, and save the result.
+">
+<meta property="og:description" content="Walk through a full optimization run: define a task and metric, compile with LabeledFewShot and GridSearchTeleprompter, evaluate on held-out data, inspect what changed, and save the result.
+">
+<meta property="og:image" content="https://jameshwade.github.io/dsprrr/logo.svg">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -132,12 +137,12 @@
 
     
     
-<p><code><a href="../reference/compile.html">compile()</a></code> runs an optimizer, called a teleprompter, over
-a module and a set of labeled examples, and returns a copy of the module
-with new demos or instructions. This guide goes through one complete
-run: define the task, the labeled data and the metric, compile with two
-teleprompters, score the result on rows the optimizer never saw, check
-what changed, and save the compiled module.</p>
+<p><code><a href="../reference/compile.html">compile()</a></code> runs an optimizer—called a
+<em>teleprompter</em>—over a module and a set of labeled examples, and
+returns a new copy of the module with tuned demos or instructions. This
+guide walks through one complete run: define the task, data, and metric,
+compile with two teleprompters, score the result on held-out rows,
+inspect what changed, and save the compiled module.</p>
 <div class="section level2">
 <h2 id="setup">Setup<a class="anchor" aria-label="anchor" href="#setup"></a>
 </h2>
@@ -150,12 +155,13 @@ what changed, and save the compiled module.</p>
 <span>  model <span class="op">=</span> <span class="st">"gpt-6-luna"</span>,</span>
 <span>  params <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/params.html" class="external-link">params</a></span><span class="op">(</span>reasoning_effort <span class="op">=</span> <span class="st">"low"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p><code>llm</code> runs and scores the module. <code>search_llm</code>
-thinks less, which makes it cheaper, and is used only while searching.
-The output on this page was recorded with <code>gpt-5-mini</code> (runs)
-and <code>gpt-4o-mini</code> (search) and is replayed when the site is
-built, so <code>gpt-6-luna</code> may give different answers and
-scores.</p>
+<p><code>llm</code> runs and scores the module; <code>search_llm</code>
+uses lower reasoning effort to keep the search cheaper. <em>Recorded
+outputs on the <a href="https://jameshwade.github.io/dsprrr/articles/compilation-optimization.html">package
+website</a> were captured with <code>gpt-5-mini</code> (runs) and
+<code>gpt-4o-mini</code> (search); <code>gpt-6-luna</code> may give
+different answers and scores, and offline CRAN vignettes omit recorded
+outputs.</em></p>
 </div>
 <div class="section level2">
 <h2 id="task-data-and-metric">Task, data and metric<a class="anchor" aria-label="anchor" href="#task-data-and-metric"></a>
@@ -219,8 +225,8 @@ compare it with:</p>
 <span><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
 <p>This metric checks the category only. The evaluation below shows what
 that leaves out.</p>
-<p>Before compiling anything, score the module as it is. That baseline
-is the number a compiled module has to beat:</p>
+<p>On your own data, score the uncompiled module first so you have a
+baseline to beat:</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">baseline</span> <span class="op">&lt;-</span> <span class="va">email_classifier</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span><span class="va">test_emails</span>, metric <span class="op">=</span> <span class="va">category_metric</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
@@ -269,9 +275,9 @@ attaches <code>k</code> demos drawn from the training rows.</p>
 <code class="sourceCode R"><span><span class="va">email_variants</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
 <span>  id <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"professional"</span>, <span class="st">"friendly"</span>, <span class="st">"analytical"</span><span class="op">)</span>,</span>
 <span>  instructions_suffix <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
-<span>    <span class="st">". Use professional business judgment."</span>,</span>
-<span>    <span class="st">". Consider customer satisfaction and relationship."</span>,</span>
-<span>    <span class="st">". Analyze linguistic patterns and intent markers."</span></span>
+<span>    <span class="st">"Use professional business judgment."</span>,</span>
+<span>    <span class="st">"Consider customer satisfaction and relationship."</span>,</span>
+<span>    <span class="st">"Analyze linguistic patterns and intent markers."</span></span>
 <span>  <span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
@@ -337,20 +343,22 @@ three fields. The predictions show where the difference comes from:</p>
 <span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> The package was damaged during shipping.    normal   urgent   </span></span>
 <span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> Do you offer student discounts?             low      normal   </span></span>
 <span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> Your team went above and beyond. Thank you! low      low</span></span></code></pre></div>
-<p>Both misses are priorities. Neither the metric nor the demos covered
-priority, so the search had no way to improve it: an optimizer improves
-only what its metric measures. Compare <code>results$mean_score</code>
-with the baseline from before, on the same rows, and keep the compiled
-module only if it wins there.</p>
+<p>In the recorded run, both misses are priorities. Neither the metric
+nor the demos covered priority, so the search had no way to improve it:
+an optimizer improves only what its metric measures. Always compare
+<code>results$mean_score</code> against your uncompiled baseline on the
+same held-out rows, and keep the compiled module only if it wins
+there.</p>
 </div>
 <div class="section level2">
 <h2 id="inspect-what-changed">Inspect what changed<a class="anchor" aria-label="anchor" href="#inspect-what-changed"></a>
 </h2>
-<p><code><a href="../reference/optimization_result.html">optimization_result()</a></code> reports the same fields for every
-optimizer: <code>best_score</code>, <code>best_params</code>,
-<code>trials</code>, <code>lineage</code>, <code>budget</code>,
-<code>stop_reason</code>, and optimizer-specific details under
-<code>extensions</code>.</p>
+<p><code><a href="../reference/optimization_result.html">optimization_result()</a></code> returns a uniform contract across
+every optimizer, including <code>status</code>,
+<code>baseline_score</code>, <code>best_score</code>,
+<code>best_params</code>, <code>trials</code>, <code>lineage</code>,
+<code>budget</code>, <code>stop_reason</code>, and optimizer-specific
+details under <code>extensions</code>:</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">res</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">optimized_grid</span><span class="op">)</span></span>
 <span><span class="va">res</span></span>
@@ -441,11 +449,24 @@ carried only the category:</p>
 <span>    .llm <span class="op">=</span> <span class="va">llm</span></span>
 <span>  <span class="op">)</span></span></code></pre></div>
 <p><code><a href="../reference/compile.html">compile()</a></code> always returns a copy. To tune settings such
-as reasoning effort on the module itself, use
-<code><a href="../reference/optimize_grid.html">optimize_grid()</a></code>, which updates the module in place (<a href="tutorial-optimize-your-module.html">Tutorial 5</a> walks through
-it).</p>
-<p><a href="advanced-optimization.html">Choose an optimizer</a> compares
-the eleven teleprompters and shows how to call each one.</p>
+as <code>reasoning_effort</code> on the module itself, use
+<code><a href="../reference/optimize_grid.html">optimize_grid()</a></code>, which updates the module in place.</p>
+</div>
+<div class="section level2">
+<h2 id="where-to-go-next">Where to go next<a class="anchor" aria-label="anchor" href="#where-to-go-next"></a>
+</h2>
+<ul>
+<li>
+<a href="advanced-optimization.html">Choose an optimizer</a>
+compares all built-in teleprompters and shows how to call each one.</li>
+<li>
+<a href="tutorial-optimize-your-module.html">Tutorial 5: Optimize a
+module</a> walks through <code><a href="../reference/optimize_grid.html">optimize_grid()</a></code>.</li>
+<li>
+<a href="concepts-optimization-theory.html">How optimization
+works</a> explains the trade-offs behind search budgets, overfitting,
+and validation splits.</li>
+</ul>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

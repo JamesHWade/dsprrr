@@ -17,6 +17,11 @@
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Tutorial 1: Your first LLM call">
+<meta name="description" content="Declare a task with signature(), turn it into a module, and get typed R values—strings, numbers, labels, and booleans—back from an LLM.
+">
+<meta property="og:description" content="Declare a task with signature(), turn it into a module, and get typed R values—strings, numbers, labels, and booleans—back from an LLM.
+">
+<meta property="og:image" content="https://jameshwade.github.io/dsprrr/logo.svg">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -132,35 +137,39 @@
 
     
     
-<p>By the end of this tutorial you can describe a task as a signature,
-run it against a language model, and get the answer back as an R value
-of the type you asked for: a string, a number, a label or
-<code>TRUE</code>/<code>FALSE</code>.</p>
+<p>Calling a language model from R usually starts with string
+interpolation and ends with regular expressions to clean up the reply.
+dsprrr flips that around: you declare a task’s inputs and typed outputs
+as a <em>signature</em>, and dsprrr writes the prompt, sends a schema to
+the model, and returns an R value of the type you asked for—a string, a
+number, a fixed label, or <code>TRUE</code>/<code>FALSE</code>.</p>
 <div class="section level2">
 <h2 id="set-up">Set up<a class="anchor" aria-label="anchor" href="#set-up"></a>
 </h2>
-<p>Install dsprrr from GitHub. pak installs ellmer from CRAN along with
-it.</p>
+<p>Install dsprrr from CRAN (this installs <a href="https://ellmer.tidyverse.org" class="external-link">ellmer</a> along with it):</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"dsprrr"</span><span class="op">)</span></span></code></pre></div>
+<p>To install the development version from GitHub instead (source builds
+require a C compiler):</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># install.packages("pak")</span></span>
 <span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"JamesHWade/dsprrr"</span><span class="op">)</span></span></code></pre></div>
-<p>Installing from source requires a C compiler: Rtools on Windows,
-Xcode Command Line Tools on macOS, or your Linux distribution’s build
-tools.</p>
-<p>The tutorials use OpenAI. Add
-<code>OPENAI_API_KEY=&lt;your key&gt;</code> to your
-<code>.Renviron</code> file and restart R; <code><a href="../reference/dsprrr_sitrep.html">dsprrr_sitrep()</a></code>
-then reports which API keys it can see.</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<p>The tutorials use OpenAI. Open your <code>.Renviron</code> file (for
+example with <code>usethis::edit_r_environ()</code>), add
+<code>OPENAI_API_KEY=&lt;your key&gt;</code>, and restart R.
+<code><a href="../reference/dsprrr_sitrep.html">dsprrr_sitrep()</a></code> confirms which API keys dsprrr can see.</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/dsprrr" class="external-link">dsprrr</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ellmer.tidyverse.org" class="external-link">ellmer</a></span><span class="op">)</span></span></code></pre></div>
 <p>dsprrr sends requests through an ellmer chat object. The tutorials
 use OpenAI’s <code>gpt-6-luna</code>:</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">chat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-luna"</span><span class="op">)</span></span></code></pre></div>
 <p>The answers on this page were recorded with <code>gpt-4.1</code> and
 are replayed when the site is built, so <code>gpt-6-luna</code> may word
-them differently.</p>
+them differently (and offline CRAN vignettes omit recorded outputs—see
+the <a href="https://jameshwade.github.io/dsprrr/articles/tutorial-hello-world.html">package
+website</a> to read them inline).</p>
 <p>Any other ellmer chat, such as <code><a href="https://ellmer.tidyverse.org/reference/chat_anthropic.html" class="external-link">chat_anthropic()</a></code>, works
 the same way.</p>
 </div>
@@ -172,7 +181,7 @@ the same way.</p>
 <code>question</code>, and one output, <code>answer</code>.
 <code><a href="../reference/module.html">module()</a></code> turns the signature into something you can
 run:</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">qa</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">qa</span>, question <span class="op">=</span> <span class="st">"What is the capital of France?"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
 <span><span class="co">#&gt; $answer</span></span>
@@ -180,7 +189,7 @@ run:</p>
 <p><code><a href="../reference/run.html">run()</a></code> returns a named list with one element per output,
 so the reply is in <code>$answer</code>. This is the prompt dsprrr wrote
 from the signature:</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="fu"><a href="../reference/get_last_prompt.html">get_last_prompt</a></span><span class="op">(</span><span class="op">)</span><span class="op">$</span><span class="va">prompt</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Given the fields `question`, produce the fields `answer`.</span></span>
 <span><span class="co">#&gt; </span></span>
@@ -193,7 +202,7 @@ yourself. Because dsprrr builds both from the signature, it can also
 change the prompt for you, which is how later tutorials improve a
 module.</p>
 <p>The same module answers any question:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">qa</span>, question <span class="op">=</span> <span class="st">"What is 7 * 8?"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
 <span><span class="co">#&gt; $answer</span></span>
 <span><span class="co">#&gt; [1] "7 multiplied by 8 is 56."</span></span>
@@ -211,21 +220,21 @@ value.</p>
 </h2>
 <p>Add a type after an output’s name. With <code>number</code> you get a
 number you can compute with:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">math</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"math_problem -&gt; result: number"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">math</span>, math_problem <span class="op">=</span> <span class="st">"What is 15% of 200?"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
 <span><span class="co">#&gt; $result</span></span>
 <span><span class="co">#&gt; [1] 30</span></span></code></pre></div>
 <p><code>enum()</code> lists the allowed labels, and the schema sent to
 the model permits only those values:</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">sentiment</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span></span>
 <span>  <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"text -&gt; sentiment: enum('positive', 'negative', 'neutral')"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">sentiment</span>, text <span class="op">=</span> <span class="st">"I absolutely loved this movie!"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
 <span><span class="co">#&gt; $sentiment</span></span>
 <span><span class="co">#&gt; [1] "positive"</span></span></code></pre></div>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">sentiment</span>, text <span class="op">=</span> <span class="st">"This was a complete waste of time."</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
 <span><span class="co">#&gt; $sentiment</span></span>
 <span><span class="co">#&gt; [1] "negative"</span></span>
@@ -235,7 +244,7 @@ the model permits only those values:</p>
 <span><span class="co">#&gt; [1] "neutral"</span></span></code></pre></div>
 <p><code>bool</code> returns <code>TRUE</code> or
 <code>FALSE</code>:</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">truth</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"statement -&gt; is_true: bool"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">truth</span>, statement <span class="op">=</span> <span class="st">"The Earth orbits the Sun."</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
 <span><span class="co">#&gt; $is_true</span></span>
@@ -252,7 +261,7 @@ as <code>int</code> and lists.</p>
 </h2>
 <p>Separate inputs with commas. A common pattern is to pass in text for
 the model to answer from:</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">contextual_qa</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"context, question -&gt; answer"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
 <span>  <span class="va">contextual_qa</span>,</span>
@@ -262,7 +271,7 @@ the model to answer from:</p>
 <span><span class="op">)</span></span>
 <span><span class="co">#&gt; $answer</span></span>
 <span><span class="co">#&gt; [1] "R was created in 1993."</span></span></code></pre></div>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
 <span>  <span class="va">contextual_qa</span>,</span>
 <span>  context <span class="op">=</span> <span class="st">"The bakery opens at 7am and closes at 6pm. They sell croissants for $3 each."</span>,</span>
@@ -277,7 +286,7 @@ the model to answer from:</p>
 </h2>
 <p><code>instructions</code> replaces the default first line of the
 prompt (“Given the fields …”) with your own description of the task:</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">one_word</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span></span>
 <span>  <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span>, instructions <span class="op">=</span> <span class="st">"Answer in exactly one word."</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>

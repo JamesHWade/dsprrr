@@ -1,15 +1,20 @@
 # Chain modules into pipelines
 
+A single signature can return several outputs, so start with one
+[`module()`](https://jameshwade.github.io/dsprrr/reference/module.md)
+call when the task is small. Split it into a pipeline when distinct
+steps need their own instructions, models, or reusable pieces—or when
+cramming extraction, summarization, and formatting into one prompt hurts
+accuracy.
+
 A pipeline runs modules in order and passes each step’s outputs to the
-next step. This page shows how to build one, how data moves between
-steps, and how to run, inspect and compile the result. A pipeline is
-itself a module, so
+next step. Because a pipeline is itself a module,
 [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md),
 [`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md),
-[`evaluate()`](https://jameshwade.github.io/dsprrr/reference/evaluate.md)
+[`evaluate()`](https://jameshwade.github.io/dsprrr/reference/evaluate.md),
 and
 [`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md)
-work on it.
+all work on it directly.
 
 ## How data moves between steps
 
@@ -129,11 +134,12 @@ when a step needs static inputs, `map` or `select`.
 
 ## Drop fields with select
 
-Every output of a step moves on to the next one, and a Predict module
-without a template writes every input it receives into its prompt.
+Every output of a step moves on to the next one, and a prediction module
+without a template writes every input it receives into its prompt—and
+warns about undeclared extra inputs.
 [`chain_of_thought()`](https://jameshwade.github.io/dsprrr/reference/chain_of_thought.md)
 adds a `reasoning` output, so without `select` the headline step below
-would also read the summary’s reasoning:
+would receive `reasoning`, warn, and include it in the prompt:
 
 ``` r
 
@@ -142,6 +148,27 @@ careful <- pipeline(
   step(chain_of_thought("changes -> summary"), select = "summary"),
   module(signature("summary -> headline"))
 )
+careful
+#> 
+#> ── PipelineModule ──
+#> 
+#> ── Steps (3)
+#> • [1] PredictModule: notes -> changes
+#> • [2] PredictModule: changes -> reasoning, summary
+#> • [3] PredictModule: summary -> headline
+#> 
+#> ── Composite Signature
+#> 
+#> ── Signature ──
+#> 
+#> ── Inputs
+#> • notes: "string" - Input: notes
+#> 
+#> ── Output
+#> Type: "object(headline: string)"
+#> 
+#> ── Instructions
+#> List each user-visible change as one short sentence.
 ```
 
 ## When a later step needs an original input
@@ -154,7 +181,9 @@ to step 1. If the value is the same on every run, attach it as a static
 input with
 [`step()`](https://jameshwade.github.io/dsprrr/reference/step.md).
 Otherwise, write the flow as a function with
-[`module_fn()`](https://jameshwade.github.io/dsprrr/reference/module_fn.md),
+[`module_fn()`](https://jameshwade.github.io/dsprrr/reference/module_fn.md)
+(see [Choose a module
+type](https://jameshwade.github.io/dsprrr/articles/advanced-modules.md)),
 which passes the active chat to a `.llm` argument:
 
 ``` r
@@ -178,11 +207,11 @@ cannot see inside a function, so it refuses
 [`module_fn()`](https://jameshwade.github.io/dsprrr/reference/module_fn.md)
 programs. Compile `facts_from` and `answer_from` on their own instead.
 
-## Run many inputs
+## Run and inspect a pipeline
 
 [`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md)
 runs the pipeline once per row and returns the input columns plus a
-`result` list-column:
+`result` list-column holding the final step’s outputs:
 
 ``` r
 
@@ -191,30 +220,25 @@ releases <- tibble::tibble(
 )
 results <- run_dataset(release, releases, .llm = llm)
 results$result
+#> [[1]]: list(headline = "Faster CSV exports and dark mode arrive")
+#> [[2]]: list(headline = "Single sign-on and faster search in v2.4")
 ```
 
-## See what each step did
-
-The result keeps only the last step’s outputs. Each run also records
-every step’s inputs and outputs in the pipeline’s traces:
-
-``` r
-
-run(release, notes = notes, .llm = llm)
-latest <- release$state$traces[[length(release$state$traces)]]
-latest$step_inputs
-latest$step_outputs
-```
-
-A structured result reports usage for the whole run (`n_steps`,
-`provider_calls`, `total_tokens`, `cost`) and keeps each step’s own
-metadata, including the prompt it sent, in `step_metadata`:
+To inspect intermediate steps, read the pipeline’s traces (`step_inputs`
+and `step_outputs`) or ask for `.return_format = "structured"`, which
+totals usage across steps (`n_steps`, `provider_calls`, `total_tokens`,
+`cost`) and stores each step’s prompt and metadata in
+`get_metadata(result)$step_metadata`:
 
 ``` r
 
 result <- run(release, notes = notes, .llm = llm, .return_format = "structured")
-result$metadata$total_tokens
-cat(result$metadata$step_metadata[[2]]$prompt)
+get_metadata(result)$total_tokens
+cat(get_metadata(result)$step_metadata[[2]]$prompt)
+
+latest <- release$state$traces[[length(release$state$traces)]]
+latest$step_inputs   # list of length 3, one entry per step
+latest$step_outputs  # list of length 3: changes, summary, headline
 ```
 
 ## Compile the whole pipeline
@@ -223,7 +247,9 @@ cat(result$metadata$step_metadata[[2]]$prompt)
 compiles a pipeline jointly: it runs the whole pipeline on each training
 row and scores the final output with your metric. When a run passes,
 every step’s inputs and outputs from that run become a demonstration for
-that step, so only the final output needs a label:
+that step, so only the final output needs a label. Pass
+`max_labeled_demos = 0L` on small training sets so rows are bootstrapped
+end to end rather than consumed as labeled demos on the final step:
 
 ``` r
 
@@ -243,7 +269,8 @@ compiled <- compile(
   BootstrapFewShot(
     metric = metric_f1(field = "headline"),
     metric_threshold = 0.5,
-    max_bootstrapped_demos = 2L
+    max_bootstrapped_demos = 2L,
+    max_labeled_demos = 0L
   ),
   past_releases,
   .llm = llm
@@ -254,4 +281,4 @@ compiled <- compile(
 returns a new pipeline and leaves `release` unchanged. A useful training
 set has more than two rows; [Compile and
 optimize](https://jameshwade.github.io/dsprrr/articles/compilation-optimization.md)
-covers data, metrics and the other teleprompters.
+covers data, metrics, and the other teleprompters.

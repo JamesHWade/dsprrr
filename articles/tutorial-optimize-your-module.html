@@ -17,6 +17,11 @@
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Tutorial 5: Optimize a module">
+<meta name="description" content="Search instruction variants, settings, and few-shot demos automatically with optimize_grid() and GridSearchTeleprompter(), then evaluate on a held-out test set.
+">
+<meta property="og:description" content="Search instruction variants, settings, and few-shot demos automatically with optimize_grid() and GridSearchTeleprompter(), then evaluate on a held-out test set.
+">
+<meta property="og:image" content="https://jameshwade.github.io/dsprrr/logo.svg">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -132,22 +137,22 @@
 
     
     
-<p><a href="tutorial-improve-with-demos.html">Tutorial 4</a> compared
-versions of a module by hand. dsprrr can run that comparison for you:
-give it candidate configurations, labeled data and a metric, and it
-scores every candidate and keeps the best. By the end of this tutorial
-you can search instruction variants with <code><a href="../reference/optimize_grid.html">optimize_grid()</a></code>,
-search instructions and demos together with
-<code>GridSearchTeleprompter</code>, and check the result on reviews the
-search never saw.</p>
+<p>In <a href="tutorial-improve-with-demos.html">Tutorial 4</a>, you
+compared three versions of a classifier by hand. Once you have several
+instruction ideas, demo counts, or model settings to test, doing that
+manually gets tedious fast. Give dsprrr a set of candidates, labeled
+data, and a metric, and it runs the experiment for you—scoring every
+candidate with <code><a href="../reference/optimize_grid.html">optimize_grid()</a></code> or
+<code><a href="../reference/GridSearchTeleprompter.html">GridSearchTeleprompter()</a></code> and keeping the winner for a final
+check on held-out test data.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/dsprrr" class="external-link">dsprrr</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ellmer.tidyverse.org" class="external-link">ellmer</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">chat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-luna"</span><span class="op">)</span></span></code></pre></div>
-<p>The answers on this page were recorded with <code>gpt-5-mini</code>
-and are replayed when the site is built, so <code>gpt-6-luna</code> may
-word them differently.</p>
+<p><em>Recorded outputs on the package website were captured with
+<code>gpt-5-mini</code>; <code>gpt-6-luna</code> may answer slightly
+differently.</em></p>
 <div class="section level2">
 <h2 id="a-classifier-and-two-datasets">A classifier and two datasets<a class="anchor" aria-label="anchor" href="#a-classifier-and-two-datasets"></a>
 </h2>
@@ -203,12 +208,12 @@ beat:</p>
 <span><span class="co">#&gt; [1] 1</span></span>
 <span><span class="va">baseline_results</span><span class="op">$</span><span class="va">scores</span></span>
 <span><span class="co">#&gt; [1] 1 1 1 1</span></span></code></pre></div>
-<p>In the recorded run, gpt-5-mini labels all four test reviews
-correctly, so here a search can at best match the baseline. Four reviews
-are too few to rank configurations anyway: each is worth 25 percentage
-points, and one changed answer can reverse a comparison. The datasets in
-this tutorial are small to keep it cheap; when the choice matters, test
-on dozens to hundreds of labeled rows.</p>
+<p>In the recorded run, <code>gpt-5-mini</code> labels all four test
+reviews correctly, so here a search can at best match the baseline. Four
+reviews are too few to rank configurations anyway: each is worth 25
+percentage points, and one changed answer can reverse a comparison. The
+datasets in this tutorial are small to keep the walkthrough cheap; when
+the choice matters, test on dozens to hundreds of labeled rows.</p>
 </div>
 <div class="section level2">
 <h2 id="search-instruction-variants">Search instruction variants<a class="anchor" aria-label="anchor" href="#search-instruction-variants"></a>
@@ -236,17 +241,24 @@ instructions with two longer versions:</p>
 <span>  .llm <span class="op">=</span> <span class="va">chat</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu"><a href="../reference/module_trials.html">module_trials</a></span><span class="op">(</span><span class="va">classifier</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">classifier</span><span class="op">)</span><span class="op">$</span><span class="va">trials</span></span>
+<span><span class="co">#&gt; # A tibble: 3 x 6</span></span>
+<span><span class="co">#&gt;   trial_id parameters        score n_evaluated n_errors total_cost</span></span>
+<span><span class="co">#&gt;      &lt;int&gt; &lt;list&gt;            &lt;dbl&gt;       &lt;int&gt;    &lt;int&gt;      &lt;dbl&gt;</span></span>
+<span><span class="co">#&gt; 1        1 &lt;named list [1]&gt;    1.0          10        0     0.0012</span></span>
+<span><span class="co">#&gt; 2        2 &lt;named list [1]&gt;    1.0          10        0     0.0013</span></span>
+<span><span class="co">#&gt; 3        3 &lt;named list [1]&gt;    0.9          10        0     0.0013</span></span></code></pre></div>
 <p>Each candidate runs on all ten training reviews, 30 calls in total.
 <code><a href="../reference/optimize_grid.html">optimize_grid()</a></code> changes <code>classifier</code> in place.
 <code><a href="../reference/module_trials.html">module_trials()</a></code> returns a one-row summary with the best
-score, the best parameters and a <code>trials</code> list-column;
-<code>optimization_result(classifier)$trials</code> has one row per
-candidate, with its score and cost.</p>
+score, the best parameters, and a <code>trials</code> list-column;
+<code>optimization_result(classifier)$trials</code> unpacks that into
+one row per candidate, with its score and cost.</p>
 <p>When <code>parameters</code> names several settings,
 <code><a href="../reference/optimize_grid.html">optimize_grid()</a></code> tries every combination, so the number of
 calls is the product of the numbers of values, times the number of rows.
-Settings you can search for a Predict module include:</p>
+Settings you can search for a module created with <code><a href="../reference/module.html">module()</a></code>
+include:</p>
 <table class="table">
 <colgroup>
 <col width="50%">
@@ -272,15 +284,15 @@ Settings you can search for a Predict module include:</p>
 </tr>
 <tr class="even">
 <td><code>reasoning_effort</code></td>
-<td>How much a reasoning model such as gpt-6-luna thinks before
-answering (<code>"none"</code> to <code>"max"</code>).</td>
+<td>How much a reasoning model such as <code>gpt-6-luna</code> thinks
+before answering (<code>"none"</code> to <code>"max"</code>).</td>
 </tr>
 <tr class="odd">
 <td>
 <code>temperature</code>, <code>top_p</code>
 </td>
-<td>Sampling settings sent to the model. gpt-6-luna accepts them only
-with <code>reasoning_effort = "none"</code>.</td>
+<td>Sampling settings sent to the model. <code>gpt-6-luna</code> accepts
+them only with <code>reasoning_effort = "none"</code>.</td>
 </tr>
 </tbody>
 </table>
@@ -288,7 +300,7 @@ with <code>reasoning_effort = "none"</code>.</td>
 <div class="section level2">
 <h2 id="search-instructions-and-demos-together">Search instructions and demos together<a class="anchor" aria-label="anchor" href="#search-instructions-and-demos-together"></a>
 </h2>
-<p><code>GridSearchTeleprompter</code> combines an instruction search
+<p><code><a href="../reference/GridSearchTeleprompter.html">GridSearchTeleprompter()</a></code> combines an instruction search
 with the demos of Tutorial 4: it attaches <code>k</code> demos sampled
 from the training data, scores each instruction variant with those demos
 in place, and keeps the best variant. Like other teleprompters it works
@@ -313,12 +325,13 @@ the one you pass in unchanged:</p>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">2026</span><span class="op">)</span></span>
 <span><span class="va">optimized</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span><span class="op">)</span>, <span class="va">tp</span>, <span class="va">trainset</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">optimized</span><span class="op">)</span><span class="op">$</span><span class="va">best_params</span><span class="op">$</span><span class="va">id</span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">optimized</span><span class="op">)</span><span class="op">$</span><span class="va">best_params</span><span class="op">$</span><span class="va">id</span></span>
+<span><span class="co">#&gt; [1] "concise"</span></span></code></pre></div>
 <p>Unless you pass <code>valset</code> to <code><a href="../reference/compile.html">compile()</a></code>,
-<code>GridSearchTeleprompter</code> scores the variants on a random 20%
-of <code>trainset</code> (two reviews here) and draws the demos from the
-rest. <code><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed()</a></code> makes that split repeatable. Two reviews
-cannot tell three variants apart, so give it a larger
+<code><a href="../reference/GridSearchTeleprompter.html">GridSearchTeleprompter()</a></code> scores the variants on a random
+20% of <code>trainset</code> (two reviews here) and draws the demos from
+the rest. <code><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed()</a></code> makes that split repeatable. Two
+reviews cannot tell three variants apart, so give it a larger
 <code>valset</code> when you have the data.</p>
 </div>
 <div class="section level2">
@@ -332,11 +345,12 @@ cannot tell three variants apart, so give it a larger
 <span>  .llm <span class="op">=</span> <span class="va">chat</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">test_results</span><span class="op">$</span><span class="va">mean_score</span></span></code></pre></div>
+<span><span class="va">test_results</span><span class="op">$</span><span class="va">mean_score</span></span>
+<span><span class="co">#&gt; [1] 1</span></span></code></pre></div>
 <p>Compare <code>test_results$mean_score</code> with
 <code>baseline_results$mean_score</code>. A configuration that wins on
-the training reviews but not on the test set has fitted those particular
-reviews rather than the task.</p>
+the training reviews but not on the test set has overfit the training
+reviews rather than improving on the task.</p>
 <p>Each candidate costs a full pass over its data: the instruction grid
 above makes 30 calls and the teleprompter 6. The <code>total_cost</code>
 column of <code>optimization_result(classifier)$trials</code> records

@@ -8,27 +8,61 @@ library(dsprrr)
 Every dsprrr module comes from a constructor and runs with
 [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md). The
 constructors differ in how they reach an answer: one prompt, several
-attempts, tools, or generated R code. This page helps you pick one. The
-table compares them, and the sections below run one small task through
-each pattern so you can see what changes in the code and in the number
-of model calls.
+attempts, retrieval, tools, or generated R code. Start simple and
+escalate only when a metric tells you to:
+
+- **One call:**
+  [`module()`](https://jameshwade.github.io/dsprrr/reference/module.md)
+  or
+  [`chain_of_thought()`](https://jameshwade.github.io/dsprrr/reference/chain_of_thought.md)
+  handles most classification and extraction tasks.
+- **Retry or vote:**
+  [`best_of_n()`](https://jameshwade.github.io/dsprrr/reference/best_of_n.md),
+  [`refine()`](https://jameshwade.github.io/dsprrr/reference/refine.md),
+  [`with_assertions()`](https://jameshwade.github.io/dsprrr/reference/with_assertions.md),
+  [`multi_chain_comparison()`](https://jameshwade.github.io/dsprrr/reference/multi_chain_comparison.md),
+  or
+  [`ensemble()`](https://jameshwade.github.io/dsprrr/reference/ensemble.md)
+  when you can score or combine attempts.
+- **External data or exact math:**
+  [`rag_module()`](https://jameshwade.github.io/dsprrr/reference/rag_module.md),
+  [`react()`](https://jameshwade.github.io/dsprrr/reference/react.md),
+  [`program_of_thought()`](https://jameshwade.github.io/dsprrr/reference/program_of_thought.md),
+  [`code_act()`](https://jameshwade.github.io/dsprrr/reference/code_act.md),
+  or
+  [`module_fn()`](https://jameshwade.github.io/dsprrr/reference/module_fn.md).
+- **Multi-step or search:**
+  [`pipeline()`](https://jameshwade.github.io/dsprrr/reference/pipeline.md),
+  [`rlm_module()`](https://jameshwade.github.io/dsprrr/reference/rlm_module.md),
+  or [`flex()`](https://jameshwade.github.io/dsprrr/reference/flex.md).
+
+The table compares every constructor, and the sections below run one
+small task through each pattern so you can see what changes in the code
+and in the number of model calls.
 
 | Constructor | What it does | Use it when | Model calls per input |
 |----|----|----|----|
 | [`module()`](https://jameshwade.github.io/dsprrr/reference/module.md) | One structured prediction | The task fits in one prompt | 1 |
-| [`chain_of_thought()`](https://jameshwade.github.io/dsprrr/reference/chain_of_thought.md) | Adds a `reasoning` output before the answer | Worked steps help the answer | 1 |
+| [`chain_of_thought()`](https://jameshwade.github.io/dsprrr/reference/chain_of_thought.md) | Adds a `reasoning` (or `plan`) field, or exposes native thinking | Worked steps help the answer | 1 |
 | [`best_of_n()`](https://jameshwade.github.io/dsprrr/reference/best_of_n.md) | Reruns a module and keeps the attempt with the highest reward | You can score an output in R | 1 to `N` |
 | [`refine()`](https://jameshwade.github.io/dsprrr/reference/refine.md) | Like [`best_of_n()`](https://jameshwade.github.io/dsprrr/reference/best_of_n.md), and each retry gets feedback text | A retry can be told what to fix | 1 to `N` |
 | [`with_assertions()`](https://jameshwade.github.io/dsprrr/reference/with_assertions.md) | Checks outputs against rules and retries with the failed rules’ messages | Outputs must meet hard constraints | 1 to `max_retries` + 1 |
 | [`multi_chain_comparison()`](https://jameshwade.github.io/dsprrr/reference/multi_chain_comparison.md) | Runs `M` reasoning chains, then one call compares them | Samples disagree and you want one reconciled answer | `M` + 1 |
 | [`ensemble()`](https://jameshwade.github.io/dsprrr/reference/ensemble.md) | Runs several modules and combines their outputs | You have variants to vote between | Sum over members |
-| [`react()`](https://jameshwade.github.io/dsprrr/reference/react.md) | Lets the model call your R functions as tools | The answer needs data or actions the model lacks | 2, plus 1 per tool round |
-| [`program_of_thought()`](https://jameshwade.github.io/dsprrr/reference/program_of_thought.md) | The model writes R code and R runs it | The answer needs exact computation | 1, plus 1 per repair |
+| [`rag_module()`](https://jameshwade.github.io/dsprrr/reference/rag_module.md) | Retrieves passages and appends them to the prompt | Answers depend on a document collection | 1 |
+| [`react()`](https://jameshwade.github.io/dsprrr/reference/react.md) | Lets the model call your R functions as tools | The answer needs data or actions the model lacks | 2, plus 1 per tool round (`finalization = "submit"` saves 1) |
+| [`program_of_thought()`](https://jameshwade.github.io/dsprrr/reference/program_of_thought.md) | The model writes R code and R runs it | The answer needs exact computation | 1–2, plus 1 per repair |
 | [`code_act()`](https://jameshwade.github.io/dsprrr/reference/code_act.md) | An agent with your tools and an R execution tool | A task needs both tools and computation | 1, plus 1 per tool round |
 | [`rlm_module()`](https://jameshwade.github.io/dsprrr/reference/rlm_module.md) | The model explores large R objects one step at a time (experimental) | The input is too big or irregular for one prompt | 1 per step, plus recursive queries |
 | [`flex()`](https://jameshwade.github.io/dsprrr/reference/flex.md) | A program whose structure an optimizer can rewrite (experimental) | The best program shape is the open question | Depends on the program |
 | [`module_fn()`](https://jameshwade.github.io/dsprrr/reference/module_fn.md) | Wraps an R function as a module | You need custom logic around model calls | Whatever the function makes |
 | [`pipeline()`](https://jameshwade.github.io/dsprrr/reference/pipeline.md) | Runs modules in sequence | A task splits into steps | Sum over steps |
+
+For document search, see [Retrieval-augmented
+generation](https://jameshwade.github.io/dsprrr/articles/rag-workflows.md).
+For probability-backed thresholds on boolean or enum outputs, see
+[Calibrated
+decisions](https://jameshwade.github.io/dsprrr/articles/calibrated-decisions.md).
 
 With `.return_format = "structured"`, most modules report what a call
 actually used in `metadata$provider_calls`, `metadata$total_tokens` and
@@ -53,18 +87,24 @@ answer, so the model writes out its steps first:
 
 basic <- module(signature("question -> answer"))
 run(basic, question = question, .llm = llm)
+#> $answer: "205"
 
 cot <- chain_of_thought("question -> answer")
 result <- run(cot, question = question, .llm = llm)
-result$reasoning
-result$answer
+result$reasoning # step-by-step rationale
+result$answer    # "205"
 ```
 
 The reasoning costs output tokens and is not guaranteed to reflect how
-the model reached its answer, so judge the answer with a metric. Under
-the hood,
-[`chain_of_thought()`](https://jameshwade.github.io/dsprrr/reference/chain_of_thought.md)
-builds its signature with
+the model reached its answer, so judge the answer with a metric. With a
+reasoning model such as `gpt-6-luna`,
+`chain_of_thought(..., mode = "native")` keeps the signature unchanged
+and exposes provider-supplied thinking blocks in
+`get_metadata(result)$native_reasoning` (with
+`.return_format = "structured"`), while `mode = "plan"` adds a short
+`plan` field instead of `reasoning`.
+
+Under the hood, the default `"rationale"` mode builds its signature with
 [`with_reasoning()`](https://jameshwade.github.io/dsprrr/reference/with_reasoning.md),
 which describes the new field with `prefix` followed by “produce the”
 and the output names. Write the prefix as the start of a sentence that
@@ -237,12 +277,12 @@ checked$get_attempts()
 [`multi_chain_comparison()`](https://jameshwade.github.io/dsprrr/reference/multi_chain_comparison.md)
 runs a chain-of-thought version of the signature `M` times at
 `temperature` (default 0.7), then makes one more call that reads all
-attempts and returns a reasoned final answer. gpt-6-luna accepts that
-temperature only with reasoning turned off, so the example gives it its
-own chat with `reasoning_effort = "none"`. The default comparison prompt
-lists the attempts but not the original inputs, so pass a
-`comparison_template` that includes them. It is a glue string with
-`{M}`, `{attempts_text}` and your input fields:
+attempts and returns a reasoned final answer. The default comparison
+prompt lists the attempts but not the original inputs, so pass a
+`comparison_template` that includes them—a glue string with `{M}`,
+`{attempts_text}`, and your input fields. Pass `.cache = FALSE` to
+[`run()`](https://jameshwade.github.io/dsprrr/reference/run.md) so the
+response cache does not replay the first chain `M` times:
 
 ``` r
 
@@ -258,9 +298,12 @@ mcc_llm <- ellmer::chat_openai(
   model = "gpt-6-luna",
   params = ellmer::params(reasoning_effort = "none")
 )
-run(mcc, question = question, .llm = mcc_llm)
+run(mcc, question = question, .llm = mcc_llm, .cache = FALSE)
 mcc$get_attempts()
 ```
+
+Because `gpt-6-luna` only accepts `temperature` when reasoning is turned
+off, the example creates a chat with `reasoning_effort = "none"`.
 
 [`ensemble()`](https://jameshwade.github.io/dsprrr/reference/ensemble.md)
 runs each member once and combines their outputs with `reduce_fn`.
@@ -341,9 +384,12 @@ result$metadata$tools_used
 ```
 
 `max_iterations` (default 10) caps the tool rounds and errors when the
-model goes past it. The agent registers its tools on the chat it runs
-with, which is why this example gives it a chat of its own. Tools run in
-your R session with your permissions, so keep them narrow.
+model goes past it. Passing `finalization = "submit"` lets the model
+return its schema-validated answer through a reserved `submit` tool call
+inside the loop, saving the extra structured-output request. The agent
+registers its tools on the chat it runs with, which is why this example
+gives it a chat of its own. Tools run in your R session with your
+permissions, so keep them narrow.
 
 ## Compute with code
 
@@ -395,11 +441,13 @@ run(agent, question = "How many minutes does train 412 take?", .llm = llm)
 
 ## Custom logic: module_fn()
 
-[`module_fn()`](https://jameshwade.github.io/dsprrr/reference/module_fn.md)
-turns an R function into a module with a signature, so it works with
+When you already know the exact R formula—rather than asking the model
+to invent code on the fly—wrap it in
+[`module_fn()`](https://jameshwade.github.io/dsprrr/reference/module_fn.md).
+It turns any R function into a module with a signature, so it works with
 [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md),
 [`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md),
-[`evaluate()`](https://jameshwade.github.io/dsprrr/reference/evaluate.md)
+[`evaluate()`](https://jameshwade.github.io/dsprrr/reference/evaluate.md),
 and pipelines. This one needs no model at all:
 
 ``` r
@@ -447,10 +495,10 @@ to look at next, and calls `SUBMIT()` when it has the answer. Use it
 when the evidence sits in an object too large or irregular to paste into
 a prompt and you cannot say in advance which slice matters. It needs a
 persistent runner. [How RLM
-works](https://jameshwade.github.io/dsprrr/articles/how-rlm-works.md)
+works](https://jameshwade.github.io/dsprrr/articles/how-rlm-works.html)
 explains the execution model and runner choices, and [Investigate a
 regression with
-RLM](https://jameshwade.github.io/dsprrr/articles/tutorial-rlm-dsprrr.md)
+RLM](https://jameshwade.github.io/dsprrr/articles/tutorial-rlm-dsprrr.html)
 works through an example.
 
 ## Search the program shape: flex() (experimental)
@@ -461,7 +509,7 @@ remove predictor steps and, with executable source, add R logic or tool
 calls. Use it when the right structure is what you want to find out. If
 you already know the structure, write a module or a pipeline. [Flex:
 optimize a whole
-program](https://jameshwade.github.io/dsprrr/articles/flex-optimization.md)
+program](https://jameshwade.github.io/dsprrr/articles/flex-optimization.html)
 shows a complete run.
 
 ## Wrappers and optimization
@@ -473,13 +521,24 @@ and changes the wrapper in place. Demo-based compilation does not work
 on a wrapped program
 ([`LabeledFewShot()`](https://jameshwade.github.io/dsprrr/reference/LabeledFewShot.md)
 stops with “cannot label nested predictors”), so compile the inner
-module on a labeled `trainset` (columns `question` and `answer`) and
-wrap the compiled copy:
+module on a labeled training set and wrap the compiled copy:
 
 ``` r
 
-compiled_qa <- compile(qa, LabeledFewShot(k = 4L), trainset)
+qa <- module(signature("question -> answer"))
+trainset <- tibble::tibble(
+  question = c("8:00 to 9:30?", "10:15 to 11:00?", "14:00 to 16:20?"),
+  answer = c("90", "45", "140")
+)
+compiled_qa <- compile(qa, LabeledFewShot(k = 2L), trainset)
 reliable <- best_of_n(compiled_qa, N = 3L, reward_fn = digits_only)
+reliable
+#> 
+#> ── BestOfNModule ──
+#> 
+#> Wrapped module: <PredictModule>
+#> N: 3
+#> Threshold: 1
 ```
 
 For multi-step programs, [Chain modules into

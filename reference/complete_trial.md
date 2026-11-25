@@ -53,16 +53,16 @@ Other optimizer building blocks:
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-program <- module(signature("question -> answer"))
-data <- data.frame(question = "2 + 2?", answer = "4")
-result <- eval_program(
-  program,
-  data,
-  metric_exact_match(field = "answer"),
-  .llm = ellmer::chat_openai(model = "gpt-6-luna")
-)
+program <- module_fn("x -> answer", function(x) list(answer = toupper(x)))
+data <- data.frame(x = c("a", "b"), answer = c("A", "B"))
+result <- eval_program(program, data, metric_exact_match(field = "answer"))
 trial <- create_trial("my-search", params = list(variant = "baseline"))
-complete_trial(trial, result, compiled_artifact_ref = program)
-} # }
+complete_trial(trial, result)
+#> 
+#> ── Trial: trial_20261125_015318_ncnyz0 
+#> ✔ Status: completed
+#> Optimizer: my-search
+#> Params: variant
+#> Score: 1
+#> Started: 2026-11-25 01:53:18
 ```

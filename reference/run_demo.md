@@ -40,7 +40,7 @@ queries and needs an OpenAI API key. The app needs the shiny package.
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-run_demo()
-} # }
+if (interactive()) {
+  run_demo()
+}
 ```

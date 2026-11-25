@@ -17,6 +17,11 @@
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="dsprrr for DSPy users">
+<meta name="description" content="Translate your DSPy mental model to R: side-by-side examples, module and optimizer comparisons against DSPy 3.5.0, infrastructure mapping, and roadmap gaps.
+">
+<meta property="og:description" content="Translate your DSPy mental model to R: side-by-side examples, module and optimizer comparisons against DSPy 3.5.0, infrastructure mapping, and roadmap gaps.
+">
+<meta property="og:image" content="https://jameshwade.github.io/dsprrr/logo.svg">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -132,14 +137,14 @@
 
     
     
-<p>dsprrr is an R implementation of <a href="https://dspy.ai" class="external-link">DSPy</a>’s
-programming model, built on <a href="https://ellmer.tidyverse.org" class="external-link">ellmer</a> and tidyverse
-conventions. It keeps DSPy’s concepts (signatures, modules, metrics and
-optimizers, or “teleprompters”) but is not a line-by-line port: data
-goes in and out as tibbles, signatures are S7 objects, modules are R6
-objects, and ellmer handles every provider call. If you know DSPy, this
-page shows what carries over, what differs, and what is not available
-yet.</p>
+<p>dsprrr brings <a href="https://dspy.ai" class="external-link">DSPy</a>’s programming model
+to R on top of <a href="https://ellmer.tidyverse.org" class="external-link">ellmer</a> and
+tidyverse conventions. It keeps DSPy’s core concepts—signatures,
+modules, metrics, and teleprompters—without forcing Python idioms onto
+R: datasets are tibbles, signatures are immutable S7 values, modules are
+stateful R6 objects, and ellmer owns every provider call and structured
+schema. If you already know DSPy, this page maps what carries over, what
+differs, and what is still on the roadmap.</p>
 <div class="section level2">
 <h2 id="side-by-side">Side by side<a class="anchor" aria-label="anchor" href="#side-by-side"></a>
 </h2>
@@ -188,9 +193,9 @@ and evaluated, in DSPy:</p>
 <span><span class="op">)</span></span>
 <span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="va">qa</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="fu"><a href="../reference/LabeledFewShot.html">LabeledFewShot</a></span><span class="op">(</span>k <span class="op">=</span> <span class="fl">3L</span><span class="op">)</span>, <span class="va">trainset</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span><span class="va">compiled</span>, <span class="va">devset</span>, <span class="va">metric</span><span class="op">)</span></span></code></pre></div>
-<p>The examples further down reuse <code>qa</code>,
-<code>trainset</code>, <code>devset</code> and this default chat.</p>
-<p>The differences that show up in everyday code:</p>
+<p>The examples below reuse <code>qa</code>, <code>trainset</code>,
+<code>devset</code>, and this default chat.</p>
+<p>The everyday differences to keep in mind:</p>
 <table class="table">
 <colgroup>
 <col width="42%">
@@ -204,15 +209,14 @@ and evaluated, in DSPy:</p>
 <tr class="odd">
 <td><code>dspy.configure(lm=...)</code></td>
 <td>
-<code><a href="../reference/dsp_configure.html">dsp_configure()</a></code> or <code><a href="../reference/get_default_chat.html">set_default_chat()</a></code>, or
-<code>.llm =</code> on a single call</td>
+<code><a href="../reference/dsp_configure.html">dsp_configure()</a></code>, <code><a href="../reference/get_default_chat.html">set_default_chat()</a></code>, or
+<code>.llm =</code> per call</td>
 </tr>
 <tr class="even">
 <td><code>dspy.Predict("question -&gt; answer")</code></td>
 <td>
 <code>module(signature("question -&gt; answer"))</code>; other
-constructors such as <code><a href="../reference/chain_of_thought.html">chain_of_thought()</a></code> also accept the
-string</td>
+constructors also take strings directly</td>
 </tr>
 <tr class="odd">
 <td>
@@ -224,58 +228,28 @@ string</td>
 <tr class="even">
 <td><code>metric(example, pred, trace=None)</code></td>
 <td>
-<code>metric(prediction, expected)</code>: the prediction comes
-first, and <code>expected</code> is the data row</td>
+<code>metric(prediction, expected)</code>: prediction first,
+<code>expected</code> is the whole data row</td>
 </tr>
 <tr class="odd">
-<td>A list of <code>dspy.Example(...).with_inputs(...)</code>
+<td>List of <code>dspy.Example(...).with_inputs(...)</code>
 </td>
-<td>A data frame; the signature’s input names say which columns are
-inputs</td>
+<td>A data frame; signature input names identify input columns</td>
 </tr>
 <tr class="even">
 <td><code>optimizer.compile(program, trainset=...)</code></td>
 <td>
-<code>compile(program, optimizer, trainset)</code>, which returns a
-new program and leaves the original unchanged</td>
+<code>compile(program, optimizer, trainset)</code> (returns a new
+program; original unchanged)</td>
 </tr>
 <tr class="odd">
 <td><code>k=3</code></td>
 <td>
-<code>k = 3L</code>: integer settings need an integer literal</td>
+<code>k = 3L</code>: many S7 integer settings require an integer
+literal</td>
 </tr>
 </tbody>
 </table>
-</div>
-<div class="section level2">
-<h2 id="version-baseline">Version baseline<a class="anchor" aria-label="anchor" href="#version-baseline"></a>
-</h2>
-<p>This comparison was checked against DSPy <strong>3.5.0</strong>,
-released on 2026-11-10. Its changes from 3.4.1 affect execution
-contracts as well as feature names:</p>
-<ul>
-<li>RLM, Flex, and GEPA have graduated from experimental status
-upstream.</li>
-<li>The newer ReAct implementation is now <code>dspy.ReAct</code>, using
-structured History and a typed <code>submit</code> tool.
-<code>ReActV2</code> is a deprecated alias.</li>
-<li>RLM accepts reusable conversation History and mixed text/image
-subqueries. Replaying History does not restore interpreter
-variables.</li>
-<li>ChainOfThought prefers native reasoning, which may have no visible
-summary, with a short-plan fallback. XML is the default predictor
-adapter.</li>
-<li>The lm15 provider layer makes LiteLLM and the OpenAI SDK optional.
-Legacy <code>lm(messages=...)</code> entry points, CodeAct, and
-ProgramOfThought were removed; TwoStepAdapter is deprecated.</li>
-</ul>
-<p>These upstream changes do not change dsprrr’s provider boundary:
-ellmer owns provider calls and structured output. dsprrr keeps its
-R-specific code modules and its own experimental labels. Re-evaluate
-optimized programs when their prompts, schemas, or execution modes
-change. See the <a href="https://github.com/stanfordnlp/dspy/releases/tag/3.5.0" class="external-link">DSPy 3.5.0
-release notes</a> and <a href="https://dspy.ai/current/community/upgrading-to-3-5/" class="external-link">upgrade
-guide</a>.</p>
 </div>
 <div class="section level2">
 <h2 id="modules">Modules<a class="anchor" aria-label="anchor" href="#modules"></a>
@@ -295,76 +269,71 @@ guide</a>.</p>
 <tr class="odd">
 <td><code>dspy.Predict</code></td>
 <td><code>module(sig)</code></td>
-<td>Core predictor</td>
+<td>Core structured predictor</td>
 </tr>
 <tr class="even">
 <td><code>dspy.ChainOfThought</code></td>
 <td>
 <code><a href="../reference/chain_of_thought.html">chain_of_thought()</a></code>, <code><a href="../reference/with_reasoning.html">with_reasoning()</a></code>
 </td>
-<td>Default rationale transform; opt-in native provider reasoning or a
-short explicit plan</td>
+<td>Default <code>"rationale"</code> field, plus <code>"plan"</code> and
+<code>"native"</code> thinking modes</td>
 </tr>
 <tr class="odd">
-<td>
-<code>dspy.ReAct</code> (<code>ReActV2</code> is deprecated)</td>
+<td><code>dspy.ReAct</code></td>
 <td><code>react(sig)</code></td>
-<td>Native ellmer turns and tool-call IDs, ordered rich tool content, an
-enforced iteration limit, and opt-in typed <code>submit</code>
-finalization. Structured follow-up remains the default</td>
+<td>Native ellmer tool turns, <code>max_iterations</code>, opt-in
+<code>finalization = "submit"</code>
+</td>
 </tr>
 <tr class="even">
 <td>
-<code>dspy.ProgramOfThought</code> (removed in DSPy 3.5)</td>
+<code>dspy.ProgramOfThought</code> <em>(removed in DSPy
+3.5)</em>
+</td>
 <td><code><a href="../reference/program_of_thought.html">program_of_thought()</a></code></td>
-<td>Generates and executes <strong>R</strong> code (not Python); accepts
-either a caller-owned reused runner or a fresh per-invocation
-interpreter factory. dsprrr keeps it supported; DSPy points users to
-<code>RLM</code> and <code>Flex</code>
+<td>Retained in dsprrr; generates and executes R code via
+<code>runner</code> or <code>interpreter_factory</code>
 </td>
 </tr>
 <tr class="odd">
 <td>
-<code>dspy.CodeAct</code> (removed in DSPy 3.5)</td>
+<code>dspy.CodeAct</code> <em>(removed in DSPy 3.5)</em>
+</td>
 <td><code><a href="../reference/code_act.html">code_act()</a></code></td>
-<td>Hybrid tools + R code execution with an enforced inner tool-call
-limit; accepts either a caller-owned reused runner or a fresh
-per-invocation interpreter factory. The built-in runner is
-trusted-input-only, and sandboxed backends can implement the runner
-protocol</td>
+<td>Retained in dsprrr; combines ellmer tools with R code execution</td>
 </tr>
 <tr class="even">
 <td><code>dspy.BestOfN</code></td>
 <td><code><a href="../reference/best_of_n.html">best_of_n()</a></code></td>
-<td>Reward-function-guided retries</td>
+<td>Reward-guided retries</td>
 </tr>
 <tr class="odd">
 <td><code>dspy.Refine</code></td>
 <td><code><a href="../reference/refine.html">refine()</a></code></td>
-<td>Retries with LLM-generated feedback</td>
+<td>Retries with rendered feedback templates</td>
 </tr>
 <tr class="even">
 <td><code>dspy.MultiChainComparison</code></td>
 <td><code><a href="../reference/multi_chain_comparison.html">multi_chain_comparison()</a></code></td>
-<td></td>
+<td>Runs <code>M</code> CoT chains and reconciles them</td>
 </tr>
 <tr class="odd">
 <td><code>dspy.RLM</code></td>
 <td>
-<code><a href="../reference/rlm_module.html">rlm_module()</a></code> (experimental)</td>
-<td>Inference-time adaptive exploration over an R REPL, with optimizable
-action and extraction predictors, inherited or separate sub-LMs,
-replayed recursive values, typed submission repair, and trajectory
-metadata</td>
+<code><a href="../reference/rlm_module.html">rlm_module()</a></code> <em>(experimental)</em>
+</td>
+<td>Explores R objects iteratively with <code>generate_action</code> /
+<code>extract</code> predictors and <code>SUBMIT()</code>
+</td>
 </tr>
 <tr class="even">
+<td><code>dspy.Flex</code></td>
 <td>
-<code>dspy.Flex</code> (stable upstream in 3.5)</td>
-<td><code><a href="../reference/flex.html">flex()</a></code></td>
-<td>GEPA can optimize a bounded predictor graph or an R
-<code>forward()</code> program. dsprrr requires an explicit fresh
-interpreter for executable source rather than choosing a default
-sandbox</td>
+<code><a href="../reference/flex.html">flex()</a></code> <em>(experimental)</em>
+</td>
+<td>Bounded JSON predictor graphs or sandboxed R <code>forward()</code>
+programs optimized by GEPA</td>
 </tr>
 <tr class="odd">
 <td>
@@ -372,159 +341,125 @@ sandbox</td>
 </td>
 <td>
 <code><a href="../reference/run_dataset.html">run_dataset()</a></code>,
-<code>run(..., .concurrency = concurrency_control(...))</code>
+<code>.concurrency = concurrency_control(...)</code>
 </td>
-<td>Batch over a data frame; heterogeneous (module, example) fan-out is
-not yet a dedicated module</td>
+<td>Batch execution via <code>ellmer</code> or <code>mirai</code>
+</td>
 </tr>
 <tr class="even">
 <td><code>dspy.majority</code></td>
 <td>
-<code><a href="../reference/ensemble.html">ensemble()</a></code> with <code><a href="../reference/reduce_majority.html">reduce_majority()</a></code>
+<code><a href="../reference/ensemble.html">ensemble()</a></code> + <code><a href="../reference/reduce_majority.html">reduce_majority()</a></code>
 </td>
-<td>Plus <code><a href="../reference/reduce_weighted_vote.html">reduce_weighted_vote()</a></code>,
+<td>Plus <code><a href="../reference/reduce_weighted_vote.html">reduce_weighted_vote()</a></code> and
 <code><a href="../reference/reduce_best_by_metric.html">reduce_best_by_metric()</a></code>
 </td>
 </tr>
 <tr class="odd">
 <td><code>dspy.KNN</code></td>
 <td>
-<code><a href="../reference/compile.html">compile()</a></code> with the <code>KNNFewShot</code>
-teleprompter</td>
-<td>The compiled module picks the nearest training examples as demos for
-each input. Bring your own vectorizer (e.g.,
+<code><a href="../reference/compile.html">compile()</a></code> with <code><a href="../reference/KNNFewShot.html">KNNFewShot()</a></code>
+</td>
+<td>Bring your own vectorizer (e.g.,
 <code>ragnar::embed_openai()</code>)</td>
 </tr>
 <tr class="even">
-<td>Retrieval (custom functions)</td>
+<td>Retrieval</td>
 <td>
-<code><a href="../reference/rag_module.html">rag_module()</a></code> + ragnar</td>
-<td>Built-in ragnar retriever integration</td>
+<code><a href="../reference/rag_module.html">rag_module()</a></code> + <code>ragnar</code>
+</td>
+<td>Plain R retrievers or <code>ragnar</code> stores
+(<code><a href="../reference/ragnar_tool.html">ragnar_tool()</a></code>)</td>
 </tr>
 <tr class="odd">
-<td>Experimental decision outputs on <code>Predict</code>
-(<code>Noul</code>, <code>Score</code>, <code>Choice</code>)</td>
 <td>
-<code><a href="../reference/with_decisions.html">with_decisions()</a></code> with <code><a href="../reference/decision_types.html">decision_bool()</a></code>,
-<code><a href="../reference/decision_types.html">decision_score()</a></code>, <code><a href="../reference/decision_types.html">decision_choice()</a></code>
-(experimental)</td>
-<td>Probability evidence from ellmer structured output, decoded locally
-with per-field <code>threshold</code>, <code>cuts</code>, and
-<code>weights</code>. Native logical/character values are returned, and
-evidence is available through <code><a href="../reference/decision_evidence.html">decision_evidence()</a></code>. DSPy’s
-TypeSafe “System One” backend has no R counterpart</td>
+<code>Noul</code>, <code>Score</code>, <code>Choice</code>
+<em>(experimental)</em>
+</td>
+<td>
+<code><a href="../reference/with_decisions.html">with_decisions()</a></code> + <code><a href="../reference/decision_types.html">decision_bool()</a></code> /
+<code><a href="../reference/decision_types.html">decision_score()</a></code> / <code><a href="../reference/decision_types.html">decision_choice()</a></code>
+<em>(experimental)</em>
+</td>
+<td>Probability evidence via ellmer structured output, decoded locally;
+no “System One” classifier backend</td>
 </tr>
 </tbody>
 </table>
-<p>ProgramOfThought, CodeAct, and RLM take either a caller-owned
-<code>runner</code> or a zero-argument <code>interpreter_factory</code>
-that creates a fresh runner per invocation. Executable Flex accepts only
-the factory form and requires an enforced sandbox by default, while JSON
-Flex needs no interpreter; see <a href="flex-optimization.html">Flex:
+<p>Code-running modules (<code><a href="../reference/program_of_thought.html">program_of_thought()</a></code>,
+<code><a href="../reference/code_act.html">code_act()</a></code>, <code><a href="../reference/rlm_module.html">rlm_module()</a></code>) accept either a
+caller-owned <code>runner</code> or a per-call
+<code>interpreter_factory</code>. Executable <code><a href="../reference/flex.html">flex()</a></code>
+requires <code>interpreter_factory</code> and an enforced sandbox by
+default, while JSON <code><a href="../reference/flex.html">flex()</a></code> needs no interpreter; see <a href="https://jameshwade.github.io/dsprrr/articles/flex-optimization.html">Flex:
 optimize a whole program</a>.</p>
 <div class="section level3">
-<h3 id="reasoning-and-typed-completion">Reasoning and typed completion<a class="anchor" aria-label="anchor" href="#reasoning-and-typed-completion"></a>
+<h3 id="reasoning-modes-react-submit-history-and-async">Reasoning modes, ReAct <code>submit</code>, history, and async<a class="anchor" aria-label="anchor" href="#reasoning-modes-react-submit-history-and-async"></a>
 </h3>
-<p><code><a href="../reference/chain_of_thought.html">chain_of_thought()</a></code> keeps its existing rationale field by
-default. Native mode keeps the original output schema and exposes
-provider-supplied thinking in structured metadata; an absent thinking
-block remains <code>NULL</code>. Plan mode adds a short, explicit plan
-to the requested output. Neither mode promises to recover a model’s
-private reasoning or change provider settings.</p>
+<ul>
+<li>
+<strong>Reasoning modes:</strong> <code><a href="../reference/chain_of_thought.html">chain_of_thought()</a></code>
+defaults to <code>"rationale"</code> (adds a <code>reasoning</code>
+field). Pass <code>mode = "plan"</code> for a concise plan field, or
+<code>mode = "native"</code> with
+<code>.return_format = "structured"</code> to keep the output schema
+unchanged and read provider thinking blocks from
+<code>get_metadata(result)$native_reasoning</code>.</li>
+<li>
+<strong>ReAct <code>finalization = "submit"</code>:</strong> Lets
+the model return its typed answer through a reserved <code>submit</code>
+tool call inside the tool loop (avoiding the extra structured-output
+request of the default <code>finalization = "structured"</code>).</li>
+<li>
+<strong>Portable conversation history:</strong> Scalar
+<code><a href="../reference/run.html">run()</a></code> calls on <code><a href="../reference/react.html">react()</a></code> and
+<code><a href="../reference/rlm_module.html">rlm_module()</a></code> accept <code>.history</code> (from
+<code><a href="../reference/conversation_history.html">conversation_history()</a></code>, <code><a href="../reference/accessors.html">get_history()</a></code>, or
+<code><a href="../reference/load_history.html">load_history()</a></code>) when
+<code>.return_format = "structured"</code>, and persist safely as JSON
+with <code><a href="../reference/save_history.html">save_history()</a></code>. ReAct preserves native turns without
+re-executing tools; RLM carries bounded textual summaries and requires
+an <code>interpreter_factory</code>. ReAct and RLM histories cannot be
+mixed, and dataset/async/streaming routes reject
+<code>.history</code>.</li>
+<li>
+<strong>Async ReAct:</strong> <code><a href="../reference/run_async.html">run_async()</a></code> awaits the
+full sequential ReAct tool loop and accepts
+<code>.control = react_async_control(on_progress = ...)</code> for
+ordered progress events and cooperative cancellation
+(<code>control$cancel()</code>). See <a href="models-and-providers.html">Models, providers and
+streaming</a>.</li>
+</ul>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">native_qa</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/chain_of_thought.html">chain_of_thought</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span>, mode <span class="op">=</span> <span class="st">"native"</span><span class="op">)</span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
-<span>  <span class="va">native_qa</span>,</span>
-<span>  question <span class="op">=</span> <span class="st">"What is the capital of France?"</span>,</span>
-<span>  .return_format <span class="op">=</span> <span class="st">"structured"</span></span>
-<span><span class="op">)</span></span>
-<span><span class="va">result</span><span class="op">$</span><span class="va">metadata</span><span class="op">$</span><span class="va">native_reasoning</span></span>
+<code class="sourceCode R"><span><span class="co"># Native reasoning + ReAct submit + portable history</span></span>
+<span><span class="va">native_qa</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/chain_of_thought.html">chain_of_thought</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span>, mode <span class="op">=</span> <span class="st">"native"</span><span class="op">)</span></span>
+<span><span class="va">agent</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/react.html">react</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span>, finalization <span class="op">=</span> <span class="st">"submit"</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">planned_qa</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/chain_of_thought.html">chain_of_thought</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span>, mode <span class="op">=</span> <span class="st">"plan"</span><span class="op">)</span></span></code></pre></div>
-<p>For ReAct, <code>finalization = "submit"</code> makes the final
-answer a typed tool call. Invalid submissions return repair feedback
-within the iteration budget. A valid submission must be the only tool
-call in its turn; mixed submission/action turns fail before tool
-effects. This avoids the extra extraction request used by the default
-<code>finalization = "structured"</code>.</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">agent</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/react.html">react</a></span><span class="op">(</span><span class="st">"question -&gt; answer"</span>, finalization <span class="op">=</span> <span class="st">"submit"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">agent</span>, question <span class="op">=</span> <span class="st">"What is the capital of France?"</span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="explicit-react-conversation-history">Explicit ReAct conversation history<a class="anchor" aria-label="anchor" href="#explicit-react-conversation-history"></a>
-</h3>
-<p>A supplied history opts into continuation on an independent Chat. The
-default <code>.history = NULL</code> keeps existing behavior. Scalar
-root ReAct calls through <code><a href="../reference/run.html">run()</a></code> or <code>Module$run()</code>
-require structured results when history is supplied:</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">first</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
+<span><span class="va">first</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
 <span>  <span class="va">agent</span>,</span>
 <span>  question <span class="op">=</span> <span class="st">"What is the capital of France?"</span>,</span>
 <span>  .history <span class="op">=</span> <span class="fu"><a href="../reference/conversation_history.html">conversation_history</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  .return_format <span class="op">=</span> <span class="st">"structured"</span></span>
 <span><span class="op">)</span></span>
-<span><span class="va">history_file</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".json"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/save_history.html">save_history</a></span><span class="op">(</span><span class="fu"><a href="../reference/accessors.html">get_history</a></span><span class="op">(</span><span class="va">first</span><span class="op">)</span>, <span class="va">history_file</span><span class="op">)</span></span>
-<span></span>
 <span><span class="va">second</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span></span>
 <span>  <span class="va">agent</span>,</span>
 <span>  question <span class="op">=</span> <span class="st">"Which river runs through it?"</span>,</span>
-<span>  .history <span class="op">=</span> <span class="fu"><a href="../reference/load_history.html">load_history</a></span><span class="op">(</span><span class="va">history_file</span><span class="op">)</span>,</span>
+<span>  .history <span class="op">=</span> <span class="fu"><a href="../reference/accessors.html">get_history</a></span><span class="op">(</span><span class="va">first</span><span class="op">)</span>,</span>
 <span>  .return_format <span class="op">=</span> <span class="st">"structured"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p>History preserves ordered content and paired tool calls/results
-without executing old tools. It excludes executable bindings, system
-prompts, and old usage accounting. The supplied Chat and history remain
-unchanged on success or error; <code>get_history(second)</code> is the
-new value. History is returned independently of trace recording. The
-JSON codec rejects unsupported values, malformed tool pairing, and
-payloads beyond its documented size/depth limits.</p>
-<p>The public dataset, batch, async, and streaming paths reject explicit
-history before work. Other modules’ low-level custom
-<code>forward()</code> methods are outside this continuation API.
-Program artifacts and conversation history remain separate files with
-separate purposes.</p>
-</div>
-<div class="section level3">
-<h3 id="asynchronous-agents">Asynchronous agents<a class="anchor" aria-label="anchor" href="#asynchronous-agents"></a>
-</h3>
-<p>ReAct’s async path awaits the complete sequential tool loop and
-either typed submission or structured follow-up. It uses the same
-simple/structured result choice as Predict. A one-invocation control
-reports ordered progress and supports cooperative cancellation:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">control</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/react_async_control.html">react_async_control</a></span><span class="op">(</span>on_progress <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">event</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/message.html" class="external-link">message</a></span><span class="op">(</span><span class="va">event</span><span class="op">$</span><span class="va">type</span><span class="op">)</span></span>
-<span><span class="op">}</span><span class="op">)</span></span>
-<span><span class="va">pending</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_async.html">run_async</a></span><span class="op">(</span></span>
-<span>  <span class="va">agent</span>,</span>
-<span>  question <span class="op">=</span> <span class="st">"What is the capital of France?"</span>,</span>
-<span>  .return_format <span class="op">=</span> <span class="st">"structured"</span>,</span>
-<span>  .control <span class="op">=</span> <span class="va">control</span></span>
-<span><span class="op">)</span></span>
-<span><span class="fu">promises</span><span class="fu">::</span><span class="fu"><a href="https://rstudio.github.io/promises/reference/then.html" class="external-link">then</a></span><span class="op">(</span><span class="va">pending</span>, <span class="kw">function</span><span class="op">(</span><span class="va">result</span><span class="op">)</span> <span class="fu"><a href="../reference/accessors.html">get_output</a></span><span class="op">(</span><span class="va">result</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co"># While the call is pending, request cancellation with control$cancel().</span></span></code></pre></div>
-<p>Cancellation blocks subsequent work; an active provider request or
-host tool must settle first. The Chat remains reserved during that
-interval. Progress callback errors reject the call after cleanup. A
-failed/cancelled conversation can be partial: metadata distinguishes
-requested tools from observed results, and
-<code>observed_tool_results</code> retains actual result evidence
-without inventing results for tools that did not run. Explicit portable
-history is not accepted on the async path.</p>
 </div>
 <div class="section level3">
 <h3 id="rlm">RLM<a class="anchor" aria-label="anchor" href="#rlm"></a>
 </h3>
-<p>dsprrr follows the core DSPy RLM execution model: one interpreter per
-invocation, <code>generate_action</code> and <code>extract</code> child
-predictors that graph optimizers can see, a sub-LM that inherits the
-outer LM unless you set one, <code>llm_query()</code> results replayed
-into the running R code, and invalid typed <code>SUBMIT()</code> calls
-returned to the model as repairable observations. <a href="how-rlm-works.html">How RLM works</a> describes the contract in
-full. The differences a DSPy user will notice:</p>
+<p>dsprrr mirrors DSPy’s RLM model—an interpreter per invocation,
+graph-visible <code>generate_action</code> and <code>extract</code>
+predictors, <code>llm_query()</code> / <code>llm_query_batched()</code>
+(including text + image slices), selectable <code>reasoning_mode</code>,
+multi-turn <code>.history</code>, and repairable typed
+<code>SUBMIT()</code> validation—while executing <strong>R</strong> code
+with signature inputs staged under <code>.context</code>. See <a href="https://jameshwade.github.io/dsprrr/articles/how-rlm-works.html">How
+RLM works</a> for the complete contract and limits, and <a href="https://jameshwade.github.io/dsprrr/articles/tutorial-rlm-dsprrr.html">Investigate
+a regression with RLM</a> for a worked example.</p>
 <table class="table">
 <colgroup>
 <col width="33%">
@@ -540,117 +475,47 @@ full. The differences a DSPy user will notice:</p>
 <tr class="odd">
 <td>Generated language</td>
 <td>Python</td>
-<td>R, with signature inputs under <code>.context</code>
+<td>R, with inputs under <code>.context</code>
 </td>
 </tr>
 <tr class="even">
 <td>Interpreter binding</td>
-<td>A keyword-only <code>interpreter_factory</code> at call time (3.4),
-or a <code>dspy.settings.interpreter_factory</code> default</td>
-<td>Runner or factory bound when constructing <code><a href="../reference/rlm_module.html">rlm_module()</a></code>;
-<code><a href="../reference/rlm.html">rlm()</a></code> creates that binding for one invocation</td>
+<td>Per-call <code>interpreter_factory</code> or global setting</td>
+<td>Bound on <code><a href="../reference/rlm_module.html">rlm_module()</a></code>, or managed <code>mcp-repl</code>
+sandbox by default in <code><a href="../reference/rlm.html">rlm()</a></code>
+</td>
 </tr>
 <tr class="odd">
-<td>Persistent local interpreter</td>
+<td>Local persistent runner</td>
 <td>
-<code>LocalInterpreter</code> (3.4), CPython without Deno</td>
+<code>LocalInterpreter</code> (CPython)</td>
 <td>
-<code>r_code_runner(persistent = TRUE)</code>, one trusted callr R
-process per invocation</td>
-</tr>
-<tr class="even">
-<td>Default local execution</td>
-<td>DSPy interpreter configuration</td>
-<td>The one-call <code><a href="../reference/rlm.html">rlm()</a></code> helper creates a fresh managed
-<code>mcp-repl</code> OS sandbox with network disabled and workspace
-writes allowed; it suits compact JSON-compatible context</td>
-</tr>
-<tr class="odd">
-<td>Returned value</td>
-<td>Prediction with reusable ordered History; native reasoning may have
-no visible summary</td>
-<td>Structured <code><a href="../reference/run.html">run()</a></code> results include the current trajectory
-and optional explicit conversation history; native thinking is optional
-metadata</td>
+<code>r_code_runner(persistent = TRUE)</code> (trusted
+<code>callr</code> process)</td>
 </tr>
 <tr class="even">
 <td>Typed outputs</td>
-<td>Signature adapters validate the Python/Pydantic type</td>
+<td>Pydantic / signature adapters</td>
 <td>ellmer string, number, integer, boolean, enum, array, and object
-types; opaque <code>TypeJsonSchema</code> nodes are rejected</td>
+types</td>
 </tr>
 <tr class="odd">
 <td>Host tools</td>
 <td>Interpreter-defined</td>
-<td>Run in the host R process, outside the guest sandbox</td>
+<td>Execute in the host R process outside the runner</td>
 </tr>
 </tbody>
 </table>
-<p>Recursive query context can contain an ordered mix of text and
-images. Generated R code passes plain records to
-<code>llm_query()</code> or aligned slices to
-<code>llm_query_batched()</code>; the guest does not need ellmer
-installed:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu">llm_query</span><span class="op">(</span></span>
-<span>  <span class="st">"What does this figure show?"</span>,</span>
-<span>  context_slice <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"text"</span>, text <span class="op">=</span> <span class="st">"Compare the two panels."</span><span class="op">)</span>,</span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"image_url"</span>, url <span class="op">=</span> <span class="st">"https://example.com/figure.png"</span><span class="op">)</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p>HTTPS image URLs and bounded inline image data are supported. PDF and
-local file records are rejected. The runner’s transport cap also
-applies: a valid image record can still be too large for a managed MCP
-control frame. These queries preserve replay identity, ordering, and
-call budgets; they do not establish that every provider/model can
-interpret images.</p>
-<p>RLM action reasoning is also selectable through
-<code>rlm_module(reasoning_mode = "native")</code> or
-<code>rlm(.reasoning_mode = "native")</code>. Native actions request
-code without a prompted rationale; provider thinking remains optional
-metadata. <code>native_reasoning_action_indices</code> maps retained
-blocks to their action steps. <code>"plan"</code> requests a short plan
-plus code, and <code>"rationale"</code> preserves the default action
-schema. The final output signature is unchanged. Custom action
-predictors must satisfy the chosen contract, which is checked again
-before each invocation’s model or interpreter work.</p>
-<p>Explicit RLM continuation uses the same <code>.history</code> and
-<code><a href="../reference/accessors.html">get_history()</a></code> API as ReAct, but stores a different kind of
-record. Each exchange contains the original visible task/context
-previews, inert code and observed output, and the complete normalized
-final output. A new invocation includes every prior exchange in both its
-action prompts and fallback extraction prompt.</p>
-<p>Every explicit-history RLM call requires an
-<code>interpreter_factory</code>; the framework leases and closes one
-interpreter for that call. The factory must return a fresh interpreter.
-Prior variables are unavailable, and historical code and tools are never
-executed merely by loading or supplying history. ReAct and RLM histories
-cannot be mixed. Async, batch, dataset, streaming, and composite calls
-do not accept explicit history.</p>
-<p>RLM history is bounded to 100 exchanges, 1,000 trajectory steps, and
-128 KiB of canonical historical text, in addition to the shared codec
-limits. It never silently prunes exchanges or clips final outputs. A
-completed call can still fail its postflight history-size check after
-provider work; the supplied history remains unchanged. Saved program
-artifacts do not include this conversation history.</p>
-<p>RLM remains experimental in dsprrr: the execution and result
-contracts are tested, but the convenience API may still change. For a
-worked example, see <a href="tutorial-rlm-dsprrr.html">Investigate a
-regression with RLM</a>.</p>
 </div>
 <div class="section level3">
 <h3 id="assertions">Assertions<a class="anchor" aria-label="anchor" href="#assertions"></a>
 </h3>
-<p>DSPy 3.0 <em>removed</em>
-<code>dspy.Assert</code>/<code>dspy.Suggest</code> in favor of
-<code>BestOfN</code>/<code>Refine</code>. dsprrr keeps both styles:
-declarative assertions with retry/backtracking
+<p>DSPy 3.0 removed <code>dspy.Assert</code>/<code>dspy.Suggest</code>
+in favor of <code>BestOfN</code>/<code>Refine</code>. dsprrr keeps both:
+declarative output assertions with retry feedback
 (<code><a href="../reference/with_assertions.html">with_assertions()</a></code>, <code><a href="../reference/assertions.html">assert_output()</a></code>,
-<code><a href="../reference/assertions.html">suggest_output()</a></code>) <em>and</em> the
-<code><a href="../reference/best_of_n.html">best_of_n()</a></code>/<code><a href="../reference/refine.html">refine()</a></code> wrappers. If you prefer
-the modern DSPy style, use the wrappers; use assertions when you want
-declarative output contracts with automatic feedback injection.</p>
+<code><a href="../reference/assertions.html">suggest_output()</a></code>) <em>and</em> the <code><a href="../reference/best_of_n.html">best_of_n()</a></code>
+/ <code><a href="../reference/refine.html">refine()</a></code> wrappers.</p>
 </div>
 </div>
 <div class="section level2">
@@ -671,56 +536,49 @@ declarative output contracts with automatic feedback injection.</p>
 <tr class="odd">
 <td><code>LabeledFewShot</code></td>
 <td><code>LabeledFewShot</code></td>
-<td>Equivalent for a root Predict module; nested-predictor graphs,
-including pipelines, RLM and Flex, are rejected rather than receiving
-mismatched root-task demos</td>
+<td>Equivalent for root prediction modules; rejects nested graphs</td>
 </tr>
 <tr class="even">
 <td><code>BootstrapFewShot</code></td>
 <td><code>BootstrapFewShot</code></td>
-<td>Compiles ordinary pipelines jointly; programs containing Flex or RLM
-are rejected because their runtime predictors cannot receive root-task
-demos</td>
+<td>Compiles pipelines jointly; rejects programs containing
+<code><a href="../reference/flex.html">flex()</a></code> or <code><a href="../reference/rlm_module.html">rlm_module()</a></code>
+</td>
 </tr>
 <tr class="odd">
 <td><code>BootstrapFewShotWithRandomSearch</code></td>
 <td><code>BootstrapFewShotWithRandomSearch</code></td>
-<td>Random search over ordinary labeled/bootstrap candidates; rejects
-programs containing Flex or RLM rather than returning a baseline-only
-no-op</td>
+<td>Random search over labeled/bootstrapped candidates; rejects
+<code><a href="../reference/flex.html">flex()</a></code> / <code><a href="../reference/rlm_module.html">rlm_module()</a></code>
+</td>
 </tr>
 <tr class="even">
 <td><code>MIPROv2</code></td>
 <td><code>MIPROv2</code></td>
-<td>Root Predict modules search instruction + demo candidates; nested
-graphs search child instructions with
-<code>max_bootstrapped_demos = 0L</code>. Candidates are chosen with a
-UCB1 bandit rather than Bayesian optimization</td>
+<td>Searches demos + instructions via a UCB1 bandit (rather than
+Bayesian optimization); nested graphs require
+<code>max_bootstrapped_demos = 0L</code>
+</td>
 </tr>
 <tr class="odd">
 <td><code>SIMBA</code></td>
 <td><code>SIMBA</code></td>
-<td>Adapted: hard-example mining + LLM-generated rules; simplified
-vs. the full introspective algorithm</td>
+<td>Simplified adaptation: hard-example mining + LLM-generated
+rules</td>
 </tr>
 <tr class="even">
 <td><code>GEPA</code></td>
 <td><code>GEPA</code></td>
-<td>Adapted reflective optimization for instructions and complete Flex
-sources, with separate train/validation roles, multi-objective
-selection, lineage, and optional retained outputs. DSPy 3.3.1’s
-per-metric <code>objective_scores</code> and <code>frontier_type</code>
-map to dsprrr’s named <code>metrics</code> list with Pareto selection.
-Task evaluation and reflection can use separate Chats with shared budget
-accounting. Fine-grained checkpoint resume is available for a bounded
-sequential predictor graph; Flex resume, cached subsample merge
-acceptance, parallel candidate evaluation, and built-in experiment
-trackers remain different</td>
+<td>Reflective evolution for instructions and <code><a href="../reference/flex.html">flex()</a></code>
+sources, with feedback metrics, multi-objective Pareto selection,
+separate <code>.reflection_llm</code>, and checkpoint resume on plain
+predictor graphs</td>
 </tr>
 <tr class="odd">
 <td><code>COPRO</code></td>
 <td><code>COPRO</code></td>
-<td>Equivalent (coordinate ascent over instructions)</td>
+<td>Equivalent (coordinate ascent over model-rewritten
+instructions)</td>
 </tr>
 <tr class="even">
 <td><code>KNNFewShot</code></td>
@@ -728,15 +586,14 @@ trackers remain different</td>
 <td>Equivalent</td>
 </tr>
 <tr class="odd">
-<td>Experimental <code>ReAnchor</code> (3.4)</td>
 <td>
-<code><a href="../reference/ReAnchor.html">ReAnchor()</a></code> (experimental)</td>
-<td>Same gap-midpoint candidates, fold check, and restore-if-not-better
-rule; single Predict modules only. <code><a href="../reference/compile.html">compile()</a></code> runs the
-module over the training set to record evidence (twice when outputs
-first have to be switched to evidence decoding) and scores any
-<code>valset</code>; the search over settings then re-decodes that
-evidence without further provider calls</td>
+<code>ReAnchor</code> <em>(experimental)</em>
+</td>
+<td>
+<code><a href="../reference/ReAnchor.html">ReAnchor()</a></code> <em>(experimental)</em>
+</td>
+<td>Same gap-midpoint search and fold check; single prediction modules
+only</td>
 </tr>
 <tr class="even">
 <td><code>Ensemble</code></td>
@@ -746,28 +603,16 @@ evidence without further provider calls</td>
 <tr class="odd">
 <td><code>BetterTogether</code></td>
 <td><code>BetterTogether</code></td>
-<td>Chains prompt optimizers via strategy strings; does
-<strong>not</strong> alternate prompt/weight optimization (no finetuning
-backend)</td>
-</tr>
-<tr class="even">
-<td><code>BootstrapFinetune</code></td>
-<td>Not available</td>
-<td>Planned; dsprrr currently optimizes prompts, not weights</td>
-</tr>
-<tr class="odd">
-<td>
-<code>GRPO</code> (RL via Arbor)</td>
-<td>Not available</td>
-<td></td>
+<td>Chains prompt optimizers via strategy strings (no weight
+finetuning)</td>
 </tr>
 <tr class="even">
 <td>
-<code>BootstrapFewShotWithOptuna</code>,
-<code>AvatarOptimizer</code>, <code>InferRules</code>
+<code>BootstrapFinetune</code>, <code>GRPO</code>
 </td>
 <td>Not available</td>
-<td>Niche/legacy in DSPy; not planned</td>
+<td>Planned; dsprrr optimizes prompts and decisions, not model
+weights</td>
 </tr>
 <tr class="odd">
 <td>No equivalent</td>
@@ -775,182 +620,74 @@ backend)</td>
 <code>GridSearchTeleprompter</code>,
 <code><a href="../reference/optimize_grid.html">optimize_grid()</a></code>
 </td>
-<td>tidymodels-style grid search over module parameters</td>
+<td>Explicit tidymodels-style parameter and variant sweeps</td>
 </tr>
 <tr class="even">
 <td>No equivalent</td>
-<td><code>Omni</code></td>
-<td>Independent best-of exploration plus a fresh continuation optimizer,
-with common validation scoring and optional mirai concurrency</td>
+<td>
+<code><a href="../reference/Omni.html">Omni()</a></code> <em>(experimental)</em>
+</td>
+<td>Best-of parallel/sequential exploration plus a continuation
+optimizer</td>
 </tr>
 <tr class="odd">
 <td>No equivalent</td>
-<td><code>AutoResearch</code></td>
-<td>Persistent research-agent loop over validated, jointly editable
-module snapshots with sandboxed R analysis</td>
-</tr>
-<tr class="even">
-<td>No equivalent</td>
-<td><code>MetaHarness</code></td>
-<td>Fresh batch proposers plus host-owned frontier selection, lineage,
-budgets, and checkpoint resume</td>
+<td>
+<code><a href="../reference/AutoResearch.html">AutoResearch()</a></code>, <code><a href="../reference/MetaHarness.html">MetaHarness()</a></code>
+<em>(experimental)</em>
+</td>
+<td>Agentic optimization loops over validated module snapshots with
+sandboxed R analysis</td>
 </tr>
 </tbody>
 </table>
 <div class="section level3">
-<h3 id="gepa-feedback-metrics">GEPA feedback metrics<a class="anchor" aria-label="anchor" href="#gepa-feedback-metrics"></a>
+<h3 id="gepa-feedback-reflection-models-and-checkpoints">GEPA feedback, reflection models, and checkpoints<a class="anchor" aria-label="anchor" href="#gepa-feedback-reflection-models-and-checkpoints"></a>
 </h3>
-<p>DSPy’s GEPA expects metrics that return a score <em>and textual
-feedback</em>. dsprrr supports the same protocol. The metric receives
-the whole data row as <code>expected</code>, so read the answer column
-from it:</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">metric</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metric_with_feedback.html">metric_with_feedback</a></span><span class="op">(</span></span>
+<p>Wrap metrics in <code><a href="../reference/metric_with_feedback.html">metric_with_feedback()</a></code> so failed rows
+feed diagnostic text into GEPA’s reflection prompt, or
+<code><a href="../reference/metric_with_trace.html">metric_with_trace()</a></code> to score execution traces as well. Pass
+<code>.reflection_llm</code> to separate proposal generation from task
+evaluation (<code>.llm</code>), and set <code>checkpoint_path</code> /
+<code>resume = TRUE</code> in <code><a href="../reference/optimizer_control.html">optimizer_control()</a></code> to pause
+and resume sequential <code>round_robin</code> searches over plain
+prediction modules and built-in pipelines (see <code><a href="../reference/GEPA.html">?GEPA</a></code> for
+exact checkpoint rules):</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">feedback_metric</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metric_with_feedback.html">metric_with_feedback</a></span><span class="op">(</span></span>
 <span>  <span class="kw">function</span><span class="op">(</span><span class="va">prediction</span>, <span class="va">expected</span><span class="op">)</span> <span class="op">{</span></span>
 <span>    <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="va">prediction</span><span class="op">$</span><span class="va">answer</span>, <span class="va">expected</span><span class="op">$</span><span class="va">answer</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
 <span>      <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>score <span class="op">=</span> <span class="fl">1</span>, feedback <span class="op">=</span> <span class="st">"Correct."</span><span class="op">)</span></span>
 <span>    <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span></span>
 <span>      <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>        score <span class="op">=</span> <span class="fl">0</span>,</span>
-<span>        feedback <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span></span>
-<span>          <span class="st">"Wrong: expected"</span>, <span class="va">expected</span><span class="op">$</span><span class="va">answer</span>, <span class="st">"- check the arithmetic."</span></span>
-<span>        <span class="op">)</span></span>
+<span>        feedback <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="st">"Expected"</span>, <span class="va">expected</span><span class="op">$</span><span class="va">answer</span>, <span class="st">"- check the arithmetic."</span><span class="op">)</span></span>
 <span>      <span class="op">)</span></span>
 <span>    <span class="op">}</span></span>
 <span>  <span class="op">}</span>,</span>
 <span>  field <span class="op">=</span> <span class="st">"answer"</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">tp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/GEPA.html">GEPA</a></span><span class="op">(</span>metric <span class="op">=</span> <span class="va">metric</span>, generations <span class="op">=</span> <span class="fl">5L</span><span class="op">)</span></span>
-<span><span class="va">reflection_chat</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-astra"</span><span class="op">)</span></span>
-<span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="va">qa</span>, <span class="va">tp</span>, <span class="va">trainset</span>, .reflection_llm <span class="op">=</span> <span class="va">reflection_chat</span><span class="op">)</span></span></code></pre></div>
-<p>The feedback for failed examples goes into GEPA’s reflection prompt,
-so the reflection model sees why each output failed as well as which
-ones did.</p>
-</div>
-<div class="section level3">
-<h3 id="choosing-a-reflection-model">Choosing a reflection model<a class="anchor" aria-label="anchor" href="#choosing-a-reflection-model"></a>
-</h3>
-<p>Pass <code>.reflection_llm</code> to <code><a href="../reference/compile.html">compile()</a></code> to
-separate GEPA proposal generation from task evaluation. Each reflection
-request starts from an independent Chat, and both stages contribute to
-the optimizer budget. An explicit <code>.llm</code> remains the legacy
-reflection fallback; an omitted task override can still resolve through
-the program’s normal runtime configuration.</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">task_chat</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-luna"</span><span class="op">)</span></span>
-<span><span class="va">reflection_chat</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-astra"</span><span class="op">)</span></span>
 <span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span></span>
 <span>  <span class="va">qa</span>,</span>
-<span>  <span class="fu"><a href="../reference/GEPA.html">GEPA</a></span><span class="op">(</span>metric <span class="op">=</span> <span class="va">metric</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="../reference/GEPA.html">GEPA</a></span><span class="op">(</span>metric <span class="op">=</span> <span class="va">feedback_metric</span>, generations <span class="op">=</span> <span class="fl">5L</span><span class="op">)</span>,</span>
 <span>  <span class="va">trainset</span>,</span>
-<span>  .llm <span class="op">=</span> <span class="va">task_chat</span>,</span>
-<span>  .reflection_llm <span class="op">=</span> <span class="va">reflection_chat</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p>Mutable search without an effective reflection Chat fails before
-evaluation. This is an adapted GEPA implementation; separate models
-alone do not establish algorithmic parity or an improvement on held-out
-data.</p>
-</div>
-<div class="section level3">
-<h3 id="durable-gepa-resume">Durable GEPA resume<a class="anchor" aria-label="anchor" href="#durable-gepa-resume"></a>
-</h3>
-<p>Use <code>optimizer_control(checkpoint_path = path)</code> to persist
-a supported GEPA search and set <code>resume = TRUE</code> to continue
-it. Completed proposals and individual evaluation rows are restored; a
-terminal checkpoint returns its result without further model or metric
-calls. An exhausted run can continue when its resource limit is
-raised.</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Start this resumable search with fresh, empty Chats.</span></span>
-<span><span class="va">task_chat</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-luna"</span><span class="op">)</span></span>
-<span><span class="va">reflection_chat</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-astra"</span><span class="op">)</span></span>
-<span><span class="va">control</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/optimizer_control.html">optimizer_control</a></span><span class="op">(</span></span>
-<span>  checkpoint_path <span class="op">=</span> <span class="st">"gepa-search.rds"</span>,</span>
-<span>  max_metric_calls <span class="op">=</span> <span class="fl">50</span></span>
-<span><span class="op">)</span></span>
-<span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span></span>
-<span>  <span class="va">qa</span>, <span class="fu"><a href="../reference/GEPA.html">GEPA</a></span><span class="op">(</span>metric <span class="op">=</span> <span class="va">metric</span><span class="op">)</span>, <span class="va">trainset</span>,</span>
-<span>  .llm <span class="op">=</span> <span class="va">task_chat</span>,</span>
-<span>  .reflection_llm <span class="op">=</span> <span class="va">reflection_chat</span>,</span>
-<span>  control <span class="op">=</span> <span class="va">control</span></span>
-<span><span class="op">)</span></span>
-<span><span class="co"># Continue the same search with a larger allowance:</span></span>
-<span><span class="va">resumed</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span></span>
-<span>  <span class="va">qa</span>, <span class="fu"><a href="../reference/GEPA.html">GEPA</a></span><span class="op">(</span>metric <span class="op">=</span> <span class="va">metric</span><span class="op">)</span>, <span class="va">trainset</span>,</span>
-<span>  .llm <span class="op">=</span> <span class="va">task_chat</span>,</span>
-<span>  .reflection_llm <span class="op">=</span> <span class="va">reflection_chat</span>,</span>
+<span>  valset <span class="op">=</span> <span class="va">devset</span>,</span>
+<span>  .llm <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-luna"</span><span class="op">)</span>,</span>
+<span>  .reflection_llm <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-astra"</span><span class="op">)</span>,</span>
 <span>  control <span class="op">=</span> <span class="fu"><a href="../reference/optimizer_control.html">optimizer_control</a></span><span class="op">(</span></span>
 <span>    checkpoint_path <span class="op">=</span> <span class="st">"gepa-search.rds"</span>,</span>
-<span>    resume <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>    max_metric_calls <span class="op">=</span> <span class="fl">100</span></span>
+<span>    max_metric_calls <span class="op">=</span> <span class="fl">50L</span></span>
 <span>  <span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p>This first resume contract covers sequential <code>round_robin</code>
-component selection over plain Predict leaves and built-in predictor
-pipelines, with plain-data predictions. It rejects Flex, custom module
-types or selectors, custom Chats, and Chats containing tools or prior
-turns before provider work. Mutable searches require at least one
-validation row, using <code>trainset</code> when <code>valset</code> is
-omitted. Metrics must return finite scores or <code>NA</code>; infinite
-scores are rejected before their row is saved. Algorithm configuration
-and model/runtime identities must match the saved search; resource
-limits may change. Checkpoints retain search state, row evidence,
-lineage, and RNG state without serializing live Chats or executable
-objects. A crash after a provider response but before its checkpoint
-commit can repeat that request: this is not an exactly-once side-effect
-guarantee.</p>
 </div>
 <div class="section level3">
-<h3 id="trace-aware-metrics">Trace-aware metrics<a class="anchor" aria-label="anchor" href="#trace-aware-metrics"></a>
+<h3 id="decision-types-and-reanchor">Decision types and <code>ReAnchor()</code><a class="anchor" aria-label="anchor" href="#decision-types-and-reanchor"></a>
 </h3>
-<p>DSPy 3.3 makes execution traces available to metrics used by
-reflective optimization. In dsprrr, wrap the metric with
-<code><a href="../reference/metric_with_trace.html">metric_with_trace()</a></code>; the wrapped function receives the
-prediction, the expected row, and a trace envelope:</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">metric</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/metric_with_trace.html">metric_with_trace</a></span><span class="op">(</span></span>
-<span>  <span class="kw">function</span><span class="op">(</span><span class="va">prediction</span>, <span class="va">expected</span>, <span class="va">program_trace</span><span class="op">)</span> <span class="op">{</span></span>
-<span>    <span class="va">correct</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="va">prediction</span><span class="op">$</span><span class="va">answer</span>, <span class="va">expected</span><span class="op">$</span><span class="va">answer</span><span class="op">)</span></span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>      score <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">correct</span><span class="op">)</span>,</span>
-<span>      feedback <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span></span>
-<span>        <span class="va">program_trace</span><span class="op">$</span><span class="va">status</span>,</span>
-<span>        <span class="st">"with"</span>,</span>
-<span>        <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">program_trace</span><span class="op">$</span><span class="va">events</span><span class="op">)</span>,</span>
-<span>        <span class="st">"trace events"</span></span>
-<span>      <span class="op">)</span></span>
-<span>    <span class="op">)</span></span>
-<span>  <span class="op">}</span>,</span>
-<span>  field <span class="op">=</span> <span class="st">"answer"</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/evaluate.html">evaluate</a></span><span class="op">(</span><span class="va">qa</span>, <span class="va">devset</span>, <span class="va">metric</span><span class="op">)</span></span>
-<span><span class="va">result</span><span class="op">$</span><span class="va">traces</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"row_id"</span>, <span class="st">"epoch"</span>, <span class="st">"status"</span><span class="op">)</span><span class="op">]</span></span></code></pre></div>
-<p>Each trace contains <code>row_id</code>, <code>epoch</code>,
-<code>status</code>, ordered <code>events</code>, and module
-<code>metadata</code>. With repeated evaluation,
-<code>result$epoch_traces</code> preserves the row-aligned traces for
-every epoch. Trace events may contain prompts, inputs, and model
-responses, so handle them as potentially sensitive data.</p>
-</div>
-<div class="section level3">
-<h3 id="decision-types-and-reanchor">Decision types and ReAnchor<a class="anchor" aria-label="anchor" href="#decision-types-and-reanchor"></a>
-</h3>
-<p>DSPy 3.4 declares decisions as signature annotations and keeps the
-tunable settings on the predictor:</p>
-<div class="sourceCode" id="cb12"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a><span class="kw">class</span> Match(dspy.Signature):</span>
-<span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a>    pair: <span class="bu">str</span> <span class="op">=</span> dspy.InputField(desc<span class="op">=</span><span class="st">"Two listings."</span>)</span>
-<span id="cb12-3"><a href="#cb12-3" tabindex="-1"></a>    match: <span class="bu">bool</span> <span class="op">=</span> dspy.OutputField(desc<span class="op">=</span><span class="st">"Are they the same item?"</span>)</span>
-<span id="cb12-4"><a href="#cb12-4" tabindex="-1"></a></span>
-<span id="cb12-5"><a href="#cb12-5" tabindex="-1"></a>matcher <span class="op">=</span> dspy.Predict(Match)</span>
-<span id="cb12-6"><a href="#cb12-6" tabindex="-1"></a>matcher.fields[<span class="st">"match"</span>] <span class="op">=</span> {<span class="st">"threshold"</span>: <span class="fl">0.7</span>}</span>
-<span id="cb12-7"><a href="#cb12-7" tabindex="-1"></a>tuned <span class="op">=</span> ReAnchor(metric).<span class="bu">compile</span>(matcher, trainset<span class="op">=</span>trainset, valset<span class="op">=</span>valset)</span></code></pre></div>
-<p>dsprrr splits the declaration the same way. The answer space stays in
-the signature, and the settings live on the module. Here
-<code>pair_train</code> and <code>pair_val</code> are data frames with a
-<code>pair</code> column and a logical <code>match</code> column:</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<p>Like DSPy 3.4, dsprrr keeps the output space in the signature and
+attaches tunable thresholds, cuts, or weights to the module with
+<code><a href="../reference/with_decisions.html">with_decisions()</a></code>:</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
 <span>  inputs <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fu"><a href="../reference/input.html">input</a></span><span class="op">(</span><span class="st">"pair"</span>, description <span class="op">=</span> <span class="st">"Two listings"</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>  output_type <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_object</a></span><span class="op">(</span></span>
@@ -966,244 +703,100 @@ the signature, and the settings live on the module. Here
 <span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/decision_settings.html">decision_settings</a></span><span class="op">(</span><span class="va">tuned</span><span class="op">)</span></span></code></pre></div>
 <p>See <a href="calibrated-decisions.html">Calibrated decisions</a> for
-Score and Choice decisions, the evidence schema, and how ReAnchor
-searches.</p>
+<code><a href="../reference/decision_types.html">decision_score()</a></code>, <code><a href="../reference/decision_types.html">decision_choice()</a></code>, and
+<code><a href="../reference/decision_evidence.html">decision_evidence()</a></code>.</p>
 </div>
 </div>
 <div class="section level2">
-<h2 id="signatures-and-types">Signatures and types<a class="anchor" aria-label="anchor" href="#signatures-and-types"></a>
+<h2 id="signatures-composition-and-infrastructure">Signatures, composition, and infrastructure<a class="anchor" aria-label="anchor" href="#signatures-composition-and-infrastructure"></a>
 </h2>
 <table class="table">
 <colgroup>
-<col width="42%">
-<col width="57%">
+<col width="30%">
+<col width="30%">
+<col width="40%">
 </colgroup>
 <thead><tr class="header">
+<th>Area</th>
 <th>DSPy</th>
 <th>dsprrr</th>
 </tr></thead>
 <tbody>
 <tr class="odd">
-<td>
-<code>"question -&gt; answer: int"</code> string signatures</td>
-<td>The same string:
-<code>signature("question -&gt; answer: int")</code>. <code>str</code>,
-<code>int</code>, <code>float</code>, <code>bool</code>,
-<code>list[...]</code>, <code>Optional[...]</code> and
-<code>Literal[...]</code> all parse</td>
-</tr>
-<tr class="even">
-<td>Class-based signatures with
-<code>InputField</code>/<code>OutputField</code>
-</td>
-<td><code>signature(inputs = list(input(...)), output_type = ...)</code></td>
-</tr>
-<tr class="odd">
-<td>
-<code>Signature.with_instructions()</code> /
-<code>Signature.append_instructions()</code>
+<td>Signatures</td>
+<td>String notation or <code>dspy.Signature</code> class;
+<code><a href="../reference/with_instructions.html">with_instructions()</a></code>
 </td>
 <td>
-<code><a href="../reference/with_instructions.html">with_instructions()</a></code> /
-<code><a href="../reference/with_instructions.html">append_instructions()</a></code>; both return a new signature without
-mutating the original</td>
+<code>signature("a -&gt; b: int")</code> or <code><a href="../reference/input.html">input()</a></code> +
+ellmer types; immutable <code><a href="../reference/with_instructions.html">with_instructions()</a></code> /
+<code><a href="../reference/with_instructions.html">append_instructions()</a></code>
+</td>
 </tr>
 <tr class="even">
-<td>Pydantic-typed outputs</td>
-<td>ellmer type objects (<code><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string()</a></code>,
-<code><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_enum()</a></code>, <code><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_object()</a></code>,
-<code><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_array()</a></code>)</td>
-</tr>
-<tr class="odd">
+<td>Multimodal inputs</td>
 <td>
 <code>dspy.Image</code>, <code>dspy.Audio</code>,
 <code>dspy.File</code>
 </td>
-<td>ellmer <code>Content</code> objects (images, PDFs) passed as
-inputs</td>
-</tr>
-<tr class="even">
-<td><code>dspy.History</code></td>
-<td>Explicit <code><a href="../reference/conversation_history.html">conversation_history()</a></code> values,
-<code><a href="../reference/accessors.html">get_history()</a></code>, and bounded JSON save/load for scalar ReAct
-and RLM continuation. ReAct retains native turns; RLM retains inert
-task, trajectory, and output evidence with a fresh interpreter</td>
+<td>ellmer <code>Content</code> objects (images, PDFs)</td>
 </tr>
 <tr class="odd">
-<td>
-<code>dspy.Tool</code>, <code>dspy.ToolCalls</code>,
-<code>ToolCallResults</code>
+<td>Composition</td>
+<td>Python <code>dspy.Module</code> subclass with
+<code>forward()</code>
 </td>
-<td>ellmer <code>ToolDef</code>, <code>ContentToolRequest</code>, and
-<code>ContentToolResult</code>; IDs remain attached to native turns</td>
+<td>
+<code><a href="../reference/pipeline.html">pipeline()</a></code> / <code>%&gt;&gt;%</code> +
+<code><a href="../reference/step.html">step()</a></code> (jointly compilable), or <code><a href="../reference/module_fn.html">module_fn()</a></code>
+for custom R control flow</td>
 </tr>
 <tr class="even">
+<td>LM client &amp; adapters</td>
 <td>
-<code>dspy.Reasoning</code> (native reasoning traces)</td>
-<td>Native thinking is optional current-call metadata in supported
-Predict/CoT and RLM paths. <code><a href="../reference/chain_of_thought.html">chain_of_thought()</a></code> also offers
-explicit rationale and plan modes; there is no separate typed reasoning
-output</td>
+<code>dspy.LM</code> (<code>lm15</code>), XML/Chat/JSON
+adapters</td>
+<td>Provider-neutral ellmer <code>Chat</code> +
+<code>chat_structured()</code> (no separate adapter layer)</td>
 </tr>
 <tr class="odd">
-<td>Experimental <code>Noul</code>, <code>Score[...]</code>,
-<code>Choice[...]</code> annotations</td>
-<td>Plain <code><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_boolean()</a></code> / <code><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_enum()</a></code> outputs
-plus <code><a href="../reference/with_decisions.html">with_decisions()</a></code> settings on the module; the answer
-space stays in the signature, and the tunable settings live on the
-module</td>
-</tr>
-</tbody>
-</table>
-</div>
-<div class="section level2">
-<h2 id="programs-and-composition">Programs and composition<a class="anchor" aria-label="anchor" href="#programs-and-composition"></a>
-</h2>
-<p>DSPy composes programs as Python classes whose <code>forward()</code>
-calls several predictors. dsprrr composes pipelines of modules:</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">outline</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"question -&gt; outline"</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">write_up</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"notes -&gt; answer"</span><span class="op">)</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">program</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pipeline.html">pipeline</a></span><span class="op">(</span></span>
-<span>  <span class="va">outline</span>,</span>
-<span>  <span class="fu"><a href="../reference/step.html">step</a></span><span class="op">(</span><span class="va">write_up</span>, map <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>outline <span class="op">=</span> <span class="st">"notes"</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">program</span>, question <span class="op">=</span> <span class="st">"Why is the sky blue?"</span><span class="op">)</span></span></code></pre></div>
-<p>The first step receives the pipeline’s inputs. Each later step
-receives only the previous step’s outputs, renamed by <code>map</code>
-(upstream field on the left, this step’s input on the right), plus any
-static inputs passed to <code><a href="../reference/step.html">step()</a></code>. For control flow that a
-pipeline cannot express, wrap an R function with
-<code><a href="../reference/module_fn.html">module_fn()</a></code>; it runs and evaluates like any module, but
-<code><a href="../reference/compile.html">compile()</a></code> refuses it.</p>
-<p><code>BootstrapFewShot</code> compiles pipelines
-<strong>jointly</strong>, like DSPy: the teacher pipeline runs end to
-end, final outputs are scored, and each step harvests demonstrations
-from passing traces. MIPROv2 and GEPA also optimize the whole program:
-they propose instructions for each Predict step (paths
-<code>$/steps/1</code>, <code>$/steps/2</code>, …) and score candidates
-on the pipeline’s final output; MIPROv2 needs
-<code>max_bootstrapped_demos = 0L</code> there.
-<code><a href="../reference/LabeledFewShot.html">LabeledFewShot()</a></code> rejects pipelines, because root examples
-do not match each step’s signature.</p>
-</div>
-<div class="section level2">
-<h2 id="infrastructure">Infrastructure<a class="anchor" aria-label="anchor" href="#infrastructure"></a>
-</h2>
-<table class="table">
-<colgroup>
-<col width="46%">
-<col width="23%">
-<col width="30%">
-</colgroup>
-<thead><tr class="header">
-<th>Capability</th>
-<th>DSPy</th>
-<th>dsprrr</th>
-</tr></thead>
-<tbody>
-<tr class="odd">
-<td>LM client</td>
+<td>Configuration &amp; caching</td>
 <td>
-<code>dspy.LM</code> on bundled lm15 with canonical Request/Response
-objects; LiteLLM and OpenAI SDK optional in 3.5; API-family routing
-defaults to <code>auto</code>
-</td>
-<td>Provider-neutral ellmer <code>Chat</code>; <code><a href="../reference/run.html">run()</a></code>
-normalizes prompt and content inputs into typed requests, while a
-complete package-wide invocation record is still planned</td>
-</tr>
-<tr class="even">
-<td>Configuration</td>
-<td>
-<code>dspy.configure()</code> / <code>dspy.context()</code>
-</td>
+<code>dspy.configure()</code>, <code>dspy.context()</code>, two-tier
+cache</td>
 <td>
 <code><a href="../reference/dsp_configure.html">dsp_configure()</a></code>, <code><a href="../reference/with_lm.html">with_lm()</a></code>,
-<code><a href="../reference/with_lm.html">local_lm()</a></code>
+<code><a href="../reference/with_lm.html">local_lm()</a></code>, two-tier <code><a href="../reference/configure_cache.html">configure_cache()</a></code>
+</td>
+</tr>
+<tr class="even">
+<td>Async &amp; streaming</td>
+<td>
+<code>acall</code> / <code>aforward</code>,
+<code>streamify()</code>
+</td>
+<td>
+<code><a href="../reference/run_async.html">run_async()</a></code> (Predict, ReAct, factory code modules),
+<code><a href="../reference/run_stream.html">run_stream()</a></code> + <code><a href="../reference/stream_listener.html">stream_listener()</a></code>,
+<code><a href="../reference/stream_async.html">stream_async()</a></code>
 </td>
 </tr>
 <tr class="odd">
-<td>Caching</td>
-<td>Two-tier memory + disk</td>
-<td>Two-tier memory + disk (<code><a href="../reference/configure_cache.html">configure_cache()</a></code>)</td>
-</tr>
-<tr class="even">
-<td>Async</td>
-<td>
-<code>acall</code>/<code>aforward</code>, <code>asyncify</code>
-</td>
-<td>
-<code><a href="../reference/run_async.html">run_async()</a></code> returns promises; direct Predict supports
-canonical structured results, current-call native reasoning, usage, and
-success/failure traces. ReAct supports its complete sequential tool
-loop, typed completion, progress, and cooperative cancellation. The
-simple output default is preserved, response caching is explicitly
-bypassed, and overlapping calls must use separate Chats. Factory-backed
-code modules retain simple background results; structured factory
-results are rejected</td>
-</tr>
-<tr class="odd">
-<td>Streaming</td>
-<td>
-<code>streamify()</code> + <code>StreamListener</code>
-</td>
-<td>
-<code><a href="../reference/run_stream.html">run_stream()</a></code> + <code><a href="../reference/stream_listener.html">stream_listener()</a></code>; one-shot
-fallback preserves specialized <code>forward()</code> semantics, while
-direct token streaming is limited to ordinary Predict steps and emits
-status events per pipeline step</td>
-</tr>
-<tr class="even">
-<td>Usage tracking</td>
-<td><code>track_usage</code></td>
-<td>
-<code><a href="../reference/accessors.html">get_tokens()</a></code>, <code><a href="../reference/accessors.html">get_cost()</a></code>,
-<code><a href="../reference/session_cost.html">session_cost()</a></code>
-</td>
-</tr>
-<tr class="odd">
-<td>Parallel evaluation</td>
-<td><code>Evaluate(num_threads = ...)</code></td>
-<td>
-<code>evaluate(.concurrency = concurrency_control(...))</code> via
-mirai or ellmer’s native parallelism. Declarative zero/one-step Flex is
-supported; executable and multi-step Flex currently require sequential
-rows</td>
-</tr>
-<tr class="even">
 <td>Saving programs</td>
 <td>
-<code>save</code>/<code>load</code>; sanitized LM state and explicit
-unsafe-class opt-in in 3.3</td>
-<td>Versioned whole-program artifacts via <code><a href="../reference/program-artifact.html">save_program()</a></code> /
-<code><a href="../reference/program-artifact.html">load_program()</a></code> or pins, with registry-backed runtime IDs
-and explicit trusted opt-in</td>
-</tr>
-<tr class="odd">
-<td>Observability</td>
-<td>MLflow autolog, OpenTelemetry callbacks; 3.3.1 adds
-optimizer-compile and interpreter-lifecycle callback events</td>
-<td>Traces tibble, <code><a href="../reference/inspect_history.html">inspect_history()</a></code>,
-<code><a href="../reference/export_traces.html">export_traces()</a></code>; package-level OpenTelemetry spans are
-planned on top of ellmer</td>
+<code><a href="https://rdrr.io/r/base/save.html" class="external-link">save()</a></code> / <code><a href="https://rdrr.io/r/base/load.html" class="external-link">load()</a></code>
+</td>
+<td>Versioned whole-program artifacts (<code><a href="../reference/program-artifact.html">save_program()</a></code>,
+<code><a href="../reference/program-artifact.html">load_program()</a></code>, <code><a href="../reference/pin_module_config.html">pin_module_config()</a></code>)</td>
 </tr>
 <tr class="even">
-<td>Adapters</td>
-<td>XML default in 3.5, with Chat/JSON alternatives; TwoStepAdapter
-deprecated</td>
-<td>No adapter layer; ellmer’s <code>chat_structured()</code> handles
-structured output</td>
-</tr>
-<tr class="odd">
-<td>Evaluation framework</td>
+<td>Evaluation &amp; traces</td>
 <td>
-<code>dspy.Evaluate</code>, including trace-aware metrics</td>
+<code>dspy.Evaluate</code>, MLflow/OTel callbacks</td>
 <td>
 <code><a href="../reference/evaluate.html">evaluate()</a></code>, <code><a href="../reference/eval_program.html">eval_program()</a></code>,
-<code><a href="../reference/metric_with_trace.html">metric_with_trace()</a></code>, plus <strong>vitals</strong>
-integration</td>
+<code><a href="../reference/export_traces.html">export_traces()</a></code>, <code><a href="../reference/session_cost.html">session_cost()</a></code>, plus
+<code>vitals</code> integration</td>
 </tr>
 </tbody>
 </table>
@@ -1222,74 +815,80 @@ integration</td>
 </tr></thead>
 <tbody>
 <tr class="odd">
-<td>tidymodels integration</td>
-<td>Modules as parsnip engines, tuned with dials parameters
+<td>
+<code>tidymodels</code> integration</td>
+<td>
+<code><a href="../reference/llm_predict.html">llm_predict()</a></code> <code>parsnip</code> engine,
+<code>yardstick</code> scoring, and <code>dials</code> parameters
 (<code><a href="../reference/temperature.html">temperature()</a></code>, <code><a href="../reference/top_p.html">top_p()</a></code>,
 <code><a href="../reference/reasoning_effort.html">reasoning_effort()</a></code>)</td>
 </tr>
 <tr class="even">
-<td>vitals integration</td>
-<td>Modules and metrics bridged to the vitals evaluation framework
-(<code><a href="../reference/as_vitals_solver.html">as_vitals_solver()</a></code>, <code><a href="../reference/as_dsprrr_metric.html">as_dsprrr_metric()</a></code>)</td>
+<td>
+<code>vitals</code> integration</td>
+<td>
+<code><a href="../reference/as_vitals_solver.html">as_vitals_solver()</a></code>, <code><a href="../reference/as_vitals_task.html">as_vitals_task()</a></code>, and
+<code><a href="../reference/as_dsprrr_metric.html">as_dsprrr_metric()</a></code>
+</td>
 </tr>
 <tr class="odd">
-<td>ragnar integration</td>
-<td>Retrieval with <code><a href="../reference/rag_module.html">rag_module()</a></code> and
+<td>
+<code>ragnar</code> integration</td>
+<td>Built-in DuckDB hybrid search via <code><a href="../reference/rag_module.html">rag_module()</a></code> and
 <code><a href="../reference/ragnar_tool.html">ragnar_tool()</a></code>
 </td>
 </tr>
 <tr class="even">
 <td>Assertions with backtracking</td>
-<td>Kept and maintained after their removal in DSPy 3.0</td>
+<td>Maintained alongside <code><a href="../reference/best_of_n.html">best_of_n()</a></code> /
+<code><a href="../reference/refine.html">refine()</a></code> after removal in DSPy 3.0</td>
 </tr>
 <tr class="odd">
 <td>Grid search compilation</td>
 <td>
-<code><a href="../reference/optimize_grid.html">optimize_grid()</a></code> for explicit, tidymodels-style
-parameter sweeps</td>
+<code><a href="../reference/optimize_grid.html">optimize_grid()</a></code> and
+<code><a href="../reference/GridSearchTeleprompter.html">GridSearchTeleprompter()</a></code> for explicit sweeps</td>
+</tr>
+<tr class="even">
+<td>Meta &amp; agentic harnesses <em>(experimental)</em>
+</td>
+<td>
+<code><a href="../reference/Omni.html">Omni()</a></code>, <code><a href="../reference/AutoResearch.html">AutoResearch()</a></code>, and
+<code><a href="../reference/MetaHarness.html">MetaHarness()</a></code>
+</td>
 </tr>
 </tbody>
 </table>
 </div>
 <div class="section level2">
-<h2 id="known-gaps-roadmap">Known gaps (roadmap)<a class="anchor" aria-label="anchor" href="#known-gaps-roadmap"></a>
+<h2 id="roadmap-gaps">Roadmap gaps<a class="anchor" aria-label="anchor" href="#roadmap-gaps"></a>
 </h2>
-<p>Besides the RLM differences above, these package-level gaps remain,
-in rough priority order:</p>
+<p>Key capabilities not yet implemented in dsprrr:</p>
 <ol style="list-style-type: decimal">
-<li>General custom input staging for interpreter-backed modules,
-analogous to DSPy’s <code>SandboxSerializable</code>, beyond the current
-persistent-callr and runner-specific paths.</li>
-<li>Remaining Flex gaps: concurrent executable evaluation, fine-grained
-checkpoint resume, and GEPA’s cached subsample merge-acceptance gate
-remain unimplemented. The top-level R <code>forward()</code> function,
-explicit interpreter factory, and non-portable R/Python source are
-intentional API differences, not missing parity.</li>
-<li>One package-wide invocation/result contract carrying native turns,
-usage, cost, cache state, timing, and normalized errors across every
-module.</li>
-<li>Package-level OpenTelemetry spans for module, optimizer, evaluation,
-cache, and tool activity, composed with ellmer’s provider
-telemetry.</li>
-<li>A typed reasoning output analogous to <code>dspy.Reasoning</code>.
-Provider-native thinking is available as metadata; it is not a required
-generated field.</li>
-<li>Predictor-local RLM demo evidence so MIPROv2 can bootstrap child
-demos; its graph mode currently tunes child instructions only, while
-GEPA selects the RLM child components explicitly.</li>
-<li>Explicit, budgeted fallbacks for demonstrated structured-output
-limitations; copying DSPy’s deprecated <code>TwoStepAdapter</code> is
-not a goal.</li>
-<li>Weight and RL optimization, after provider-neutral training data,
-reproducibility, cost accounting, and artifact contracts are
-stable.</li>
-<li>Whole-program decision calibration. <code><a href="../reference/ReAnchor.html">ReAnchor()</a></code> fits a
-single Predict module exactly; DSPy also re-runs composed programs with
-cached answers. Concurrent execution of decision modules is also not yet
-supported.</li>
+<li>
+<strong>Custom input staging</strong> for interpreter-backed modules
+beyond <code>r_code_runner(persistent = TRUE)</code> and JSON-serialized
+<code>mcp-repl</code> inputs.</li>
+<li>
+<strong>Concurrent execution and checkpoint resume</strong> for
+executable <code><a href="../reference/flex.html">flex()</a></code> modules and calibrated decision
+modules.</li>
+<li>
+<strong>Whole-program decision calibration</strong> (calibrating
+<code><a href="../reference/ReAnchor.html">ReAnchor()</a></code> across composed pipelines rather than single
+prediction modules) and <strong>RLM child-demo bootstrapping</strong> in
+<code><a href="../reference/MIPROv2.html">MIPROv2()</a></code>.</li>
+<li>
+<strong>Package-level OpenTelemetry spans</strong> layered on top of
+ellmer’s provider telemetry, and a dedicated typed reasoning output
+field analogous to <code>dspy.Reasoning</code>.</li>
+<li>
+<strong>Model-weight and RL optimization</strong>
+(<code>BootstrapFinetune</code>, <code>GRPO</code>).</li>
 </ol>
-<p>If one of these blocks your use case, please <a href="https://github.com/JamesHWade/dsprrr/issues" class="external-link">open an
-issue</a>.</p>
+<p><em>Checked against <a href="https://github.com/stanfordnlp/dspy/releases/tag/3.5.0" class="external-link">DSPy
+3.5.0</a> (2026-11-10). If one of these gaps blocks your work, please <a href="https://github.com/JamesHWade/dsprrr/issues" class="external-link">open an
+issue</a>.</em></p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

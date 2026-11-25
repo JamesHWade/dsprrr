@@ -139,11 +139,11 @@
     
 <p>No optimizer wins on every task. Demo selection may be the decisive
 lever for one module, while instruction search or reflective mutation
-wins for another. <code><a href="../reference/Omni.html">Omni()</a></code> runs several teleprompters from
-the same seed program, scores every result with one validation metric,
-and hands the strongest candidate to a fresh continuation optimizer.
-This page shows how to configure it, budget it fairly, and read what it
-did.</p>
+wins for another. <code><a href="../reference/Omni.html">Omni()</a></code> <em>(experimental)</em> runs
+several teleprompters from the same seed program, scores every result
+with one validation metric, and hands the strongest candidate to a fresh
+continuation optimizer. This page shows how to configure it, budget it
+fairly, and read what it did.</p>
 <p>The design follows the <a href="https://gepa.dev/blog/2026/07/22/optimize-anything-omni/" class="external-link"><code>omni</code>
 meta-optimizer</a> from the open-source <a href="https://github.com/gepa-ai/gepa" class="external-link">GEPA project</a>. On Frontier-CS
 tasks, the GEPA team found that no single engine won every task, that
@@ -234,13 +234,14 @@ evolution, then continues with SIMBA:</p>
 strategy rather than its position in the list.</p>
 <p>Choose a continuation that can edit an already compiled program,
 because unless the seed wins, the continuation starts from an explorer’s
-output. <code><a href="../reference/COPRO.html">COPRO()</a></code>, <code><a href="../reference/SIMBA.html">SIMBA()</a></code> and
+output. <code><a href="../reference/COPRO.html">COPRO()</a></code>, <code><a href="../reference/SIMBA.html">SIMBA()</a></code>, and
 <code><a href="../reference/BootstrapFewShotWithRandomSearch.html">BootstrapFewShotWithRandomSearch()</a></code> can.
-<code><a href="../reference/GEPA.html">GEPA()</a></code>, <code><a href="../reference/AutoResearch.html">AutoResearch()</a></code> and
-<code><a href="../reference/MetaHarness.html">MetaHarness()</a></code> leave compiled modules alone: as a
-continuation, GEPA returns the winner unchanged and the two harnesses
-fail, in which case Omni keeps the exploration winner. Use those three
-as explorers.</p>
+<code><a href="../reference/GEPA.html">GEPA()</a></code>, <code><a href="../reference/AutoResearch.html">AutoResearch()</a></code>, and
+<code><a href="../reference/MetaHarness.html">MetaHarness()</a></code> respect compiled module boundaries in
+<code><a href="../reference/module-graph.html">named_parameters()</a></code> and leave already-compiled modules
+untouched: as a continuation, GEPA returns the winner unchanged and the
+two harnesses error (in which case Omni keeps the exploration winner).
+Use those three as explorers instead.</p>
 <p>To pass compile-time arguments to one optimizer, name it. These
 arguments cannot replace Omni’s own <code>program</code>,
 <code>trainset</code>, <code>valset</code> or <code>.llm</code>:</p>
@@ -329,7 +330,15 @@ continuation:</p>
 <code class="sourceCode R"><span><span class="va">omni_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/optimization_result.html">optimization_result</a></span><span class="op">(</span><span class="va">compiled</span><span class="op">)</span><span class="op">$</span><span class="va">extensions</span><span class="op">$</span><span class="va">omni</span></span>
 <span></span>
 <span><span class="va">candidates</span> <span class="op">&lt;-</span> <span class="va">omni_result</span><span class="op">$</span><span class="va">candidate_programs</span></span>
-<span><span class="va">candidates</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"phase"</span>, <span class="st">"optimizer"</span>, <span class="st">"score"</span>, <span class="st">"selected"</span>, <span class="st">"error"</span><span class="op">)</span><span class="op">]</span></span></code></pre></div>
+<span><span class="va">candidates</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"phase"</span>, <span class="st">"optimizer"</span>, <span class="st">"score"</span>, <span class="st">"selected"</span>, <span class="st">"error"</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="co">#&gt; # A tibble: 5 x 5</span></span>
+<span><span class="co">#&gt;   phase        optimizer    score selected error</span></span>
+<span><span class="co">#&gt;   &lt;chr&gt;        &lt;chr&gt;        &lt;dbl&gt; &lt;lgl&gt;    &lt;chr&gt;</span></span>
+<span><span class="co">#&gt; 1 baseline     seed         0.62  FALSE    NA</span></span>
+<span><span class="co">#&gt; 2 exploration  demos        0.74  FALSE    NA</span></span>
+<span><span class="co">#&gt; 3 exploration  instructions 0.78  FALSE    NA</span></span>
+<span><span class="co">#&gt; 4 exploration  reflection   0.81  FALSE    NA</span></span>
+<span><span class="co">#&gt; 5 continuation SIMBA        0.85  TRUE     NA</span></span></code></pre></div>
 <p>The <code>program_config</code> list-column holds each candidate
 module’s <code>config</code> list, or <code>NULL</code> for a branch
 that failed. The selected program is <code>compiled</code> itself.</p>

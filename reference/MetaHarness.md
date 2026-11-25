@@ -114,6 +114,8 @@ A `MetaHarness` object to pass to
 
 ## Details
 
+**\[experimental\]**
+
 `MetaHarness()` is inspired by the Meta-Harness engine in the [GEPA
 optimize-anything project](https://github.com/gepa-ai/gepa) and the
 [Meta-Harness paper](https://arxiv.org/abs/2603.28052). It keeps the
@@ -175,6 +177,12 @@ harness
 #> OS sandbox required: TRUE
 
 if (FALSE) { # \dontrun{
+program <- module(signature("question -> answer"))
+trainset <- data.frame(
+  question = c("Capital of France?", "Capital of Peru?"),
+  answer = c("Paris", "Lima")
+)
+valset <- data.frame(question = "Capital of Japan?", answer = "Tokyo")
 compiled <- compile(
   program,
   harness,

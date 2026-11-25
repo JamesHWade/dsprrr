@@ -187,7 +187,7 @@ settings are left unchanged and a warning is raised.</p>
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>Give the candidates as <code>grid</code>, a data frame with one row per candidate, or
 as <code>parameters</code>, which is expanded into a grid: a named list is crossed with
-<code><a href="https://rdrr.io/r/base/expand.grid.html" class="external-link">expand.grid()</a></code>, and a tidymodels parameter set (see <code><a href="module_parameters.html">module_parameters()</a></code>)
+<code><a href="https://rdrr.io/r/base/expand.grid.html" class="external-link">base::expand.grid()</a></code>, and a tidymodels parameter set (see <code><a href="module_parameters.html">module_parameters()</a></code>)
 is expanded with <code><a href="https://dials.tidymodels.org/reference/grid_regular.html" class="external-link">dials::grid_regular()</a></code> or <code><a href="https://dials.tidymodels.org/reference/grid_regular.html" class="external-link">dials::grid_random()</a></code>,
 depending on <code>control</code>. One of the two is required.</p>
 <p>These grid columns change what the module sends:</p><ul><li><p>Runtime settings, sent to the chat: <code>temperature</code>, <code>top_p</code>,

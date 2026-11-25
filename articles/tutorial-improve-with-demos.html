@@ -17,6 +17,11 @@
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Tutorial 4: Improve with examples">
+<meta name="description" content="Score a classifier against labeled data with evaluate(), attach worked examples by hand or with LabeledFewShot(), and check whether they help.
+">
+<meta property="og:description" content="Score a classifier against labeled data with evaluate(), attach worked examples by hand or with LabeledFewShot(), and check whether they help.
+">
+<meta property="og:image" content="https://jameshwade.github.io/dsprrr/logo.svg">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -133,18 +138,21 @@
     
     
 <p>A module can return the right shape and still pick the wrong answer.
-By the end of this tutorial you can measure how often a support-ticket
-classifier is right, add worked examples (demos) to its prompt by hand
-or with <code>LabeledFewShot</code>, and check with
-<code><a href="../reference/evaluate.html">evaluate()</a></code> whether they helped.</p>
+When your instructions leave gray areas—does a damaged-in-transit item
+belong to <code>shipping</code> or <code>billing</code>?—the fastest fix
+is often to show the model a few worked examples (<em>demos</em>). In
+this tutorial, you will score a support-ticket classifier against
+labeled data, attach demos by hand and with
+<code><a href="../reference/LabeledFewShot.html">LabeledFewShot()</a></code>, and check with <code><a href="../reference/evaluate.html">evaluate()</a></code>
+whether accuracy actually moved.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/dsprrr" class="external-link">dsprrr</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ellmer.tidyverse.org" class="external-link">ellmer</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">chat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-luna"</span><span class="op">)</span></span></code></pre></div>
-<p>The answers on this page were recorded with <code>gpt-5-mini</code>
-and are replayed when the site is built, so <code>gpt-6-luna</code> may
-word them differently.</p>
+<p><em>Recorded outputs on the package website were captured with
+<code>gpt-5-mini</code>; <code>gpt-6-luna</code> may answer slightly
+differently.</em></p>
 <div class="section level2">
 <h2 id="a-ticket-classifier">A ticket classifier<a class="anchor" aria-label="anchor" href="#a-ticket-classifier"></a>
 </h2>
@@ -206,14 +214,13 @@ column in the output is your label, copied from the input.</p>
 <span><span class="va">tickets</span><span class="op">[</span><span class="va">predicted</span> <span class="op">!=</span> <span class="va">tickets</span><span class="op">$</span><span class="va">category</span>, <span class="op">]</span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 0 × 2</span></span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># ℹ 2 variables: ticket &lt;chr&gt;, category &lt;chr&gt;</span></span></span></code></pre></div>
-<p>In the recorded run, gpt-5-mini labels all ten tickets correctly, so
-the list of misses is empty. That is the check to make before adding
-demos. Demos lengthen every prompt, and they can only help on tickets
-the model gets wrong, so with this baseline there is nothing for them to
-fix. When your baseline does miss tickets, read the misses: they tell
-you which kinds of ticket need an example.</p>
-<p>The rest of this tutorial adds demos anyway, to show how, and
-measures them on the same ten tickets.</p>
+<p>In the recorded run, <code>gpt-5-mini</code> labels all ten tickets
+correctly, so the list of misses is empty. That is a useful habit to
+build before tuning anything: demos lengthen every prompt and can only
+help where the baseline actually makes mistakes. On a real dataset with
+domain-specific routing rules, the misses tell you which edge cases need
+worked examples. Below we add demos anyway to walk through the
+mechanics.</p>
 </div>
 <div class="section level2">
 <h2 id="add-demos-by-hand">Add demos by hand<a class="anchor" aria-label="anchor" href="#add-demos-by-hand"></a>
@@ -271,12 +278,14 @@ the prompt for the second call:</p>
 <div class="section level2">
 <h2 id="sample-demos-with-labeledfewshot">Sample demos with <code>LabeledFewShot</code><a class="anchor" aria-label="anchor" href="#sample-demos-with-labeledfewshot"></a>
 </h2>
-<p><code>LabeledFewShot</code> builds demos from the rows of a labeled
-data frame instead. dsprrr calls objects like this teleprompters:
+<p><code><a href="../reference/LabeledFewShot.html">LabeledFewShot()</a></code> builds demos from the rows of a labeled
+data frame instead. dsprrr calls optimizers like this
+<em>teleprompters</em> (DSPy’s term for a prompt optimizer):
 <code><a href="../reference/compile.html">compile()</a></code> applies one to a module and returns a new module,
-leaving the original unchanged. Here the rows come from
-<code>tickets</code>, which is a shortcut with a cost, explained
-below.</p>
+leaving the original unchanged. Integer counts on teleprompters must be
+R integers (<code>3L</code>, not <code>3</code>). Here we draw from
+<code>tickets</code> as a compact shortcut—and see why you should split
+your data in practice below.</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">compiled</span> <span class="op">&lt;-</span> <span class="va">classifier</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/compile.html">compile</a></span><span class="op">(</span><span class="fu"><a href="../reference/LabeledFewShot.html">LabeledFewShot</a></span><span class="op">(</span>k <span class="op">=</span> <span class="fl">3L</span><span class="op">)</span>, <span class="va">tickets</span><span class="op">)</span></span>
 <span></span>

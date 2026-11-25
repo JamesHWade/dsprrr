@@ -17,6 +17,11 @@
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Tutorial 2: Build a classifier">
+<meta name="description" content="Scale a sentiment classifier from a single review to vectors and data frames with run_dataset(), steer borderline cases with instructions, and describe inputs with input().
+">
+<meta property="og:description" content="Scale a sentiment classifier from a single review to vectors and data frames with run_dataset(), steer borderline cases with instructions, and describe inputs with input().
+">
+<meta property="og:image" content="https://jameshwade.github.io/dsprrr/logo.svg">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -132,22 +137,25 @@
 
     
     
-<p>You will build a sentiment classifier and run it three ways: on one
-text, on a vector of texts, and on a data frame with
-<code><a href="../reference/run_dataset.html">run_dataset()</a></code>. It uses the signature syntax from <a href="tutorial-hello-world.html">Tutorial 1</a>.</p>
+<p>Classifying one review is easy; classifying a whole column of
+reviews—and deciding what to do with borderline ones—is where modules
+pay off. Picking up from <a href="tutorial-hello-world.html">Tutorial
+1</a>, this tutorial runs a sentiment classifier on a single text, a
+character vector, and a data frame with <code><a href="../reference/run_dataset.html">run_dataset()</a></code>, then
+shows how instructions and input descriptions steer the model.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/JamesHWade/dsprrr" class="external-link">dsprrr</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ellmer.tidyverse.org" class="external-link">ellmer</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">chat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-luna"</span><span class="op">)</span></span></code></pre></div>
-<p>The answers on this page were recorded with <code>gpt-4.1</code> and
-are replayed when the site is built, so <code>gpt-6-luna</code> may word
-them differently.</p>
+<p><em>Recorded outputs on the package website were captured with
+<code>gpt-4.1</code>; <code>gpt-6-luna</code> may answer slightly
+differently.</em></p>
 <div class="section level2">
 <h2 id="define-the-classifier">Define the classifier<a class="anchor" aria-label="anchor" href="#define-the-classifier"></a>
 </h2>
-<p>Start from the sentiment signature in Tutorial 1 and print the
-module:</p>
+<p>Start from the sentiment signature in Tutorial 1 and print the module
+(a <em>prediction module</em>, <code>PredictModule</code>):</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">classifier</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span></span>
 <span>  <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"text -&gt; sentiment: enum('positive', 'negative', 'neutral')"</span><span class="op">)</span></span>
@@ -169,7 +177,7 @@ module:</p>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ── Instructions</span></span>
 <span><span class="co">#&gt; Given the fields `text`, produce the fields `sentiment`.</span></span></code></pre></div>
-<p>The printout shows the inputs, the output type and the instructions
+<p>The printout shows the inputs, the output type, and the instructions
 that start every prompt. This signature has no instructions of its own,
 so dsprrr wrote a default from the field names.</p>
 </div>
@@ -219,8 +227,10 @@ above, so <code><a href="https://purrr.tidyverse.org/reference/map.html" class="
 <span><span class="fu">purrr</span><span class="fu">::</span><span class="fu"><a href="https://purrr.tidyverse.org/reference/map.html" class="external-link">map_chr</a></span><span class="op">(</span><span class="va">sentiments</span>, <span class="st">"sentiment"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] "positive" "negative" "neutral"  "positive" "negative"</span></span></code></pre></div>
 <p>Each element is still its own request to the model, and by default
-they are sent one after another. <code><a href="../reference/concurrency_control.html">concurrency_control()</a></code> lets
-several run at once.</p>
+they are sent one after another. Passing
+<code>.concurrency = concurrency_control(...)</code> lets several
+requests run at once (see <a href="orchestration.html">Run dsprrr in
+pipelines</a>).</p>
 </div>
 <div class="section level2">
 <h2 id="add-instructions">Add instructions<a class="anchor" aria-label="anchor" href="#add-instructions"></a>
@@ -234,8 +244,9 @@ labels leave open, such as mixed reviews:</p>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">classifier2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="va">sig</span><span class="op">)</span></span></code></pre></div>
-<p>The new module takes the same inputs, one at a time or as a
-vector:</p>
+<p>The new module takes the same inputs—one at a time, as a vector, or
+on borderline cases like
+<code>"The service was terrible but the food was amazing."</code>:</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">classifier2</span>, text <span class="op">=</span> <span class="st">"This is fantastic!"</span>, .llm <span class="op">=</span> <span class="va">chat</span><span class="op">)</span></span>
 <span><span class="co">#&gt; $sentiment</span></span>
@@ -299,8 +310,9 @@ made and the tokens they used.</p>
 <h2 id="describe-the-inputs">Describe the inputs<a class="anchor" aria-label="anchor" href="#describe-the-inputs"></a>
 </h2>
 <p>A signature can also be built from <code><a href="../reference/input.html">input()</a></code> objects and
-an ellmer type. An input’s description becomes its heading in the
-prompt, in place of the input’s name:</p>
+an ellmer output type such as <code><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">ellmer::type_enum()</a></code>. An
+input’s description is added as a <code>#</code> heading above that
+field in the prompt:</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">sig</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
 <span>  inputs <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
@@ -318,6 +330,13 @@ prompt, in place of the input’s name:</p>
 <span>  .llm <span class="op">=</span> <span class="va">chat</span></span>
 <span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] "positive"</span></span></code></pre></div>
+<p>You can inspect the exact prompt that was sent:</p>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="fu"><a href="../reference/get_last_prompt.html">get_last_prompt</a></span><span class="op">(</span><span class="op">)</span><span class="op">$</span><span class="va">prompt</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Classify the customer sentiment.</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; # Customer review to classify</span></span>
+<span><span class="co">#&gt; review_text: Five stars! Would buy again!</span></span></code></pre></div>
 <p>The output type here is a bare <code><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_enum()</a></code> rather than a
 named field, so <code><a href="../reference/run.html">run()</a></code> returns the label itself instead of a
 list.</p>

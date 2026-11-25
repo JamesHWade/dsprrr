@@ -5,6 +5,14 @@ it. The messages on this page are real: the page was built in an R
 session without API keys, and each error was produced with
 [`try()`](https://rdrr.io/r/base/try.html) while rendering it.
 
+**Quick index:** [Setup check](#check-your-setup-with-dsprrr_sitrep) ·
+[No chat or API key](#no-chat-or-api-key) · [Signature
+errors](#signature-errors) · [Module errors](#module-errors) · [`run()`
+errors](#errors-when-calling-run) · [Evaluation &
+optimization](#evaluation-and-optimization-errors) · [Provider, async &
+timeouts](#provider-errors) · [Cache problems](#cache-problems) · [Wrong
+or empty answers](#the-answer-is-wrong-or-empty)
+
 ## Check your setup with `dsprrr_sitrep()`
 
 [`dsprrr_sitrep()`](https://jameshwade.github.io/dsprrr/reference/dsprrr_sitrep.md)
@@ -307,12 +315,12 @@ try(run(qa, question = "What is the capital of France?", .parallel = TRUE))
 
 Arguments that start with a dot configure the call.
 [`run()`](https://jameshwade.github.io/dsprrr/reference/run.md) accepts
-`.llm`, `.cache`, `.concurrency`, `.return_format`, `.progress`,
-`.verbose`, `.show_prompt` and `.trace_context`; anything else is
-rejected rather than sent to the model as an input. Set temperature on
-the chat (`ellmer::params(temperature = 0)`) or the module
-(`config = list(temperature = 0)`), and run batches in parallel with
-`.concurrency = concurrency_control(max_active = 4L)`.
+`.llm`, `.history`, `.cache`, `.concurrency`, `.return_format`,
+`.progress`, `.verbose`, `.show_prompt`, and `.trace_context`; anything
+else is rejected rather than sent to the model as an input. Set
+temperature on the chat (`ellmer::params(temperature = 0)`) or the
+module (`config = list(temperature = 0)`), and run batches in parallel
+with `.concurrency = concurrency_control(max_active = 4L)`.
 
 ### “Extra input not declared in the signature”
 
@@ -409,8 +417,10 @@ compare one output field with the data column of the same name. Without
 `field` they look for exactly one name the output and the data share,
 and fail when there is none (here the column is called `label`) or more
 than one. Failed rows count as 0 in `mean_score`, so a score of 0 can
-mean the metric failed on every row; check `n_errors`. Rename the column
-and name the field, or write a metric that reads both:
+mean every row failed; inspect `result$n_errors` (the sum of
+`n_run_errors` and `n_metric_errors`) to see whether the model call or
+the metric errored. Rename the column and name the field, or write a
+metric that reads both:
 
 ``` r
 
@@ -521,8 +531,10 @@ options(ellmer_timeout_s = 600)
 ```
 
 To stop slow rows in a batch instead, set a per-row limit. Finite
-timeouts need the mirai backend, which runs the module in worker
-processes, so attach the chat to the module instead of passing `.llm`:
+timeouts need the `mirai` backend, which runs the module in worker
+processes—and rejects explicit `.llm` arguments
+(`"The mirai backend requires .llm = NULL"`). Attach the chat to the
+module (or set a default chat) instead of passing `.llm`:
 
 ``` r
 
@@ -532,6 +544,33 @@ run_dataset(
   questions,
   .concurrency = concurrency_control(backend = "mirai", max_active = 2L, task_timeout = 120)
 )
+```
+
+### Reasoning model rejects `temperature` or `top_p`
+
+Reasoning models such as `gpt-6-luna` reject `temperature` and `top_p`
+unless reasoning is turned off. Either pass `reasoning_effort = "none"`
+alongside `temperature`, or tune `reasoning_effort` instead:
+
+``` r
+
+chat <- ellmer::chat_openai(
+  model = "gpt-6-luna",
+  params = ellmer::params(reasoning_effort = "none", temperature = 0)
+)
+```
+
+### “This Chat is reserved by `run_async`” (`dsprrr_chat_busy`)
+
+[`run_async()`](https://jameshwade.github.io/dsprrr/reference/run_async.md)
+reserves a Chat until its promise settles so concurrent calls cannot
+overwrite each other’s turns. When launching overlapping async calls,
+give each call its own clone:
+
+``` r
+
+p1 <- run_async(qa, question = "Capital of Peru?", .llm = chat$clone())
+p2 <- run_async(qa, question = "Capital of Japan?", .llm = chat$clone())
 ```
 
 ## Cache problems
@@ -547,10 +586,15 @@ fresh sample or are measuring how answers vary.
 ``` r
 
 run(qa, question = "Suggest a name for a cat.", .llm = chat, .cache = FALSE) # this call
-clear_cache() # forget everything cached
+clear_cache() # clear active in-memory and initialized disk cache
 configure_cache(enable = FALSE) # stop caching for this session
 ```
 
+In a fresh R session before any cached call has opened the disk tier,
+[`clear_cache()`](https://jameshwade.github.io/dsprrr/reference/clear_cache.md)
+only clears memory; to wipe an old disk cache right after restarting R,
+delete the cache folder reported by
+[`dsprrr_sitrep()`](https://jameshwade.github.io/dsprrr/reference/dsprrr_sitrep.md).
 In CI, set the environment variable `DSPRRR_CACHE_ENABLED=false`. To
 sample several different answers on purpose, use
 [`best_of_n()`](https://jameshwade.github.io/dsprrr/reference/best_of_n.md),
@@ -560,15 +604,15 @@ which keeps its attempts apart in the cache.
 
 ``` r
 
-shared_dir <- file.path(tempdir(), "shared-cache")
+shared_dir <- tempfile("shared-cache-")
 dir.create(shared_dir)
 Sys.chmod(shared_dir, mode = "0755") # readable by other accounts
 configure_cache(disk_path = shared_dir)
 try(run(qa, question = "What is the capital of France?", .llm = chat))
-#> Warning: ! Disk caching is unavailable at /tmp/Rtmp5E8AJE/shared-cache
+#> Warning: ! Disk caching is unavailable at /tmp/RtmpmmyY1P/shared-cache-ae3b59657a30
 #> ✖ an existing private cache directory must have mode exactly 0700, but it is
 #>   755; restrict it yourself, then retry: chmod 700
-#>   '/tmp/Rtmp5E8AJE/shared-cache'
+#>   '/tmp/RtmpmmyY1P/shared-cache-ae3b59657a30'
 #> ℹ Falling back to memory-only caching for this session.
 #> This warning is displayed once per session.
 #> Error in openai_key() : Can't find env var `OPENAI_API_KEY`.

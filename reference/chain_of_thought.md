@@ -1,12 +1,11 @@
 # Create a chain-of-thought module
 
 `chain_of_thought()` creates a prediction module with one of three
-reasoning modes. The default, `"rationale"`, keeps the existing
-behavior: it adds a `reasoning` output field before the requested
-fields. `"plan"` adds a short, explicit `plan` field before the
-requested fields. `"native"` keeps the signature unchanged and exposes
-provider-supplied reasoning metadata when the provider records it in
-ellmer turns.
+reasoning modes. The default, `"rationale"`, adds a `reasoning` output
+field before the requested fields. `"plan"` adds a short, explicit
+`plan` field before the requested fields. `"native"` keeps the signature
+unchanged and exposes provider-supplied reasoning metadata when the
+provider records it in ellmer turns.
 
 ## Usage
 

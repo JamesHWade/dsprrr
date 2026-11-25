@@ -17,6 +17,11 @@
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Chain modules into pipelines">
+<meta name="description" content="Connect modules into multi-step pipelines with pipeline(), step(), and %&gt;&gt;%, control field flow with map and select, inspect step traces, and compile pipelines jointly.
+">
+<meta property="og:description" content="Connect modules into multi-step pipelines with pipeline(), step(), and %&gt;&gt;%, control field flow with map and select, inspect step traces, and compile pipelines jointly.
+">
+<meta property="og:image" content="https://jameshwade.github.io/dsprrr/logo.svg">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -132,11 +137,15 @@
 
     
     
+<p>A single signature can return several outputs, so start with one
+<code><a href="../reference/module.html">module()</a></code> call when the task is small. Split it into a
+pipeline when distinct steps need their own instructions, models, or
+reusable pieces—or when cramming extraction, summarization, and
+formatting into one prompt hurts accuracy.</p>
 <p>A pipeline runs modules in order and passes each step’s outputs to
-the next step. This page shows how to build one, how data moves between
-steps, and how to run, inspect and compile the result. A pipeline is
-itself a module, so <code><a href="../reference/run.html">run()</a></code>, <code><a href="../reference/run_dataset.html">run_dataset()</a></code>,
-<code><a href="../reference/evaluate.html">evaluate()</a></code> and <code><a href="../reference/compile.html">compile()</a></code> work on it.</p>
+the next step. Because a pipeline is itself a module,
+<code><a href="../reference/run.html">run()</a></code>, <code><a href="../reference/run_dataset.html">run_dataset()</a></code>, <code><a href="../reference/evaluate.html">evaluate()</a></code>,
+and <code><a href="../reference/compile.html">compile()</a></code> all work on it directly.</p>
 <div class="section level2">
 <h2 id="how-data-moves-between-steps">How data moves between steps<a class="anchor" aria-label="anchor" href="#how-data-moves-between-steps"></a>
 </h2>
@@ -300,17 +309,39 @@ typing:</p>
 <div class="section level2">
 <h2 id="drop-fields-with-select">Drop fields with select<a class="anchor" aria-label="anchor" href="#drop-fields-with-select"></a>
 </h2>
-<p>Every output of a step moves on to the next one, and a Predict module
-without a template writes every input it receives into its prompt.
+<p>Every output of a step moves on to the next one, and a prediction
+module without a template writes every input it receives into its
+prompt—and warns about undeclared extra inputs.
 <code><a href="../reference/chain_of_thought.html">chain_of_thought()</a></code> adds a <code>reasoning</code> output, so
-without <code>select</code> the headline step below would also read the
-summary’s reasoning:</p>
+without <code>select</code> the headline step below would receive
+<code>reasoning</code>, warn, and include it in the prompt:</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">careful</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pipeline.html">pipeline</a></span><span class="op">(</span></span>
 <span>  <span class="va">list_changes</span>,</span>
 <span>  <span class="fu"><a href="../reference/step.html">step</a></span><span class="op">(</span><span class="fu"><a href="../reference/chain_of_thought.html">chain_of_thought</a></span><span class="op">(</span><span class="st">"changes -&gt; summary"</span><span class="op">)</span>, select <span class="op">=</span> <span class="st">"summary"</span><span class="op">)</span>,</span>
 <span>  <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"summary -&gt; headline"</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="op">)</span></span></code></pre></div>
+<span><span class="op">)</span></span>
+<span><span class="va">careful</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ── <span style="font-weight: bold;">PipelineModule</span> ──</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ── Steps (3)</span></span>
+<span><span class="co">#&gt; • [1] PredictModule: notes -&gt; changes</span></span>
+<span><span class="co">#&gt; • [2] PredictModule: changes -&gt; reasoning, summary</span></span>
+<span><span class="co">#&gt; • [3] PredictModule: summary -&gt; headline</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ── Composite Signature</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ── <span style="font-weight: bold;">Signature</span> ──</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ── Inputs</span></span>
+<span><span class="co">#&gt; • <span style="color: #00BB00;">notes</span>: <span style="color: #0000BB;">"string"</span> - Input: notes</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ── Output</span></span>
+<span><span class="co">#&gt; Type: <span style="color: #0000BB;">"object(headline: string)"</span></span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ── Instructions</span></span>
+<span><span class="co">#&gt; List each user-visible change as one short sentence.</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="when-a-later-step-needs-an-original-input">When a later step needs an original input<a class="anchor" aria-label="anchor" href="#when-a-later-step-needs-an-original-input"></a>
@@ -320,8 +351,8 @@ question about those facts. As a pipeline, <code><a href="../reference/run.html"
 “Missing inputs for pipeline step 2”, because <code>question</code> went
 only to step 1. If the value is the same on every run, attach it as a
 static input with <code><a href="../reference/step.html">step()</a></code>. Otherwise, write the flow as a
-function with <code><a href="../reference/module_fn.html">module_fn()</a></code>, which passes the active chat to
-a <code>.llm</code> argument:</p>
+function with <code><a href="../reference/module_fn.html">module_fn()</a></code> (see <a href="advanced-modules.html">Choose a module type</a>), which passes the
+active chat to a <code>.llm</code> argument:</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">facts_from</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"document -&gt; facts: list[str]"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">answer_from</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span><span class="st">"facts: list[str], question -&gt; answer"</span><span class="op">)</span><span class="op">)</span></span>
@@ -340,36 +371,34 @@ Compile <code>facts_from</code> and <code>answer_from</code> on their
 own instead.</p>
 </div>
 <div class="section level2">
-<h2 id="run-many-inputs">Run many inputs<a class="anchor" aria-label="anchor" href="#run-many-inputs"></a>
+<h2 id="run-and-inspect-a-pipeline">Run and inspect a pipeline<a class="anchor" aria-label="anchor" href="#run-and-inspect-a-pipeline"></a>
 </h2>
 <p><code><a href="../reference/run_dataset.html">run_dataset()</a></code> runs the pipeline once per row and returns
-the input columns plus a <code>result</code> list-column:</p>
+the input columns plus a <code>result</code> list-column holding the
+final step’s outputs:</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">releases</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
 <span>  notes <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">notes</span>, <span class="st">"v2.4: Added single sign-on. Search is faster."</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span><span class="va">results</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_dataset.html">run_dataset</a></span><span class="op">(</span><span class="va">release</span>, <span class="va">releases</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
-<span><span class="va">results</span><span class="op">$</span><span class="va">result</span></span></code></pre></div>
-</div>
-<div class="section level2">
-<h2 id="see-what-each-step-did">See what each step did<a class="anchor" aria-label="anchor" href="#see-what-each-step-did"></a>
-</h2>
-<p>The result keeps only the last step’s outputs. Each run also records
-every step’s inputs and outputs in the pipeline’s traces:</p>
+<span><span class="va">results</span><span class="op">$</span><span class="va">result</span></span>
+<span><span class="co">#&gt; [[1]]: list(headline = "Faster CSV exports and dark mode arrive")</span></span>
+<span><span class="co">#&gt; [[2]]: list(headline = "Single sign-on and faster search in v2.4")</span></span></code></pre></div>
+<p>To inspect intermediate steps, read the pipeline’s traces
+(<code>step_inputs</code> and <code>step_outputs</code>) or ask for
+<code>.return_format = "structured"</code>, which totals usage across
+steps (<code>n_steps</code>, <code>provider_calls</code>,
+<code>total_tokens</code>, <code>cost</code>) and stores each step’s
+prompt and metadata in
+<code>get_metadata(result)$step_metadata</code>:</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">release</span>, notes <span class="op">=</span> <span class="va">notes</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">)</span></span>
-<span><span class="va">latest</span> <span class="op">&lt;-</span> <span class="va">release</span><span class="op">$</span><span class="va">state</span><span class="op">$</span><span class="va">traces</span><span class="op">[[</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">release</span><span class="op">$</span><span class="va">state</span><span class="op">$</span><span class="va">traces</span><span class="op">)</span><span class="op">]</span><span class="op">]</span></span>
-<span><span class="va">latest</span><span class="op">$</span><span class="va">step_inputs</span></span>
-<span><span class="va">latest</span><span class="op">$</span><span class="va">step_outputs</span></span></code></pre></div>
-<p>A structured result reports usage for the whole run
-(<code>n_steps</code>, <code>provider_calls</code>,
-<code>total_tokens</code>, <code>cost</code>) and keeps each step’s own
-metadata, including the prompt it sent, in
-<code>step_metadata</code>:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">release</span>, notes <span class="op">=</span> <span class="va">notes</span>, .llm <span class="op">=</span> <span class="va">llm</span>, .return_format <span class="op">=</span> <span class="st">"structured"</span><span class="op">)</span></span>
-<span><span class="va">result</span><span class="op">$</span><span class="va">metadata</span><span class="op">$</span><span class="va">total_tokens</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">metadata</span><span class="op">$</span><span class="va">step_metadata</span><span class="op">[[</span><span class="fl">2</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="va">prompt</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/accessors.html">get_metadata</a></span><span class="op">(</span><span class="va">result</span><span class="op">)</span><span class="op">$</span><span class="va">total_tokens</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="fu"><a href="../reference/accessors.html">get_metadata</a></span><span class="op">(</span><span class="va">result</span><span class="op">)</span><span class="op">$</span><span class="va">step_metadata</span><span class="op">[[</span><span class="fl">2</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="va">prompt</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">latest</span> <span class="op">&lt;-</span> <span class="va">release</span><span class="op">$</span><span class="va">state</span><span class="op">$</span><span class="va">traces</span><span class="op">[[</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">release</span><span class="op">$</span><span class="va">state</span><span class="op">$</span><span class="va">traces</span><span class="op">)</span><span class="op">]</span><span class="op">]</span></span>
+<span><span class="va">latest</span><span class="op">$</span><span class="va">step_inputs</span>   <span class="co"># list of length 3, one entry per step</span></span>
+<span><span class="va">latest</span><span class="op">$</span><span class="va">step_outputs</span>  <span class="co"># list of length 3: changes, summary, headline</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="compile-the-whole-pipeline">Compile the whole pipeline<a class="anchor" aria-label="anchor" href="#compile-the-whole-pipeline"></a>
@@ -378,8 +407,10 @@ metadata, including the prompt it sent, in
 the whole pipeline on each training row and scores the final output with
 your metric. When a run passes, every step’s inputs and outputs from
 that run become a demonstration for that step, so only the final output
-needs a label:</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+needs a label. Pass <code>max_labeled_demos = 0L</code> on small
+training sets so rows are bootstrapped end to end rather than consumed
+as labeled demos on the final step:</p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">past_releases</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
 <span>  notes <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
 <span>    <span class="st">"v2.1: Added two-factor login. Fixed slow search on large projects."</span>,</span>
@@ -396,7 +427,8 @@ needs a label:</p>
 <span>  <span class="fu"><a href="../reference/BootstrapFewShot.html">BootstrapFewShot</a></span><span class="op">(</span></span>
 <span>    metric <span class="op">=</span> <span class="fu"><a href="../reference/metric_f1.html">metric_f1</a></span><span class="op">(</span>field <span class="op">=</span> <span class="st">"headline"</span><span class="op">)</span>,</span>
 <span>    metric_threshold <span class="op">=</span> <span class="fl">0.5</span>,</span>
-<span>    max_bootstrapped_demos <span class="op">=</span> <span class="fl">2L</span></span>
+<span>    max_bootstrapped_demos <span class="op">=</span> <span class="fl">2L</span>,</span>
+<span>    max_labeled_demos <span class="op">=</span> <span class="fl">0L</span></span>
 <span>  <span class="op">)</span>,</span>
 <span>  <span class="va">past_releases</span>,</span>
 <span>  .llm <span class="op">=</span> <span class="va">llm</span></span>
@@ -404,7 +436,7 @@ needs a label:</p>
 <p><code><a href="../reference/compile.html">compile()</a></code> returns a new pipeline and leaves
 <code>release</code> unchanged. A useful training set has more than two
 rows; <a href="compilation-optimization.html">Compile and optimize</a>
-covers data, metrics and the other teleprompters.</p>
+covers data, metrics, and the other teleprompters.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

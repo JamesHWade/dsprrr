@@ -101,6 +101,8 @@ An `AutoResearch` object to pass to
 
 ## Details
 
+**\[experimental\]**
+
 `AutoResearch()` is inspired by Andrej Karpathy's
 [`autoresearch`](https://github.com/karpathy/autoresearch) and the
 AutoResearch engine in the [GEPA optimize-anything
@@ -161,6 +163,12 @@ research
 #> OS sandbox required: TRUE
 
 if (FALSE) { # \dontrun{
+program <- module(signature("question -> answer"))
+trainset <- data.frame(
+  question = c("Capital of France?", "Capital of Peru?"),
+  answer = c("Paris", "Lima")
+)
+valset <- data.frame(question = "Capital of Japan?", answer = "Tokyo")
 compiled <- compile(
   program,
   research,

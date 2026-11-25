@@ -17,6 +17,11 @@
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Build a text adventure">
+<meta name="description" content="Build an interactive console text adventure in R where dsprrr modules invent rooms, referee risky actions with calibrated probability thresholds, and narrate outcomes that you can score with metrics.
+">
+<meta property="og:description" content="Build an interactive console text adventure in R where dsprrr modules invent rooms, referee risky actions with calibrated probability thresholds, and narrate outcomes that you can score with metrics.
+">
+<meta property="og:image" content="https://jameshwade.github.io/dsprrr/logo.svg">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -184,8 +189,9 @@ threshold you set in R</td>
 <div class="section level2">
 <h2 id="rooms-as-data">Rooms as data<a class="anchor" aria-label="anchor" href="#rooms-as-data"></a>
 </h2>
-<p>The game starts somewhere and never needs a map drawn in advance.
-Whenever the player reaches a new place, a module describes it:</p>
+<p>The game starts at a storm-swept jetty and invents the island as you
+explore it. Whenever the player reaches a new place, a module describes
+it:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">setting</span> <span class="op">&lt;-</span> <span class="st">"a storm-bound lighthouse island whose keeper vanished last winter"</span></span>
 <span></span>
@@ -232,9 +238,10 @@ take an item the room contains.</p>
 <p>When the player tries something risky, a referee decides whether it
 works. A plain <code><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_boolean()</a></code> output would make the model
 answer yes or no, and the only way to make it stricter would be to
-reword the prompt. <code><a href="../reference/with_decisions.html">with_decisions()</a></code> changes the question:
-the model reports the probability that the action succeeds, and dsprrr
-compares it with a threshold that stays in R (see <a href="calibrated-decisions.html">Calibrated decisions</a>).</p>
+reword the prompt. <code><a href="../reference/with_decisions.html">with_decisions()</a></code> (experimental) changes
+the question: the model reports the probability that the action
+succeeds, and dsprrr compares it with a threshold that stays in R (see
+<a href="calibrated-decisions.html">Calibrated decisions</a>).</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">skill_check</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module.html">module</a></span><span class="op">(</span><span class="fu"><a href="../reference/signature.html">signature</a></span><span class="op">(</span></span>
 <span>  inputs <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
@@ -289,15 +296,21 @@ narrator is told the verdict and reports what changed hands:</p>
 <h2 id="the-game-loop">The game loop<a class="anchor" aria-label="anchor" href="#the-game-loop"></a>
 </h2>
 <p><code>play()</code> keeps the state in plain R objects.
-<code>go</code> and <code>take</code> are handled in R without a model
-call; any other command goes to the referee and then the narrator.</p>
+<code>go</code>, <code>take</code>, and <code>inventory</code> are
+handled in R without a model call; any other command goes to the referee
+and then the narrator. Passing <code>referee</code> as an argument lets
+you swap in <code>strict_check</code> (or a calibrated referee from
+<code><a href="../reference/ReAnchor.html">ReAnchor()</a></code> below) without touching the loop:</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">match_one</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">text</span>, <span class="va">options</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">hits</span> <span class="op">&lt;-</span> <span class="va">options</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grepl</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/chartr.html" class="external-link">tolower</a></span><span class="op">(</span><span class="va">text</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/chartr.html" class="external-link">tolower</a></span><span class="op">(</span><span class="va">options</span><span class="op">)</span>, fixed <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">]</span></span>
 <span>  <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nchar.html" class="external-link">nzchar</a></span><span class="op">(</span><span class="va">text</span><span class="op">)</span> <span class="op">&amp;&amp;</span> <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">hits</span><span class="op">)</span> <span class="op">&gt;</span> <span class="fl">0</span><span class="op">)</span> <span class="va">hits</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span> <span class="kw">else</span> <span class="cn">NA_character_</span></span>
 <span><span class="op">}</span></span>
 <span></span>
-<span><span class="va">play</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">llm</span> <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-luna"</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
+<span><span class="va">play</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span></span>
+<span>  <span class="va">llm</span> <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">chat_openai</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-luna"</span><span class="op">)</span>,</span>
+<span>  <span class="va">referee</span> <span class="op">=</span> <span class="va">skill_check</span></span>
+<span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/interactive.html" class="external-link">interactive</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="kw"><a href="https://rdrr.io/r/base/stop.html" class="external-link">stop</a></span><span class="op">(</span><span class="st">"play() needs an interactive R session."</span><span class="op">)</span></span>
 <span>  <span class="co"># A fresh copy of the chat per call: the model sees only what is passed in.</span></span>
 <span>  <span class="va">ask</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">mod</span>, <span class="va">...</span><span class="op">)</span> <span class="fu"><a href="../reference/run.html">run</a></span><span class="op">(</span><span class="va">mod</span>, <span class="va">...</span>, .llm <span class="op">=</span> <span class="va">llm</span><span class="op">$</span><span class="fu">clone</span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
@@ -323,6 +336,10 @@ call; any other command goes to the referee and then the narrator.</p>
 <span>    <span class="va">cmd</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/trimws.html" class="external-link">trimws</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/readline.html" class="external-link">readline</a></span><span class="op">(</span><span class="st">"&gt; "</span><span class="op">)</span><span class="op">)</span></span>
 <span>    <span class="kw">if</span> <span class="op">(</span><span class="va">cmd</span> <span class="op">==</span> <span class="st">"quit"</span><span class="op">)</span> <span class="kw">break</span></span>
 <span>    <span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/nchar.html" class="external-link">nzchar</a></span><span class="op">(</span><span class="va">cmd</span><span class="op">)</span><span class="op">)</span> <span class="kw">next</span></span>
+<span>    <span class="kw">if</span> <span class="op">(</span><span class="va">cmd</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"i"</span>, <span class="st">"inventory"</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
+<span>      <span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Carrying:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/toString.html" class="external-link">toString</a></span><span class="op">(</span><span class="va">inventory</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
+<span>      <span class="kw">next</span></span>
+<span>    <span class="op">}</span></span>
 <span>    <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/startsWith.html" class="external-link">startsWith</a></span><span class="op">(</span><span class="va">cmd</span>, <span class="st">"go "</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
 <span>      <span class="va">to</span> <span class="op">&lt;-</span> <span class="fu">match_one</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/substr.html" class="external-link">substring</a></span><span class="op">(</span><span class="va">cmd</span>, <span class="fl">4</span><span class="op">)</span>, <span class="va">here</span><span class="op">$</span><span class="va">exits</span><span class="op">)</span></span>
 <span>      <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/NA.html" class="external-link">is.na</a></span><span class="op">(</span><span class="va">to</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
@@ -338,6 +355,7 @@ call; any other command goes to the referee and then the narrator.</p>
 <span>      <span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/NA.html" class="external-link">is.na</a></span><span class="op">(</span><span class="va">item</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
 <span>        <span class="va">inventory</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">inventory</span>, <span class="va">item</span><span class="op">)</span></span>
 <span>        <span class="va">rooms</span><span class="op">[[</span><span class="va">place</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="va">items</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sets.html" class="external-link">setdiff</a></span><span class="op">(</span><span class="va">here</span><span class="op">$</span><span class="va">items</span>, <span class="va">item</span><span class="op">)</span></span>
+<span>        <span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Taken:"</span>, <span class="va">item</span>, <span class="st">"\n"</span><span class="op">)</span></span>
 <span>        <span class="kw">next</span></span>
 <span>      <span class="op">}</span></span>
 <span>    <span class="op">}</span></span>
@@ -346,7 +364,7 @@ call; any other command goes to the referee and then the narrator.</p>
 <span>      <span class="va">place</span>, <span class="st">". "</span>, <span class="va">here</span><span class="op">$</span><span class="va">description</span>, <span class="st">" Items: "</span>, <span class="fu"><a href="https://rdrr.io/r/base/toString.html" class="external-link">toString</a></span><span class="op">(</span><span class="va">here</span><span class="op">$</span><span class="va">items</span><span class="op">)</span></span>
 <span>    <span class="op">)</span></span>
 <span>    <span class="va">verdict</span> <span class="op">&lt;-</span> <span class="fu">ask</span><span class="op">(</span></span>
-<span>      <span class="va">skill_check</span>,</span>
+<span>      <span class="va">referee</span>,</span>
 <span>      action <span class="op">=</span> <span class="va">cmd</span>, scene <span class="op">=</span> <span class="va">scene</span>, inventory <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/toString.html" class="external-link">toString</a></span><span class="op">(</span><span class="va">inventory</span><span class="op">)</span>,</span>
 <span>      .return_format <span class="op">=</span> <span class="st">"structured"</span></span>
 <span>    <span class="op">)</span></span>
@@ -369,9 +387,32 @@ call; any other command goes to the referee and then the narrator.</p>
 <span>  <span class="op">}</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/invisible.html" class="external-link">invisible</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>place <span class="op">=</span> <span class="va">place</span>, inventory <span class="op">=</span> <span class="va">inventory</span>, rooms <span class="op">=</span> <span class="va">rooms</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">}</span></span></code></pre></div>
-<p>Start a game with:</p>
+<p>Start a game (or try the stricter referee with
+<code>play(referee = strict_check)</code>):</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">play</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<p>An interactive session looks like this:</p>
+<pre class="text"><code>THE JETTY
+Salt spray lashes the slick timber planks as the supply boat disappears into
+the squall. Ahead, a stone path winds toward the dark lighthouse tower.
+Exits: stone path, boathouse, the supply boat
+You see: coil of rope, rusted padlock key
+
+&gt; take key
+Taken: rusted padlock key
+
+&gt; go boathouse
+
+BOATHOUSE
+Tilted shutters rattle over a half-rotted dory and a heavy sea chest wedged
+beneath the workbench.
+Exits: the jetty, cliff stairs
+You see: oilskin coat
+
+&gt; force open the sea chest with the rusted key
+[referee: 68% likely, success]
+The rusted teeth catch on the second turn and the padlock gives with a dry
+snap. Inside, wrapped in tarred canvas, lies the keeper's logbook.</code></pre>
 <p>Each call gets its own copy of the chat, so the model knows only what
 the state tells it. The game’s memory lives in <code>rooms</code>: go
 back to a place and you get the description it had the first time.</p>
@@ -386,12 +427,12 @@ something changes, such as what you carry. To let players try again, add
 <h2 id="test-the-referee">Test the referee<a class="anchor" aria-label="anchor" href="#test-the-referee"></a>
 </h2>
 <p>The referee is a classifier, so you can grade it. Write down rulings
-you consider fair, score the module, and let <code><a href="../reference/ReAnchor.html">ReAnchor()</a></code> fit
-the threshold against them. It runs the module over the rulings once,
-tries thresholds against the recorded probabilities without calling the
-model again, and keeps a new threshold only if it scores better on
-held-out folds. The prompt does not change.</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+you consider fair, score the module, and let <code><a href="../reference/ReAnchor.html">ReAnchor()</a></code>
+(experimental) fit the threshold against them. It runs the module over
+the rulings once, tries thresholds against the recorded probabilities
+without calling the model again, and keeps a new threshold only if it
+scores better on held-out folds. The prompt does not change.</p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">rulings</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tribble.html" class="external-link">tribble</a></span><span class="op">(</span></span>
 <span>  <span class="op">~</span><span class="va">action</span>,                 <span class="op">~</span><span class="va">scene</span>,                       <span class="op">~</span><span class="va">inventory</span>, <span class="op">~</span><span class="va">success</span>,</span>
 <span>  <span class="st">"unlock the sea chest"</span>,  <span class="st">"a locked sea chest"</span>,         <span class="st">"brass key"</span>, <span class="cn">TRUE</span>,</span>
@@ -424,10 +465,10 @@ more.</p>
 should never break: it can only hand the player items that are in the
 scene. The game already drops anything else, but then the story and the
 state disagree. A metric counts how often that happens:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">keeps_items_honest</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">prediction</span>, <span class="va">expected</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="va">here</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/strsplit.html" class="external-link">strsplit</a></span><span class="op">(</span><span class="va">expected</span><span class="op">$</span><span class="va">items_here</span>, <span class="st">", "</span><span class="op">)</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/all.html" class="external-link">all</a></span><span class="op">(</span><span class="va">prediction</span><span class="op">$</span><span class="va">gained</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="va">here</span><span class="op">)</span></span>
+<span>  <span class="va">here</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/chartr.html" class="external-link">tolower</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/strsplit.html" class="external-link">strsplit</a></span><span class="op">(</span><span class="va">expected</span><span class="op">$</span><span class="va">items_here</span>, <span class="st">", "</span><span class="op">)</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/all.html" class="external-link">all</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/chartr.html" class="external-link">tolower</a></span><span class="op">(</span><span class="va">prediction</span><span class="op">$</span><span class="va">gained</span><span class="op">)</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="va">here</span><span class="op">)</span></span>
 <span><span class="op">}</span></span>
 <span></span>
 <span><span class="fu">keeps_items_honest</span><span class="op">(</span></span>
@@ -438,7 +479,7 @@ state disagree. A metric counts how often that happens:</p>
 <p><code><a href="../reference/evaluate.html">evaluate()</a></code> passes each whole row to the metric as
 <code>expected</code>, so the metric can read <code>items_here</code>
 even though the narrator never sees that column:</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">situations</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tribble.html" class="external-link">tribble</a></span><span class="op">(</span></span>
 <span>  <span class="op">~</span><span class="va">action</span>,              <span class="op">~</span><span class="va">succeeded</span>, <span class="op">~</span><span class="va">scene</span>,                <span class="op">~</span><span class="va">inventory</span>, <span class="op">~</span><span class="va">items_here</span>,</span>
 <span>  <span class="st">"search the desk"</span>,    <span class="cn">TRUE</span>,       <span class="st">"a desk, a brass key"</span>, <span class="st">"lantern"</span>,  <span class="st">"brass key"</span>,</span>
