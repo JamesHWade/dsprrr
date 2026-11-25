@@ -1,18 +1,339 @@
 # dsprrr
 
-dsprrr lets you write LLM features in R as small programs instead of
-prompt strings. You declare a task’s inputs and typed outputs; dsprrr
-builds the prompt, calls the model through
-[ellmer](https://ellmer.tidyverse.org), and returns an R list with the
-types you asked for. Once you have labeled examples, you can score the
-program with a metric and let an optimizer tune its instructions and
-few-shot examples against that score.
+Program LLMs in R instead of hand-tuning prompt strings.
 
-If you have a prompt that already works and no data to measure it
-against, plain ellmer is enough. dsprrr earns its keep when you want
-typed outputs across many inputs, a score you can track, or a prompt
-tuned on examples instead of by hand. The design follows
-[DSPy](https://dspy.ai), and any provider ellmer supports works.
+Declare a task’s inputs and typed outputs once, swap reasoning and
+tool-use strategies without rewriting prompts, measure quality on
+labeled data, and let an optimizer fit instructions and examples to your
+metric. Built on [ellmer](https://ellmer.tidyverse.org) and inspired by
+[DSPy](https://dspy.ai).
+
+[Get
+started](https://jameshwade.github.io/dsprrr/articles/tutorial-hello-world.md)
+[How dsprrr
+works](https://jameshwade.github.io/dsprrr/articles/concepts-signatures-modules.md)
+[Coming from
+DSPy? →](https://jameshwade.github.io/dsprrr/articles/dspy-comparison.md)
+
+## Why program instead of prompt?
+
+A hand-written prompt mixes three fragile things into one string: *what*
+you want, *how* to coax a particular model, and *which examples* to
+show. `dsprrr` keeps them separate so you can test, compare, and
+optimize LLM features like any other R code.
+
+Hand-tuned prompt
+
+``` r
+
+# Task and wording tangled in one string
+chat$chat(paste(
+  "Route this ticket. Return urgency",
+  "(low/high) and team. Ticket:", ticket
+))
+```
+
+- Free-text output you have to parse by hand
+- Hard to test across rows or compare versions
+- Breaks quietly when you change models
+
+Declarative dsprrr program
+
+``` r
+
+sig <- signature(
+  "ticket -> urgency: enum('low', 'high')"
+)
+router <- chain_of_thought(sig) |>
+  compile(
+    BootstrapFewShot(metric = metric),
+    trainset = train
+  )
+```
+
+- Typed R list returned via structured schemas
+- Swap strategies or chain steps in one line
+- Measure with
+  [`evaluate()`](https://jameshwade.github.io/dsprrr/reference/evaluate.md),
+  re-compile for any model
+
+If you have a one-off prompt that already works and no data to measure
+it against, plain [ellmer](https://ellmer.tidyverse.org) is enough.
+`dsprrr` earns its keep once an LLM call becomes a repeatable workflow
+you need to measure, compose, or port across models.
+
+## The R modeling mental model
+
+If you have ever fit a model in R, you already know the loop:
+
+1\. Declare
+
+[`signature()`](https://jameshwade.github.io/dsprrr/reference/signature.md)
+
+Like `y ~ x`
+
+State inputs, typed outputs, and task intent without writing prompt
+plumbing.
+
+2\. Build
+
+[`module()`](https://jameshwade.github.io/dsprrr/reference/module.md)
+
+Like a model spec
+
+Choose direct prediction, chain-of-thought, ReAct tools, or `%>>%`
+pipelines.
+
+3\. Measure
+
+[`evaluate()`](https://jameshwade.github.io/dsprrr/reference/evaluate.md)
+
+Like `yardstick`
+
+Score predictions across a data frame and inspect prompts, traces, and
+cost.
+
+4\. Optimize
+
+[`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md)
+
+Like `fit()`
+
+Search instructions and few-shot demos on training data to raise your
+metric.
+
+## How the pieces fit
+
+One support-ticket workflow from declaration to a saved, compiled
+program:
+
+01
+
+### Signatures
+
+**Declare the contract.** Put inputs on the left of `->`, typed outputs
+on the right, and optional instructions. `dsprrr` builds the prompt and
+JSON schema from this, so results arrive as typed R values ready for a
+data frame.
+
+[How dsprrr
+works →](https://jameshwade.github.io/dsprrr/articles/concepts-signatures-modules.md)
+
+``` r
+
+library(dsprrr)
+
+sig <- signature(
+  "ticket -> urgency: enum('low', 'high'), team: string",
+  instructions = "Route a support ticket."
+)
+```
+
+02
+
+### Modules
+
+**Swap how it thinks.** The same signature can run as one structured
+call, with step-by-step reasoning first, or in a tool-calling loop. Run
+any module on one input with
+[`run()`](https://jameshwade.github.io/dsprrr/reference/run.md) or over
+a data frame with
+[`run_dataset()`](https://jameshwade.github.io/dsprrr/reference/run_dataset.md).
+
+[Choose a module
+type →](https://jameshwade.github.io/dsprrr/articles/advanced-modules.md)
+
+``` r
+
+chat <- ellmer::chat_openai(model = "gpt-6-luna")
+
+router <- module(sig)                # one call
+router_cot <- chain_of_thought(sig)  # reason first
+
+lookup <- ellmer::tool(
+  function(q) "Duplicate charges go to billing.",
+  description = "Look up routing policy",
+  arguments = list(q = ellmer::type_string())
+)
+router_agent <- react(sig, tools = list(lookup))
+
+run(router, ticket = "Charged twice!", .llm = chat)
+```
+
+03
+
+### Pipelines
+
+**Compose multi-step programs.** Chain modules with `%>>%` or wire
+inputs explicitly with
+[`pipeline()`](https://jameshwade.github.io/dsprrr/reference/pipeline.md)
+and [`step()`](https://jameshwade.github.io/dsprrr/reference/step.md). A
+pipeline is itself a module, so
+[`run()`](https://jameshwade.github.io/dsprrr/reference/run.md),
+[`evaluate()`](https://jameshwade.github.io/dsprrr/reference/evaluate.md),
+and
+[`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md)
+work across all steps together.
+
+[Chain modules into
+pipelines →](https://jameshwade.github.io/dsprrr/articles/chaining-modules.md)
+
+``` r
+
+draft <- module(signature(
+  "urgency, team -> reply",
+  instructions = "Write a brief acknowledgment."
+))
+
+# Outputs connect to matching inputs by name
+triage <- module(sig) %>>% draft
+
+run(triage, ticket = "Charged twice!", .llm = chat)
+```
+
+04
+
+### Metrics & evaluation
+
+**Measure instead of eyeballing.** Split your labeled rows, run the
+module over the validation set, and score every prediction. Inspect
+misses, prompts
+([`get_last_prompt()`](https://jameshwade.github.io/dsprrr/reference/get_last_prompt.md)),
+traces
+([`summarize_traces()`](https://jameshwade.github.io/dsprrr/reference/summarize_traces.md)),
+and spend
+([`session_cost()`](https://jameshwade.github.io/dsprrr/reference/session_cost.md)).
+
+[Metrics and
+evaluation →](https://jameshwade.github.io/dsprrr/articles/concepts-why-metrics-matter.md)
+
+``` r
+
+tickets <- tibble::tribble(
+  ~ticket,                       ~urgency, ~team,
+  "Charged twice for my order",  "high",   "billing",
+  "Change my profile photo?",    "low",    "account",
+  "App deletes files on sync",   "high",   "technical",
+  "Need last year's invoice",    "low",    "billing",
+  "Unknown login on my account", "high",   "account",
+  "Export fails in Safari",      "low",    "technical"
+)
+
+splits <- split_dataset(tickets, prop = 0.67, seed = 1)
+metric <- metric_exact_match(field = "urgency")
+
+baseline <- evaluate(
+  router, splits$val, metric = metric, .llm = chat
+)
+baseline$mean_score
+```
+
+05
+
+### Optimizers & persistence
+
+**Fit prompts to your data.**
+[`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md)
+returns a new module whose demos or instructions were chosen to raise
+your metric on training rows (`BootstrapFewShot`, `MIPROv2`, `GEPA`, and
+more). Verify on held-out rows, then save with
+[`save_program()`](https://jameshwade.github.io/dsprrr/reference/program-artifact.md).
+Switch models? Swap `chat` and re-compile.
+
+[Compile and
+optimize →](https://jameshwade.github.io/dsprrr/articles/compilation-optimization.md)
+
+``` r
+
+optimizer <- BootstrapFewShot(
+  metric = metric,
+  max_bootstrapped_demos = 2L,
+  max_labeled_demos = 0L
+)
+
+optimized <- router |>
+  compile(optimizer, splits$train, .llm = chat)
+
+evaluate(
+  optimized, splits$val, metric, .llm = chat
+)
+save_program(optimized, "ticket_router.rds")
+```
+
+## Works with your R stack
+
+[ellmer
+providers](https://jameshwade.github.io/dsprrr/articles/models-and-providers.md)
+
+Runs on any chat ellmer supports: OpenAI, Anthropic, Google, Ollama,
+Bedrock, and more.
+
+[vitals
+evaluation](https://jameshwade.github.io/dsprrr/articles/vitals-recipes.md)
+
+Expose modules as vitals solvers and reuse vitals scorers directly as
+dsprrr metrics.
+
+[ragnar
+retrieval](https://jameshwade.github.io/dsprrr/articles/rag-workflows.md)
+
+Connect document stores to RAG modules and ReAct agents with
+[`ragnar_tool()`](https://jameshwade.github.io/dsprrr/reference/ragnar_tool.md).
+
+[tidymodels](https://jameshwade.github.io/dsprrr/articles/tidymodels-integration.md)
+
+Tune LLM parameters alongside workflows with the
+[`llm_predict()`](https://jameshwade.github.io/dsprrr/reference/llm_predict.md)
+parsnip spec.
+
+[pins &
+targets](https://jameshwade.github.io/dsprrr/articles/orchestration.md)
+
+Version compiled configs with
+[`pin_module_config()`](https://jameshwade.github.io/dsprrr/reference/pin_module_config.md)
+and orchestrate batch runs.
+
+[Caching, async &
+traces](https://jameshwade.github.io/dsprrr/reference/index.html#run-programs)
+
+Built-in memory and disk cache,
+[`run_async()`](https://jameshwade.github.io/dsprrr/reference/run_async.md),
+[`run_stream()`](https://jameshwade.github.io/dsprrr/reference/run_stream.md),
+and token/cost logs.
+
+## Where to go next
+
+New to dsprrr
+
+[Follow the 6-step
+tutorials →](https://jameshwade.github.io/dsprrr/articles/tutorial-hello-world.md)
+
+Go from your first typed call to structured extraction, demos,
+optimization, and saving a compiled module.
+
+Already using ellmer
+
+[Read how dsprrr
+works →](https://jameshwade.github.io/dsprrr/articles/concepts-signatures-modules.md)
+
+Understand signatures, R6 module state, traces, and when a plain ellmer
+prompt is still the right tool.
+
+Coming from Python DSPy
+
+[See the DSPy
+comparison →](https://jameshwade.github.io/dsprrr/articles/dspy-comparison.md)
+
+Translate signatures, modules, teleprompters, and pipelines between
+Python DSPy and idiomatic R.
+
+Ready to optimize
+
+[Choose an
+optimizer →](https://jameshwade.github.io/dsprrr/articles/advanced-optimization.md)
+
+Compare all eleven teleprompters — from `LabeledFewShot` and
+`BootstrapFewShot` to `MIPROv2` and `GEPA`.
 
 ## Installation
 
@@ -31,163 +352,15 @@ Or install the development version from GitHub:
 pak::pak("JamesHWade/dsprrr")
 ```
 
-Installing from source requires a C compiler (Rtools on Windows, Xcode
-Command Line Tools on macOS, or your Linux distribution’s build tools);
-the compiled helper preserves exact filesystem identities for safe
-persistence.
+Set a provider API key in your `.Renviron` (for example `OPENAI_API_KEY`
+or `ANTHROPIC_API_KEY`), then run
+[`dsprrr_sitrep()`](https://jameshwade.github.io/dsprrr/reference/dsprrr_sitrep.md)
+to verify your setup. Installing from source requires a C compiler
+(Rtools on Windows, Xcode Command Line Tools on macOS, or your Linux
+distribution’s build tools); the compiled helper preserves exact
+filesystem identities for safe persistence.
 
-You also need credentials for a model provider, for example
-`OPENAI_API_KEY` in your `.Renviron`.
-
-## Example
-
-A signature names the inputs and outputs of a task.
-[`module()`](https://jameshwade.github.io/dsprrr/reference/module.md)
-turns it into something you can run.
-
-``` r
-
-library(dsprrr)
-chat <- ellmer::chat_openai(model = "gpt-6-luna")
-
-analyzer <- module(signature(
-  "review -> sentiment: enum('positive', 'negative', 'neutral'), stars: int, summary: string"
-))
-
-result <- run(
-  analyzer,
-  review = "I've been using this blender for 6 months now. It's incredibly powerful and easy to clean. The only downside is it's quite loud. Overall, I'm very happy with it.",
-  .llm = chat
-)
-str(result)
-#> List of 3
-#>  $ sentiment: chr "positive"
-#>  $ stars    : int 4
-#>  $ summary  : chr "Powerful and easy-to-clean blender, but a bit loud."
-```
-
-`stars` comes back as an integer and `sentiment` is always one of the
-three labels, so the result can go straight into a data frame. The
-output above was recorded from a real call to `gpt-4.1` in [Tutorial
-3](https://jameshwade.github.io/dsprrr/articles/tutorial-structured-outputs.md);
-`gpt-6-luna` may word the summary differently.
-
-## How the pieces fit
-
-### Signatures
-
-**Declare the task.** Inputs on the left of the arrow, typed outputs on
-the right, and optional instructions. The prompt is generated from this.
-
-[How dsprrr works
-→](https://jameshwade.github.io/dsprrr/articles/concepts-signatures-modules.md)
-
-``` r
-
-sig <- signature(
-  "ticket -> urgency: enum('low', 'high'), team: string",
-  instructions = "Route the support ticket."
-)
-```
-
-### Modules
-
-**Choose how it runs.** The same signature can be answered in one call,
-with step-by-step reasoning first, or by a loop that calls R functions
-as tools.
-
-[Choose a module type
-→](https://jameshwade.github.io/dsprrr/articles/advanced-modules.md)
-
-``` r
-
-route <- module(sig)                # one call
-route_cot <- chain_of_thought(sig)  # reason, then answer
-
-lookup <- ellmer::tool(
-  function(query) "Duplicate charges are refunded by billing.",
-  description = "Look up support policy",
-  arguments = list(query = ellmer::type_string())
-)
-route_agent <- react(sig, tools = list(lookup))  # call tools as needed
-```
-
-### Metrics
-
-**Measure it.** Run the module over labeled rows and score each
-prediction. You get the mean score, per-row scores, and the predictions
-to inspect.
-
-[Metrics and evaluation
-→](https://jameshwade.github.io/dsprrr/articles/concepts-why-metrics-matter.md)
-
-``` r
-
-tickets <- tibble::tibble(
-  ticket = c(
-    "I was charged twice for my order",
-    "How do I change my profile photo?",
-    "The app deletes my files when I sync",
-    "Can I get last year's invoice?"
-  ),
-  urgency = c("high", "low", "high", "low"),
-  team = c("billing", "account", "engineering", "billing")
-)
-
-scores <- evaluate(
-  route,
-  tickets,
-  metric = metric_exact_match(field = "urgency"),
-  .llm = chat
-)
-scores$mean_score
-```
-
-### Optimizers
-
-**Improve it with data.**
-[`compile()`](https://jameshwade.github.io/dsprrr/reference/compile.md)
-returns a new module whose examples or instructions were tuned to raise
-the metric on your training rows. Check the result on rows it did not
-see.
-
-[Compile and optimize
-→](https://jameshwade.github.io/dsprrr/articles/compilation-optimization.md)
-
-``` r
-
-optimizer <- BootstrapFewShot(
-  metric = metric_exact_match(field = "urgency"),
-  max_bootstrapped_demos = 2L,
-  max_labeled_demos = 0L
-)
-
-split <- split_dataset(tickets, prop = 0.5, seed = 1)
-
-optimized <- route |>
-  compile(optimizer, trainset = split$train, .llm = chat)
-
-evaluate(
-  optimized,
-  split$val,
-  metric = metric_exact_match(field = "urgency"),
-  .llm = chat
-)
-```
-
-## Where to go next
-
-| To | Read |
-|----|----|
-| Learn the basics one step at a time | [Tutorial 1: Your first LLM call](https://jameshwade.github.io/dsprrr/articles/tutorial-hello-world.md) |
-| Pick a module for your task | [Choose a module type](https://jameshwade.github.io/dsprrr/articles/advanced-modules.md) |
-| Measure quality with metrics | [Metrics and evaluation](https://jameshwade.github.io/dsprrr/articles/concepts-why-metrics-matter.md) |
-| Improve a module with labeled data | [Compile and optimize](https://jameshwade.github.io/dsprrr/articles/compilation-optimization.md) |
-| Decide which optimizer to use | [Choose an optimizer](https://jameshwade.github.io/dsprrr/articles/advanced-optimization.md) |
-| Translate DSPy code to R | [dsprrr for DSPy users](https://jameshwade.github.io/dsprrr/articles/dspy-comparison.md) |
-| Look up a function | [Reference](https://jameshwade.github.io/dsprrr/reference/index.md) |
-
-Some features are experimental:
+**Experimental features:**
 [`rlm_module()`](https://jameshwade.github.io/dsprrr/reference/rlm_module.md)
 lets a model explore a large R object by writing code ([How RLM
 works](https://jameshwade.github.io/dsprrr/articles/how-rlm-works.md)),
@@ -197,7 +370,7 @@ GEPA rewrite a whole program
 [`with_decisions()`](https://jameshwade.github.io/dsprrr/reference/with_decisions.md)
 and
 [`ReAnchor()`](https://jameshwade.github.io/dsprrr/reference/ReAnchor.md)
-calibrate probability-backed decision thresholds ([Calibrated
+calibrate decision thresholds ([Calibrated
 decisions](https://jameshwade.github.io/dsprrr/articles/calibrated-decisions.md)),
 and [`Omni()`](https://jameshwade.github.io/dsprrr/reference/Omni.md)
 and the agentic harnesses compose optimizers
@@ -205,7 +378,7 @@ and the agentic harnesses compose optimizers
 [agentic
 harnesses](https://jameshwade.github.io/dsprrr/articles/agentic-optimization-harnesses.md)).
 
-dsprrr is experimental; the API may change. It is inspired by
+`dsprrr` is experimental; the API may change. It is inspired by
 [DSPy](https://dspy.ai) from Stanford NLP, builds on
 [ellmer](https://ellmer.tidyverse.org) for model access, and bridges to
 [vitals](https://vitals.tidyverse.org) for evaluation.

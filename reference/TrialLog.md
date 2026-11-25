@@ -261,8 +261,8 @@ log$as_tibble()[, c("trial_id", "status", "mean_score")]
 #> # A tibble: 2 × 3
 #>   trial_id                     status  mean_score
 #>   <chr>                        <chr>        <dbl>
-#> 1 trial_20261125_113637_ncnyz0 pending         NA
-#> 2 trial_20261125_113637_e01i28 pending         NA
+#> 1 trial_20261125_115724_ncnyz0 pending         NA
+#> 2 trial_20261125_115724_e01i28 pending         NA
 
 # Persist to a directory and load it again
 dir <- file.path(tempdir(), "trial-log-example")
@@ -274,5 +274,5 @@ load_trial_log(dir)
 #> 
 #> ── Trial Log: my-search 
 #> Trials: 1 (0 completed, 0 failed)
-#> Log Dir: /tmp/RtmpxCt271/trial-log-example
+#> Log Dir: /tmp/Rtmp36WHYb/trial-log-example
 ```

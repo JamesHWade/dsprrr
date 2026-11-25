@@ -82,7 +82,7 @@ run(shout, text = "hello")
 #> [1] "HELLO"
 #> 
 pin_trace(board, "shout-traces", shout, include_outputs = TRUE)
-#> Creating new version '20261125T113718Z-b14f4'
+#> Creating new version '20261125T115815Z-5a264'
 #> Writing to pin 'shout-traces'
 #> ✔ Pinned 1 trace: "shout-traces"
 #> ℹ Total tokens: 0
