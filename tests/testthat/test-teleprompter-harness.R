@@ -707,7 +707,7 @@ test_that("malformed actions and runner failures stay inside the harness", {
 })
 
 test_that("MetaHarness checkpoints and resumes without repeating baseline", {
-  checkpoint <- withr::local_tempfile(fileext = ".rds")
+  checkpoint <- file.path(local_private_storage_dir(), "checkpoint.rds")
   sandbox <- make_harness_runner()
   tp <- MetaHarness(
     metric = harness_metric,

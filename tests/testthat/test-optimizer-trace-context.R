@@ -61,7 +61,7 @@ test_that("trial persistence round-trips nested trace context", {
     trial_id = "persisted-trace",
     trace_context = context
   )
-  path <- file.path(withr::local_tempdir(), "trials.jsonl")
+  path <- file.path(local_private_storage_dir(), "trials.jsonl")
 
   write_trials_jsonl(list(trial), path)
 

@@ -33,8 +33,11 @@ trials <- list(
   create_trial("my-search", params = list(k = 4L))
 )
 path <- tempfile(fileext = ".jsonl")
-write_trials_jsonl(trials, path)
-readLines(path, n = 1)
+# Shared temporary directories can be unsuitable for private logs.
+tryCatch({
+  write_trials_jsonl(trials, path)
+  read_trials_jsonl(path)[[1]]
+}, dsprrr_trial_log_trust_error = function(e) message(conditionMessage(e)))
 }
 \seealso{
 Other optimizer building blocks:

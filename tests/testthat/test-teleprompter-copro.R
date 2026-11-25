@@ -571,10 +571,7 @@ test_that("COPRO preserves the best candidate when evaluation exhausts budget", 
 
 test_that("COPRO retains partial evidence without selecting or logging it", {
   eval_calls <- 0L
-  log_dir <- withr::local_tempdir()
-  if (.Platform$OS.type == "unix") {
-    Sys.chmod(log_dir, mode = "0700", use_umask = FALSE)
-  }
+  log_dir <- local_private_storage_dir()
 
   testthat::local_mocked_bindings(
     identify_failed_examples = function(...) list(),

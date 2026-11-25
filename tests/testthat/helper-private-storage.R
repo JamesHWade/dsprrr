@@ -1,0 +1,16 @@
+# A private child cannot make a writable, non-sticky ancestor trustworthy.
+# Keep persistence fixtures inside the R session's temporary directory.
+local_private_storage_dir <- function(.local_envir = parent.frame()) {
+  path <- tempfile(tmpdir = normalizePath(tempdir()))
+  capability <- dsprrr:::audit_existing_cache_parent_capability(path)
+  if (
+    !capability$ok &&
+      startsWith(capability$reason, "a non-sticky cache ancestor is writable:")
+  ) {
+    testthat::skip(capability$reason)
+  }
+
+  stopifnot(dir.create(path, mode = "0700"))
+  withr::defer(unlink(path, recursive = TRUE), envir = .local_envir)
+  path
+}

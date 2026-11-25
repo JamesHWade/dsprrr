@@ -324,10 +324,7 @@ test_that("SIMBA returns empty variability diagnostics when its budget stops", {
 
 test_that("SIMBA preserves and reports a complete baseline over a biased partial", {
   eval_calls <- 0L
-  log_dir <- withr::local_tempdir()
-  if (.Platform$OS.type == "unix") {
-    Sys.chmod(log_dir, mode = "0700", use_umask = FALSE)
-  }
+  log_dir <- local_private_storage_dir()
 
   testthat::local_mocked_bindings(
     eval_program = function(program, dataset, ...) {

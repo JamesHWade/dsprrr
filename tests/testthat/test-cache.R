@@ -1072,10 +1072,8 @@ test_that("private disk caches preserve parents and use owner-only modes", {
   skip_on_os("windows")
   local_reset_cache()
 
-  parent <- tempfile("cache_private_parent_")
+  parent <- local_private_storage_dir()
   disk_path <- file.path(parent, "cache")
-  withr::defer(unlink(parent, recursive = TRUE))
-  dir.create(parent)
   Sys.chmod(parent, mode = "0755", use_umask = FALSE)
   original_umask <- Sys.umask()
 
@@ -1111,11 +1109,9 @@ test_that("live private path replacement never returns or rewrites poison", {
   skip_on_os("windows")
   local_reset_cache()
 
-  root <- tempfile("cache_live_replacement_")
+  root <- local_private_storage_dir()
   disk_path <- file.path(root, "cache")
   displaced <- file.path(root, "audited-cache")
-  withr::defer(unlink(root, recursive = TRUE))
-  dir.create(root)
 
   configure_cache(
     enable_memory = TRUE,
@@ -1198,11 +1194,9 @@ test_that("warn-as-error cannot strand an invalid global disk guard", {
   skip_on_os("windows")
   local_reset_cache()
 
-  root <- tempfile("cache_warn_error_cleanup_")
+  root <- local_private_storage_dir()
   disk_path <- file.path(root, "cache")
   displaced <- file.path(root, "audited-cache")
-  withr::defer(unlink(root, recursive = TRUE))
-  dir.create(root)
   configure_cache(
     enable_memory = TRUE,
     enable_disk = TRUE,
@@ -1285,7 +1279,7 @@ test_that("private caches reject attacker-owned ancestors", {
   skip_on_os("windows")
   local_reset_cache()
 
-  root <- withr::local_tempdir()
+  root <- local_private_storage_dir()
   effective_owner <- dsprrr:::cache_effective_owner_id()
   skip_if(is.na(effective_owner), "effective user ID unavailable")
   original_owner <- dsprrr:::cache_path_owner_id
@@ -1377,8 +1371,7 @@ test_that("private writes verify 0600 staging before serialization", {
   skip_on_os("windows")
   local_reset_cache()
 
-  disk_path <- tempfile("cache_prewrite_mode_")
-  withr::defer(unlink(disk_path, recursive = TRUE))
+  disk_path <- file.path(local_private_storage_dir(), "cache")
   observations <- list()
   testthat::local_mocked_bindings(
     cache_save_rds = function(value, file) {
@@ -1409,7 +1402,7 @@ test_that("private writes verify 0600 staging before serialization", {
   expect_true(all(vapply(observations, `[[`, numeric(1), "size") == 0))
 })
 
-test_that("unsafe non-sticky parents fail and sticky parents remain usable", {
+test_that("a writable non-sticky parent forces a disk cache to fall back to memory", {
   skip_on_os("windows")
   local_reset_cache()
 
@@ -1417,14 +1410,22 @@ test_that("unsafe non-sticky parents fail and sticky parents remain usable", {
   withr::defer(unlink(root, recursive = TRUE))
   dir.create(root)
   Sys.chmod(root, mode = "0777", use_umask = FALSE)
-  unsafe <- dsprrr:::prepare_cache_directory(
-    file.path(root, "unsafe-cache"),
-    private = TRUE
+  path <- file.path(root, "unsafe-cache")
+  configure_cache(enable_memory = TRUE, enable_disk = TRUE, disk_path = path)
+  expect_warning(
+    cache <- dsprrr:::get_cache(),
+    "non-sticky cache ancestor is writable",
+    class = "dsprrr_cache_security_warning"
   )
-  expect_false(unsafe$ok)
-  expect_match(unsafe$reason, "non-sticky cache ancestor is writable")
-  expect_false(dir.exists(file.path(root, "unsafe-cache")))
+  expect_s3_class(cache, "cache_mem")
+  cache$set("example", 42)
+  expect_equal(cache$get("example"), 42)
+  expect_false(dir.exists(path))
+})
 
+test_that("a sticky shared parent permits a private cache", {
+  skip_on_os("windows")
+  root <- local_private_storage_dir()
   Sys.chmod(root, mode = "1777", use_umask = FALSE)
   safe <- dsprrr:::prepare_cache_directory(
     file.path(root, "sticky-cache"),
@@ -1467,7 +1468,7 @@ test_that("private cache files reject special mode bits unchanged", {
   skip_on_os("windows")
   local_reset_cache()
 
-  root <- withr::local_tempdir()
+  root <- local_private_storage_dir()
   cache_dir <- file.path(root, "special-file")
   dir.create(cache_dir, mode = "0700")
   Sys.chmod(cache_dir, mode = "0700", use_umask = FALSE)
@@ -1497,9 +1498,7 @@ test_that("overexposed existing disk caches fail closed without repair", {
   skip_on_os("windows")
   local_reset_cache()
 
-  root <- tempfile("cache_no_repair_")
-  withr::defer(unlink(root, recursive = TRUE))
-  dir.create(root)
+  root <- local_private_storage_dir()
 
   observed <- new.env(parent = emptyenv())
   observed$enumerated <- character()
@@ -1687,8 +1686,7 @@ test_that("non-regular cache entries fail closed before cachem", {
   skip_if(Sys.which("mkfifo") == "", "mkfifo unavailable")
   local_reset_cache()
 
-  disk_path <- tempfile("cache_fifo_")
-  withr::defer(unlink(disk_path, recursive = TRUE))
+  disk_path <- file.path(local_private_storage_dir(), "cache")
   dir.create(disk_path, mode = "0700")
   fifo <- file.path(disk_path, "adversarial name.rds")
   status <- system2(Sys.which("mkfifo"), shQuote(fifo))
@@ -1848,7 +1846,7 @@ test_that("clear all invalidates stale disk handles before degradation", {
   skip_on_os("windows")
   local_reset_cache()
 
-  disk_path <- tempfile("cache_stale_handle_")
+  disk_path <- file.path(local_private_storage_dir(), "cache")
   withr::defer({
     Sys.chmod(disk_path, mode = "0700", use_umask = FALSE)
     unlink(disk_path, recursive = TRUE)
@@ -1933,8 +1931,7 @@ test_that("targeted clears preserve configured tiers and untouched entries", {
   skip_on_os("windows")
   local_reset_cache()
 
-  disk_path <- tempfile("cache_targeted_clear_")
-  withr::defer(unlink(disk_path, recursive = TRUE))
+  disk_path <- file.path(local_private_storage_dir(), "cache")
   configure_cache(
     enable_memory = TRUE,
     enable_disk = TRUE,
@@ -1978,6 +1975,7 @@ test_that("targeted clears preserve configured tiers and untouched entries", {
 
 test_that("failed targeted cleanup still leaves only the safe tier reachable", {
   local_reset_cache()
+  configure_cache(enable_memory = TRUE, enable_disk = TRUE)
 
   pkg_env <- asNamespace("dsprrr")$.dsprrr_env
   remaining_disk <- list(name = "remaining-disk")
@@ -2019,8 +2017,7 @@ test_that("cleanup FALSE is reported and detached guards stay detached", {
 test_that("disk cache persists data across cache resets", {
   local_reset_cache()
 
-  tmp_dir <- tempfile("cache_test_")
-  withr::defer(unlink(tmp_dir, recursive = TRUE))
+  tmp_dir <- file.path(local_private_storage_dir(), "cache")
 
   # Configure with only disk cache
   configure_cache(
@@ -2065,8 +2062,7 @@ test_that("disk cache persists data across cache resets", {
 test_that("layered cache uses both memory and disk tiers", {
   local_reset_cache()
 
-  tmp_dir <- tempfile("cache_test_layered_")
-  withr::defer(unlink(tmp_dir, recursive = TRUE))
+  tmp_dir <- file.path(local_private_storage_dir(), "cache")
 
   # Configure with both tiers
   configure_cache(enable_memory = TRUE, enable_disk = TRUE, disk_path = tmp_dir)
@@ -2092,9 +2088,7 @@ test_that("layered cache uses both memory and disk tiers", {
 test_that("disk cache creates directory when it doesn't exist", {
   local_reset_cache()
 
-  # Use a nested path that doesn't exist
-  tmp_dir <- file.path(tempdir(), "dsprrr_test", "nested", "cache")
-  withr::defer(unlink(file.path(tempdir(), "dsprrr_test"), recursive = TRUE))
+  tmp_dir <- file.path(local_private_storage_dir(), "nested", "cache")
 
   # Directory should not exist yet
   expect_false(dir.exists(tmp_dir))
@@ -2117,13 +2111,7 @@ test_that("disk cache creates directory when it doesn't exist", {
 test_that("disk cache handles race condition when directory created by another process", {
   local_reset_cache()
 
-  # Create a directory that will trigger the "already exists" warning
-  # by creating it between the dir.exists() check and the dir.create() call
-  tmp_dir <- file.path(tempdir(), "dsprrr_race_test", "cache")
-  withr::defer(unlink(
-    file.path(tempdir(), "dsprrr_race_test"),
-    recursive = TRUE
-  ))
+  tmp_dir <- file.path(local_private_storage_dir(), "nested", "cache")
 
   # Pre-create the directory to simulate race condition
   # When configure_cache runs, it will see dir doesn't exist, then

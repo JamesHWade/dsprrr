@@ -1021,9 +1021,24 @@ checkpoint_fixture <- function(path, control = NULL) {
   )
 }
 
+test_that("optimizer checkpoints refuse a private directory below a writable parent", {
+  skip_on_os("windows")
+  parent <- withr::local_tempdir()
+  Sys.chmod(parent, mode = "0777", use_umask = FALSE)
+  directory <- file.path(parent, "private")
+  dir.create(directory, mode = "0700")
+  path <- file.path(directory, "checkpoint.rds")
+
+  expect_error(
+    checkpoint_fixture(path),
+    "non-sticky cache ancestor is writable",
+    class = "dsprrr_optimizer_checkpoint_trust_error"
+  )
+  expect_false(file.exists(path))
+})
+
 test_that("optimizer checkpoints roundtrip through a private atomic manifest", {
-  path <- withr::local_tempfile(fileext = ".rds")
-  unlink(path)
+  path <- file.path(local_private_storage_dir(), "checkpoint.rds")
   fixture <- checkpoint_fixture(path)
   record_optimizer_usage(
     fixture$context$budget,
