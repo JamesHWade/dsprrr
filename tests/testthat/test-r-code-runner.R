@@ -126,6 +126,7 @@ test_that("RCodeRunner executes simple R code", {
 })
 
 test_that("RCodeRunner executes multi-line code", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10)
@@ -141,6 +142,7 @@ test_that("RCodeRunner executes multi-line code", {
 })
 
 test_that("RCodeRunner captures stdout and stderr without trailing newlines", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   result <- r_code_runner(timeout = 10)$execute(
@@ -154,6 +156,7 @@ test_that("RCodeRunner captures stdout and stderr without trailing newlines", {
 })
 
 test_that("RCodeRunner captures messages", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10)
@@ -165,6 +168,7 @@ test_that("RCodeRunner captures messages", {
 })
 
 test_that("RCodeRunner captures warnings", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10)
@@ -176,6 +180,7 @@ test_that("RCodeRunner captures warnings", {
 })
 
 test_that("RCodeRunner handles errors gracefully", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10)
@@ -189,6 +194,7 @@ test_that("RCodeRunner handles errors gracefully", {
 })
 
 test_that("RCodeRunner handles syntax errors", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10)
@@ -200,6 +206,7 @@ test_that("RCodeRunner handles syntax errors", {
 })
 
 test_that("RCodeRunner terminalizes malformed or crashed subprocesses", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   crash_code <- paste0(
@@ -231,6 +238,7 @@ test_that("RCodeRunner terminalizes malformed or crashed subprocesses", {
 })
 
 test_that("RCodeRunner passes context correctly", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10)
@@ -244,6 +252,7 @@ test_that("RCodeRunner passes context correctly", {
 })
 
 test_that("RCodeRunner context with multiple objects", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10)
@@ -269,6 +278,7 @@ test_that("RCodeRunner enforces timeout", {
 })
 
 test_that("RCodeRunner blocks dangerous system() calls", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10)
@@ -279,6 +289,7 @@ test_that("RCodeRunner blocks dangerous system() calls", {
 })
 
 test_that("RCodeRunner blocks dangerous system2() calls", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10)
@@ -289,6 +300,7 @@ test_that("RCodeRunner blocks dangerous system2() calls", {
 })
 
 test_that("RCodeRunner blocks unlink()", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10)
@@ -299,6 +311,7 @@ test_that("RCodeRunner blocks unlink()", {
 })
 
 test_that("RCodeRunner blocks quit()", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10)
@@ -309,6 +322,7 @@ test_that("RCodeRunner blocks quit()", {
 })
 
 test_that("RCodeRunner blocks Sys.setenv", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10)
@@ -319,6 +333,7 @@ test_that("RCodeRunner blocks Sys.setenv", {
 })
 
 test_that("RCodeRunner blocks download.file", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10)
@@ -329,6 +344,7 @@ test_that("RCodeRunner blocks download.file", {
 })
 
 test_that("RCodeRunner blocks url() connections", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10)
@@ -339,6 +355,7 @@ test_that("RCodeRunner blocks url() connections", {
 })
 
 test_that("RCodeRunner blocks base::system() bypass", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10)
@@ -349,6 +366,7 @@ test_that("RCodeRunner blocks base::system() bypass", {
 })
 
 test_that("RCodeRunner blocks do.call(system) bypass", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10)
@@ -359,6 +377,7 @@ test_that("RCodeRunner blocks do.call(system) bypass", {
 })
 
 test_that("RCodeRunner truncates large output in messages", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, max_output_chars = 100)
@@ -371,6 +390,7 @@ test_that("RCodeRunner truncates large output in messages", {
 })
 
 test_that("RCodeRunner bounds captured stdout before returning it", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, max_output_chars = 100)
@@ -382,6 +402,7 @@ test_that("RCodeRunner bounds captured stdout before returning it", {
 })
 
 test_that("RCodeRunner respects custom timeout", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 60)
@@ -389,6 +410,7 @@ test_that("RCodeRunner respects custom timeout", {
 })
 
 test_that("RCodeRunner respects custom max_output_chars", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(max_output_chars = 5000)
@@ -396,6 +418,7 @@ test_that("RCodeRunner respects custom max_output_chars", {
 })
 
 test_that("RCodeRunner respects custom allowed_packages", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(allowed_packages = c("base", "stats", "dplyr"))
@@ -403,6 +426,7 @@ test_that("RCodeRunner respects custom allowed_packages", {
 })
 
 test_that("RCodeRunner blocks library() for disallowed packages", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(
@@ -417,6 +441,7 @@ test_that("RCodeRunner blocks library() for disallowed packages", {
 })
 
 test_that("RCodeRunner blocks require() for disallowed packages", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(
@@ -431,6 +456,7 @@ test_that("RCodeRunner blocks require() for disallowed packages", {
 })
 
 test_that("RCodeRunner allows library() for allowed packages", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(
@@ -445,6 +471,7 @@ test_that("RCodeRunner allows library() for allowed packages", {
 })
 
 test_that("RCodeRunner runs prelude code", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(
@@ -458,6 +485,7 @@ test_that("RCodeRunner runs prelude code", {
 })
 
 test_that("RCodeRunner print method works", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 5)
@@ -469,6 +497,7 @@ test_that("RCodeRunner print method works", {
 })
 
 test_that("RCodeRunner validates code input", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10)
@@ -485,6 +514,7 @@ test_that("RCodeRunner validates code input", {
 })
 
 test_that("RCodeRunner handles empty code", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10)
@@ -497,6 +527,7 @@ test_that("RCodeRunner handles empty code", {
 })
 
 test_that("RCodeRunner returns structured result with all fields", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10)
@@ -513,6 +544,7 @@ test_that("RCodeRunner returns structured result with all fields", {
 })
 
 test_that("RCodeRunner can use base R functions", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10)
@@ -523,6 +555,7 @@ test_that("RCodeRunner can use base R functions", {
 })
 
 test_that("RCodeRunner can use stats functions", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10)
@@ -533,6 +566,7 @@ test_that("RCodeRunner can use stats functions", {
 })
 
 test_that("RCodeRunner can create and manipulate data frames", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10)
@@ -547,6 +581,7 @@ test_that("RCodeRunner can create and manipulate data frames", {
 })
 
 test_that("RCodeRunner isolation - variables don't persist", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10)
@@ -564,6 +599,7 @@ test_that("RCodeRunner isolation - variables don't persist", {
 })
 
 test_that("persistent RCodeRunner preserves execution state", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
@@ -591,6 +627,7 @@ test_that("persistent RCodeRunner preserves execution state", {
 })
 
 test_that("persistent RCodeRunner preserves structured output capture", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
@@ -608,6 +645,7 @@ test_that("persistent RCodeRunner preserves structured output capture", {
 })
 
 test_that("persistent RCodeRunner stages base context and overlays dynamic fields", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
@@ -660,6 +698,7 @@ test_that("persistent RCodeRunner stages base context and overlays dynamic field
 })
 
 test_that("persistent RCodeRunner reset clears state and staged context", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(
@@ -713,6 +752,7 @@ test_that("persistent RCodeRunner timeout terminalizes and stops its session", {
 })
 
 test_that("persistent RCodeRunner terminalizes when its subprocess crashes", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
@@ -734,6 +774,7 @@ test_that("persistent RCodeRunner terminalizes when its subprocess crashes", {
 })
 
 test_that("persistent RCodeRunner close tears down its session", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
@@ -752,6 +793,7 @@ test_that("persistent RCodeRunner close tears down its session", {
 })
 
 test_that("prepare_context requires persistent mode and named fields", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10)

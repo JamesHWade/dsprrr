@@ -1,4 +1,5 @@
 test_that("executable Flex issue router preserves quality with fewer predictors", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   route_signature <- signature(
@@ -211,6 +212,7 @@ test_that("executable Flex issue router preserves quality with fewer predictors"
 })
 
 test_that("GEPA selects the executable Flex issue-router hybrid", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   route_signature <- signature(

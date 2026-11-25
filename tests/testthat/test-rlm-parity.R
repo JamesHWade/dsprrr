@@ -1,4 +1,7 @@
 # Deterministic end-to-end regressions for the public RLM contract.
+# Full multi-subprocess parity suite runs in CI (NOT_CRAN=true); core RLM
+# unit and smoke tests remain active on CRAN in test-module-rlm.R.
+skip_on_cran()
 
 new_rlm_parity_chat <- function(
   actions,

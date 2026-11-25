@@ -61,6 +61,7 @@ test_that("TrialLog resumes existing JSONL without rewriting records", {
 })
 
 test_that("duplicate trial IDs are idempotent or rejected on conflict", {
+  skip_on_cran()
   log_dir <- local_private_trial_log_dir()
   trials_path <- file.path(log_dir, "trials.jsonl")
   trial <- complete_trial(
@@ -91,6 +92,7 @@ test_that("duplicate trial IDs are idempotent or rejected on conflict", {
 })
 
 test_that("save synchronizes missing trials with append-only persistence", {
+  skip_on_cran()
   log_dir <- local_private_trial_log_dir()
   trials_path <- file.path(log_dir, "trials.jsonl")
   log <- TrialLog$new("SaveOptimizer")
@@ -113,6 +115,7 @@ test_that("save synchronizes missing trials with append-only persistence", {
 })
 
 test_that("usage persistence keeps unknown values distinct from zero", {
+  skip_on_cran()
   log_dir <- local_private_trial_log_dir()
   log <- TrialLog$new("UsageOptimizer", log_dir = log_dir)
 
@@ -164,6 +167,7 @@ test_that("usage persistence keeps unknown values distinct from zero", {
 })
 
 test_that("best programs are stored as safe program artifacts", {
+  skip_on_cran()
   log_dir <- local_private_trial_log_dir()
   program <- module(signature("question -> answer"))
   trial <- complete_trial(
@@ -182,6 +186,7 @@ test_that("best programs are stored as safe program artifacts", {
 })
 
 test_that("persisted journals and derived files are owner-only", {
+  skip_on_cran()
   skip_on_os("windows")
   root <- withr::local_tempdir()
   log_dir <- file.path(root, "log")
@@ -216,6 +221,7 @@ test_that("persisted journals and derived files are owner-only", {
 })
 
 test_that("TrialLog rejects non-private pre-existing directories unchanged", {
+  skip_on_cran()
   skip_on_os("windows")
   root <- withr::local_tempdir()
   log_dir <- file.path(root, "existing")
@@ -245,6 +251,7 @@ test_that("TrialLog rejects non-private pre-existing directories unchanged", {
 })
 
 test_that("TrialLog rejects symbolic-link directories and journals", {
+  skip_on_cran()
   skip_on_os("windows")
   root <- withr::local_tempdir()
   real_dir <- file.path(root, "real")
@@ -276,6 +283,7 @@ test_that("TrialLog rejects symbolic-link directories and journals", {
 })
 
 test_that("TrialLog rejects creation below writable non-sticky parents", {
+  skip_on_cran()
   skip_on_os("windows")
   root <- withr::local_tempdir()
   unsafe_parent <- file.path(root, "unsafe")
@@ -292,6 +300,7 @@ test_that("TrialLog rejects creation below writable non-sticky parents", {
 })
 
 test_that("TrialLog rejects attacker-owned sticky ancestors and children", {
+  skip_on_cran()
   skip_on_os("windows")
   root <- withr::local_tempdir()
   original_owner <- cache_path_owner_id
@@ -367,6 +376,7 @@ test_that("TrialLog rejects attacker-owned sticky ancestors and children", {
 })
 
 test_that("TrialLog rejects attacker-owned non-writable ancestors", {
+  skip_on_cran()
   skip_on_os("windows")
   root <- withr::local_tempdir()
   effective_owner <- cache_effective_owner_id()
@@ -405,6 +415,7 @@ test_that("TrialLog rejects attacker-owned non-writable ancestors", {
 })
 
 test_that("TrialLog rejects special directory mode bits unchanged", {
+  skip_on_cran()
   skip_on_os("windows")
   root <- withr::local_tempdir()
   log_dir <- file.path(root, "special-directory")
@@ -436,6 +447,7 @@ test_that("TrialLog rejects special directory mode bits unchanged", {
 })
 
 test_that("TrialLog rejects special file mode bits unchanged", {
+  skip_on_cran()
   skip_on_os("windows")
 
   log_dir <- local_private_trial_log_dir()
@@ -472,6 +484,7 @@ test_that("TrialLog rejects special file mode bits unchanged", {
 })
 
 test_that("TrialLog rejects unavailable exact directory identities", {
+  skip_on_cran()
   log_dir <- local_private_trial_log_dir()
   original_identity <- file_identity_exact
   testthat::local_mocked_bindings(
@@ -493,6 +506,7 @@ test_that("TrialLog rejects unavailable exact directory identities", {
 })
 
 test_that("non-POSIX TrialLog files require stable platform identities", {
+  skip_on_cran()
   log_dir <- local_private_trial_log_dir()
   journal <- file.path(log_dir, "trials.jsonl")
   writeLines(character(), journal)
@@ -516,6 +530,7 @@ test_that("non-POSIX TrialLog files require stable platform identities", {
 })
 
 test_that("TrialLog retains its original canonical directory identity", {
+  skip_on_cran()
   skip_on_os("windows")
   root <- withr::local_tempdir()
   log_dir <- file.path(root, "log")
@@ -537,6 +552,7 @@ test_that("TrialLog retains its original canonical directory identity", {
 })
 
 test_that("publication rejects staging and target replacement races", {
+  skip_on_cran()
   skip_on_os("windows")
   log_dir <- local_private_trial_log_dir()
   log <- TrialLog$new("RaceOptimizer", log_dir = log_dir)
@@ -606,6 +622,7 @@ test_that("publication rejects staging and target replacement races", {
 })
 
 test_that("publication detects log directory replacement while locked", {
+  skip_on_cran()
   skip_on_os("windows")
   root <- withr::local_tempdir()
   log_dir <- file.path(root, "log")
@@ -644,6 +661,7 @@ test_that("publication detects log directory replacement while locked", {
 })
 
 test_that("derived symlink failures do not roll back the journal", {
+  skip_on_cran()
   skip_on_os("windows")
   root <- withr::local_tempdir()
   log_dir <- file.path(root, "log")
@@ -705,6 +723,7 @@ test_that("derived symlink failures do not roll back the journal", {
 })
 
 test_that("non-private journals are rejected without repair or reads", {
+  skip_on_cran()
   skip_on_os("windows")
   log_dir <- local_private_trial_log_dir()
   journal <- file.path(log_dir, "trials.jsonl")
@@ -735,6 +754,7 @@ test_that("non-private journals are rejected without repair or reads", {
 })
 
 test_that("non-private best program artifacts fail initialization unchanged", {
+  skip_on_cran()
   skip_on_os("windows")
   log_dir <- local_private_trial_log_dir()
   artifact <- file.path(log_dir, "best_program.rds")
@@ -765,6 +785,7 @@ test_that("non-private best program artifacts fail initialization unchanged", {
 })
 
 test_that("save preflights existing metadata before locking or mutation", {
+  skip_on_cran()
   skip_on_os("windows")
   log <- TrialLog$new("SavePreflightOptimizer")
   log$add_trial(create_trial("SavePreflightOptimizer", trial_id = "memory"))
@@ -804,6 +825,7 @@ test_that("save preflights existing metadata before locking or mutation", {
 })
 
 test_that("torn journal tails are rejected without mutation", {
+  skip_on_cran()
   log_dir <- local_private_trial_log_dir()
   TrialLog$new("TornOptimizer", log_dir = log_dir)
   journal <- file.path(log_dir, "trials.jsonl")
@@ -825,6 +847,7 @@ test_that("torn journal tails are rejected without mutation", {
 })
 
 test_that("failed atomic publication leaves journal and derived state intact", {
+  skip_on_cran()
   log_dir <- local_private_trial_log_dir()
   log <- TrialLog$new("AtomicOptimizer", log_dir = log_dir)
   first <- complete_trial(
@@ -875,6 +898,7 @@ test_that("failed atomic publication leaves journal and derived state intact", {
 })
 
 test_that("two writers persist one identical trial idempotently", {
+  skip_on_cran()
   skip_if_not_installed("callr")
   log_dir <- local_private_trial_log_dir()
   package_context <- callr_dsprrr_context()
@@ -969,6 +993,7 @@ test_that("two writers persist one identical trial idempotently", {
 })
 
 test_that("two writers reject conflicting records for the same trial ID", {
+  skip_on_cran()
   skip_if_not_installed("callr")
   log_dir <- local_private_trial_log_dir()
   package_context <- callr_dsprrr_context()
@@ -1073,6 +1098,7 @@ test_that("two writers reject conflicting records for the same trial ID", {
 })
 
 test_that("process death releases the interprocess trial log lock", {
+  skip_on_cran()
   skip_if_not_installed("callr")
   log_dir <- local_private_trial_log_dir()
   package_context <- callr_dsprrr_context()
@@ -1184,6 +1210,7 @@ test_that("public append rejects a torn journal without changing it", {
 })
 
 test_that("public append failure leaves the previous journal intact", {
+  skip_on_cran()
   path <- withr::local_tempfile(fileext = ".jsonl")
   unlink(path)
   write_trials_jsonl(
@@ -1215,6 +1242,7 @@ test_that("public append failure leaves the previous journal intact", {
 })
 
 test_that("a record without schema_version names the missing field", {
+  skip_on_cran()
   dir <- withr::local_tempdir()
   Sys.chmod(dir, "0700")
   path <- file.path(dir, "trials.jsonl")
@@ -1234,6 +1262,7 @@ test_that("a record without schema_version names the missing field", {
 })
 
 test_that("a fully unreadable journal aborts instead of returning nothing", {
+  skip_on_cran()
   dir <- withr::local_tempdir()
   Sys.chmod(dir, "0700")
   path <- file.path(dir, "trials.jsonl")
@@ -1247,6 +1276,7 @@ test_that("a fully unreadable journal aborts instead of returning nothing", {
 })
 
 test_that("a partially readable journal keeps its valid records", {
+  skip_on_cran()
   dir <- withr::local_tempdir()
   Sys.chmod(dir, "0700")
   path <- file.path(dir, "trials.jsonl")
@@ -1257,6 +1287,7 @@ test_that("a partially readable journal keeps its valid records", {
 })
 
 test_that("an empty journal reads as no trials without aborting", {
+  skip_on_cran()
   dir <- withr::local_tempdir()
   Sys.chmod(dir, "0700")
   path <- file.path(dir, "trials.jsonl")
@@ -1267,6 +1298,7 @@ test_that("an empty journal reads as no trials without aborting", {
 })
 
 test_that("a rejected log directory reports the chmod that fixes it", {
+  skip_on_cran()
   skip_on_os("windows")
   dir <- withr::local_tempdir()
   Sys.chmod(dir, "0755")
@@ -1279,6 +1311,7 @@ test_that("a rejected log directory reports the chmod that fixes it", {
 })
 
 test_that("a rejected log file reports the chmod that fixes it", {
+  skip_on_cran()
   skip_on_os("windows")
   dir <- withr::local_tempdir()
   Sys.chmod(dir, "0700")

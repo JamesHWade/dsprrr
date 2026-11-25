@@ -484,6 +484,7 @@ test_that("generic Module batches reject concurrency before forward work", {
 })
 
 test_that("mirai enforces actual peak concurrency for N one and two", {
+  skip_on_cran()
   skip_if_not_installed("mirai")
   skip_if(nzchar(Sys.getenv("R_COVR")), "mirai workers interfere with covr")
 
@@ -516,6 +517,7 @@ test_that("mirai enforces actual peak concurrency for N one and two", {
 })
 
 test_that("mirai preserves the user-owned default topology", {
+  skip_on_cran()
   skip_if_not_installed("mirai")
   skip_if(nzchar(Sys.getenv("R_COVR")), "mirai workers interfere with covr")
 
@@ -560,6 +562,7 @@ test_that("mirai preserves the user-owned default topology", {
 })
 
 test_that("mirai teardown reuses an expired absolute deadline", {
+  skip_on_cran()
   daemons_calls <- list()
   testthat::local_mocked_bindings(
     daemons = function(n, sync, .compute) {
@@ -603,6 +606,7 @@ test_that("mirai teardown reuses an expired absolute deadline", {
 })
 
 test_that("expired mirai batch deadlines launch no worker tasks", {
+  skip_on_cran()
   launches <- 0L
   ticks <- c(0, 1)
   tick <- 0L
@@ -662,6 +666,7 @@ test_that("expired mirai batch deadlines launch no worker tasks", {
 })
 
 test_that("mirai refuses to claim an occupied named profile", {
+  skip_on_cran()
   skip_if_not_installed("mirai")
   skip_if(nzchar(Sys.getenv("R_COVR")), "mirai workers interfere with covr")
 
@@ -707,6 +712,7 @@ test_that("mirai refuses to claim an occupied named profile", {
 })
 
 test_that("unexpected scheduler aborts drain owned profiles observably", {
+  skip_on_cran()
   skip_if_not_installed("mirai")
   skip_if(nzchar(Sys.getenv("R_COVR")), "mirai workers interfere with covr")
 
@@ -768,6 +774,7 @@ test_that("unexpected scheduler aborts drain owned profiles observably", {
 })
 
 test_that("mirai cleanup completes before warnings become errors", {
+  skip_on_cran()
   skip_if_not_installed("mirai")
   skip_if(nzchar(Sys.getenv("R_COVR")), "mirai workers interfere with covr")
 
@@ -798,6 +805,7 @@ test_that("mirai cleanup completes before warnings become errors", {
 })
 
 test_that("mirai task timeouts halt work before return", {
+  skip_on_cran()
   skip_if_not_installed("mirai")
   skip_if(nzchar(Sys.getenv("R_COVR")), "mirai workers interfere with covr")
   marker <- withr::local_tempfile()
@@ -838,6 +846,7 @@ test_that("mirai task timeouts halt work before return", {
 })
 
 test_that("mirai total timeouts cancel active and quarantine queued work", {
+  skip_on_cran()
   skip_if_not_installed("mirai")
   skip_if(nzchar(Sys.getenv("R_COVR")), "mirai workers interfere with covr")
   marker <- withr::local_tempfile()
@@ -874,6 +883,7 @@ test_that("mirai total timeouts cancel active and quarantine queued work", {
 })
 
 test_that("mirai error budgets cancel active work and preserve row order", {
+  skip_on_cran()
   skip_if_not_installed("mirai")
   skip_if(nzchar(Sys.getenv("R_COVR")), "mirai workers interfere with covr")
   marker <- withr::local_tempfile()
@@ -929,6 +939,7 @@ test_that("mirai error budgets cancel active work and preserve row order", {
 })
 
 test_that("mirai cancel false drains active work and quarantines queued rows", {
+  skip_on_cran()
   skip_if_not_installed("mirai")
   skip_if(nzchar(Sys.getenv("R_COVR")), "mirai workers interfere with covr")
   marker <- withr::local_tempfile()

@@ -1458,6 +1458,7 @@ test_that("factory RLM mirai workers preserve explicit cache control", {
 })
 
 test_that("bounded sequential factory traces remain available to evaluation", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   clear_prompt_history()
@@ -1513,6 +1514,7 @@ test_that("bounded sequential factory traces remain available to evaluation", {
 })
 
 test_that("sequential factory RLM batches retain traces across failed rows", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   clear_prompt_history()
@@ -1590,6 +1592,7 @@ test_that("sequential factory RLM batches retain traces across failed rows", {
 })
 
 test_that("built-in runners become terminal after shutdown", {
+  skip_on_cran()
   skip_if_not_installed("callr")
   runner <- r_code_runner(timeout = 1)
   runner$shutdown()

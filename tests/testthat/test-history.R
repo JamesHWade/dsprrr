@@ -272,6 +272,7 @@ test_that("bounded nested list values survive JSON round-trips", {
 })
 
 test_that("large allowed vectors round-trip below the tagged-value limit", {
+  skip_on_cran()
   values <- seq_len(40000L)
   history <- conversation_history(list(ellmer::UserTurn(list(
     history_test_content_json(data = values)

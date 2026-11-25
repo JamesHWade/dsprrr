@@ -222,6 +222,7 @@ test_that("run_dataset batches rich contexts with one owned runner per row", {
 })
 
 test_that("one-row factory RLM datasets keep the named result record", {
+  skip_on_cran()
   skip_if_not_installed("callr")
   module <- rlm_module(
     "question -> answer: integer",
@@ -246,6 +247,7 @@ test_that("one-row factory RLM datasets keep the named result record", {
 })
 
 test_that("run_dataset reuses a caller-owned RLM runner sequentially by row", {
+  skip_on_cran()
   skip_if_not_installed("callr")
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
   withr::defer(runner$shutdown())
@@ -291,6 +293,7 @@ test_that("run_dataset reuses a caller-owned RLM runner sequentially by row", {
 })
 
 test_that("rlm rejects conflicting execution ownership", {
+  skip_on_cran()
   skip_if_not_installed("callr")
   runner <- r_code_runner(timeout = 5, persistent = TRUE)
   withr::defer(runner$shutdown())
@@ -357,6 +360,7 @@ test_that("rlm_module validates runner type", {
 })
 
 test_that("rlm_module creates RLMModule", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 5, persistent = TRUE)
@@ -368,6 +372,7 @@ test_that("rlm_module creates RLMModule", {
 })
 
 test_that("rlm_module accepts string signature", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 5, persistent = TRUE)
@@ -409,6 +414,7 @@ test_that("rlm_module rejects opaque JSON Schema outputs before execution", {
 })
 
 test_that("rlm_module accepts Signature object", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 5, persistent = TRUE)
@@ -420,6 +426,7 @@ test_that("rlm_module accepts Signature object", {
 })
 
 test_that("rlm_module respects max_iterations", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 5, persistent = TRUE)
@@ -434,6 +441,7 @@ test_that("rlm_module respects max_iterations", {
 })
 
 test_that("rlm_module respects max_llm_calls", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 5, persistent = TRUE)
@@ -448,6 +456,7 @@ test_that("rlm_module respects max_llm_calls", {
 })
 
 test_that("rlm_module validates tools parameter", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 5, persistent = TRUE)
@@ -471,6 +480,7 @@ test_that("rlm_module validates tools parameter", {
 })
 
 test_that("rlm_module validates all tools are functions", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 5, persistent = TRUE)
@@ -498,6 +508,7 @@ test_that("rlm_module validates all tools are functions", {
 })
 
 test_that("rlm_module validates tool names", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 5, persistent = TRUE)
@@ -586,6 +597,7 @@ test_that("rlm_module validates tool names", {
 })
 
 test_that("RLMModule constructor also enforces tool and signature contracts", {
+  skip_on_cran()
   skip_if_not_installed("callr")
   runner <- r_code_runner(timeout = 5, persistent = TRUE)
   withr::defer(runner$shutdown())
@@ -608,6 +620,7 @@ test_that("RLMModule constructor also enforces tool and signature contracts", {
 })
 
 test_that("rlm_module validates max_iterations bounds", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 5, persistent = TRUE)
@@ -633,6 +646,7 @@ test_that("rlm_module validates max_iterations bounds", {
 })
 
 test_that("rlm_module validates max_llm_calls bounds", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 5, persistent = TRUE)
@@ -655,6 +669,7 @@ test_that("rlm_module validates max_llm_calls bounds", {
 })
 
 test_that("rlm_module validates output bounds at both construction layers", {
+  skip_on_cran()
   skip_if_not_installed("callr")
   runner <- r_code_runner(timeout = 5, persistent = TRUE)
   withr::defer(runner$shutdown())
@@ -678,6 +693,7 @@ test_that("rlm_module validates output bounds at both construction layers", {
 # ============================================================================
 
 test_that("RLMModule has correct fields", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 5, persistent = TRUE)
@@ -694,6 +710,7 @@ test_that("RLMModule has correct fields", {
 })
 
 test_that("RLMModule get_repl_history returns list", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 5, persistent = TRUE)
@@ -707,6 +724,7 @@ test_that("RLMModule get_repl_history returns list", {
 })
 
 test_that("RLMModule reset_copy creates fresh module", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 5, persistent = TRUE)
@@ -725,6 +743,7 @@ test_that("RLMModule reset_copy creates fresh module", {
 })
 
 test_that("RLMModule print works", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 5, persistent = TRUE)
@@ -739,6 +758,7 @@ test_that("RLMModule print works", {
 # ============================================================================
 
 test_that("RLMModule terminates on SUBMIT call", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
@@ -768,6 +788,7 @@ test_that("RLMModule terminates on SUBMIT call", {
 })
 
 test_that("RLMModule rejects unexpected invocation inputs", {
+  skip_on_cran()
   skip_if_not_installed("callr")
   runner <- r_code_runner(timeout = 5, persistent = TRUE)
   withr::defer(runner$shutdown())
@@ -781,6 +802,7 @@ test_that("RLMModule rejects unexpected invocation inputs", {
 })
 
 test_that("RLMModule accepts an instruction-only zero-input signature", {
+  skip_on_cran()
   skip_if_not_installed("callr")
   sig <- Signature(
     inputs = list(),
@@ -802,6 +824,7 @@ test_that("RLMModule accepts an instruction-only zero-input signature", {
 })
 
 test_that("RLMModule SUBMIT returns correct value", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
@@ -828,6 +851,7 @@ test_that("RLMModule SUBMIT returns correct value", {
 })
 
 test_that("RLMModule SUBMIT works with complex values", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
@@ -862,6 +886,7 @@ test_that("RLMModule SUBMIT works with complex values", {
 })
 
 test_that("RLMModule strips markdown code fences before execution", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
@@ -884,6 +909,7 @@ test_that("RLMModule strips markdown code fences before execution", {
 })
 
 test_that("RLMModule supports multi-output SUBMIT with named arguments", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
@@ -910,6 +936,7 @@ test_that("RLMModule supports multi-output SUBMIT with named arguments", {
 })
 
 test_that("RLMModule supports multi-output SUBMIT with positional arguments", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
@@ -936,6 +963,7 @@ test_that("RLMModule supports multi-output SUBMIT with positional arguments", {
 })
 
 test_that("RLMModule retries after invalid multi-output SUBMIT payload", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
@@ -972,6 +1000,7 @@ test_that("RLMModule retries after invalid multi-output SUBMIT payload", {
 # ============================================================================
 
 test_that("RLM peek function works in REPL", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
@@ -1001,6 +1030,7 @@ test_that("RLM peek function works in REPL", {
 })
 
 test_that("RLM search function works in REPL", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
@@ -1033,6 +1063,7 @@ test_that("RLM search function works in REPL", {
 # ============================================================================
 
 test_that("RLMModule supports multiple iterations", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
@@ -1063,6 +1094,7 @@ test_that("RLMModule supports multiple iterations", {
 })
 
 test_that("RLMModule respects max_iterations", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
@@ -1105,6 +1137,7 @@ test_that("RLM control nonces are cross-platform and preserve R RNG state", {
 })
 
 test_that("RLMModule uses fallback when no SUBMIT", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
@@ -1133,6 +1166,7 @@ test_that("RLMModule uses fallback when no SUBMIT", {
 })
 
 test_that("RLMModule normalizes structured fallback to signature fields and types", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
@@ -1172,6 +1206,7 @@ test_that("RLMModule normalizes structured fallback to signature fields and type
 # ============================================================================
 
 test_that("RLMModule handles code execution errors", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
@@ -1202,6 +1237,7 @@ test_that("RLMModule handles code execution errors", {
 # ============================================================================
 
 test_that("RLMModule supports custom tools", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
@@ -1234,6 +1270,7 @@ test_that("RLMModule supports custom tools", {
 })
 
 test_that("RLM custom tools execute once on the host with live closures", {
+  skip_on_cran()
   skip_if_not_installed("callr")
   state <- new.env(parent = emptyenv())
   state$calls <- 0L
@@ -1267,6 +1304,7 @@ test_that("RLM custom tools execute once on the host with live closures", {
 })
 
 test_that("RLM rejects forged classed controls from generated R code", {
+  skip_on_cran()
   skip_if_not_installed("callr")
   state <- new.env(parent = emptyenv())
   state$calls <- 0L
@@ -1310,6 +1348,7 @@ test_that("RLM rejects forged classed controls from generated R code", {
 })
 
 test_that("RLM replays host-tool errors without repeating side effects", {
+  skip_on_cran()
   skip_if_not_installed("callr")
   state <- new.env(parent = emptyenv())
   state$calls <- 0L
@@ -1345,6 +1384,7 @@ test_that("RLM replays host-tool errors without repeating side effects", {
 # ============================================================================
 
 test_that("RLMModule stores REPL history", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
@@ -1372,6 +1412,7 @@ test_that("RLMModule stores REPL history", {
 })
 
 test_that("RLMModule respects trace=FALSE", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
@@ -1396,6 +1437,7 @@ test_that("RLMModule respects trace=FALSE", {
 # ============================================================================
 
 test_that("RLMModule returns correct metadata", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
@@ -1435,6 +1477,7 @@ test_that("RLMModule returns correct metadata", {
 # ============================================================================
 
 test_that("rlm_module() constructs its module", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 5, persistent = TRUE)
@@ -1470,6 +1513,7 @@ test_that("rlm_module() requires a runner", {
 # ============================================================================
 
 test_that("RLMModule handles various context types", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
@@ -1589,6 +1633,7 @@ test_that("create_rlm_prelude requests host tools without deparsing them", {
 })
 
 test_that("create_rlm_prelude enforces multi-output SUBMIT shape", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
@@ -1633,6 +1678,7 @@ test_that("create_rlm_prelude enforces multi-output SUBMIT shape", {
 })
 
 test_that("long authenticated control frames round-trip without whitespace", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   nonce <- "long-control-frame"
@@ -1654,6 +1700,7 @@ test_that("long authenticated control frames round-trip without whitespace", {
 })
 
 test_that("RLM control frames preserve long multiline unicode payloads", {
+  skip_on_cran()
   skip_if_not_installed("callr")
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
   withr::defer(runner$shutdown())
@@ -1679,6 +1726,7 @@ test_that("RLM control frames preserve long multiline unicode payloads", {
 })
 
 test_that("RLM control frames authenticate and fail closed", {
+  skip_on_cran()
   skip_if_not_installed("callr")
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
   withr::defer(runner$shutdown())
@@ -1832,6 +1880,7 @@ test_that("extract_rlm_final removes rlm_final class", {
 # ============================================================================
 
 test_that("RLMModule warns when max_iterations reached without SUBMIT", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
@@ -1855,6 +1904,7 @@ test_that("RLMModule warns when max_iterations reached without SUBMIT", {
 })
 
 test_that("RLMModule handles LLM response with missing code", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
@@ -1880,6 +1930,7 @@ test_that("RLMModule handles LLM response with missing code", {
 })
 
 test_that("RLMModule handles LLM response with non-string code", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
@@ -2002,6 +2053,7 @@ test_that("is_rlm_query_request detects query requests", {
 })
 
 test_that("llm_query_batched generates batch request marker", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
@@ -2029,6 +2081,7 @@ test_that("llm_query_batched generates batch request marker", {
 })
 
 test_that("llm_query_batched preserves one-query arrays", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
@@ -2081,6 +2134,7 @@ test_that("llm_query_batched preserves one-query arrays", {
 })
 
 test_that("llm_query_batched rejects non-scalar context slices", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
@@ -2134,6 +2188,7 @@ test_that("llm_query_batched rejects non-scalar context slices", {
 })
 
 test_that("llm_query_batched preserves empty batches and rejects missing queries", {
+  skip_on_cran()
   skip_if_not_installed("callr")
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
   withr::defer(runner$shutdown())
@@ -2187,6 +2242,7 @@ test_that("llm_query_batched preserves empty batches and rejects missing queries
 })
 
 test_that("llm_query_batched produces a batch request", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
@@ -2391,6 +2447,7 @@ test_that("MCP RLM image queries reach a real ellmer Chat", {
 })
 
 test_that("RLM invokes an actual ellmer ToolDef through replay", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
@@ -2421,6 +2478,7 @@ test_that("RLM invokes an actual ellmer ToolDef through replay", {
 })
 
 test_that("captured SUBMIT helpers resist user-code base masking", {
+  skip_on_cran()
   skip_if_not_installed("callr")
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
   withr::defer(runner$shutdown())
@@ -2445,6 +2503,7 @@ test_that("captured SUBMIT helpers resist user-code base masking", {
 })
 
 test_that("llm_query_batched validates queries is character", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
@@ -2466,6 +2525,7 @@ test_that("llm_query_batched validates queries is character", {
 })
 
 test_that("llm_query_batched validates slices length", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
@@ -2692,6 +2752,7 @@ test_that("parallel recursive accounting uses the cleared batch baseline", {
 })
 
 test_that("process_rlm_query_batch uses bounded parallelism and preserves order", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
@@ -2778,6 +2839,7 @@ test_that("process_rlm_query_batch uses bounded parallelism and preserves order"
 })
 
 test_that("process_rlm_query_batch propagates parallel infrastructure failure", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
@@ -2853,6 +2915,7 @@ test_that("RLM sub-LM responses must contain one non-empty text value", {
 
 
 test_that("RLM guest query content uses ordered JSON-native records", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
@@ -2965,6 +3028,7 @@ test_that("RLM guest query content uses ordered JSON-native records", {
 
 
 test_that("single RLM content queries reach ellmer as typed content", {
+  skip_on_cran()
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
   withr::defer(runner$shutdown())
   captured <- new.env(parent = emptyenv())
@@ -3062,6 +3126,7 @@ test_that("ellmer Chat receives RLM content as variadic UserTurn parts", {
 
 
 test_that("sequential RLM batches send content as separate Chat arguments", {
+  skip_on_cran()
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
   withr::defer(runner$shutdown())
   captured <- list()
@@ -3091,6 +3156,7 @@ test_that("sequential RLM batches send content as separate Chat arguments", {
 
 
 test_that("RLM replay preserves mixed query content identity", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
@@ -3137,6 +3203,7 @@ test_that("RLM replay preserves mixed query content identity", {
 
 
 test_that("RLM replay preserves null, legacy, and mixed batch query shapes", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)
@@ -3255,6 +3322,7 @@ test_that("RLM replay preserves null, legacy, and mixed batch query shapes", {
 
 
 test_that("batched RLM content queries preserve order and call budgets", {
+  skip_on_cran()
   skip_if_not_installed("ellmer")
   if (
     !exists("parallel_chat", envir = asNamespace("ellmer"), inherits = FALSE)
@@ -3357,6 +3425,7 @@ test_that("batched RLM content queries preserve order and call budgets", {
 
 
 test_that("ellmer parallel RLM requests keep nested content turns", {
+  skip_on_cran()
   skip_if_not_installed("ellmer")
   if (
     !exists("parallel_turns", envir = asNamespace("ellmer"), inherits = FALSE)
@@ -3413,6 +3482,7 @@ test_that("ellmer parallel RLM requests keep nested content turns", {
 
 
 test_that("RLM rejects unsafe URLs and oversized image control frames", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   runner <- r_code_runner(timeout = 10, persistent = TRUE)

@@ -38,6 +38,7 @@ checkpoint_test_chat <- function(
 }
 
 test_that("subprocess readiness propagates failures and stays bounded", {
+  skip_on_cran()
   skip_if_not_installed("callr")
 
   failed_process <- callr::r_bg(
@@ -907,6 +908,7 @@ test_that("optimizer metadata accepts only canonical live usage fields", {
 })
 
 test_that("row-sized optimizer evaluation resumes without repeating paid rows", {
+  skip_on_cran()
   calls <- integer()
   testthat::local_mocked_bindings(
     eval_program = function(program, dataset, metric, ...) {
@@ -1066,6 +1068,7 @@ test_that("optimizer checkpoints roundtrip through a private atomic manifest", {
 })
 
 test_that("checkpoint integrity and compatibility failures are typed", {
+  skip_on_cran()
   path <- withr::local_tempfile(fileext = ".rds")
   unlink(path)
   fixture <- checkpoint_fixture(path)
@@ -1105,6 +1108,7 @@ test_that("checkpoint integrity and compatibility failures are typed", {
 })
 
 test_that("checkpoint metadata is closed and canonically typed before integrity", {
+  skip_on_cran()
   path <- withr::local_tempfile(fileext = ".rds")
   unlink(path)
   fixture <- checkpoint_fixture(path)
@@ -1162,6 +1166,7 @@ test_that("checkpoint metadata is closed and canonically typed before integrity"
 })
 
 test_that("checkpoint path trust rejects substitution and untrusted inputs", {
+  skip_on_cran()
   skip_if(.Platform$OS.type != "unix", "POSIX identity checks are unavailable")
 
   permissive <- withr::local_tempfile(fileext = ".rds")
@@ -1220,6 +1225,7 @@ test_that("checkpoint path trust rejects substitution and untrusted inputs", {
 })
 
 test_that("checkpoint publication detects canonical parent retargeting", {
+  skip_on_cran()
   skip_if(.Platform$OS.type != "unix", "POSIX identity checks are unavailable")
   root <- tempfile("checkpoint-parent-")
   moved <- paste0(root, "-moved")
@@ -1250,6 +1256,7 @@ test_that("checkpoint publication detects canonical parent retargeting", {
 })
 
 test_that("checkpoint reads detect same-inode rewrites with restored mtime", {
+  skip_on_cran()
   skip_if(.Platform$OS.type != "unix", "POSIX change times are unavailable")
   path <- withr::local_tempfile(fileext = ".rds")
   unlink(path)
@@ -1301,6 +1308,7 @@ test_that("checkpoint reads detect same-inode rewrites with restored mtime", {
 })
 
 test_that("concurrent checkpoint writers reject a stale predecessor", {
+  skip_on_cran()
   skip_if_not_installed("callr")
   directory <- withr::local_tempdir()
   if (.Platform$OS.type == "unix") {
@@ -1430,6 +1438,7 @@ test_that("concurrent checkpoint writers reject a stale predecessor", {
 })
 
 test_that("checkpoint locks are released when a writer process dies", {
+  skip_on_cran()
   skip_if_not_installed("callr")
   directory <- withr::local_tempdir()
   if (.Platform$OS.type == "unix") {
@@ -1468,6 +1477,7 @@ test_that("checkpoint locks are released when a writer process dies", {
 })
 
 test_that("checkpoint publication failure leaves the prior file unchanged", {
+  skip_on_cran()
   path <- withr::local_tempfile(fileext = ".rds")
   unlink(path)
   fixture <- checkpoint_fixture(path)
@@ -1500,6 +1510,7 @@ test_that("checkpoint publication failure leaves the prior file unchanged", {
 })
 
 test_that("checkpoint fingerprints reject secrets and stateful metrics", {
+  skip_on_cran()
   path <- withr::local_tempfile(fileext = ".rds")
   unlink(path)
   fixture <- checkpoint_fixture(path)
@@ -1590,6 +1601,7 @@ test_that("checkpoint fingerprints reject secrets and stateful metrics", {
 })
 
 test_that("checkpoint publication rejects direct credential fields", {
+  skip_on_cran()
   raw_contains <- function(bytes, text) {
     needle <- charToRaw(text)
     if (length(bytes) < length(needle)) {
@@ -1681,6 +1693,7 @@ test_that("checkpoint publication rejects direct credential fields", {
 })
 
 test_that("checkpoint program artifacts exclude camel runtime fields", {
+  skip_on_cran()
   path <- withr::local_tempfile(fileext = ".rds")
   unlink(path)
   fixture <- checkpoint_fixture(path)
@@ -1723,6 +1736,7 @@ test_that("checkpoint program artifacts exclude camel runtime fields", {
 })
 
 test_that("checkpoint program artifacts exclude connection credentials", {
+  skip_on_cran()
   path <- withr::local_tempfile(fileext = ".rds")
   unlink(path)
   fixture <- checkpoint_fixture(path)
@@ -1818,6 +1832,7 @@ test_that("checkpoint program artifacts exclude connection credentials", {
 })
 
 test_that("checkpoint program artifacts exclude secret key material", {
+  skip_on_cran()
   path <- withr::local_tempfile(fileext = ".rds")
   unlink(path)
   fixture <- checkpoint_fixture(path)
@@ -1904,6 +1919,7 @@ test_that("checkpoint program artifacts exclude secret key material", {
 })
 
 test_that("Bootstrap module checkpoints bind the effective model by hash", {
+  skip_on_cran()
   path <- withr::local_tempfile(fileext = ".rds")
   unlink(path)
   program <- module(signature("question -> answer"))
@@ -1967,6 +1983,7 @@ test_that("Bootstrap module checkpoints bind the effective model by hash", {
 })
 
 test_that("Bootstrap pipeline checkpoints reject a changed effective model", {
+  skip_on_cran()
   draft <- module(signature("question -> draft"))
   answer <- module(signature("draft -> answer"))
   program <- draft %>>% answer
@@ -2018,6 +2035,7 @@ test_that("Bootstrap pipeline checkpoints reject a changed effective model", {
 })
 
 test_that("effective runtime distinguishes providers sharing a model name", {
+  skip_on_cran()
   path <- withr::local_tempfile(fileext = ".rds")
   unlink(path)
   program <- module(signature("question -> answer"))
@@ -2064,6 +2082,7 @@ test_that("effective runtime distinguishes providers sharing a model name", {
 })
 
 test_that("effective runtime resolves attached and default Chats", {
+  skip_on_cran()
   data <- data.frame(question = "q", answer = "a")
   metric <- function(...) 1
   teleprompter <- BootstrapFewShot(
@@ -2155,6 +2174,7 @@ test_that("effective runtime resolves attached and default Chats", {
 })
 
 test_that("checkpointing fails before work without a stable effective Chat", {
+  skip_on_cran()
   testthat::local_mocked_bindings(
     get_default_chat = function(create = TRUE) NULL,
     .package = "dsprrr"
@@ -2187,6 +2207,7 @@ test_that("checkpointing fails before work without a stable effective Chat", {
 })
 
 test_that("BootstrapFewShot checkpoint resume matches uninterrupted search", {
+  skip_on_cran()
   make_llm <- function(counter) {
     new_test_chat(
       model = "bootstrap-checkpoint-model",
@@ -2277,6 +2298,7 @@ test_that("BootstrapFewShot checkpoint resume matches uninterrupted search", {
 })
 
 test_that("MIPRO resumes an interrupted BO row without repeated provider calls", {
+  skip_on_cran()
   make_chat <- function(counter) {
     local({
       self <- new_test_chat(
@@ -2376,6 +2398,7 @@ test_that("MIPRO resumes an interrupted BO row without repeated provider calls",
 })
 
 test_that("MIPRO replays one durable trial after failure between append and checkpoint", {
+  skip_on_cran()
   counter <- new.env(parent = emptyenv())
   counter$calls <- 0L
   chat <- local({
