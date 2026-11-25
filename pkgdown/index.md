@@ -227,14 +227,21 @@ the validation set, and score every prediction. Inspect misses, prompts
 <div class="col-lg-7">
 
 ```r
-splits <- split_dataset(tickets, prop = 0.7, seed = 1)
+tickets <- tibble::tribble(
+  ~ticket,                       ~urgency, ~team,
+  "Charged twice for my order",  "high",   "billing",
+  "Change my profile photo?",    "low",    "account",
+  "App deletes files on sync",   "high",   "technical",
+  "Need last year's invoice",    "low",    "billing",
+  "Unknown login on my account", "high",   "account",
+  "Export fails in Safari",      "low",    "technical"
+)
+
+splits <- split_dataset(tickets, prop = 0.67, seed = 1)
 metric <- metric_exact_match(field = "urgency")
 
 baseline <- evaluate(
-  router,
-  splits$val,
-  metric = metric,
-  .llm = chat
+  router, splits$val, metric = metric, .llm = chat
 )
 baseline$mean_score
 ```
@@ -262,7 +269,7 @@ instructions were chosen to raise your metric on training rows (`BootstrapFewSho
 ```r
 optimizer <- BootstrapFewShot(
   metric = metric,
-  max_bootstrapped_demos = 4L,
+  max_bootstrapped_demos = 2L,
   max_labeled_demos = 0L
 )
 

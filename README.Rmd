@@ -90,12 +90,15 @@ signature:
 ```r
 chat <- ellmer::chat_openai(model = "gpt-6-luna")
 
-router <- module(sig)                       # one structured call
-# router <- chain_of_thought(sig)           # reason step by step first
-# router <- react(sig, tools = list(lookup))# call R functions as tools
+router <- module(sig)                # one structured call
+# router_cot <- chain_of_thought(sig)# reason step by step first
 
-# Run on one input or across a whole data frame
+# Run on one input or across a data frame
 run(router, ticket = "I was charged twice for my order", .llm = chat)
+
+new_tickets <- tibble::tibble(
+  ticket = c("I was charged twice for my order", "How do I reset my password?")
+)
 run_dataset(router, new_tickets, .llm = chat)
 
 # Compose multi-step programs — pipelines are modules too
@@ -108,7 +111,17 @@ Split your labeled data, pick a metric, and measure a baseline before changing
 anything:
 
 ```r
-splits <- split_dataset(tickets, prop = 0.7, seed = 1)
+tickets <- tibble::tribble(
+  ~ticket,                                 ~urgency, ~team,
+  "I was charged twice for my order",      "high",   "billing",
+  "How do I change my profile photo?",     "low",    "account",
+  "The app deletes my files when I sync",  "high",   "technical",
+  "Can I get last year's invoice?",        "low",    "billing",
+  "Unknown login on my account",           "high",   "account",
+  "Export button is disabled in Safari",   "low",    "technical"
+)
+
+splits <- split_dataset(tickets, prop = 0.67, seed = 1)
 metric <- metric_exact_match(field = "urgency")
 
 baseline <- evaluate(router, splits$val, metric = metric, .llm = chat)
@@ -128,7 +141,7 @@ optimized <- compile(
   router,
   BootstrapFewShot(
     metric = metric,
-    max_bootstrapped_demos = 4L,
+    max_bootstrapped_demos = 2L,
     max_labeled_demos = 0L
   ),
   trainset = splits$train,
