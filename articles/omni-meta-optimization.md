@@ -10,7 +10,7 @@ candidate to a fresh continuation optimizer. This page shows how to
 configure it, budget it fairly, and read what it did.
 
 The design follows the [`omni`
-meta-optimizer](https://gepa.dev/blog/2026/07/22/optimize-anything-omni/)
+meta-optimizer](https://github.com/gepa-ai/gepa/blob/2059343dfcc622aab67943b4ce98184ae302661a/docs/docs/blog/posts/2026-07-22-optimize-anything-omni/index.md)
 from the open-source [GEPA project](https://github.com/gepa-ai/gepa). On
 Frontier-CS tasks, the GEPA team found that no single engine won every
 task, that each engine plateaus after its early gains, and that

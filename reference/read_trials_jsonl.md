@@ -49,9 +49,9 @@ tryCatch({
   read_trials_jsonl(path)[[1]]
 }, dsprrr_trial_log_trust_error = function(e) message(conditionMessage(e)))
 #> 
-#> ── Trial: trial_20261125_222953_ncnyz0 
+#> ── Trial: trial_20261126_011041_ncnyz0 
 #> • Status: pending
 #> Optimizer: my-search
 #> Params: k
-#> Started: 2026-11-25 22:29:53
+#> Started: 2026-11-26 01:10:41
 ```

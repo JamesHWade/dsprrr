@@ -261,8 +261,8 @@ log$as_tibble()[, c("trial_id", "status", "mean_score")]
 #> # A tibble: 2 × 3
 #>   trial_id                     status  mean_score
 #>   <chr>                        <chr>        <dbl>
-#> 1 trial_20261125_222850_ncnyz0 pending         NA
-#> 2 trial_20261125_222850_e01i28 pending         NA
+#> 1 trial_20261126_010933_ncnyz0 pending         NA
+#> 2 trial_20261126_010933_e01i28 pending         NA
 
 # See example(load_trial_log) to persist and reopen a log.
 ```

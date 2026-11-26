@@ -65,8 +65,8 @@ export_traces(shout)
 #> # A tibble: 2 × 11
 #>     timestamp latency_ms input_tokens cached_input_tokens output_tokens
 #>         <dbl>      <dbl>        <int>               <int>         <int>
-#> 1 1795645760.     0.0229           NA                  NA            NA
-#> 2 1795645760.     0.0200           NA                  NA            NA
+#> 1 1795655404.     0.0191           NA                  NA            NA
+#> 2 1795655405.     0.0196           NA                  NA            NA
 #> # ℹ 6 more variables: total_tokens <int>, cost <dbl>, model <chr>,
 #> #   prompt_length <int>, program_artifact_id <chr>, trace_context <list>
 export_traces(shout, include_outputs = TRUE)$output

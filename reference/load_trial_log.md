@@ -47,5 +47,5 @@ tryCatch({
 #> # A tibble: 1 × 2
 #>   trial_id                     status 
 #>   <chr>                        <chr>  
-#> 1 trial_20261125_222928_hzgis9 pending
+#> 1 trial_20261126_011013_hzgis9 pending
 ```

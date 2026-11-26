@@ -5,6 +5,13 @@
 Initial CRAN release. `dsprrr` is experimental and its API may still
 evolve.
 
+- Keep examples and tests compatible with CRAN temporary directories
+  without relaxing the persistent-storage guards.
+- Run a focused set of core and storage checks on CRAN; developer CI
+  still runs the full suite.
+- Cite the upstream source for the Omni announcement through a pinned
+  link.
+
 ### Core programming model
 
 - Declare LLM tasks with typed inputs, outputs, and instructions using

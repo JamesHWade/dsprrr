@@ -92,7 +92,10 @@
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.1.0" id="dsprrr-010">dsprrr 0.1.0<a class="anchor" aria-label="anchor" href="#dsprrr-010"></a></h2>
 <p>Initial CRAN release. <code>dsprrr</code> is experimental and its API may still evolve.</p>
-<div class="section level3">
+<ul><li>Keep examples and tests compatible with CRAN temporary directories without relaxing the persistent-storage guards.</li>
+<li>Run a focused set of core and storage checks on CRAN; developer CI still runs the full suite.</li>
+<li>Cite the upstream source for the Omni announcement through a pinned link.</li>
+</ul><div class="section level3">
 <h3 id="core-programming-model-0-1-0">Core programming model<a class="anchor" aria-label="anchor" href="#core-programming-model-0-1-0"></a></h3>
 <ul><li>Declare LLM tasks with typed inputs, outputs, and instructions using <code><a href="../reference/signature.html">signature()</a></code>, <code><a href="../reference/input.html">input()</a></code>, <code><a href="../reference/with_instructions.html">with_instructions()</a></code>, <code><a href="../reference/with_instructions.html">append_instructions()</a></code>, and <code><a href="../reference/with_reasoning.html">with_reasoning()</a></code>.</li>
 <li>Turn signatures into runnable programs with <code><a href="../reference/module.html">module()</a></code>, <code><a href="../reference/chain_of_thought.html">chain_of_thought()</a></code> (supporting <code>"rationale"</code>, <code>"plan"</code>, and <code>"native"</code> reasoning modes), <code><a href="../reference/multi_chain_comparison.html">multi_chain_comparison()</a></code>, <code><a href="../reference/react.html">react()</a></code> (including tool-loop <code>finalization = "submit"</code>), <code><a href="../reference/rag_module.html">rag_module()</a></code>, <code><a href="../reference/module_fn.html">module_fn()</a></code>, and code-executing modules (<code><a href="../reference/program_of_thought.html">program_of_thought()</a></code>, <code><a href="../reference/code_act.html">code_act()</a></code>).</li>

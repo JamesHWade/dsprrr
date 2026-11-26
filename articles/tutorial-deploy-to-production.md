@@ -103,7 +103,7 @@ temporary folder that R deletes when the session ends:
 board <- pins::board_temp()
 
 pin_module_config(board, "sentiment-classifier", classifier)
-#> Creating new version '20261125T223234Z-673ae'
+#> Creating new version '20261126T011318Z-bb3fa'
 #> Writing to pin 'sentiment-classifier'
 #> ✔ Pinned program artifact: "sentiment-classifier"
 #> ℹ Root module: <PredictModule>
@@ -179,7 +179,7 @@ run(classifier, review = "Does the job.", .llm = chat)
 if (has_pins) {
   pin_trace(board, "sentiment-traces", classifier)
 }
-#> Creating new version '20261125T223236Z-57069'
+#> Creating new version '20261126T011320Z-be0aa'
 #> Writing to pin 'sentiment-traces'
 #> ✔ Pinned 4 traces: "sentiment-traces"
 #> ℹ Total tokens: 941
@@ -195,10 +195,10 @@ export_traces(classifier)
 #> # A tibble: 4 × 11
 #>     timestamp latency_ms input_tokens cached_input_tokens output_tokens
 #>         <dbl>      <dbl>        <int>               <int>         <int>
-#> 1 1795645954.       976.          101                   0             7
-#> 2 1795645955.       405.          200                   0             7
-#> 3 1795645956.       337.          271                   0             7
-#> 4 1795645956.       342.          341                   0             7
+#> 1 1795655598.       880.          101                   0             7
+#> 2 1795655599.       383.          200                   0             7
+#> 3 1795655600.       320.          271                   0             7
+#> 4 1795655600.       328.          341                   0             7
 #> # ℹ 6 more variables: total_tokens <int>, cost <dbl>, model <chr>,
 #> #   prompt_length <int>, program_artifact_id <chr>, trace_context <list>
 ```
@@ -224,8 +224,8 @@ summarize_traces(classifier)
 #> • Total cost: $0.0001053
 #> 
 #> ── Performance
-#> • Average latency: 515.1ms
-#> • Total time: 2.06s
+#> • Average latency: 477.8ms
+#> • Total time: 1.91s
 #> • Tokens/request: 235.2
 #> 
 #> ── Models Used

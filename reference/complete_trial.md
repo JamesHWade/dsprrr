@@ -59,10 +59,10 @@ result <- eval_program(program, data, metric_exact_match(field = "answer"))
 trial <- create_trial("my-search", params = list(variant = "baseline"))
 complete_trial(trial, result)
 #> 
-#> ── Trial: trial_20261125_222908_ncnyz0 
+#> ── Trial: trial_20261126_010952_ncnyz0 
 #> ✔ Status: completed
 #> Optimizer: my-search
 #> Params: variant
 #> Score: 1
-#> Started: 2026-11-25 22:29:08
+#> Started: 2026-11-26 01:09:52
 ```
