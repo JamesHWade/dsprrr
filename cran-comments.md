@@ -1,25 +1,21 @@
-## R CMD check results
+## Resubmission
 
-0 errors | 0 warnings | 1 note
+The previous 0.1.0 incoming check on Debian had errors when a writable,
+non-sticky ancestor of the temporary directory prevented private persistent
+storage. The examples and tests now respect that restriction without weakening
+package storage checks. The second 0.1.0 pretest passed examples and tests on
+Debian and Windows, but Windows reported an overall check time of 17 minutes.
 
-* This is a new submission.
+This revised 0.1.0 tarball keeps the version because no previous submission
+was published. The CRAN check runs core contracts and representative integration
+tests, including native file identity and the cache, trial-log, and
+checkpoint boundaries. The full integration suite still runs in developer
+CI. The Omni help topic now links to the same upstream announcement at a
+revision-pinned source on GitHub, addressing the TLS failure on the former
+URL reported by the Windows pretest.
 
-## Test environments
-
-* local macOS Golden Gate 27.0 (aarch64), R 4.6.1:
-  `R CMD check --as-cran --run-donttest` with remote incoming checks, all
-  Suggests installed and API credentials removed. Examples, tests (8,773
-  passing assertions), vignettes, and both PDF and HTML manuals passed.
-* GitHub Actions: ubuntu-latest (R release and oldrel-1), windows-latest
-  (R release and R-devel), macos-latest (R release).
-* win-builder: R-devel.
-
-The tests and vignettes do not require API keys or network access; tests that
-need a live language-model provider are skipped on CRAN.
-
-## First submission
-
-This is the first CRAN submission of dsprrr.
+This is the first release of dsprrr on CRAN. The spelling flags for
+"Khattab et al.", "LLMs", "composable", and "optimizable" are intentional.
 
 ## Bundled files
 

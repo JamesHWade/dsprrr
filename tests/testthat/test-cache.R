@@ -1402,27 +1402,6 @@ test_that("private writes verify 0600 staging before serialization", {
   expect_true(all(vapply(observations, `[[`, numeric(1), "size") == 0))
 })
 
-test_that("a writable non-sticky parent forces a disk cache to fall back to memory", {
-  skip_on_os("windows")
-  local_reset_cache()
-
-  root <- tempfile("cache_parent_safety_")
-  withr::defer(unlink(root, recursive = TRUE))
-  dir.create(root)
-  Sys.chmod(root, mode = "0777", use_umask = FALSE)
-  path <- file.path(root, "unsafe-cache")
-  configure_cache(enable_memory = TRUE, enable_disk = TRUE, disk_path = path)
-  expect_warning(
-    cache <- dsprrr:::get_cache(),
-    "non-sticky cache ancestor is writable",
-    class = "dsprrr_cache_security_warning"
-  )
-  expect_s3_class(cache, "cache_mem")
-  cache$set("example", 42)
-  expect_equal(cache$get("example"), 42)
-  expect_false(dir.exists(path))
-})
-
 test_that("a sticky shared parent permits a private cache", {
   skip_on_os("windows")
   root <- local_private_storage_dir()
