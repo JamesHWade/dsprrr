@@ -282,7 +282,7 @@ auto_detect_chat <- function() {
 
   # Check for Anthropic
   if (nzchar(Sys.getenv("ANTHROPIC_API_KEY"))) {
-    chat <- ellmer::chat_claude()
+    chat <- ellmer::chat_anthropic()
     emit_auto_detection_message("Anthropic", chat)
     return(chat)
   }
@@ -667,9 +667,13 @@ dsprrr_sitrep <- function() {
   # ── Default Chat section ──
   cli::cli_h2("Default Chat")
 
+  chat_error <- NULL
   chat <- tryCatch(
     get_default_chat(create = FALSE),
-    error = function(e) NULL
+    error = function(e) {
+      chat_error <<- e
+      NULL
+    }
   )
 
   if (!is.null(chat)) {
@@ -691,6 +695,18 @@ dsprrr_sitrep <- function() {
       "Auto-detected from environment"
     }
     cli::cli_text("  {.emph {source_msg}}")
+  } else if (!is.null(chat_error)) {
+    result$has_default_chat <- FALSE
+    result$provider <- NA_character_
+    result$model <- NA_character_
+    result$chat_error <- conditionMessage(chat_error)
+
+    cli::cli_bullets(c(
+      "x" = "Invalid configuration: {conditionMessage(chat_error)}"
+    ))
+    cli::cli_text(
+      "  Fix {.code options(dsprrr.default_chat = ...)} or call {.code clear_default_chat()}"
+    )
   } else {
     result$has_default_chat <- FALSE
     result$provider <- NA_character_
@@ -728,7 +744,10 @@ dsprrr_sitrep <- function() {
 
   history <- .dsprrr_env$prompt_history %||% list()
   n_calls <- length(history)
-  history_max <- .dsprrr_env$prompt_history_max %||% 100L
+  history_max <- getOption(
+    "dsprrr.prompt_history_max",
+    .dsprrr_env$prompt_history_max %||% 100L
+  )
 
   result$n_calls <- n_calls
   result$prompt_history_count <- n_calls
@@ -959,46 +978,58 @@ session_cost <- function() {
   # Build per-model breakdown
   models <- vapply(
     history,
-    function(e) e$model %||% "unknown",
+    function(e) {
+      model <- e$model %||% "unknown"
+      if (length(model) != 1L || is.na(model) || !nzchar(as.character(model))) {
+        "unknown"
+      } else {
+        as.character(model)
+      }
+    },
     character(1)
+  )
+  tokens_in_vec <- vapply(
+    history,
+    function(e) as.integer(e$tokens_in %||% 0L),
+    integer(1)
+  )
+  tokens_out_vec <- vapply(
+    history,
+    function(e) as.integer(e$tokens_out %||% 0L),
+    integer(1)
+  )
+  cost_vec <- vapply(
+    history,
+    function(e) as.numeric(e$cost %||% 0),
+    numeric(1)
   )
   unique_models <- unique(models)
 
   by_model <- tibble::tibble(
     model = unique_models,
-    n_calls = vapply(unique_models, function(m) sum(models == m), integer(1)),
+    n_calls = vapply(
+      unique_models,
+      function(m) sum(models == m),
+      integer(1),
+      USE.NAMES = FALSE
+    ),
     tokens_in = vapply(
       unique_models,
-      function(m) {
-        sum(vapply(
-          history[models == m],
-          function(e) e$tokens_in %||% 0L,
-          integer(1)
-        ))
-      },
-      integer(1)
+      function(m) as.integer(sum(tokens_in_vec[models == m], na.rm = TRUE)),
+      integer(1),
+      USE.NAMES = FALSE
     ),
     tokens_out = vapply(
       unique_models,
-      function(m) {
-        sum(vapply(
-          history[models == m],
-          function(e) e$tokens_out %||% 0L,
-          integer(1)
-        ))
-      },
-      integer(1)
+      function(m) as.integer(sum(tokens_out_vec[models == m], na.rm = TRUE)),
+      integer(1),
+      USE.NAMES = FALSE
     ),
     cost = vapply(
       unique_models,
-      function(m) {
-        sum(vapply(
-          history[models == m],
-          function(e) e$cost %||% 0,
-          numeric(1)
-        ))
-      },
-      numeric(1)
+      function(m) sum(cost_vec[models == m], na.rm = TRUE),
+      numeric(1),
+      USE.NAMES = FALSE
     )
   )
 

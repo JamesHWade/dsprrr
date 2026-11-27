@@ -432,6 +432,7 @@ compile_copro <- function(
           is.na(best_score) ||
           iteration_best_score > best_score)
     ) {
+      prev_best_score <- best_score
       best_score <- iteration_best_score
       best_complete <- TRUE
       best_instructions <- iteration_best_instructions
@@ -453,8 +454,13 @@ compile_copro <- function(
         }
       }
 
+      from_score <- if (is.na(prev_best_score)) {
+        best_eval@mean_score
+      } else {
+        prev_best_score
+      }
       cli::cli_alert_success(
-        "COPRO iteration {iteration}: improved score from {round(best_eval@mean_score, 4)} to {round(best_score, 4)}"
+        "COPRO iteration {iteration}: improved score from {round(from_score, 4)} to {round(best_score, 4)}"
       )
 
       # Re-identify failed examples for next iteration

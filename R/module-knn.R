@@ -82,7 +82,11 @@ KNNFewShotModule <- R6::R6Class(
       )
 
       # Create deep copy of module to avoid modifying original
-      self$module <- module$deepcopy()
+      self$module <- if (is.function(module$deepcopy)) {
+        module$deepcopy()
+      } else {
+        module$copy(deep = TRUE)
+      }
       self$k <- as.integer(k)
       self$vectorizer <- vectorizer
       self$input_text <- input_text
@@ -185,6 +189,33 @@ KNNFewShotModule <- R6::R6Class(
     },
 
     #' @description
+    #' Create a reset copy of this KNN module
+    #' @return A new KNNFewShotModule with reset state and empty config
+    reset_copy = function() {
+      inner_reset <- if (is.function(self$module$reset_copy)) {
+        tryCatch(
+          self$module$reset_copy(),
+          error = function(e) self$module$copy(deep = TRUE)
+        )
+      } else {
+        self$module$copy(deep = TRUE)
+      }
+      new_module <- KNNFewShotModule$new(
+        module = inner_reset,
+        k = self$k,
+        vectorizer = self$vectorizer,
+        input_text = self$input_text,
+        train_embeddings = self$train_embeddings,
+        trainset_demos = self$trainset_demos,
+        merge_demos = self$merge_demos,
+        config = list(),
+        chat = self$chat
+      )
+      new_module$original_demos <- self$original_demos
+      artifact_copy_runtime(self, new_module)
+    },
+
+    #' @description
     #' Get info about the last demo selection
     #' @return List with indices and demos selected for last query
     last_selection = function() {
@@ -196,11 +227,12 @@ KNNFewShotModule <- R6::R6Class(
 
     #' @description
     #' Reset state including demo selection history
-    reset = function() {
-      super$reset()
+    #' @param hard Logical; if TRUE, also reset config
+    reset = function(hard = FALSE) {
+      super$reset(hard = hard)
       self$state$knn_queries <- 0L
       self$state$demo_selections <- list()
-      self$module$reset()
+      self$module$reset(hard = hard)
       invisible(self)
     }
   ),

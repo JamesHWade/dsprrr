@@ -583,10 +583,11 @@ module_trials <- function(
 
   mean_score <- mean(scores, na.rm = TRUE)
   sd_score <- stats::sd(scores, na.rm = TRUE)
-  std_error <- if (is.na(sd_score)) {
+  n_valid <- sum(!is.na(scores))
+  std_error <- if (is.na(sd_score) || n_valid <= 1L) {
     NA_real_
   } else {
-    sd_score / sqrt(length(scores))
+    sd_score / sqrt(n_valid)
   }
 
   tibble::tibble(
@@ -600,25 +601,30 @@ module_trials <- function(
   )
 }
 
-#' Per-trial rows from a grid search
+#' Per-trial metrics from a grid search
 #'
 #' @description
 #' `module_metrics()` returns one row per grid-search trial recorded on a
-#' module by [optimize_grid()] (or [GridSearchTeleprompter()]). Like
-#' [module_trials()], it reads only `module$state$trials`.
+#' module by [optimize_grid()] (or [GridSearchTeleprompter()]), summarizing
+#' per-example scores and optionally computing yardstick metrics on each
+#' trial's predictions.
 #'
 #' @details
-#' The per-example evaluation results are not kept with the trials, so
-#' `median_score`, `std_dev`, `n_evaluated` and `n_errors` are `NA`, `scores`
-#' is empty, and the yardstick metrics requested with `metrics` are not
-#' computed: the `yardstick` column is always `NULL`. Use [module_trials()] or
-#' [top_trials()] for trial scores.
+#' In-session grid-search runs store per-example evaluation results in
+#' `module$state$optimization_history`, allowing `module_metrics()` to compute
+#' `median_score`, `std_dev`, `n_evaluated`, `n_errors`, `scores`, and
+#' `yardstick` metrics for each trial. Programs restored from disk artifacts do
+#' not retain per-example evaluation objects, so those columns fall back to
+#' `NA`, empty numeric vectors, or `NULL`.
 #'
 #' @param module A module.
-#' @param metrics Optional yardstick metric or metric set. Currently never
-#'   computed; see Details.
-#' @param truth,estimate Column names for the yardstick metrics. Required when
-#'   `metrics` is supplied.
+#' @param metrics Optional yardstick metric function, list of yardstick metric
+#'   functions, or `yardstick::metric_set()`.
+#' @param truth,estimate Column names (as strings or bare symbols) for the
+#'   yardstick metrics. Required when `metrics` is supplied. If `estimate` is
+#'   not a column in the evaluation data frame, predictions are extracted from
+#'   `evaluation$predictions` (looking up a matching output field name when
+#'   predictions are named lists).
 #' @param ... Passed to the yardstick metrics.
 #'
 #' @return A tibble with one row per trial and columns `trial_id`, `score`,
@@ -658,37 +664,215 @@ module_metrics <- function(
     ))
   }
 
+  resolve_col_sym <- function(quo, arg) {
+    if (rlang::quo_is_null(quo)) {
+      return(NULL)
+    }
+    expr <- rlang::quo_get_expr(quo)
+    if (is.character(expr) && length(expr) == 1L && !is.na(expr)) {
+      return(rlang::sym(expr))
+    }
+    if (rlang::is_symbol(expr)) {
+      val <- tryCatch(rlang::eval_tidy(quo), error = function(e) NULL)
+      if (rlang::is_string(val)) {
+        return(rlang::sym(val))
+      }
+      return(expr)
+    }
+    val <- rlang::eval_tidy(quo)
+    if (!rlang::is_string(val)) {
+      cli::cli_abort("{.arg {arg}} must be a single column name or symbol")
+    }
+    rlang::sym(val)
+  }
+
+  truth_quo <- rlang::enquo(truth)
+  estimate_quo <- rlang::enquo(estimate)
+
   yardstick_metrics <- NULL
   truth_sym <- estimate_sym <- NULL
   if (!is.null(metrics)) {
     rlang::check_installed("yardstick")
-    if (is.null(truth) || is.null(estimate)) {
+    truth_sym <- resolve_col_sym(truth_quo, "truth")
+    estimate_sym <- resolve_col_sym(estimate_quo, "estimate")
+    if (is.null(truth_sym) || is.null(estimate_sym)) {
       cli::cli_abort(
         "Provide `truth` and `estimate` column names when supplying yardstick metrics."
       )
     }
     if (inherits(metrics, "metric_set")) {
       yardstick_metrics <- metrics
+    } else if (is.function(metrics)) {
+      yardstick_metrics <- yardstick::metric_set(metrics)
     } else {
       yardstick_metrics <- do.call(yardstick::metric_set, as.list(metrics))
     }
-    truth_sym <- if (is.character(truth)) {
-      rlang::sym(truth)
-    } else {
-      rlang::ensym(truth)
+  }
+
+  # Recover per-trial evaluation objects from trials$evaluation or the most
+  # recent optimization_history entry (kept in memory alongside durable trials).
+  history_evals <- NULL
+  if (!"evaluation" %in% names(trials)) {
+    opt_hist <- module$state$optimization_history %||% list()
+    if (length(opt_hist) > 0L) {
+      for (k in rev(seq_along(opt_hist))) {
+        entry <- opt_hist[[k]]
+        if (
+          is.data.frame(entry) &&
+            all(c("trial_id", "evaluation") %in% names(entry))
+        ) {
+          history_evals <- entry
+          break
+        }
+      }
     }
-    estimate_sym <- if (is.character(estimate)) {
-      rlang::sym(estimate)
+  }
+
+  lookup_eval <- function(i) {
+    if ("evaluation" %in% names(trials)) {
+      return(trials$evaluation[[i]])
+    }
+    if (!is.null(history_evals)) {
+      idx <- match(trials$trial_id[[i]], history_evals$trial_id)
+      if (!is.na(idx)) {
+        return(history_evals$evaluation[[idx]])
+      }
+    }
+    NULL
+  }
+
+  extract_prediction_vector <- function(predictions, estimate_col) {
+    vals <- lapply(predictions, function(pred) {
+      if (is.null(pred) || length(pred) == 0L) {
+        return(NA)
+      }
+      if (is.list(pred) && !is.data.frame(pred)) {
+        if (estimate_col %in% names(pred)) {
+          val <- pred[[estimate_col]]
+        } else if (length(pred) >= 1L) {
+          val <- pred[[1L]]
+        } else {
+          return(NA)
+        }
+        if (is.null(val) || length(val) == 0L) NA else val[[1L]]
+      } else {
+        pred[[1L]]
+      }
+    })
+    non_na <- Filter(function(x) !is.na(x), vals)
+    if (length(non_na) > 0L && all(vapply(non_na, is.numeric, logical(1)))) {
+      vapply(
+        vals,
+        function(x) if (is.na(x)) NA_real_ else as.numeric(x),
+        numeric(1)
+      )
     } else {
-      rlang::ensym(estimate)
+      vapply(
+        vals,
+        function(x) if (is.na(x)) NA_character_ else as.character(x),
+        character(1)
+      )
+    }
+  }
+
+  coerce_col <- function(vec) {
+    if (is.list(vec)) {
+      non_empty <- Filter(function(x) length(x) > 0L && !is.na(x[[1L]]), vec)
+      if (
+        length(non_empty) > 0L &&
+          all(vapply(non_empty, function(x) is.numeric(x[[1L]]), logical(1)))
+      ) {
+        return(vapply(
+          vec,
+          function(x) {
+            if (length(x) == 0L || is.na(x[[1L]])) {
+              NA_real_
+            } else {
+              as.numeric(x[[1L]])
+            }
+          },
+          numeric(1)
+        ))
+      }
+      return(vapply(
+        vec,
+        function(x) {
+          if (length(x) == 0L || is.na(x[[1L]])) {
+            NA_character_
+          } else {
+            as.character(x[[1L]])
+          }
+        },
+        character(1)
+      ))
+    }
+    vec
+  }
+
+  # Collect known class levels across signature enum values and all trials so
+  # classification yardstick metrics use a consistent level set even when a
+  # single trial predicts only one class.
+  enum_levels <- character()
+  out_type <- module$signature@output_type
+  if (inherits(out_type, "ellmer::TypeEnum")) {
+    enum_levels <- as.character(out_type@values)
+  } else if (
+    inherits(out_type, "ellmer::TypeObject") &&
+      length(out_type@properties) == 1L &&
+      inherits(out_type@properties[[1L]], "ellmer::TypeEnum")
+  ) {
+    enum_levels <- as.character(out_type@properties[[1L]]@values)
+  }
+
+  trial_evals <- lapply(seq_len(nrow(trials)), lookup_eval)
+
+  global_class_levels <- enum_levels
+  if (!is.null(yardstick_metrics)) {
+    estimate_col <- rlang::as_string(estimate_sym)
+    truth_col <- rlang::as_string(truth_sym)
+    for (eval in trial_evals) {
+      eval_data <- eval$dataset %||% eval$data
+      if (!is.data.frame(eval_data)) {
+        next
+      }
+      if (truth_col %in% names(eval_data)) {
+        tv <- coerce_col(eval_data[[truth_col]])
+        if (is.factor(tv)) {
+          global_class_levels <- unique(c(global_class_levels, levels(tv)))
+        } else if (!is.numeric(tv)) {
+          global_class_levels <- unique(c(
+            global_class_levels,
+            as.character(stats::na.omit(tv))
+          ))
+        }
+      }
+      ev <- if (estimate_col %in% names(eval_data)) {
+        coerce_col(eval_data[[estimate_col]])
+      } else if (
+        !is.null(eval$predictions) &&
+          length(eval$predictions) == nrow(eval_data)
+      ) {
+        extract_prediction_vector(eval$predictions, estimate_col)
+      } else {
+        NULL
+      }
+      if (!is.null(ev)) {
+        if (is.factor(ev)) {
+          global_class_levels <- unique(c(global_class_levels, levels(ev)))
+        } else if (!is.numeric(ev)) {
+          global_class_levels <- unique(c(
+            global_class_levels,
+            as.character(stats::na.omit(ev))
+          ))
+        }
+      }
     }
   }
 
   rows <- vector("list", nrow(trials))
-  has_evaluation <- "evaluation" %in% names(trials)
 
   for (i in seq_len(nrow(trials))) {
-    eval <- if (has_evaluation) trials$evaluation[[i]] else NULL
+    eval <- trial_evals[[i]]
     scores <- eval$scores %||% numeric()
     score_mean <- eval$mean_score %||%
       if (length(scores)) mean(scores, na.rm = TRUE) else trials$score[[i]]
@@ -703,34 +887,41 @@ module_metrics <- function(
       NA_real_
     }
     n_eval <- eval$n_evaluated %||%
-      if (length(scores)) sum(!is.na(scores)) else NA_integer_
+      if ("n_evaluated" %in% names(trials)) {
+        trials$n_evaluated[[i]]
+      } else if (length(scores)) {
+        sum(!is.na(scores))
+      } else {
+        NA_integer_
+      }
     n_err <- eval$n_errors %||%
-      if (length(scores)) sum(is.na(scores)) else NA_integer_
+      if ("n_errors" %in% names(trials)) {
+        trials$n_errors[[i]]
+      } else if (length(scores)) {
+        sum(is.na(scores))
+      } else {
+        NA_integer_
+      }
 
     yardstick_results <- NULL
-    if (!is.null(yardstick_metrics) && !is.null(eval$dataset)) {
-      data <- eval$dataset
+    eval_data <- eval$dataset %||% eval$data
+    if (!is.null(yardstick_metrics) && is.data.frame(eval_data)) {
+      data <- eval_data
       estimate_col <- rlang::as_string(estimate_sym)
       truth_col <- rlang::as_string(truth_sym)
 
-      coerce_col <- function(vec) {
-        if (is.list(vec)) {
-          vec <- vapply(
-            vec,
-            function(x) {
-              if (length(x) == 0) NA_character_ else as.character(x[[1]])
-            },
-            character(1)
-          )
-        }
-        vec
-      }
-
-      if (estimate_col %in% names(data)) {
+      if (
+        !(estimate_col %in% names(data)) &&
+          !is.null(eval$predictions) &&
+          length(eval$predictions) == nrow(data)
+      ) {
+        data[[estimate_col]] <- extract_prediction_vector(
+          eval$predictions,
+          estimate_col
+        )
+      } else if (estimate_col %in% names(data)) {
         data[[estimate_col]] <- coerce_col(data[[estimate_col]])
       }
-
-      truth_vec <- NULL
 
       if (!(truth_col %in% names(data))) {
         cli::cli_warn(
@@ -743,18 +934,11 @@ module_metrics <- function(
       } else {
         truth_vec <- coerce_col(data[[truth_col]])
         est_vec <- coerce_col(data[[estimate_col]])
-        levels_union <- unique(c(
-          stats::na.omit(truth_vec),
-          stats::na.omit(est_vec)
-        ))
-        if (length(levels_union) == 0) {
-          cli::cli_warn(
-            "Unable to determine class levels for trial {trials$trial_id[[i]]}; skipping yardstick metrics."
-          )
-        } else {
-          data[[truth_col]] <- factor(truth_vec, levels = levels_union)
-          data[[estimate_col]] <- factor(est_vec, levels = levels_union)
+        both_numeric <- is.numeric(truth_vec) && is.numeric(est_vec)
 
+        if (both_numeric) {
+          data[[truth_col]] <- as.numeric(truth_vec)
+          data[[estimate_col]] <- as.numeric(est_vec)
           yardstick_results <- tryCatch(
             yardstick_metrics(
               data,
@@ -764,11 +948,42 @@ module_metrics <- function(
             ),
             error = function(e) {
               cli::cli_warn(
-                "Failed to compute yardstick metrics for trial {trials$trial_id[[i]]}: {e$message}"
+                "Failed to compute yardstick metrics for trial {trials$trial_id[[i]]}: {conditionMessage(e)}"
               )
               NULL
             }
           )
+        } else {
+          truth_chr <- as.character(truth_vec)
+          est_chr <- as.character(est_vec)
+          levels_union <- unique(c(
+            global_class_levels,
+            if (is.factor(truth_vec)) levels(truth_vec),
+            if (is.factor(est_vec)) levels(est_vec),
+            stats::na.omit(truth_chr),
+            stats::na.omit(est_chr)
+          ))
+          if (length(levels_union) < 2L) {
+            yardstick_results <- NULL
+          } else {
+            data[[truth_col]] <- factor(truth_chr, levels = levels_union)
+            data[[estimate_col]] <- factor(est_chr, levels = levels_union)
+
+            yardstick_results <- tryCatch(
+              yardstick_metrics(
+                data,
+                truth = !!truth_sym,
+                estimate = !!estimate_sym,
+                ...
+              ),
+              error = function(e) {
+                cli::cli_warn(
+                  "Failed to compute yardstick metrics for trial {trials$trial_id[[i]]}: {conditionMessage(e)}"
+                )
+                NULL
+              }
+            )
+          }
         }
       }
     }
@@ -779,20 +994,13 @@ module_metrics <- function(
       mean_score = score_mean,
       median_score = score_median,
       std_dev = score_sd,
-      n_evaluated = n_eval,
-      n_errors = n_err,
+      n_evaluated = as.integer(n_eval),
+      n_errors = as.integer(n_err),
       params = list(trials$parameters[[i]]),
       scores = list(scores),
       yardstick = list(yardstick_results)
     )
   }
 
-  result <- rows[[1]]
-  if (length(rows) > 1) {
-    for (i in 2:length(rows)) {
-      result <- tibble::add_row(result, !!!rows[[i]])
-    }
-  }
-
-  result
+  purrr::list_rbind(rows)
 }

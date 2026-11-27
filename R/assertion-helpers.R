@@ -44,11 +44,17 @@ assert_length <- function(
 
   # Build message
   if (!is.null(min) && !is.null(max)) {
-    msg <- sprintf("Length must be between %d and %d characters", min, max)
+    msg <- as.character(glue::glue(
+      "Length must be between {min} and {max} characters"
+    ))
   } else if (!is.null(min)) {
-    msg <- sprintf("Length must be at least %d characters", min)
+    msg <- as.character(glue::glue(
+      "Length must be at least {min} characters"
+    ))
   } else {
-    msg <- sprintf("Length must be at most %d characters", max)
+    msg <- as.character(glue::glue(
+      "Length must be at most {max} characters"
+    ))
   }
 
   if (!is.null(field)) {

@@ -55,10 +55,10 @@ Assertion <- S7::new_class(
       S7::class_character,
       default = "Assertion failed",
       validator = function(value) {
-        if (!is.character(value) || length(value) != 1) {
+        if (!rlang::is_string(value)) {
           return("message must be a single character string")
         }
-        if (nchar(value) == 0) {
+        if (!nzchar(value)) {
           return("message must not be empty")
         }
         NULL
@@ -68,7 +68,7 @@ Assertion <- S7::new_class(
       S7::class_any,
       default = NULL,
       validator = function(value) {
-        if (!is.null(value) && (!is.character(value) || length(value) != 1)) {
+        if (!is.null(value) && !rlang::is_string(value)) {
           return("field must be a single character string or NULL")
         }
         NULL
@@ -78,7 +78,7 @@ Assertion <- S7::new_class(
       S7::class_character,
       default = "assert",
       validator = function(value) {
-        if (!is.character(value) || length(value) != 1) {
+        if (!rlang::is_string(value)) {
           return("type must be a single character string")
         }
         if (!value %in% c("assert", "suggest")) {

@@ -1188,7 +1188,7 @@ artifact_build_node <- function(
   )
   if (inherits(construction, "condition")) {
     if (any(grepl("^dsprrr_artifact_", class(construction)))) {
-      stop(construction)
+      rlang::cnd_signal(construction)
     }
     cli::cli_abort(
       c(

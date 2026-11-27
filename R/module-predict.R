@@ -33,7 +33,7 @@ PredictModule <- R6::R6Class(
       super$initialize(signature, config, chat)
       module_reasoning_mode(self)
 
-      if (!is.character(template) || length(template) != 1) {
+      if (!rlang::is_string(template)) {
         cli::cli_abort("template must be a single character string")
       }
 

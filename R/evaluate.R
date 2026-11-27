@@ -424,24 +424,27 @@ evaluate.Module <- function(
 
   if (nrow(data) == 0) {
     cli::cli_warn("Empty data provided")
-    return(list(
-      mean_score = NA_real_,
-      scores = numeric(0),
-      predictions = list(),
-      metadata = list(),
-      n_evaluated = 0L,
-      n_errors = 0L,
-      errors = character(),
-      n_run_errors = 0L,
-      run_errors = character(),
-      n_metric_errors = 0L,
-      metric_errors = character(),
-      total_cost = 0,
-      feedbacks = character(),
-      traces = list(),
-      data = data,
-      program_artifact_id = current_trace_program_artifact_id(),
-      trace_context = current_trace_context()
+    return(structure(
+      list(
+        mean_score = NA_real_,
+        scores = numeric(0),
+        predictions = list(),
+        metadata = list(),
+        n_evaluated = 0L,
+        n_errors = 0L,
+        errors = character(),
+        n_run_errors = 0L,
+        run_errors = character(),
+        n_metric_errors = 0L,
+        metric_errors = character(),
+        total_cost = 0,
+        feedbacks = character(),
+        traces = list(),
+        data = data,
+        program_artifact_id = current_trace_program_artifact_id(),
+        trace_context = current_trace_context()
+      ),
+      class = "dsprrr_evaluation"
     ))
   }
 

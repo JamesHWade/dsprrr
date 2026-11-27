@@ -378,7 +378,7 @@ ReactModule <- R6::R6Class(
                 submit_invocation_marker
               )
           ) {
-            stop(error)
+            rlang::cnd_signal(error)
           }
           submit_completion <<- error
           invisible(NULL)
@@ -393,7 +393,7 @@ ReactModule <- R6::R6Class(
               )
             )
           ) {
-            stop(e)
+            rlang::cnd_signal(e)
           }
           cli::cli_abort(
             "LLM call failed in ReAct loop: {e$message}",

@@ -1,3 +1,17 @@
+#' Re-signal a captured condition while preserving custom interrupt classes
+#'
+#' `rlang::cnd_signal()` replaces `interrupt` conditions with a bare
+#' `rlang::interrupt()`, discarding subclasses, messages, and attached
+#' attributes. Routing interrupts through `stop()` preserves the original
+#' condition object while errors keep `rlang` backtrace chaining.
+#' @noRd
+resignal_condition <- function(cnd) {
+  if (inherits(cnd, "interrupt")) {
+    stop(cnd)
+  }
+  rlang::cnd_signal(cnd)
+}
+
 #' Compose a per-attempt cache-partition id that nests cleanly
 #'
 #' Retrying wrappers (BestOfN, Refine, Assert) tag each attempt with a
@@ -147,6 +161,7 @@ has_ellmer_credentials <- function() {
   any(
     nzchar(Sys.getenv("OPENAI_API_KEY")),
     nzchar(Sys.getenv("ANTHROPIC_API_KEY")),
+    nzchar(Sys.getenv("GOOGLE_API_KEY")),
     nzchar(Sys.getenv("GOOGLE_GEMINI_API_KEY"))
   )
 }

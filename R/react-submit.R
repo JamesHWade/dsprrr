@@ -215,10 +215,10 @@ react_submit_cleanup <- function(chat, prepared, remove_callback = NULL) {
     error = identity
   )
   if (!is.null(callback_error)) {
-    stop(callback_error)
+    rlang::cnd_signal(callback_error)
   }
   if (!is.null(registry_error)) {
-    stop(registry_error)
+    rlang::cnd_signal(registry_error)
   }
   invisible(NULL)
 }

@@ -443,6 +443,11 @@ compile_gridsearch <- function(
     cli::cli_abort("GridSearchTeleprompter requires a metric function")
   }
 
+  if (nrow(trainset) == 0L) {
+    cli::cli_warn("Empty trainset provided; returning unmodified module")
+    return(copy_module(program))
+  }
+
   # Use validation set if provided, otherwise use a portion of trainset
   if (is.null(valset)) {
     n_val <- min(teleprompter@eval_sample_size, ceiling(nrow(trainset) * 0.2))

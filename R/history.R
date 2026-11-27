@@ -205,7 +205,7 @@ history_limits <- function() {
 }
 
 history_abort <- function(message) {
-  cli::cli_abort(message, class = "dsprrr_history_error")
+  cli::cli_abort("{message}", class = "dsprrr_history_error")
 }
 
 history_new_budget <- function() {
@@ -1454,7 +1454,7 @@ history_reject_duplicate_json_fields <- function(json) {
     parse_value(1L),
     error = function(error) {
       if (inherits(error, "dsprrr_history_error")) {
-        stop(error)
+        rlang::cnd_signal(error)
       }
       history_abort("Conversation history JSON structure is invalid")
     }

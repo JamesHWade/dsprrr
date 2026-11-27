@@ -27,7 +27,7 @@ commit_async_trace_transaction <- function(
       module$state$traces <- append(module$state$traces, list(trace))
       return(list(committed = FALSE, local_only = TRUE, error = commit_error))
     }
-    stop(commit_error)
+    rlang::cnd_signal(commit_error)
   }
   list(committed = TRUE, local_only = FALSE, error = NULL)
 }

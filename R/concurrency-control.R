@@ -517,7 +517,7 @@ shutdown_dsprrr_mirai_profile <- function(
     cli::cli_abort(
       c(
         "Could not fully stop the dsprrr-owned mirai worker pool",
-        "x" = detail
+        "x" = "{detail}"
       ),
       class = if (timed_out) {
         c(

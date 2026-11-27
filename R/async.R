@@ -294,14 +294,14 @@ run_async <- function(
     interrupt = function(error) {
       record_failure(error, "provider")
       release()
-      stop(error)
+      resignal_condition(error)
     },
     error = function(error) error
   )
   if (inherits(provider_result, "condition")) {
     record_failure(provider_result, "provider")
     release()
-    stop(provider_result)
+    resignal_condition(provider_result)
   }
 
   provider_promise <- tryCatch(
@@ -313,7 +313,7 @@ run_async <- function(
     error = function(error) {
       record_failure(error, "provider")
       release()
-      stop(error)
+      resignal_condition(error)
     }
   )
   result <- tryCatch(
@@ -326,7 +326,7 @@ run_async <- function(
               decision_decode_response(response, decisions),
               error = function(error) {
                 record_failure(error, "decode")
-                stop(error)
+                resignal_condition(error)
               }
             )
             output <- decoded$output
@@ -363,19 +363,19 @@ run_async <- function(
           }),
           error = function(error) {
             record_failure(error, "completion")
-            stop(error)
+            resignal_condition(error)
           }
         )
       },
       onRejected = function(error) {
         record_failure(error, "provider")
-        stop(error)
+        resignal_condition(error)
       }
     ),
     error = function(error) {
       record_failure(error, "completion")
       release()
-      stop(error)
+      resignal_condition(error)
     }
   )
   result <- tryCatch(
@@ -383,7 +383,7 @@ run_async <- function(
     error = function(error) {
       record_failure(error, "completion")
       release()
-      stop(error)
+      resignal_condition(error)
     }
   )
   attr(result, "dsprrr_trace_context") <- invocation_trace_fields
@@ -579,7 +579,7 @@ run_factory_interpreter_async <- function(module, inputs, .llm = NULL) {
     cli::cli_abort(
       c(
         "Could not launch the isolated interpreter workflow",
-        "x" = conditionMessage(error)
+        "x" = "{conditionMessage(error)}"
       ),
       class = "dsprrr_interpreter_async_launch_error",
       parent = error
@@ -611,7 +611,7 @@ run_factory_interpreter_async <- function(module, inputs, .llm = NULL) {
     },
     interrupt = function(condition) {
       cleanup_after_failure()
-      stop(condition)
+      resignal_condition(condition)
     },
     error = abort_launch
   )
@@ -620,7 +620,7 @@ run_factory_interpreter_async <- function(module, inputs, .llm = NULL) {
     promises::as.promise(task),
     interrupt = function(condition) {
       cleanup_after_failure()
-      stop(condition)
+      resignal_condition(condition)
     },
     error = abort_launch
   )
@@ -632,7 +632,7 @@ run_factory_interpreter_async <- function(module, inputs, .llm = NULL) {
     },
     onRejected = function(error) {
       cleanup_after_failure()
-      stop(error)
+      resignal_condition(error)
     }
   )
 }
@@ -731,7 +731,7 @@ stream_async <- function(module, ..., .llm = NULL, .history = NULL) {
 #' )
 #' }
 stream_listener <- function(field, callback) {
-  if (!is.character(field) || length(field) != 1 || !nzchar(field)) {
+  if (!rlang::is_string(field) || !nzchar(field)) {
     cli::cli_abort("{.arg field} must be a single non-empty string")
   }
   if (!is.function(callback)) {

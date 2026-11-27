@@ -90,7 +90,7 @@ print.llm_predict <- function(x, ...) {
     x$args,
     function(a) {
       expr <- rlang::quo_get_expr(a)
-      inherits(expr, "call") && identical(expr[[1]], quote(tune))
+      rlang::is_call(expr, "tune", ns = c("", "parsnip", "tune"))
     },
     logical(1)
   )
@@ -151,7 +151,7 @@ register_dsprrr_engine <- function() {
     eng = "dsprrr",
     parsnip = "signature",
     original = "signature",
-    func = list(pkg = "dsprrr", fun = "signature"),
+    func = list(pkg = "dials", fun = "unknown"),
     has_submodel = FALSE
   )
 
@@ -298,7 +298,7 @@ fit_llm_predict <- function(
   temperature = NULL,
   top_p = NULL
 ) {
-  # Auto-generate signature if not provided
+  # Auto-generate signature directly via S7 without string round-tripping
   if (is.null(signature)) {
     input_names <- names(x)
     if (length(input_names) == 0) {
@@ -306,16 +306,15 @@ fit_llm_predict <- function(
     }
 
     output_type <- if (is.factor(y) || is.character(y)) {
-      levels <- unique(as.character(y))
-      paste0("output: enum('", paste(levels, collapse = "', '"), "')")
+      lvls <- if (is.factor(y)) levels(y) else unique(as.character(y))
+      ellmer::type_object(output = ellmer::type_enum(values = lvls))
     } else {
-      "output: number"
+      ellmer::type_object(output = ellmer::type_number())
     }
 
-    signature <- paste(
-      paste(input_names, collapse = ", "),
-      "->",
-      output_type
+    signature <- Signature(
+      inputs = lapply(input_names, function(nm) input(nm)),
+      output_type = output_type
     )
   }
 
