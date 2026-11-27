@@ -425,7 +425,7 @@ ProgramOfThoughtModule <- R6::R6Class(
     #' Get output field names from signature
     get_output_names = function() {
       output_type <- self$signature@output_type
-      if (methods::.hasSlot(output_type, "properties")) {
+      if (S7::prop_exists(output_type, "properties")) {
         props <- output_type@properties
         if (length(props) > 0) {
           return(paste(names(props), collapse = ", "))
@@ -600,7 +600,7 @@ Return your response as JSON with two fields:
           if (is.data.frame(result)) {
             paste(utils::capture.output(print(result)), collapse = "\n")
           } else {
-            paste(utils::capture.output(str(result)), collapse = "\n")
+            paste(utils::capture.output(utils::str(result)), collapse = "\n")
           }
         },
         error = function(e) deparse(result)
@@ -647,7 +647,7 @@ Provide a clear, concise answer to the original question.
       # Get output field names from signature
       output_type <- self$signature@output_type
 
-      if (methods::.hasSlot(output_type, "properties")) {
+      if (S7::prop_exists(output_type, "properties")) {
         props <- output_type@properties
         if (length(props) == 1) {
           # Single output field

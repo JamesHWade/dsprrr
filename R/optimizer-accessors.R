@@ -702,33 +702,3 @@ format_value <- function(x) {
   }
   as.character(x)
 }
-
-#' Format a value for R code generation
-#' @noRd
-format_value_for_code <- function(x) {
-  if (is.null(x)) {
-    return("NULL")
-  }
-  if (is.character(x)) {
-    escaped <- gsub("\"", "\\\\\"", x)
-    escaped <- gsub("\n", "\\\\n", escaped)
-    return(paste0("\"", escaped, "\""))
-  }
-  if (is.numeric(x)) {
-    return(as.character(x))
-  }
-  if (is.logical(x)) {
-    return(if (x) "TRUE" else "FALSE")
-  }
-  if (is.list(x)) {
-    items <- vapply(
-      names(x),
-      function(n) {
-        paste0(n, " = ", format_value_for_code(x[[n]]))
-      },
-      character(1)
-    )
-    return(paste0("list(", paste(items, collapse = ", "), ")"))
-  }
-  deparse(x)
-}

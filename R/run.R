@@ -2037,64 +2037,6 @@ get_default_llm <- function(module) {
   resolve_module_llm(module, create = TRUE)
 }
 
-#' Call the LLM with structured output
-#'
-#' @noRd
-call_llm <- function(
-  llm,
-  prompt,
-  output_type,
-  instructions = "",
-  verbose = FALSE,
-  inputs = list(),
-  .cache = NULL
-) {
-  request <- list(
-    prompt = prompt,
-    instructions = instructions,
-    full_prompt = if (nchar(instructions) > 0) {
-      paste(instructions, prompt, sep = "\n\n")
-    } else {
-      prompt
-    },
-    payload = if (length(Filter(is_content_input, inputs)) > 0) {
-      c(
-        list(ellmer::ContentText(
-          if (nchar(instructions) > 0) {
-            paste(instructions, prompt, sep = "\n\n")
-          } else {
-            prompt
-          }
-        )),
-        unname(Filter(is_content_input, inputs))
-      )
-    } else {
-      if (nchar(instructions) > 0) {
-        paste(instructions, prompt, sep = "\n\n")
-      } else {
-        prompt
-      }
-    },
-    is_multimodal = length(Filter(is_content_input, inputs)) > 0
-  )
-
-  tryCatch(
-    call_llm_request(
-      llm = llm,
-      request = request,
-      output_type = output_type,
-      .cache = .cache
-    ),
-    error = function(e) {
-      cli::cli_abort(
-        "LLM call failed: {e$message}",
-        class = "dsprrr_provider_error",
-        parent = e
-      )
-    }
-  )
-}
-
 #' Run a module on each row of a data frame
 #'
 #' @description

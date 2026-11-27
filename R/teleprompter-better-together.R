@@ -302,22 +302,7 @@ compile_better_together <- function(
   }
 
   if (!is.null(seed)) {
-    old_seed <- if (exists(".Random.seed", envir = globalenv())) {
-      get(".Random.seed", envir = globalenv())
-    } else {
-      NULL
-    }
-    set.seed(seed)
-    on.exit(
-      {
-        if (is.null(old_seed)) {
-          rm(".Random.seed", envir = globalenv())
-        } else {
-          assign(".Random.seed", old_seed, envir = globalenv())
-        }
-      },
-      add = TRUE
-    )
+    withr::local_seed(as.integer(seed))
   }
 
   current <- copy_module(program)
@@ -550,22 +535,7 @@ better_together_train_val_split <- function(
 
   indices <- seq_len(nrow(trainset))
   if (!is.null(seed)) {
-    old_seed <- if (exists(".Random.seed", envir = globalenv())) {
-      get(".Random.seed", envir = globalenv())
-    } else {
-      NULL
-    }
-    on.exit(
-      {
-        if (is.null(old_seed)) {
-          rm(".Random.seed", envir = globalenv())
-        } else {
-          assign(".Random.seed", old_seed, envir = globalenv())
-        }
-      },
-      add = TRUE
-    )
-    set.seed(seed)
+    withr::local_seed(as.integer(seed))
   }
 
   val_idx <- sample(indices, n_val)

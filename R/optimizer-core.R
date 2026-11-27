@@ -679,26 +679,7 @@ sample_dataset <- function(dataset, n = NULL, seed = NULL, replace = FALSE) {
 
   # Sample with proper RNG state management
   if (!is.null(seed)) {
-    # Save current RNG state
-    old_seed <- if (exists(".Random.seed", envir = globalenv())) {
-      get(".Random.seed", envir = globalenv())
-    } else {
-      NULL
-    }
-
-    set.seed(seed)
-
-    # Restore RNG state on exit
-    on.exit(
-      {
-        if (is.null(old_seed)) {
-          rm(".Random.seed", envir = globalenv())
-        } else {
-          assign(".Random.seed", old_seed, envir = globalenv())
-        }
-      },
-      add = TRUE
-    )
+    withr::local_seed(as.integer(seed))
   }
 
   # Sample indices
@@ -746,26 +727,7 @@ split_dataset <- function(dataset, prop = 0.8, seed = NULL) {
 
   # Split with proper RNG state management
   if (!is.null(seed)) {
-    # Save current RNG state
-    old_seed <- if (exists(".Random.seed", envir = globalenv())) {
-      get(".Random.seed", envir = globalenv())
-    } else {
-      NULL
-    }
-
-    set.seed(seed)
-
-    # Restore RNG state on exit
-    on.exit(
-      {
-        if (is.null(old_seed)) {
-          rm(".Random.seed", envir = globalenv())
-        } else {
-          assign(".Random.seed", old_seed, envir = globalenv())
-        }
-      },
-      add = TRUE
-    )
+    withr::local_seed(as.integer(seed))
   }
 
   n_train <- floor(n * prop)

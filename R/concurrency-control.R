@@ -388,22 +388,9 @@ mirai_profile_is_unoccupied <- function(profile) {
 #' Allocate a collision-resistant name for a dsprrr-owned mirai profile
 #' @noRd
 new_dsprrr_mirai_profile <- local({
-  counter <- 0L
   function(max_attempts = 32L) {
     for (attempt in seq_len(max_attempts)) {
-      counter <<- counter + 1L
-      entropy <- paste(
-        Sys.getpid(),
-        counter,
-        format(Sys.time(), digits = 22L),
-        basename(tempfile()),
-        sep = "-"
-      )
-      nonce <- substr(
-        digest::digest(entropy, algo = "sha256", serialize = FALSE),
-        1L,
-        24L
-      )
+      nonce <- substr(nanonext::random(16L, convert = TRUE), 1L, 24L)
       profile <- paste0("dsprrr-", Sys.getpid(), "-", nonce)
       if (mirai_profile_is_unoccupied(profile)) {
         return(profile)

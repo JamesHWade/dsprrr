@@ -15,7 +15,7 @@ create_mock_rlm_llm <- function(
     chat_structured = function(prompt, type, ...) {
       type_fields <- if (
         inherits(type, "ellmer::TypeObject") &&
-          methods::.hasSlot(type, "properties")
+          S7::prop_exists(type, "properties")
       ) {
         names(type@properties)
       } else {

@@ -35,9 +35,8 @@ Imports:
     fs,
     glue,
     jsonlite,
-    methods,
     mirai,
-    openssl,
+    nanonext,
     purrr,
     R6,
     rlang,
@@ -111,7 +110,6 @@ Collate:
     'module-predict.R'
     'module-program-of-thought.R'
     'module-rag.R'
-    'module-react-doc.R'
     'module-react.R'
     'module-rlm-phases.R'
     'module-rlm.R'

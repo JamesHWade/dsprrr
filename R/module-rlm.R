@@ -1369,7 +1369,7 @@ RLMModule <- R6::R6Class(
     #' Get output field specs from signature
     get_output_specs = function() {
       output_type <- self$signature@output_type
-      if (methods::.hasSlot(output_type, "properties")) {
+      if (S7::prop_exists(output_type, "properties")) {
         props <- output_type@properties
         props <- props[
           !vapply(
@@ -1408,11 +1408,6 @@ RLMModule <- R6::R6Class(
     preview_context_value = function(value) {
       text <- if (is.character(value) && length(value) == 1L) {
         value
-      } else if (is.data.frame(value)) {
-        paste(
-          utils::capture.output(utils::str(value, max.level = 1L)),
-          collapse = " "
-        )
       } else {
         paste(
           utils::capture.output(utils::str(value, max.level = 1L)),
@@ -1447,9 +1442,7 @@ RLMModule <- R6::R6Class(
             paste0(total_chars, " characters")
           } else if (is.data.frame(val)) {
             paste0(nrow(val), " rows x ", ncol(val), " cols")
-          } else if (is.list(val)) {
-            paste0(length(val), " elements")
-          } else if (is.vector(val)) {
+          } else if (is.list(val) || is.vector(val)) {
             paste0(length(val), " elements")
           } else {
             "1 object"

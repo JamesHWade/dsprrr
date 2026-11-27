@@ -1037,23 +1037,10 @@ generate_mipro_instruction_candidates_for_signature <- function(
   sampled_tips <- if (tip_count == 0L) {
     character(0)
   } else if (!is.null(seed)) {
-    old_seed <- if (exists(".Random.seed", envir = globalenv())) {
-      get(".Random.seed", envir = globalenv())
-    } else {
-      NULL
-    }
-    set.seed(seed)
-    on.exit(
-      {
-        if (is.null(old_seed)) {
-          rm(".Random.seed", envir = globalenv())
-        } else {
-          assign(".Random.seed", old_seed, envir = globalenv())
-        }
-      },
-      add = TRUE
+    withr::with_seed(
+      as.integer(seed),
+      sample(tips, size = min(tip_count, length(tips)))
     )
-    sample(tips, size = min(tip_count, length(tips)))
   } else {
     sample(tips, size = min(tip_count, length(tips)))
   }

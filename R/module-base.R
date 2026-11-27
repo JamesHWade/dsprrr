@@ -56,7 +56,7 @@ Module <- R6::R6Class(
     #' @param .llm Optional ellmer chat object
     #' @param trace Logical whether to record trace information
     #' @param ... Additional arguments passed to implementation
-    #' @return Tibble with output, trace, metadata columns
+    #' @return Tibble with output, chat, metadata columns
     forward = function(batch, .llm = NULL, trace = TRUE, ...) {
       cli::cli_abort("forward() must be implemented by subclass")
     },
@@ -81,12 +81,14 @@ Module <- R6::R6Class(
     #' @param .verbose Logical for debug output (currently unused, for API consistency)
     #' @param .concurrency Optional policy created by [concurrency_control()]
     #' @param .progress Logical for progress bar (currently unused, for API consistency)
+    #' @param .cache Logical or `NULL` to control response caching
     #' @param .return_format Either "simple" or "structured"
     #' @param .trace_context A named JSON-compatible correlation context
     #' @param .history A portable history for scalar root ReAct or RLM calls.
     #'   A non-`NULL` history requires structured output.
-    #' @return Module outputs. For .return_format="simple", returns the output value directly.
-    #'   For "structured", returns a tibble with output, chat, and metadata columns.
+    #' @return Module outputs. For `.return_format = "simple"`, returns the output
+    #'   value directly. For `"structured"`, returns a `dsprrr_result` list with
+    #'   `output`, `chat`, and `metadata` elements.
     run = function(
       ...,
       .llm = NULL,
@@ -991,6 +993,8 @@ Module <- R6::R6Class(
           cli::cli_abort("{.arg callback} must be a function")
         }
 
+        rlang::check_installed("coro", reason = "for streaming with a callback")
+
         full_response <- character()
         coro::loop(
           for (chunk in gen) {
@@ -1531,11 +1535,6 @@ run_factory_interpreter_batch <- function(
     rows
   }
 }
-
-#' Null-coalescing operator
-#' @keywords internal
-#' @noRd
-`%||%` <- function(x, y) if (is.null(x)) y else x
 
 #' Predict with a module on new data
 #'

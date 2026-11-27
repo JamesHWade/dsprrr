@@ -2292,16 +2292,6 @@ write_trials_jsonl <- function(trials, path, append = FALSE) {
           function(trial) !trial@trial_id %in% disk_ids,
           requested
         )
-        missing_ids <- vapply(
-          missing,
-          function(trial) trial@trial_id,
-          character(1)
-        )
-        missing <- requested[vapply(
-          requested,
-          function(trial) trial@trial_id %in% missing_ids,
-          logical(1)
-        )]
         trial_log_append_verified(missing, path, existing, guard)
         return(invisible(original_path))
       }

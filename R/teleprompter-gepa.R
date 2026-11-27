@@ -459,24 +459,7 @@ compile_gepa <- function(
   }
 
   if (!is.null(teleprompter@seed) && !is.na(teleprompter@seed)) {
-    old_seed <- if (exists(".Random.seed", envir = globalenv())) {
-      get(".Random.seed", envir = globalenv())
-    } else {
-      NULL
-    }
-    set.seed(teleprompter@seed)
-    on.exit(
-      {
-        if (is.null(old_seed)) {
-          if (exists(".Random.seed", envir = globalenv())) {
-            rm(".Random.seed", envir = globalenv())
-          }
-        } else {
-          assign(".Random.seed", old_seed, envir = globalenv())
-        }
-      },
-      add = TRUE
-    )
+    withr::local_seed(as.integer(teleprompter@seed))
   }
 
   budget <- new_optimizer_budget(control)

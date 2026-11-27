@@ -1029,11 +1029,7 @@ RefineModule <- R6::R6Class(
 
     #' Inject feedback into the batch
     inject_feedback = function(batch, feedback) {
-      if (is.data.frame(batch)) {
-        batch[[self$feedback_field]] <- feedback
-      } else {
-        batch[[self$feedback_field]] <- feedback
-      }
+      batch[[self$feedback_field]] <- feedback
       batch
     }
   )

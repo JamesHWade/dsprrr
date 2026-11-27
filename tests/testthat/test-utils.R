@@ -137,7 +137,7 @@ test_that("CI replays cassettes only for pkgdown site builds", {
 # --- null coalescing operator tests ---
 
 test_that("null coalescing operator works correctly", {
-  `%||%` <- dsprrr:::`%||%`
+  `%||%` <- get("%||%", envir = asNamespace("dsprrr"))
 
   # NULL case
   expect_equal(NULL %||% "default", "default")

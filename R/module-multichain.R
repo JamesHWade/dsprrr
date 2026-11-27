@@ -543,15 +543,6 @@ MultiChainComparisonModule <- R6::R6Class(
         chat = list(llm),
         metadata = list(metadata)
       )
-    },
-
-    #' Get default LLM client
-    get_default_llm = function() {
-      resolve_module_llm(
-        self,
-        create = TRUE,
-        extra_params = list(temperature = self$temperature)
-      )
     }
   )
 )

@@ -1487,7 +1487,7 @@ flex_validate_supported_type <- function(type, context) {
 flex_signature_output_types <- function(signature) {
   output_type <- signature@output_type
   if (
-    methods::.hasSlot(output_type, "properties") &&
+    S7::prop_exists(output_type, "properties") &&
       length(output_type@properties) > 0L
   ) {
     properties <- as.list(output_type@properties)

@@ -214,8 +214,5 @@ export(with_reasoning)
 export(without_reasoning)
 export(write_trials_jsonl)
 importFrom(R6,R6Class)
-importFrom(purrr,
-  map,
-  map2
-)
+importFrom(rlang,"%||%")
 useDynLib(dsprrr, .registration = TRUE, .fixes = "C_")

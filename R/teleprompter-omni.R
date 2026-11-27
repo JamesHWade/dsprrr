@@ -301,22 +301,7 @@ compile_omni <- function(
   }
 
   if (!is.null(seed)) {
-    old_seed <- if (exists(".Random.seed", envir = globalenv())) {
-      get(".Random.seed", envir = globalenv())
-    } else {
-      NULL
-    }
-    set.seed(seed)
-    on.exit(
-      {
-        if (is.null(old_seed)) {
-          rm(".Random.seed", envir = globalenv())
-        } else {
-          assign(".Random.seed", old_seed, envir = globalenv())
-        }
-      },
-      add = TRUE
-    )
+    withr::local_seed(as.integer(seed))
   }
 
   baseline <- copy_module(program)

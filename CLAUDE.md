@@ -13,8 +13,8 @@ Before starting ANY implementation work:
 git checkout -b feature/<short-description>
 # or: git checkout -b fix/<short-description>
 
-# 2. Then claim the issue and start work
-kata claim <id> --agent
+# 2. Check or pick up the GitHub issue
+gh issue view <number> -R JamesHWade/dsprrr
 ```
 
 This is mandatory even for small changes. The only commits to main should be merge commits from PRs.
@@ -562,10 +562,10 @@ test_that("mock returns different values", {
 
 ### Dependencies
 Required (Imports):
-- `cli`, `ellmer`, `glue`, `jsonlite`, `lifecycle`, `mirai`, `R6`, `rlang`, `S7`, `tibble`
+- `cachem`, `cli`, `codetools`, `digest`, `ellmer (>= 0.5.0)`, `filelock`, `fs`, `glue`, `jsonlite`, `mirai`, `nanonext`, `purrr`, `R6`, `rlang`, `S7 (>= 1.0.0)`, `tibble`, `withr`
 
 Suggested:
-- `dials`, `knitr`, `rmarkdown`, `testthat`, `vcr`, `vitals`
+- `callr`, `coro`, `dials`, `httr2`, `knitr`, `later`, `mcptools (>= 1.0.1)`, `parsnip`, `pins`, `pkgload`, `promises`, `quarto`, `ragnar`, `rmarkdown`, `rsample`, `scales`, `shiny (>= 1.8.0)`, `tarchetypes`, `targets`, `testthat (>= 3.0.0)`, `tune`, `vcr (>= 2.0.0)`, `vitals`, `yardstick`
 
 ## Known Issues
 
@@ -574,74 +574,50 @@ Suggested:
   predictor's instructions across multi-predictor programs, and
   BootstrapFewShot compiles pipelines jointly
 
-## Issue Tracking with Kata
+## Issue Tracking with GitHub Issues
 
-This project uses **Kata** for its persistent backlog. The committed
-`.kata.toml` binds every checkout and worktree to the `dsprrr` Kata project;
-issue data lives in the Kata daemon rather than in git-tracked database files.
-
-The former Beads IDs are preserved as `beads-id:dsprrr-...` labels and in each
-migrated issue body. To resolve an old reference, run
-`kata search "dsprrr-..." --agent`.
+This project tracks its backlog in **GitHub Issues** (`JamesHWade/dsprrr`) via the `gh` CLI.
 
 ### Essential Commands
 
 ```bash
 # Finding work
-kata ready --agent                    # Open, unblocked work
-kata list --status open --agent       # All active issues
-kata show <id> --agent                # Details, comments, and relationships
-kata search "text" --agent            # Search before creating
+gh issue list -R JamesHWade/dsprrr --state open
+gh issue view <number> -R JamesHWade/dsprrr
+gh issue list -R JamesHWade/dsprrr --search "text"
 
-# Working on issues
-kata claim <id> --agent               # Claim after creating a feature branch
-kata comment <id> --body "Progress" --agent
-kata unassign <id> --agent            # Release unfinished work
-
-# Creating work safely
-kata create "Fix bug" \
+# Creating issues
+gh issue create -R JamesHWade/dsprrr \
+  --title "Fix bug" \
   --body "Observed behavior and intended outcome." \
-  --priority 1 \
-  --label bug \
-  --idempotency-key "fix-bug-YYYY-MM-DD" \
-  --agent
+  --label bug
 
-# Relationships
-kata edit <id> --blocked-by <ref> --agent
-kata edit <id> --related <ref> --agent
-
-# Close only after verification, with evidence
-kata close <id> --done \
-  --message "Implemented the fix and verified the package checks." \
-  --commit <sha>
+# Commenting and closing
+gh issue comment <number> -R JamesHWade/dsprrr --body "Progress update"
+gh issue close <number> -R JamesHWade/dsprrr --comment "Resolved in #<pr>"
 ```
 
-Use Kata for multi-session work, dependencies, and discovered follow-ups. A
-short in-session checklist can still be used for immediate execution steps,
-but it does not replace the persistent Kata issue.
+Use GitHub Issues for multi-session work, roadmap tracking, and discovered follow-ups. Link pull requests to issues with `Closes #<number>` or `Resolves #<number>` in the PR body.
 
 ## Feature Branch + PR Workflow
 
 ### 1. Find Work and Create Feature Branch
 
-**⚠️ IMPORTANT: Create the feature branch BEFORE claiming the issue or writing any code.**
+**⚠️ IMPORTANT: Create the feature branch BEFORE writing any code.**
 
 ```bash
-kata ready --agent                    # Find available work
-kata show <id> --agent                # Review issue details
+gh issue list -R JamesHWade/dsprrr --state open
+gh issue view <number> -R JamesHWade/dsprrr
 
 # CREATE BRANCH FIRST - before any code changes!
 git checkout -b feature/<short-description>
 # or: git checkout -b fix/<short-description>
-
-kata claim <id> --agent               # Now claim the work
 ```
 
 ### 2. Work and Record Progress
 
 ```bash
-# Make changes...
-kata comment <id> --body "Implemented the first verified slice." --agent
+# Make changes and commit logically on your feature branch...
 ```
 
 ### 3. Run Quality Gates
@@ -663,24 +639,16 @@ Rscript -e "devtools::check()"
 Rscript -e "devtools::document(); pkgdown::build_site(preview = FALSE)"
 ```
 
-### 4. Create PR and Close Issue
+### 4. Create PR
 
 When code is complete and ready for review:
 
 ```bash
 git add <specific-files>
-git commit -m "feat: description (dsprrr#<id>)"
-commit_sha="$(git rev-parse HEAD)"
-kata close <id> --done \
-  --message "Implemented and verified the requested work." \
-  --commit "$commit_sha"
+git commit -m "feat: description (#<number>)"
 git push -u origin HEAD
-gh pr create --title "..." --body "Resolves dsprrr#<id>"
+gh pr create -R JamesHWade/dsprrr --title "..." --body "Closes #<number>"
 ```
-
-**Important**: Close the Kata issue when the work is complete and verified, not
-merely because a PR exists. The issue tracks implementation; the PR tracks
-review and merge.
 
 ### 5. Human Reviews and Merges PR
 
@@ -709,35 +677,26 @@ usethis::pr_finish()
 # 1. Verify you're on a feature branch (NOT main!)
 git branch --show-current  # Should NOT be 'main'
 
-# 2. File issues for remaining work
-kata create "Follow-up task" \
+# 2. File GitHub issues for remaining follow-up work
+gh issue create -R JamesHWade/dsprrr \
+  --title "Follow-up task" \
   --body "What remains and why it is separate." \
-  --priority 2 \
-  --idempotency-key "follow-up-YYYY-MM-DD" \
-  --agent
+  --label upkeep
 
 # 3. Run quality gates (if code changed)
 air format R/ tests/testthat/
 jarl check R tests/testthat
 Rscript -e "devtools::check()"
 
-# 4. Release unfinished work with durable context
-kata comment <unfinished-id> --body "What remains and the next step." --agent
-kata unassign <unfinished-id> --agent
-
-# 5. Commit specific files, then close completed work with that evidence
+# 4. Commit specific files and push
 git add <specific-files>
-git commit -m "feat: description (dsprrr#<id>)"
-commit_sha="$(git rev-parse HEAD)"
-kata close <completed-id> --done \
-  --message "Implemented and verified the completed work." \
-  --commit "$commit_sha"
+git commit -m "feat: description (#<number>)"
 git push -u origin HEAD
 
-# 6. Create PR (if not already created)
-gh pr create --title "..." --body "Resolves dsprrr#<id>"
+# 5. Create PR (if not already created)
+gh pr create -R JamesHWade/dsprrr --title "..." --body "Closes #<number>"
 
-# 7. Verify
+# 6. Verify
 git status  # Should show "up to date with origin"
 ```
 
@@ -748,14 +707,12 @@ git status  # Should show "up to date with origin"
 - NEVER stop before pushing—that leaves work stranded locally
 - NEVER say "ready to push when you are"—YOU must push
 - If push fails, resolve and retry until it succeeds
-- Record unfinished follow-up work in Kata before ending the session
-- Include the Kata issue ID in commit messages when work is issue-driven
+- File GitHub issues for unfinished follow-up work before ending the session
+- Reference the GitHub issue (`#<number>`) in commit messages and PR descriptions
 
 ## Parallel Sessions & Worktrees
 
-This project supports parallel work via git worktrees. Every worktree resolves
-the same Kata project through `.kata.toml`, so backlog changes are immediately
-visible without a tracker-specific git branch or merge driver.
+This project supports parallel work via git worktrees.
 
 ### Creating Worktrees for Parallel Features
 
@@ -763,17 +720,9 @@ visible without a tracker-specific git branch or merge driver.
 # From main repo, create worktree for a feature
 git worktree add ../dsprrr-feature-x -b feature/feature-x
 cd ../dsprrr-feature-x
-
-# Kata commands resolve the shared dsprrr project
-kata ready --agent
-kata create "Implement feature" \
-  --body "Implementation scope." \
-  --priority 2 \
-  --idempotency-key "implement-feature-YYYY-MM-DD" \
-  --agent
 ```
 
-Do not create worktree-local tracker databases or reintroduce `.beads/`.
+Do not reintroduce `.beads/` or `.kata.toml`.
 
 ### Cleanup After PR Merged
 

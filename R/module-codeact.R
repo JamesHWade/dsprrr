@@ -604,7 +604,7 @@ CodeActModule <- R6::R6Class(
     #' Get output field names
     get_output_names = function() {
       output_type <- self$signature@output_type
-      if (methods::.hasSlot(output_type, "properties")) {
+      if (S7::prop_exists(output_type, "properties")) {
         props <- output_type@properties
         if (length(props) > 0) {
           return(paste(names(props), collapse = ", "))
@@ -774,7 +774,7 @@ Work step by step to solve this task.
     build_output = function(answer) {
       output_type <- self$signature@output_type
 
-      if (methods::.hasSlot(output_type, "properties")) {
+      if (S7::prop_exists(output_type, "properties")) {
         props <- output_type@properties
         if (length(props) == 1) {
           output <- list()

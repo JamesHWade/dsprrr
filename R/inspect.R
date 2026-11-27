@@ -59,9 +59,9 @@ get_last_prompt <- function() {
 #' The history is kept in memory for the session and holds the most recent
 #' 100 calls by default (`options(dsprrr.prompt_history_max = )`). Prediction
 #' modules ([module()], [chain_of_thought()]) and [rag_module()], [react()],
-#' [rlm_module()] and [flex()] modules add their calls to it; calls made
-#' inside wrappers and pipelines, and by [run_async()] or [run_stream()], are
-#' not recorded. [clear_prompt_history()] empties it.
+#' [rlm_module()] and [flex()] modules (including via [run_async()]) add their
+#' calls to it; calls made inside wrappers and pipelines, and by [run_stream()],
+#' are not recorded. [clear_prompt_history()] empties it.
 #'
 #' @param n Number of recent calls to return.
 #' @param include_prompts If `TRUE` (the default), include the full prompt
@@ -205,8 +205,11 @@ write_history_transcript <- function(entries, file) {
     cli::cli_abort("{.arg file} must be a file path or writable connection")
   }
 
-  con <- base::file(file, open = "w", encoding = "UTF-8")
-  on.exit(close(con), add = TRUE)
+  con <- withr::local_connection(base::file(
+    file,
+    open = "w",
+    encoding = "UTF-8"
+  ))
   writeLines(transcript, con = con)
   invisible(file)
 }
