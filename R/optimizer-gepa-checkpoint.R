@@ -1045,11 +1045,6 @@ gepa_checkpoint_state_validate <- function(
         class = "dsprrr_optimizer_checkpoint_malformed"
       )
     }
-    gepa_checkpoint_decode_candidate(
-      active$candidate,
-      program,
-      component_specs
-    )
     for (metric_index in seq_along(metric_names)) {
       gepa_checkpoint_validate_rows(
         active$metric_rows[[metric_index]],
@@ -1639,17 +1634,6 @@ gepa_checkpoint_update_selection <- function(
     teleprompter@selection,
     metric_names
   ))
-  all_records <- lapply(state$all_records, function(record) {
-    gepa_checkpoint_hydrate_record(
-      record,
-      program,
-      validation_dataset,
-      discovery_dataset,
-      metrics,
-      component_specs,
-      metric_threshold = teleprompter@metric_threshold
-    )
-  })
   if (
     state$candidate_index > length(state$population) &&
       is.null(state$active_candidate)

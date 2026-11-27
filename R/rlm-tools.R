@@ -762,8 +762,8 @@ rlm_control_prefix <- function() {
 
 
 rlm_control_nonce <- function() {
-  entropy <- tryCatch(
-    openssl::rand_bytes(32L),
+  tryCatch(
+    nanonext::random(32L, convert = TRUE),
     error = function(error) {
       cli::cli_abort(
         "Could not create a secure RLM control nonce",
@@ -772,7 +772,6 @@ rlm_control_nonce <- function() {
       )
     }
   )
-  digest::digest(entropy, algo = "sha256", serialize = FALSE)
 }
 
 

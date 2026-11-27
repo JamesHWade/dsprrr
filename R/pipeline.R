@@ -198,7 +198,7 @@ PipelineModule <- R6::R6Class(
         )
 
         # Merge with static inputs (static inputs override mapped ones)
-        merged_inputs <- modifyList(mapped_inputs, step@static_inputs)
+        merged_inputs <- utils::modifyList(mapped_inputs, step@static_inputs)
         step_inputs[[i]] <- merged_inputs
 
         # Validate inputs against module signature
@@ -282,7 +282,7 @@ PipelineModule <- R6::R6Class(
         } else {
           # Simple output - wrap in list with output name from signature
           output_name <- private$get_output_name(step@module$signature)
-          current_data <- setNames(list(output), output_name)
+          current_data <- stats::setNames(list(output), output_name)
         }
       }
 
@@ -354,7 +354,7 @@ PipelineModule <- R6::R6Class(
           current_data,
           step@input_map
         )
-        merged_inputs <- modifyList(mapped_inputs, step@static_inputs)
+        merged_inputs <- utils::modifyList(mapped_inputs, step@static_inputs)
 
         required_inputs <- vapply(
           caller_input_specs(step@module),

@@ -555,8 +555,8 @@ extract_output_fields <- function(type_obj) {
     return(list(answer = ellmer::type_string()))
   }
 
-  # Check for S4/S7 with @properties slot (ellmer TypeObject)
-  if (methods::.hasSlot(type_obj, "properties")) {
+  # Check for S7 ellmer TypeObject with @properties
+  if (S7::prop_exists(type_obj, "properties")) {
     props <- type_obj@properties
     if (length(props) > 0) {
       return(props)
@@ -625,7 +625,7 @@ has_reasoning <- function(sig, reasoning_field = "reasoning") {
   output_type <- sig@output_type
 
   # Check if it's an object type with the reasoning field
-  if (methods::.hasSlot(output_type, "properties")) {
+  if (S7::prop_exists(output_type, "properties")) {
     props <- output_type@properties
     return(reasoning_field %in% names(props))
   }
@@ -670,9 +670,6 @@ without_reasoning <- function(sig, reasoning_field = "reasoning") {
   if (length(props) == 0) {
     # No fields left - default to string
     new_output_type <- ellmer::type_object(answer = ellmer::type_string())
-  } else if (length(props) == 1) {
-    # Single field remaining - could unwrap but keep as object for consistency
-    new_output_type <- do.call(ellmer::type_object, props)
   } else {
     new_output_type <- do.call(ellmer::type_object, props)
   }

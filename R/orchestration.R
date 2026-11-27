@@ -422,8 +422,7 @@ use_dsprrr_template <- function(
   template_dir <- system.file("templates", package = "dsprrr")
   if (template_dir == "") {
     cli::cli_abort(
-      "Template directory not found. Is dsprrr installed correctly?
-"
+      "Template directory not found. Is dsprrr installed correctly?"
     )
   }
 

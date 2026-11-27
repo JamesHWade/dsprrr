@@ -212,24 +212,7 @@ compile_copro <- function(
 
   # Save and restore RNG state
   if (!is.null(teleprompter@seed) && !is.na(teleprompter@seed)) {
-    old_seed <- if (exists(".Random.seed", envir = globalenv())) {
-      get(".Random.seed", envir = globalenv())
-    } else {
-      NULL
-    }
-    set.seed(teleprompter@seed)
-    on.exit(
-      {
-        if (is.null(old_seed)) {
-          if (exists(".Random.seed", envir = globalenv())) {
-            rm(".Random.seed", envir = globalenv())
-          }
-        } else {
-          assign(".Random.seed", old_seed, envir = globalenv())
-        }
-      },
-      add = TRUE
-    )
+    withr::local_seed(as.integer(teleprompter@seed))
   }
 
   input_names <- get_input_names(program$signature)

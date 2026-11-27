@@ -217,26 +217,8 @@ compile_simba <- function(
   }
 
   # Save and restore RNG state to avoid side effects
-
   if (!is.null(teleprompter@seed) && !is.na(teleprompter@seed)) {
-    old_seed <- if (exists(".Random.seed", envir = globalenv())) {
-      get(".Random.seed", envir = globalenv())
-    } else {
-      NULL
-    }
-    set.seed(teleprompter@seed)
-    on.exit(
-      {
-        if (is.null(old_seed)) {
-          if (exists(".Random.seed", envir = globalenv())) {
-            rm(".Random.seed", envir = globalenv())
-          }
-        } else {
-          assign(".Random.seed", old_seed, envir = globalenv())
-        }
-      },
-      add = TRUE
-    )
+    withr::local_seed(as.integer(teleprompter@seed))
   }
 
   input_names <- get_input_names(program$signature)
@@ -633,7 +615,6 @@ generate_simba_rule <- function(
   )
 
   rule <- NULL
-  used_fallback <- FALSE
 
   if (!is.null(budget) && !is.null(prompt_model)) {
     request <- optimizer_budgeted_provider_call(
@@ -675,7 +656,6 @@ generate_simba_rule <- function(
   }
 
   if (is.null(rule) || !nzchar(rule)) {
-    used_fallback <- TRUE
     rule <- paste(
       "SIMBA rule:",
       example_lines[1]

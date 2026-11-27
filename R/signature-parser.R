@@ -396,9 +396,6 @@ split_respecting_nesting <- function(str, delimiter) {
 #' Parse type string to ellmer type object
 #' @noRd
 parse_type_string <- function(type_str, field_name = NULL) {
-  # Load ellmer types
-  rlang::check_installed("ellmer", reason = "for type specifications")
-
   # Handle common type patterns
   type_str <- trimws(type_str)
 
@@ -680,21 +677,6 @@ validate_type_string <- function(type_str, context = "output") {
 
   # Check for common type mistakes
   type_lower <- tolower(type_str)
-
-  # Check for Python-style types
-  python_types <- list(
-    list(wrong = "str", correct = "string"),
-    list(wrong = "int", correct = "integer"),
-    list(wrong = "float", correct = "number"),
-    list(wrong = "bool", correct = "boolean")
-  )
-
-  for (pt in python_types) {
-    if (type_lower == pt$wrong) {
-      # These are actually supported, so no error needed
-      return(NULL)
-    }
-  }
 
   # Check for completely unknown types
   known_types <- c(

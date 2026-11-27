@@ -442,23 +442,16 @@ optimizer_budget_note_unknown <- function(
   work_unit,
   max_started
 ) {
-  limit_name <- names(optimizer_budget_limit_map())[
-    optimizer_budget_limit_map() == sub("_calls$", "", resource)
-  ]
-  if (resource == "cost_calls") {
-    limit_name <- "max_cost"
-  } else if (resource == "metric_calls") {
-    limit_name <- "max_metric_calls"
-  } else if (resource == "provider_calls") {
-    limit_name <- "max_provider_calls"
-  } else if (resource == "input_tokens") {
-    limit_name <- "max_input_tokens"
-  } else if (resource == "output_tokens") {
-    limit_name <- "max_output_tokens"
-  } else if (resource == "total_tokens") {
-    limit_name <- "max_total_tokens"
-  }
-  limit_name <- limit_name[[1L]] %||% NULL
+  limit_name <- switch(
+    resource,
+    cost_calls = "max_cost",
+    metric_calls = "max_metric_calls",
+    provider_calls = "max_provider_calls",
+    input_tokens = "max_input_tokens",
+    output_tokens = "max_output_tokens",
+    total_tokens = "max_total_tokens",
+    NULL
+  )
   if (!is.null(limit_name) && !is.null(budget$limits[[limit_name]])) {
     code <- paste0("unknown_", sub("_calls$", "", resource))
     if (resource == "cost_calls") {

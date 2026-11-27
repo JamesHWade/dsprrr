@@ -10,7 +10,7 @@ valid_signature_field_name <- function(name) {
 
 signature_output_field_names <- function(output_type) {
   if (
-    methods::.hasSlot(output_type, "properties") &&
+    S7::prop_exists(output_type, "properties") &&
       length(output_type@properties) > 0L
   ) {
     return(names(output_type@properties))

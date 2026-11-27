@@ -50,7 +50,7 @@ new_rlm_parity_chat <- function(
     chat_structured = function(prompt, type, ...) {
       fields <- if (
         inherits(type, "ellmer::TypeObject") &&
-          methods::.hasSlot(type, "properties")
+          S7::prop_exists(type, "properties")
       ) {
         names(type@properties)
       } else {

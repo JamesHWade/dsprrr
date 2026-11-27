@@ -2,9 +2,6 @@
 #' @noRd
 
 .onLoad <- function(libname, pkgname) {
-  registerS3method("print", "dsprrr_batch_result", print.dsprrr_batch_result)
-  registerS3method("print", "dsprrr_trace_summary", print.dsprrr_trace_summary)
-
   # Print methods for S7 classes are registered here rather than at top level:
   # `S7::method(print, X) <- f` assigns `print` in the calling environment, and
   # a `print` binding in the namespace sends every S3method(print, ...) entry
@@ -39,246 +36,44 @@
     )
   }
 
-  S7::method(compile, list(S7::class_any, LabeledFewShot)) <- function(
-    program,
-    teleprompter,
-    trainset,
-    ...
-  ) {
-    abort_if_fn_module(program)
-    compile_with_trace_context(
-      compile_labeled,
-      program,
-      teleprompter,
-      trainset,
-      ...
-    )
-  }
-
-  S7::method(compile, list(S7::class_any, GridSearchTeleprompter)) <- function(
-    program,
-    teleprompter,
-    trainset,
-    ...
-  ) {
-    abort_if_fn_module(program)
-    compile_with_trace_context(
-      compile_gridsearch,
-      program,
-      teleprompter,
-      trainset,
-      ...
-    )
-  }
-
-  S7::method(compile, list(S7::class_any, BootstrapFewShot)) <- function(
-    program,
-    teleprompter,
-    trainset,
-    ...
-  ) {
-    abort_if_fn_module(program)
-    compile_with_trace_context(
-      compile_bootstrap,
-      program,
-      teleprompter,
-      trainset,
-      ...
-    )
-  }
-
-  S7::method(
-    compile,
-    list(S7::class_any, BootstrapFewShotWithRandomSearch)
-  ) <- function(
-    program,
-    teleprompter,
-    trainset,
-    ...
-  ) {
-    abort_if_fn_module(program)
-    compile_with_trace_context(
-      compile_bootstrap_rs,
-      program,
-      teleprompter,
-      trainset,
-      ...
-    )
-  }
-
-  S7::method(compile, list(S7::class_any, BetterTogether)) <- function(
-    program,
-    teleprompter,
-    trainset,
-    ...
-  ) {
-    abort_if_fn_module(program)
-    compile_with_trace_context(
-      compile_better_together,
-      program,
-      teleprompter,
-      trainset,
-      ...
-    )
-  }
-
-  S7::method(compile, list(S7::class_any, Omni)) <- function(
-    program,
-    teleprompter,
-    trainset,
-    ...
-  ) {
-    abort_if_fn_module(program)
-    compile_with_trace_context(
-      compile_omni,
-      program,
-      teleprompter,
-      trainset,
-      ...
-    )
-  }
-
-  S7::method(compile, list(S7::class_any, AutoResearch)) <- function(
-    program,
-    teleprompter,
-    trainset,
-    ...
-  ) {
-    abort_if_fn_module(program)
-    compile_with_trace_context(
-      compile_autoresearch,
-      program,
-      teleprompter,
-      trainset,
-      ...
-    )
-  }
-
-  S7::method(compile, list(S7::class_any, MetaHarness)) <- function(
-    program,
-    teleprompter,
-    trainset,
-    ...
-  ) {
-    abort_if_fn_module(program)
-    compile_with_trace_context(
-      compile_meta_harness,
-      program,
-      teleprompter,
-      trainset,
-      ...
-    )
-  }
-
-  S7::method(compile, list(S7::class_any, KNNFewShot)) <- function(
-    program,
-    teleprompter,
-    trainset,
-    ...
-  ) {
-    abort_if_fn_module(program)
-    compile_with_trace_context(
-      compile_knn,
-      program,
-      teleprompter,
-      trainset,
-      ...
-    )
-  }
-
-  S7::method(compile, list(S7::class_any, SIMBA)) <- function(
-    program,
-    teleprompter,
-    trainset,
-    ...
-  ) {
-    abort_if_fn_module(program)
-    compile_with_trace_context(
-      compile_simba,
-      program,
-      teleprompter,
-      trainset,
-      ...
-    )
-  }
-
-  S7::method(compile, list(S7::class_any, GEPA)) <- function(
-    program,
-    teleprompter,
-    trainset,
-    ...
-  ) {
-    abort_if_fn_module(program)
-    compile_with_trace_context(
-      compile_gepa,
-      program,
-      teleprompter,
-      trainset,
-      ...
-    )
-  }
-
-  S7::method(compile, list(S7::class_any, MIPROv2)) <- function(
-    program,
-    teleprompter,
-    trainset,
-    ...
-  ) {
-    abort_if_fn_module(program)
-    compile_with_trace_context(
-      compile_mipro,
-      program,
-      teleprompter,
-      trainset,
-      ...
-    )
-  }
-
-  S7::method(compile, list(S7::class_any, COPRO)) <- function(
-    program,
-    teleprompter,
-    trainset,
-    ...
-  ) {
-    abort_if_fn_module(program)
-    compile_with_trace_context(
-      compile_copro,
-      program,
-      teleprompter,
-      trainset,
-      ...
-    )
-  }
-
-  S7::method(compile, list(S7::class_any, ReAnchor)) <- function(
-    program,
-    teleprompter,
-    trainset,
-    ...
-  ) {
-    abort_if_fn_module(program)
-    compile_with_trace_context(
-      compile_reanchor,
-      program,
-      teleprompter,
-      trainset,
-      ...
-    )
-  }
-
-  S7::method(compile, list(S7::class_any, Teleprompter)) <- function(
-    program,
-    teleprompter,
-    trainset,
-    ...
-  ) {
-    abort_if_fn_module(program)
-    compile_with_trace_context(
-      compile_default,
-      program,
-      teleprompter,
-      trainset,
-      ...
+  compilers <- list(
+    list(LabeledFewShot, "compile_labeled"),
+    list(GridSearchTeleprompter, "compile_gridsearch"),
+    list(BootstrapFewShot, "compile_bootstrap"),
+    list(BootstrapFewShotWithRandomSearch, "compile_bootstrap_rs"),
+    list(BetterTogether, "compile_better_together"),
+    list(Omni, "compile_omni"),
+    list(AutoResearch, "compile_autoresearch"),
+    list(MetaHarness, "compile_meta_harness"),
+    list(KNNFewShot, "compile_knn"),
+    list(SIMBA, "compile_simba"),
+    list(GEPA, "compile_gepa"),
+    list(MIPROv2, "compile_mipro"),
+    list(COPRO, "compile_copro"),
+    list(ReAnchor, "compile_reanchor"),
+    list(Teleprompter, "compile_default")
+  )
+  for (entry in compilers) {
+    cls <- entry[[1L]]
+    fn_sym <- as.name(entry[[2L]])
+    S7::method(compile, list(S7::class_any, cls)) <- rlang::new_function(
+      rlang::pairlist2(
+        program = ,
+        teleprompter = ,
+        trainset = ,
+        ... =
+      ),
+      bquote({
+        abort_if_fn_module(program)
+        compile_with_trace_context(
+          .(fn_sym),
+          program,
+          teleprompter,
+          trainset,
+          ...
+        )
+      }),
+      env = rlang::ns_env("dsprrr")
     )
   }
 

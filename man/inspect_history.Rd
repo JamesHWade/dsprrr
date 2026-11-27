@@ -39,9 +39,9 @@ also write them to a plain-text transcript.
 The history is kept in memory for the session and holds the most recent
 100 calls by default (\code{options(dsprrr.prompt_history_max = )}). Prediction
 modules (\code{\link[=module]{module()}}, \code{\link[=chain_of_thought]{chain_of_thought()}}) and \code{\link[=rag_module]{rag_module()}}, \code{\link[=react]{react()}},
-\code{\link[=rlm_module]{rlm_module()}} and \code{\link[=flex]{flex()}} modules add their calls to it; calls made
-inside wrappers and pipelines, and by \code{\link[=run_async]{run_async()}} or \code{\link[=run_stream]{run_stream()}}, are
-not recorded. \code{\link[=clear_prompt_history]{clear_prompt_history()}} empties it.
+\code{\link[=rlm_module]{rlm_module()}} and \code{\link[=flex]{flex()}} modules (including via \code{\link[=run_async]{run_async()}}) add their
+calls to it; calls made inside wrappers and pipelines, and by \code{\link[=run_stream]{run_stream()}},
+are not recorded. \code{\link[=clear_prompt_history]{clear_prompt_history()}} empties it.
 }
 \examples{
 # Empty until a module has called a model

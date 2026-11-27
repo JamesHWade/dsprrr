@@ -283,22 +283,7 @@ compile_bootstrap_rs <- function(
 
   # Set seed for reproducibility
   if (!is.null(effective_seed)) {
-    old_seed <- if (exists(".Random.seed", envir = globalenv())) {
-      get(".Random.seed", envir = globalenv())
-    } else {
-      NULL
-    }
-    set.seed(effective_seed)
-    on.exit(
-      {
-        if (is.null(old_seed)) {
-          rm(".Random.seed", envir = globalenv())
-        } else {
-          assign(".Random.seed", old_seed, envir = globalenv())
-        }
-      },
-      add = TRUE
-    )
+    withr::local_seed(as.integer(effective_seed))
   }
 
   # Generate candidate configurations

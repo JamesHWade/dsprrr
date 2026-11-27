@@ -1,7 +1,7 @@
 rlm_optimizer_type_fields <- function(type) {
   if (
     inherits(type, "ellmer::TypeObject") &&
-      methods::.hasSlot(type, "properties")
+      S7::prop_exists(type, "properties")
   ) {
     return(names(type@properties))
   }

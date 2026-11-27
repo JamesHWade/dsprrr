@@ -26,9 +26,3 @@ Conventions:
 - Tests use testthat 3e with VCR cassettes for HTTP recording
 - Never commit directly to main; feature branches + PRs only
 """
-
-# Create Kata issues for failed reviews
-[[hooks]]
-event = "review.failed"
-type = "kata"
-project = "dsprrr"

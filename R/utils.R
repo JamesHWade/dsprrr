@@ -95,12 +95,7 @@ reject_partial_argument_matches <- function(call, fn) {
 #'
 #' @noRd
 is_ellmer_type <- function(x) {
-  inherits(x, "ellmer::Type") ||
-    inherits(x, "ellmer::TypeBasic") ||
-    inherits(x, "ellmer::TypeEnum") ||
-    inherits(x, "ellmer::TypeArray") ||
-    inherits(x, "ellmer::TypeObject") ||
-    inherits(x, "ellmer::TypeJsonSchema")
+  inherits(x, "ellmer::Type")
 }
 
 #' Decide whether a vignette's LLM examples run

@@ -674,10 +674,7 @@ acquire_code_runner <- function(runner, interpreter_factory, module_name) {
     if (inherits(cleanup_error, "condition")) {
       attr(cleanup, "dsprrr_interpreter_close_error") <- cleanup_error
     }
-    if (inherits(cleanup, "interrupt")) {
-      stop(cleanup)
-    }
-    stop(cleanup)
+    rlang::cnd_signal(cleanup)
   }
 
   start_error <- tryCatch(
