@@ -683,7 +683,8 @@ sample_dataset <- function(dataset, n = NULL, seed = NULL, replace = FALSE) {
   }
 
   # Sample indices
-  sample_size <- if (replace) n else min(n, total_rows)
+  n_target <- n %||% total_rows
+  sample_size <- if (replace) n_target else min(n_target, total_rows)
   indices <- sample(total_rows, size = sample_size, replace = replace)
 
   dataset[indices, , drop = FALSE]

@@ -107,10 +107,10 @@ inspect_history <- function(
 
   # Get the last n entries (or all if fewer)
   n_available <- length(history)
-  n_to_get <- min(as.integer(n), n_available)
-  if (is.na(n_to_get) || n_to_get <= 0L) {
+  if (length(n) != 1L || is.na(n) || n <= 0) {
     return(tibble::tibble())
   }
+  n_to_get <- as.integer(min(n, n_available))
   start_idx <- n_available - n_to_get + 1L
   entries <- history[start_idx:n_available]
 

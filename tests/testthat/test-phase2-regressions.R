@@ -107,6 +107,9 @@ test_that("inspect_history(n = 0) returns empty tibble and format_output_for_his
   expect_s3_class(empty, "tbl_df")
   expect_equal(nrow(empty), 0L)
 
+  all_entries <- expect_no_warning(inspect_history(n = Inf))
+  expect_equal(nrow(all_entries), 1L)
+
   formatted_vec <- dsprrr:::format_output_for_history(c("a", "b", "c"))
   expect_identical(formatted_vec, "a, b, c")
   expect_identical(
@@ -261,10 +264,13 @@ test_that("module_trials uses non-NA trial count for std_error", {
   expect_equal(summary$std_error, expected_se)
 })
 
-test_that("sample_dataset supports n > nrow(dataset) when replace = TRUE", {
+test_that("sample_dataset supports n > nrow(dataset) and n = NULL when replace = TRUE", {
   df <- tibble::tibble(x = 1:3)
   sampled <- sample_dataset(df, n = 10L, replace = TRUE, seed = 1L)
   expect_equal(nrow(sampled), 10L)
+
+  boot <- sample_dataset(df, replace = TRUE, seed = 1L)
+  expect_equal(nrow(boot), 3L)
 })
 
 test_that("module_metrics computes per-trial stats and yardstick metrics (classification & regression)", {
