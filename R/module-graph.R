@@ -1261,3 +1261,20 @@ module_graph_refresh_all <- function(program) {
   }
   invisible(program)
 }
+
+module_leaf_nodes <- function(program, cycles = c("error", "record")) {
+  cycles <- match.arg(cycles)
+  graph <- module_graph(program, boundaries = "cross", cycles = cycles)
+  if (identical(cycles, "record")) {
+    graph <- graph[!graph$cycle, , drop = FALSE]
+  }
+  leaf <- vapply(
+    graph$path,
+    function(node_path) {
+      prefix <- if (identical(node_path, "$")) "$/" else paste0(node_path, "/")
+      !any(startsWith(graph$path, prefix))
+    },
+    logical(1)
+  )
+  graph[leaf, , drop = FALSE]
+}

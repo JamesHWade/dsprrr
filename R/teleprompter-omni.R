@@ -129,42 +129,20 @@ Omni <- S7::new_class(
         NULL
       }
     ),
-    valset_ratio = S7::new_property(
-      S7::class_numeric,
+    valset_ratio = prop_unit_double(
+      "valset_ratio",
       default = 0.1,
-      validator = function(value) {
-        if (length(value) != 1L || is.na(value) || value <= 0 || value >= 1) {
-          return("valset_ratio must be a single number in (0, 1)")
-        }
-        NULL
-      }
+      lower_open = TRUE,
+      upper_open = TRUE,
+      type_message = "valset_ratio must be a single number in (0, 1)",
+      range_message = "valset_ratio must be a single number in (0, 1)"
     ),
-    parallel = S7::new_property(
-      S7::class_logical,
-      default = FALSE,
-      validator = function(value) {
-        if (length(value) != 1L || is.na(value)) {
-          return("parallel must be TRUE or FALSE")
-        }
-        NULL
-      }
-    ),
-    num_workers = S7::new_property(
-      S7::class_any,
+    parallel = prop_scalar_bool("parallel", default = FALSE),
+    num_workers = prop_optional_seed(
       default = NULL,
-      validator = function(value) {
-        if (
-          !is.null(value) &&
-            (!is.numeric(value) ||
-              length(value) != 1L ||
-              is.na(value) ||
-              value < 1 ||
-              value != as.integer(value))
-        ) {
-          return("num_workers must be a positive integer or NULL")
-        }
-        NULL
-      }
+      whole_number = TRUE,
+      min = 1L,
+      message = "num_workers must be a positive integer or NULL"
     ),
     seed = S7::new_property(
       S7::class_any,
@@ -177,16 +155,7 @@ Omni <- S7::new_class(
         NULL
       }
     ),
-    verbose = S7::new_property(
-      S7::class_logical,
-      default = TRUE,
-      validator = function(value) {
-        if (length(value) != 1L || is.na(value)) {
-          return("verbose must be TRUE or FALSE")
-        }
-        NULL
-      }
-    )
+    verbose = prop_scalar_bool("verbose", default = TRUE)
   ),
   constructor = function(
     metric,

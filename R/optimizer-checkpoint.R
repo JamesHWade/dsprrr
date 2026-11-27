@@ -445,17 +445,7 @@ optimizer_checkpoint_effective_runtime_identity <- function(
     ))
   }
 
-  graph <- module_graph(program, boundaries = "cross", cycles = "record")
-  graph <- graph[!graph$cycle, , drop = FALSE]
-  leaf <- vapply(
-    graph$path,
-    function(node_path) {
-      prefix <- if (identical(node_path, "$")) "$/" else paste0(node_path, "/")
-      !any(startsWith(graph$path, prefix))
-    },
-    logical(1)
-  )
-  graph <- graph[leaf, , drop = FALSE]
+  graph <- module_leaf_nodes(program, cycles = "record")
   default_chat <- get_default_chat(create = FALSE)
   nodes <- lapply(seq_len(nrow(graph)), function(i) {
     module_chat <- tryCatch(graph$module[[i]]$chat, error = function(e) NULL)
@@ -808,81 +798,68 @@ optimizer_checkpoint_lock_path <- function(path) {
 
 optimizer_checkpoint_with_lock <- function(path, code) {
   lock_path <- optimizer_checkpoint_lock_path(path)
-  timeout <- getOption("dsprrr.optimizer_checkpoint_lock_timeout", 10)
-  if (
-    !is.numeric(timeout) ||
-      length(timeout) != 1L ||
-      is.na(timeout) ||
-      timeout < 0
-  ) {
-    timeout <- 10
-  }
-
-  old_umask <- Sys.umask("0077")
-  on.exit(Sys.umask(old_umask), add = TRUE)
-  lock <- tryCatch(
-    filelock::lock(lock_path, timeout = timeout * 1000),
-    error = function(e) e
-  )
-  Sys.umask(old_umask)
-  if (inherits(lock, "condition")) {
-    optimizer_checkpoint_trust_abort(
-      paste0(
-        "the checkpoint lock could not be acquired: ",
-        conditionMessage(lock)
-      ),
-      parent = lock
-    )
-  }
-  if (is.null(lock)) {
-    cli::cli_abort(
-      c(
-        "Timed out waiting for the optimizer checkpoint lock",
-        "x" = "Lock: {.path {lock_path}}"
-      ),
-      class = c(
-        "dsprrr_optimizer_checkpoint_lock_error",
-        "dsprrr_optimizer_checkpoint_io_error"
-      )
-    )
-  }
-  on.exit(filelock::unlock(lock), add = TRUE)
-
-  guard <- optimizer_checkpoint_path_guard(path)
-  if (!identical(dirname(guard$path), dirname(lock_path))) {
-    optimizer_checkpoint_trust_abort(
-      "the checkpoint directory changed while its lock was acquired"
-    )
-  }
-  if (cache_private_modes_supported()) {
-    if (
-      cache_path_is_symlink(lock_path) ||
-        !cache_path_is_regular(lock_path) ||
-        !cache_paths_owned_by_effective_user(lock_path) ||
-        !cache_set_private_mode(lock_path, "0600")
-    ) {
+  private_storage_with_lock(
+    lock_path = lock_path,
+    timeout_option = "dsprrr.optimizer_checkpoint_lock_timeout",
+    on_error = function(lock) {
       optimizer_checkpoint_trust_abort(
-        "the checkpoint lock is not an effective-user-owned 0600 file"
+        paste0(
+          "the checkpoint lock could not be acquired: ",
+          conditionMessage(lock)
+        ),
+        parent = lock
       )
-    }
-    lock_identity <- cache_private_file_identity(lock_path, guard$parent)
-    if (!isTRUE(lock_identity$ok)) {
-      optimizer_checkpoint_trust_abort(lock_identity$reason)
-    }
-  } else if (
-    cache_path_is_symlink(lock_path) ||
-      !cache_path_is_regular(lock_path)
-  ) {
-    optimizer_checkpoint_trust_abort(
-      "the checkpoint lock is not a regular file"
-    )
-  }
+    },
+    on_timeout = function() {
+      cli::cli_abort(
+        c(
+          "Timed out waiting for the optimizer checkpoint lock",
+          "x" = "Lock: {.path {lock_path}}"
+        ),
+        class = c(
+          "dsprrr_optimizer_checkpoint_lock_error",
+          "dsprrr_optimizer_checkpoint_io_error"
+        )
+      )
+    },
+    code = function() {
+      guard <- optimizer_checkpoint_path_guard(path)
+      if (!identical(dirname(guard$path), dirname(lock_path))) {
+        optimizer_checkpoint_trust_abort(
+          "the checkpoint directory changed while its lock was acquired"
+        )
+      }
+      if (cache_private_modes_supported()) {
+        if (
+          cache_path_is_symlink(lock_path) ||
+            !cache_path_is_regular(lock_path) ||
+            !cache_paths_owned_by_effective_user(lock_path) ||
+            !cache_set_private_mode(lock_path, "0600")
+        ) {
+          optimizer_checkpoint_trust_abort(
+            "the checkpoint lock is not an effective-user-owned 0600 file"
+          )
+        }
+        lock_identity <- cache_private_file_identity(lock_path, guard$parent)
+        if (!isTRUE(lock_identity$ok)) {
+          optimizer_checkpoint_trust_abort(lock_identity$reason)
+        }
+      } else if (
+        cache_path_is_symlink(lock_path) ||
+          !cache_path_is_regular(lock_path)
+      ) {
+        optimizer_checkpoint_trust_abort(
+          "the checkpoint lock is not a regular file"
+        )
+      }
 
-  hook <- getOption("dsprrr.optimizer_checkpoint_lock_hook")
-  if (is.function(hook)) {
-    hook()
-  }
-  code(guard)
+      hook <- getOption("dsprrr.optimizer_checkpoint_lock_hook")
+      if (is.function(hook)) {
+        hook()
+      }
+      code(guard)
+    }
+  )
 }
 
 optimizer_checkpoint_path_guard <- function(path, require_existing = FALSE) {
@@ -992,55 +969,28 @@ optimizer_checkpoint_file_identity <- function(path, guard) {
     as.character(fs::path_real(dirname(path))),
     error = function(e) NULL
   )
-  info <- tryCatch(
-    suppressWarnings(fs::file_info(path, follow = FALSE, fail = FALSE)),
-    error = function(e) NULL
-  )
-  file_identity <- file_identity_exact(path)
-  if (
-    is.null(parent) ||
-      !identical(parent, guard$parent$path) ||
-      is.null(info) ||
-      nrow(info) != 1L ||
-      is.null(file_identity)
-  ) {
+  if (is.null(parent) || !identical(parent, guard$parent$path)) {
     return(list(ok = FALSE, reason = "the checkpoint identity is unavailable"))
   }
-  list(
-    ok = TRUE,
-    identity = list(
-      device_id = file_identity$device_id,
-      inode = file_identity$inode,
-      size = as.numeric(info$size[[1L]]),
-      modification_time = as.numeric(info$modification_time[[1L]]),
-      change_time = as.numeric(info$change_time[[1L]])
-    )
+  private_storage_non_posix_file_identity(
+    path,
+    unavailable_reason = "the checkpoint identity is unavailable"
   )
 }
 
 optimizer_checkpoint_identity_core <- function(identity) {
-  identity[intersect(
-    c("device_id", "inode", "owner_id", "mode"),
-    names(identity)
-  )]
+  private_storage_identity_fields(identity, include_content = FALSE)
 }
 
 optimizer_checkpoint_identity_content <- function(
   identity,
   include_change_time = TRUE
 ) {
-  fields <- c(
-    "device_id",
-    "inode",
-    "owner_id",
-    "mode",
-    "size",
-    "modification_time"
+  private_storage_identity_fields(
+    identity,
+    include_content = TRUE,
+    include_change_time = include_change_time
   )
-  if (isTRUE(include_change_time)) {
-    fields <- c(fields, "change_time")
-  }
-  identity[intersect(fields, names(identity))]
 }
 
 optimizer_checkpoint_assert_same_file <- function(
@@ -1050,17 +1000,14 @@ optimizer_checkpoint_assert_same_file <- function(
   include_content = FALSE,
   include_change_time = TRUE
 ) {
-  before_value <- if (include_content) {
-    optimizer_checkpoint_identity_content(before, include_change_time)
-  } else {
-    optimizer_checkpoint_identity_core(before)
-  }
-  after_value <- if (include_content) {
-    optimizer_checkpoint_identity_content(after, include_change_time)
-  } else {
-    optimizer_checkpoint_identity_core(after)
-  }
-  if (!identical(before_value, after_value)) {
+  if (
+    !private_storage_same_file(
+      before,
+      after,
+      include_content = include_content,
+      include_change_time = include_change_time
+    )
+  ) {
     optimizer_checkpoint_trust_abort(message)
   }
   invisible(TRUE)
@@ -1137,108 +1084,54 @@ optimizer_checkpoint_atomic_save_locked <- function(
       expected_predecessor
     )
   }
-  temporary <- artifact_private_stage(path)
-  on.exit(unlink(temporary), add = TRUE)
-  staging_before <- optimizer_checkpoint_file_identity(temporary, guard)
-  if (!isTRUE(staging_before$ok)) {
-    optimizer_checkpoint_trust_abort(staging_before$reason)
-  }
-  staging_hold <- tryCatch(
-    artifact_file_hold(temporary),
-    error = function(e) e
-  )
-  on.exit(artifact_file_hold_release(staging_hold), add = TRUE)
-  if (inherits(staging_hold, "condition")) {
-    optimizer_checkpoint_trust_abort(
-      "the checkpoint staging identity could not be held",
-      parent = staging_hold
-    )
-  }
-  tryCatch(
-    artifact_write_rds(checkpoint, temporary),
-    error = function(e) {
-      cli::cli_abort(
-        "Could not write optimizer checkpoint",
-        parent = e,
-        class = "dsprrr_optimizer_checkpoint_io_error"
+  private_storage_atomic_publish(
+    path = path,
+    what = "optimizer checkpoint",
+    existing = current_predecessor,
+    get_identity = function(candidate) {
+      optimizer_checkpoint_file_identity(candidate, guard)
+    },
+    assert_parent = function() optimizer_checkpoint_assert_parent(guard),
+    abort_trust = optimizer_checkpoint_trust_abort,
+    writer = function(temporary) {
+      tryCatch(
+        artifact_write_rds(checkpoint, temporary),
+        error = function(e) {
+          cli::cli_abort(
+            "Could not write optimizer checkpoint",
+            parent = e,
+            class = "dsprrr_optimizer_checkpoint_io_error"
+          )
+        }
       )
-    }
-  )
-  staging_written <- optimizer_checkpoint_file_identity(temporary, guard)
-  if (!isTRUE(staging_written$ok)) {
-    optimizer_checkpoint_trust_abort(staging_written$reason)
-  }
-  optimizer_checkpoint_assert_same_file(
-    staging_before$identity,
-    staging_written$identity,
-    "the checkpoint staging file changed identity while being written"
-  )
-  before_read <- staging_written
-  staged <- tryCatch(
-    optimizer_checkpoint_read_rds(temporary),
-    error = function(e) {
-      cli::cli_abort(
-        "Could not verify staged optimizer checkpoint",
-        parent = e,
-        class = "dsprrr_optimizer_checkpoint_io_error"
+    },
+    verifier = function(temporary) {
+      staged <- tryCatch(
+        optimizer_checkpoint_read_rds(temporary),
+        error = function(e) {
+          cli::cli_abort(
+            "Could not verify staged optimizer checkpoint",
+            parent = e,
+            class = "dsprrr_optimizer_checkpoint_io_error"
+          )
+        }
       )
-    }
-  )
-  after_read <- optimizer_checkpoint_file_identity(temporary, guard)
-  if (!isTRUE(after_read$ok)) {
-    optimizer_checkpoint_trust_abort(after_read$reason)
-  }
-  optimizer_checkpoint_assert_same_file(
-    before_read$identity,
-    after_read$identity,
-    "the checkpoint staging file changed while being verified",
-    include_content = TRUE
-  )
-  optimizer_checkpoint_validate_manifest(staged)
-  artifact_file_hold_release(staging_hold)
-  staging_hold <- NULL
-  optimizer_checkpoint_assert_parent(guard)
-  if (is.null(current_predecessor)) {
-    if (file.exists(path)) {
-      optimizer_checkpoint_trust_abort(
-        "the checkpoint target appeared during publication"
-      )
-    }
-  } else {
-    current <- optimizer_checkpoint_file_identity(path, guard)
-    if (!isTRUE(current$ok)) {
-      optimizer_checkpoint_trust_abort(current$reason)
-    }
-    optimizer_checkpoint_assert_same_file(
-      current_predecessor,
-      current$identity,
-      "the checkpoint target changed before publication",
-      include_content = TRUE
-    )
-  }
-  tryCatch(
-    artifact_atomic_replace(temporary, path, what = "optimizer checkpoint"),
-    error = function(e) {
+      optimizer_checkpoint_validate_manifest(staged)
+    },
+    replace_error = function(e) {
       cli::cli_abort(
         "Could not atomically publish optimizer checkpoint",
         parent = e,
         class = "dsprrr_optimizer_checkpoint_io_error"
       )
-    }
+    },
+    hold_staging_msg = "the checkpoint staging identity could not be held",
+    written_msg = "the checkpoint staging file changed identity while being written",
+    verified_msg = "the checkpoint staging file changed while being verified",
+    appeared_msg = "the checkpoint target appeared during publication",
+    changed_before_msg = "the checkpoint target changed before publication",
+    mismatch_msg = "the published checkpoint is not the verified staging file"
   )
-  optimizer_checkpoint_assert_parent(guard)
-  installed <- optimizer_checkpoint_file_identity(path, guard)
-  if (!isTRUE(installed$ok)) {
-    optimizer_checkpoint_trust_abort(installed$reason)
-  }
-  optimizer_checkpoint_assert_same_file(
-    after_read$identity,
-    installed$identity,
-    "the published checkpoint is not the verified staging file",
-    include_content = TRUE,
-    include_change_time = FALSE
-  )
-  invisible(installed$identity)
 }
 
 optimizer_checkpoint_atomic_save <- function(

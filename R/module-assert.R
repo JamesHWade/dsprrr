@@ -137,12 +137,7 @@ AssertModule <- R6::R6Class(
       rollout_id = NULL,
       ...
     ) {
-      # Handle both list and data frame inputs
-      if (is.data.frame(batch)) {
-        inputs <- as.list(batch[1, , drop = FALSE])
-      } else {
-        inputs <- batch
-      }
+      inputs <- normalize_forward_batch(batch)
 
       start_time <- Sys.time()
       attempts <- list()
@@ -345,52 +340,22 @@ AssertModule <- R6::R6Class(
     #' @param all Logical. If TRUE, return all attempts across all runs
     #' @return A tibble of attempts
     get_attempts = function(all = FALSE) {
-      if (length(self$state$attempts) == 0) {
-        return(tibble::tibble(
-          run = integer(),
-          attempt = integer(),
-          prediction = list(),
-          hard_passed = logical(),
-          n_hard_failed = integer(),
-          n_soft_failed = integer()
-        ))
-      }
-
-      if (all) {
-        # All runs
-        rows <- list()
-        for (run_idx in seq_along(self$state$attempts)) {
-          run_attempts <- self$state$attempts[[run_idx]]
-          for (a in run_attempts) {
-            rows <- append(
-              rows,
-              list(list(
-                run = run_idx,
-                attempt = a$attempt,
-                prediction = list(a$prediction),
-                hard_passed = a$hard_passed,
-                n_hard_failed = a$n_hard_failed,
-                n_soft_failed = a$n_soft_failed
-              ))
-            )
-          }
-        }
-      } else {
-        # Just last run
-        last_run <- self$state$attempts[[length(self$state$attempts)]]
-        rows <- lapply(last_run, function(a) {
+      rows <- collect_run_records(
+        self$state$attempts,
+        all = all,
+        format_row = function(run_idx, a, idx) {
           list(
-            run = length(self$state$attempts),
+            run = run_idx,
             attempt = a$attempt,
             prediction = list(a$prediction),
             hard_passed = a$hard_passed,
             n_hard_failed = a$n_hard_failed,
             n_soft_failed = a$n_soft_failed
           )
-        })
-      }
+        }
+      )
 
-      if (length(rows) == 0) {
+      if (length(rows) == 0L) {
         return(tibble::tibble(
           run = integer(),
           attempt = integer(),

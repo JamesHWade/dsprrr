@@ -68,12 +68,7 @@ PredictModule <- R6::R6Class(
     ) {
       reasoning_mode <- module_reasoning_mode(self)
 
-      # Handle both list and data frame inputs
-      if (is.data.frame(batch)) {
-        inputs <- as.list(batch[1, , drop = FALSE])
-      } else {
-        inputs <- batch
-      }
+      inputs <- normalize_forward_batch(batch)
 
       request <- build_module_request(self, inputs)
       prompt <- request$prompt

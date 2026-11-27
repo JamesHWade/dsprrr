@@ -6,6 +6,216 @@
 #' @noRd
 NULL
 
+wrapper_run_attempts <- function(
+  self,
+  batch,
+  .llm = NULL,
+  trace = TRUE,
+  rollout_id = NULL,
+  label = "BestOfN",
+  with_feedback = FALSE,
+  inject_feedback = NULL,
+  generate_feedback = NULL,
+  ...
+) {
+  inputs <- normalize_forward_batch(batch)
+
+  start_time <- Sys.time()
+  attempts <- list()
+  feedback_history <- list()
+  best_score <- -Inf
+  best_result <- NULL
+  best_metadata <- NULL
+  best_chat <- NULL
+  first_result <- NULL # Fallback if all scores are NA
+  first_metadata <- NULL
+  first_chat <- NULL
+  consecutive_failures <- 0
+  n_errors <- 0L
+  current_batch <- batch
+  previous_feedback <- NULL
+
+  if (isTRUE(with_feedback)) {
+    # A wrapped module that declares the feedback field needs a value on the
+    # first attempt too, before any feedback exists.
+    wrapped_inputs <- get_input_names(self$module$signature)
+    if (
+      self$feedback_field %in%
+        wrapped_inputs &&
+        is.null(current_batch[[self$feedback_field]])
+    ) {
+      current_batch <- inject_feedback(current_batch, "No feedback yet.")
+    }
+  }
+
+  for (i in seq_len(self$N)) {
+    if (isTRUE(with_feedback) && i > 1 && !is.null(previous_feedback)) {
+      current_batch <- inject_feedback(current_batch, previous_feedback)
+    }
+
+    # rollout_id partitions the cache per attempt so attempts 2..N are not
+    # served identical cached responses. compose_* folds in any inherited id.
+    result <- tryCatch(
+      {
+        self$module$forward(
+          current_batch,
+          .llm = .llm,
+          trace = FALSE,
+          rollout_id = compose_rollout_id(rollout_id, i),
+          ...
+        )
+      },
+      error = function(e) {
+        consecutive_failures <<- consecutive_failures + 1
+        n_errors <<- n_errors + 1L
+        cli::cli_warn(c(
+          "Attempt {i} of {self$N} failed in {label}",
+          "x" = e$message,
+          "i" = "Consecutive failures: {consecutive_failures}/{self$fail_count}"
+        ))
+        if (consecutive_failures >= self$fail_count) {
+          cli::cli_abort(c(
+            "Too many consecutive failures in {label}",
+            "x" = "Failed {consecutive_failures} times",
+            "i" = "Last error: {e$message}"
+          ))
+        }
+        NULL
+      }
+    )
+
+    if (is.null(result)) {
+      next
+    }
+
+    consecutive_failures <- 0
+
+    prediction <- result$output[[1]]
+    metadata <- result$metadata[[1]]
+    chat_obj <- result$chat[[1]]
+
+    if (is.null(first_result)) {
+      first_result <- prediction
+      first_metadata <- metadata
+      first_chat <- chat_obj
+    }
+
+    score <- tryCatch(
+      {
+        s <- self$reward_fn(prediction, inputs)
+        if (is.logical(s)) as.numeric(s) else s
+      },
+      error = function(e) {
+        cli::cli_warn(c(
+          "Reward function failed for attempt {i}",
+          "x" = "Treating as unscored (will not be selected as best)",
+          "i" = e$message
+        ))
+        NA_real_
+      }
+    )
+
+    attempt_entry <- list(
+      attempt = i,
+      prediction = prediction,
+      score = score,
+      metadata = metadata
+    )
+    if (isTRUE(with_feedback)) {
+      attempt_entry$feedback <- previous_feedback
+    }
+    attempts[[length(attempts) + 1L]] <- attempt_entry
+
+    if (!is.na(score) && score > best_score) {
+      best_score <- score
+      best_result <- prediction
+      best_metadata <- metadata
+      best_chat <- chat_obj
+    }
+
+    if (!is.na(score) && score >= self$threshold) {
+      break
+    }
+
+    if (isTRUE(with_feedback) && i < self$N) {
+      previous_feedback <- generate_feedback(inputs, prediction, score)
+      feedback_history[[length(feedback_history) + 1L]] <- previous_feedback
+    }
+  }
+
+  end_time <- Sys.time()
+  latency_ms <- as.numeric(difftime(end_time, start_time, units = "secs")) *
+    1000
+
+  if (is.null(first_result)) {
+    cli::cli_abort("All {self$N} attempts failed in {label}")
+  }
+
+  if (is.null(best_result)) {
+    best_result <- first_result
+    best_metadata <- first_metadata
+    best_chat <- first_chat
+  }
+
+  usage <- aggregate_module_usage_metadata(
+    lapply(attempts, function(attempt) attempt$metadata),
+    unknown_attempt = n_errors > 0L
+  )
+
+  final_metadata <- c(
+    list(
+      timestamp = end_time,
+      model = best_metadata$model,
+      n_attempts = length(attempts),
+      best_score = best_score,
+      all_scores = vapply(attempts, function(a) a$score, numeric(1)),
+      early_stopped = !is.infinite(best_score) && best_score >= self$threshold
+    ),
+    if (isTRUE(with_feedback)) {
+      list(feedback_count = length(feedback_history))
+    },
+    list(
+      total_tokens = usage$total_tokens,
+      cost = usage$cost,
+      provider_calls = usage$provider_calls,
+      latency_ms = latency_ms
+    )
+  )
+
+  if (trace) {
+    trace_entry <- c(
+      list(
+        timestamp = end_time,
+        inputs = inputs,
+        output = best_result,
+        attempts = attempts
+      ),
+      if (isTRUE(with_feedback)) {
+        list(feedback_history = feedback_history)
+      },
+      list(
+        n_attempts = length(attempts),
+        best_score = best_score,
+        threshold = self$threshold,
+        model = best_metadata$model
+      )
+    )
+    self$state$traces[[length(self$state$traces) + 1L]] <- trace_entry
+    self$state$attempts[[length(self$state$attempts) + 1L]] <- attempts
+    if (isTRUE(with_feedback)) {
+      self$state$feedback_history[[
+        length(self$state$feedback_history) + 1L
+      ]] <- feedback_history
+    }
+  }
+
+  tibble::tibble(
+    output = list(best_result),
+    chat = list(best_chat),
+    metadata = list(final_metadata)
+  )
+}
+
 #' BestOfN Wrapper Module
 #'
 #' @description
@@ -117,174 +327,14 @@ BestOfNModule <- R6::R6Class(
       rollout_id = NULL,
       ...
     ) {
-      # Handle both list and data frame inputs
-      if (is.data.frame(batch)) {
-        inputs <- as.list(batch[1, , drop = FALSE])
-      } else {
-        inputs <- batch
-      }
-
-      start_time <- Sys.time()
-      attempts <- list()
-      best_score <- -Inf
-      best_result <- NULL
-      best_metadata <- NULL
-      best_chat <- NULL
-      first_result <- NULL # Fallback if all scores are NA
-      first_metadata <- NULL
-      first_chat <- NULL
-      consecutive_failures <- 0
-      n_errors <- 0L
-
-      for (i in seq_len(self$N)) {
-        # Run the wrapped module. rollout_id partitions the cache per attempt so
-        # attempts 2..N are not served identical cached responses (which would
-        # make BestOfN explore nothing when caching is enabled). compose_*
-        # folds in any inherited id so nesting stays unique and consistent.
-        result <- tryCatch(
-          {
-            self$module$forward(
-              batch,
-              .llm = .llm,
-              trace = FALSE,
-              rollout_id = compose_rollout_id(rollout_id, i),
-              ...
-            )
-          },
-          error = function(e) {
-            consecutive_failures <<- consecutive_failures + 1
-            n_errors <<- n_errors + 1L
-            cli::cli_warn(c(
-              "Attempt {i} of {self$N} failed in BestOfN",
-              "x" = e$message,
-              "i" = "Consecutive failures: {consecutive_failures}/{self$fail_count}"
-            ))
-            if (consecutive_failures >= self$fail_count) {
-              cli::cli_abort(c(
-                "Too many consecutive failures in BestOfN",
-                "x" = "Failed {consecutive_failures} times",
-                "i" = "Last error: {e$message}"
-              ))
-            }
-            NULL
-          }
-        )
-
-        if (is.null(result)) {
-          next
-        }
-
-        # Reset failure counter on success
-        consecutive_failures <- 0
-
-        # Extract prediction and metadata
-        prediction <- result$output[[1]]
-        metadata <- result$metadata[[1]]
-        chat_obj <- result$chat[[1]]
-
-        # Keep first successful result as fallback (in case all scores are NA)
-        if (is.null(first_result)) {
-          first_result <- prediction
-          first_metadata <- metadata
-          first_chat <- chat_obj
-        }
-
-        # Score the result
-        score <- tryCatch(
-          {
-            s <- self$reward_fn(prediction, inputs)
-            if (is.logical(s)) as.numeric(s) else s
-          },
-          error = function(e) {
-            cli::cli_warn(c(
-              "Reward function failed for attempt {i}",
-              "x" = "Treating as unscored (will not be selected as best)",
-              "i" = e$message
-            ))
-            NA_real_
-          }
-        )
-
-        # Record attempt
-        attempt_entry <- list(
-          attempt = i,
-          prediction = prediction,
-          score = score,
-          metadata = metadata
-        )
-        attempts <- append(attempts, list(attempt_entry))
-
-        # Track best result (NA scores are not eligible for best)
-        if (!is.na(score) && score > best_score) {
-          best_score <- score
-          best_result <- prediction
-          best_metadata <- metadata
-          best_chat <- chat_obj
-        }
-
-        # Early stopping if threshold met (NA scores don't trigger early stop)
-        if (!is.na(score) && score >= self$threshold) {
-          break
-        }
-      }
-
-      end_time <- Sys.time()
-      latency_ms <- as.numeric(difftime(end_time, start_time, units = "secs")) *
-        1000
-
-      # If no successful attempts at all, error
-      if (is.null(first_result)) {
-        cli::cli_abort("All {self$N} attempts failed in BestOfN")
-      }
-
-      # Use first_result as fallback if all scores were NA
-      if (is.null(best_result)) {
-        best_result <- first_result
-        best_metadata <- first_metadata
-        best_chat <- first_chat
-        # best_score stays -Inf since no valid scores
-      }
-
-      usage <- aggregate_module_usage_metadata(
-        lapply(attempts, function(attempt) attempt$metadata),
-        unknown_attempt = n_errors > 0L
-      )
-
-      # Create aggregated metadata
-      final_metadata <- list(
-        timestamp = end_time,
-        model = best_metadata$model,
-        n_attempts = length(attempts),
-        best_score = best_score,
-        all_scores = vapply(attempts, function(a) a$score, numeric(1)),
-        early_stopped = !is.infinite(best_score) &&
-          best_score >= self$threshold,
-        total_tokens = usage$total_tokens,
-        cost = usage$cost,
-        provider_calls = usage$provider_calls,
-        latency_ms = latency_ms
-      )
-
-      # Record trace with all attempts
-      if (trace) {
-        trace_entry <- list(
-          timestamp = end_time,
-          inputs = inputs,
-          output = best_result,
-          attempts = attempts,
-          n_attempts = length(attempts),
-          best_score = best_score,
-          threshold = self$threshold,
-          model = best_metadata$model
-        )
-        self$state$traces <- append(self$state$traces, list(trace_entry))
-        self$state$attempts <- append(self$state$attempts, list(attempts))
-      }
-
-      tibble::tibble(
-        output = list(best_result),
-        chat = list(best_chat),
-        metadata = list(final_metadata)
+      wrapper_run_attempts(
+        self = self,
+        batch = batch,
+        .llm = .llm,
+        trace = trace,
+        rollout_id = rollout_id,
+        label = "BestOfN",
+        ...
       )
     },
 
@@ -293,46 +343,20 @@ BestOfNModule <- R6::R6Class(
     #' @param all Logical. If TRUE, return all attempts across all runs
     #' @return A tibble of attempts with columns: run, attempt, prediction, score
     get_attempts = function(all = FALSE) {
-      if (length(self$state$attempts) == 0) {
-        return(tibble::tibble(
-          run = integer(),
-          attempt = integer(),
-          prediction = list(),
-          score = numeric()
-        ))
-      }
-
-      if (all) {
-        # All runs
-        rows <- list()
-        for (run_idx in seq_along(self$state$attempts)) {
-          run_attempts <- self$state$attempts[[run_idx]]
-          for (a in run_attempts) {
-            rows <- append(
-              rows,
-              list(list(
-                run = run_idx,
-                attempt = a$attempt,
-                prediction = list(a$prediction),
-                score = a$score
-              ))
-            )
-          }
-        }
-      } else {
-        # Just last run
-        last_run <- self$state$attempts[[length(self$state$attempts)]]
-        rows <- lapply(last_run, function(a) {
+      rows <- collect_run_records(
+        self$state$attempts,
+        all = all,
+        format_row = function(run_idx, a, idx) {
           list(
-            run = length(self$state$attempts),
+            run = run_idx,
             attempt = a$attempt,
             prediction = list(a$prediction),
             score = a$score
           )
-        })
-      }
+        }
+      )
 
-      if (length(rows) == 0) {
+      if (length(rows) == 0L) {
         return(tibble::tibble(
           run = integer(),
           attempt = integer(),
@@ -701,219 +725,17 @@ RefineModule <- R6::R6Class(
       rollout_id = NULL,
       ...
     ) {
-      # Handle both list and data frame inputs
-      if (is.data.frame(batch)) {
-        inputs <- as.list(batch[1, , drop = FALSE])
-      } else {
-        inputs <- batch
-      }
-
-      start_time <- Sys.time()
-      attempts <- list()
-      feedback_history <- list()
-      best_score <- -Inf
-      best_result <- NULL
-      best_metadata <- NULL
-      best_chat <- NULL
-      first_result <- NULL # Fallback if all scores are NA
-      first_metadata <- NULL
-      first_chat <- NULL
-      consecutive_failures <- 0
-      n_errors <- 0L
-      current_batch <- batch
-      previous_feedback <- NULL
-
-      # A wrapped module that declares the feedback field needs a value on the
-      # first attempt too, before any feedback exists.
-      wrapped_inputs <- vapply(
-        self$module$signature@inputs,
-        function(x) x$name,
-        character(1)
-      )
-      if (
-        self$feedback_field %in%
-          wrapped_inputs &&
-          is.null(current_batch[[self$feedback_field]])
-      ) {
-        current_batch <- private$inject_feedback(
-          current_batch,
-          "No feedback yet."
-        )
-      }
-
-      for (i in seq_len(self$N)) {
-        # Inject feedback from previous attempt (if any)
-        if (i > 1 && !is.null(previous_feedback)) {
-          current_batch <- private$inject_feedback(
-            current_batch,
-            previous_feedback
-          )
-        }
-
-        # Run the wrapped module. rollout_id partitions the cache per attempt so
-        # retries are not served identical cached responses even before feedback
-        # changes the prompt. compose_* folds in any inherited id for nesting.
-        result <- tryCatch(
-          {
-            self$module$forward(
-              current_batch,
-              .llm = .llm,
-              trace = FALSE,
-              rollout_id = compose_rollout_id(rollout_id, i),
-              ...
-            )
-          },
-          error = function(e) {
-            consecutive_failures <<- consecutive_failures + 1
-            n_errors <<- n_errors + 1L
-            cli::cli_warn(c(
-              "Attempt {i} of {self$N} failed in Refine",
-              "x" = e$message,
-              "i" = "Consecutive failures: {consecutive_failures}/{self$fail_count}"
-            ))
-            if (consecutive_failures >= self$fail_count) {
-              cli::cli_abort(c(
-                "Too many consecutive failures in Refine",
-                "x" = "Failed {consecutive_failures} times",
-                "i" = "Last error: {e$message}"
-              ))
-            }
-            NULL
-          }
-        )
-
-        if (is.null(result)) {
-          next
-        }
-
-        # Reset failure counter on success
-        consecutive_failures <- 0
-
-        # Extract prediction and metadata
-        prediction <- result$output[[1]]
-        metadata <- result$metadata[[1]]
-        chat_obj <- result$chat[[1]]
-
-        # Keep first successful result as fallback (in case all scores are NA)
-        if (is.null(first_result)) {
-          first_result <- prediction
-          first_metadata <- metadata
-          first_chat <- chat_obj
-        }
-
-        # Score the result
-        score <- tryCatch(
-          {
-            s <- self$reward_fn(prediction, inputs)
-            if (is.logical(s)) as.numeric(s) else s
-          },
-          error = function(e) {
-            cli::cli_warn(c(
-              "Reward function failed for attempt {i}",
-              "x" = "Treating as unscored (will not be selected as best)",
-              "i" = e$message
-            ))
-            NA_real_
-          }
-        )
-
-        # Record attempt
-        attempt_entry <- list(
-          attempt = i,
-          prediction = prediction,
-          score = score,
-          metadata = metadata,
-          feedback = previous_feedback
-        )
-        attempts <- append(attempts, list(attempt_entry))
-
-        # Track best result (NA scores are not eligible for best)
-        if (!is.na(score) && score > best_score) {
-          best_score <- score
-          best_result <- prediction
-          best_metadata <- metadata
-          best_chat <- chat_obj
-        }
-
-        # Early stopping if threshold met (NA scores don't trigger early stop)
-        if (!is.na(score) && score >= self$threshold) {
-          break
-        }
-
-        # Generate feedback for next attempt (only if there will be one)
-        if (i < self$N) {
-          previous_feedback <- private$generate_feedback(
-            inputs,
-            prediction,
-            score
-          )
-          feedback_history <- append(feedback_history, list(previous_feedback))
-        }
-      }
-
-      end_time <- Sys.time()
-      latency_ms <- as.numeric(difftime(end_time, start_time, units = "secs")) *
-        1000
-
-      # If no successful attempts at all, error
-      if (is.null(first_result)) {
-        cli::cli_abort("All {self$N} attempts failed in Refine")
-      }
-
-      # Use first_result as fallback if all scores were NA
-      if (is.null(best_result)) {
-        best_result <- first_result
-        best_metadata <- first_metadata
-        best_chat <- first_chat
-        # best_score stays -Inf since no valid scores
-      }
-
-      usage <- aggregate_module_usage_metadata(
-        lapply(attempts, function(attempt) attempt$metadata),
-        unknown_attempt = n_errors > 0L
-      )
-
-      # Create aggregated metadata
-      final_metadata <- list(
-        timestamp = end_time,
-        model = best_metadata$model,
-        n_attempts = length(attempts),
-        best_score = best_score,
-        all_scores = vapply(attempts, function(a) a$score, numeric(1)),
-        early_stopped = !is.infinite(best_score) &&
-          best_score >= self$threshold,
-        feedback_count = length(feedback_history),
-        total_tokens = usage$total_tokens,
-        cost = usage$cost,
-        provider_calls = usage$provider_calls,
-        latency_ms = latency_ms
-      )
-
-      # Record trace with all attempts and feedback
-      if (trace) {
-        trace_entry <- list(
-          timestamp = end_time,
-          inputs = inputs,
-          output = best_result,
-          attempts = attempts,
-          feedback_history = feedback_history,
-          n_attempts = length(attempts),
-          best_score = best_score,
-          threshold = self$threshold,
-          model = best_metadata$model
-        )
-        self$state$traces <- append(self$state$traces, list(trace_entry))
-        self$state$attempts <- append(self$state$attempts, list(attempts))
-        self$state$feedback_history <- append(
-          self$state$feedback_history,
-          list(feedback_history)
-        )
-      }
-
-      tibble::tibble(
-        output = list(best_result),
-        chat = list(best_chat),
-        metadata = list(final_metadata)
+      wrapper_run_attempts(
+        self = self,
+        batch = batch,
+        .llm = .llm,
+        trace = trace,
+        rollout_id = rollout_id,
+        label = "Refine",
+        with_feedback = TRUE,
+        inject_feedback = private$inject_feedback,
+        generate_feedback = private$generate_feedback,
+        ...
       )
     },
 

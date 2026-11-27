@@ -348,24 +348,6 @@ validate_rlm_sub_lm <- function(sub_lm) {
 }
 
 
-rlm_type_contains_json_schema <- function(type) {
-  if (inherits(type, "ellmer::TypeJsonSchema")) {
-    return(TRUE)
-  }
-  if (inherits(type, "ellmer::TypeArray")) {
-    return(rlm_type_contains_json_schema(type@items))
-  }
-  if (inherits(type, "ellmer::TypeObject")) {
-    return(any(vapply(
-      type@properties,
-      rlm_type_contains_json_schema,
-      logical(1)
-    )))
-  }
-  FALSE
-}
-
-
 validate_rlm_output_type <- function(type) {
   if (rlm_type_contains_json_schema(type)) {
     cli::cli_abort(
@@ -713,24 +695,20 @@ rlm_reserved_tool_names <- function() {
 }
 
 normalize_rlm_bound <- function(value, name, minimum) {
-  valid <- is.numeric(value) &&
-    length(value) == 1L &&
-    !is.na(value) &&
-    is.finite(value) &&
-    value == floor(value) &&
-    value >= minimum &&
-    value <= .Machine$integer.max
-  if (!valid) {
-    message <- switch(
-      name,
-      max_iterations = "max_iterations must be at least 1",
-      max_llm_calls = "max_llm_calls must be non-negative",
-      max_output_chars = "max_output_chars must be a positive integer",
-      paste0(name, " is outside its supported integer range")
-    )
-    cli::cli_abort(message, class = "dsprrr_rlm_bounds_error")
-  }
-  as.integer(value)
+  message <- switch(
+    name,
+    max_iterations = "max_iterations must be at least 1",
+    max_llm_calls = "max_llm_calls must be non-negative",
+    max_output_chars = "max_output_chars must be a positive integer",
+    paste0(name, " is outside its supported integer range")
+  )
+  validate_integer_bound(
+    value,
+    arg = name,
+    min = minimum,
+    message = message,
+    class = "dsprrr_rlm_bounds_error"
+  )
 }
 
 validate_rlm_tools <- function(tools) {

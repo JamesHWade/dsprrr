@@ -81,12 +81,7 @@ RAGModule <- R6::R6Class(
     #' @param ... Additional arguments
     #' @return Tibble with result, .chat, .metadata columns
     forward = function(batch, .llm = NULL, trace = TRUE, ...) {
-      # Handle both list and data frame inputs
-      if (is.data.frame(batch)) {
-        inputs <- as.list(batch[1, , drop = FALSE])
-      } else {
-        inputs <- batch
-      }
+      inputs <- normalize_forward_batch(batch)
 
       # Extract query from inputs for retrieval
       query <- private$extract_query(inputs)

@@ -521,81 +521,54 @@ artifact_module_class <- function(module) {
   class
 }
 
+.artifact_module_kinds <- c(
+  ReactModule = "react",
+  PredictModule = "predict",
+  PipelineModule = "pipeline",
+  EnsembleModule = "ensemble",
+  MultiChainComparisonModule = "multichain",
+  RefineModule = "refine",
+  BestOfNModule = "best_of_n",
+  AssertModule = "assert",
+  KNNFewShotModule = "knn_few_shot",
+  FnModule = "fn",
+  ProgramOfThoughtModule = "program_of_thought",
+  CodeActModule = "codeact",
+  RLMModule = "rlm",
+  RAGModule = "rag",
+  FlexModule = "flex"
+)
+
 artifact_supported_module_classes <- function() {
-  c(
-    "ReactModule",
-    "PredictModule",
-    "PipelineModule",
-    "EnsembleModule",
-    "MultiChainComparisonModule",
-    "RefineModule",
-    "BestOfNModule",
-    "AssertModule",
-    "KNNFewShotModule",
-    "FnModule",
-    "ProgramOfThoughtModule",
-    "CodeActModule",
-    "RLMModule",
-    "RAGModule",
-    "FlexModule"
-  )
+  names(.artifact_module_kinds)
 }
 
 artifact_module_kind <- function(module) {
   class <- artifact_module_class(module)
-  kind <- switch(
-    class,
-    ReactModule = "react",
-    PredictModule = {
-      configured <- module$config$.module_kind %||% "predict"
-      if (!configured %in% c("predict", "chain_of_thought")) {
-        cli::cli_abort(
-          c(
-            "Predict module has an inconsistent module kind",
-            "x" = "Got {.val {configured}}."
-          ),
-          class = "dsprrr_artifact_malformed"
-        )
-      }
-      configured
-    },
-    PipelineModule = "pipeline",
-    EnsembleModule = "ensemble",
-    MultiChainComparisonModule = "multichain",
-    RefineModule = "refine",
-    BestOfNModule = "best_of_n",
-    AssertModule = "assert",
-    KNNFewShotModule = "knn_few_shot",
-    FnModule = "fn",
-    ProgramOfThoughtModule = "program_of_thought",
-    CodeActModule = "codeact",
-    RLMModule = "rlm",
-    RAGModule = "rag",
-    FlexModule = "flex"
-  )
-  kind
+  if (identical(class, "PredictModule")) {
+    configured <- module$config$.module_kind %||% "predict"
+    if (!configured %in% c("predict", "chain_of_thought")) {
+      cli::cli_abort(
+        c(
+          "Predict module has an inconsistent module kind",
+          "x" = "Got {.val {configured}}."
+        ),
+        class = "dsprrr_artifact_malformed"
+      )
+    }
+    return(configured)
+  }
+  unname(.artifact_module_kinds[[class]])
 }
 
 artifact_expected_kinds <- function(class) {
-  switch(
-    class,
-    ReactModule = "react",
-    PredictModule = c("predict", "chain_of_thought"),
-    PipelineModule = "pipeline",
-    EnsembleModule = "ensemble",
-    MultiChainComparisonModule = "multichain",
-    RefineModule = "refine",
-    BestOfNModule = "best_of_n",
-    AssertModule = "assert",
-    KNNFewShotModule = "knn_few_shot",
-    FnModule = "fn",
-    ProgramOfThoughtModule = "program_of_thought",
-    CodeActModule = "codeact",
-    RLMModule = "rlm",
-    RAGModule = "rag",
-    FlexModule = "flex",
-    character()
-  )
+  if (identical(class, "PredictModule")) {
+    return(c("predict", "chain_of_thought"))
+  }
+  if (class %in% names(.artifact_module_kinds)) {
+    return(unname(.artifact_module_kinds[[class]]))
+  }
+  character()
 }
 
 artifact_serialize_state <- function(
@@ -1033,19 +1006,19 @@ artifact_runtime_state_fields <- function() {
   )
 }
 
-artifact_registry_ids <- function(value) {
-  ids <- character()
+artifact_walk_runtime_envelopes <- function(
+  value,
+  visitor,
+  stop_when = NULL
+) {
   visit <- function(item) {
-    if (!is.list(item)) {
+    if ((is.function(stop_when) && isTRUE(stop_when())) || !is.list(item)) {
       return(invisible(NULL))
     }
     if (artifact_is_envelope_candidate(item)) {
       envelope <- item$.dsprrr
-      if (
-        identical(envelope$kind, "runtime") &&
-          identical(envelope$payload$kind, "registry")
-      ) {
-        ids <<- c(ids, envelope$payload$id)
+      if (identical(envelope$kind, "runtime")) {
+        visitor(envelope)
       } else if (identical(envelope$kind, "plain")) {
         for (child in envelope$payload) {
           visit(child)
@@ -1059,35 +1032,30 @@ artifact_registry_ids <- function(value) {
     invisible(NULL)
   }
   visit(value)
+  invisible(NULL)
+}
+
+artifact_registry_ids <- function(value) {
+  ids <- character()
+  artifact_walk_runtime_envelopes(value, function(envelope) {
+    if (identical(envelope$payload$kind, "registry")) {
+      ids <<- c(ids, envelope$payload$id)
+    }
+  })
   unique(ids)
 }
 
 artifact_has_trusted_runtime <- function(value) {
   found <- FALSE
-  visit <- function(item) {
-    if (found || !is.list(item)) {
-      return(invisible(NULL))
-    }
-    if (artifact_is_envelope_candidate(item)) {
-      envelope <- item$.dsprrr
-      if (
-        identical(envelope$kind, "runtime") &&
-          identical(envelope$payload$kind, "trusted")
-      ) {
+  artifact_walk_runtime_envelopes(
+    value,
+    function(envelope) {
+      if (identical(envelope$payload$kind, "trusted")) {
         found <<- TRUE
-      } else if (identical(envelope$kind, "plain")) {
-        for (child in envelope$payload) {
-          visit(child)
-        }
       }
-      return(invisible(NULL))
-    }
-    for (child in item) {
-      visit(child)
-    }
-    invisible(NULL)
-  }
-  visit(value)
+    },
+    stop_when = function() found
+  )
   found
 }
 
@@ -1790,26 +1758,8 @@ artifact_strip_demos <- function(artifact) {
 
 artifact_runtime_kinds <- function(value) {
   kinds <- character()
-  visit <- function(item) {
-    if (!is.list(item)) {
-      return(invisible(NULL))
-    }
-    if (artifact_is_envelope_candidate(item)) {
-      envelope <- item$.dsprrr
-      if (identical(envelope$kind, "runtime")) {
-        kinds <<- c(kinds, envelope$payload$kind)
-      } else if (identical(envelope$kind, "plain")) {
-        for (child in envelope$payload) {
-          visit(child)
-        }
-      }
-      return(invisible(NULL))
-    }
-    for (child in item) {
-      visit(child)
-    }
-    invisible(NULL)
-  }
-  visit(value)
+  artifact_walk_runtime_envelopes(value, function(envelope) {
+    kinds <<- c(kinds, envelope$payload$kind)
+  })
   unique(kinds)
 }

@@ -175,11 +175,7 @@ PipelineModule <- R6::R6Class(
     #' @return Tibble with output, chat, metadata columns
     forward = function(batch, .llm = NULL, trace = TRUE, .cache = NULL, ...) {
       # Handle both list and data frame inputs
-      if (is.data.frame(batch)) {
-        current_data <- as.list(batch[1, , drop = FALSE])
-      } else {
-        current_data <- batch
-      }
+      current_data <- normalize_forward_batch(batch)
 
       start_time <- Sys.time()
       all_metadata <- list()
@@ -339,11 +335,7 @@ PipelineModule <- R6::R6Class(
       listeners = list(),
       on_status = NULL
     ) {
-      if (is.data.frame(batch)) {
-        current_data <- as.list(batch[1, , drop = FALSE])
-      } else {
-        current_data <- batch
-      }
+      current_data <- normalize_forward_batch(batch)
 
       n_steps <- length(self$steps)
 

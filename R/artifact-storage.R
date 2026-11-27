@@ -1,11 +1,18 @@
 # Read artifacts and publish files with checked filesystem identity.
 
-artifact_atomic_save_rds <- function(value, path) {
+artifact_atomic_write_file <- function(
+  path,
+  writer,
+  verifier,
+  what,
+  dir_label,
+  write_error_msg
+) {
   path <- artifact_validate_path(path)
   directory <- dirname(path)
   if (!dir.exists(directory)) {
     cli::cli_abort(
-      "Artifact directory does not exist: {.path {directory}}",
+      "{dir_label} directory does not exist: {.path {directory}}",
       class = "dsprrr_artifact_io_error"
     )
   }
@@ -13,69 +20,69 @@ artifact_atomic_save_rds <- function(value, path) {
   on.exit(unlink(temporary), add = TRUE)
 
   tryCatch(
-    artifact_write_rds(value, temporary),
+    writer(temporary),
     error = function(e) {
       cli::cli_abort(
-        "Could not write program artifact",
+        write_error_msg,
         parent = e,
         class = "dsprrr_artifact_io_error"
       )
     }
   )
-  staged <- tryCatch(
-    readRDS(temporary),
-    error = function(e) {
-      cli::cli_abort(
-        "Could not verify staged program artifact",
-        parent = e,
-        class = "dsprrr_artifact_io_error"
-      )
-    }
-  )
-  artifact_validate_manifest(staged)
-  artifact_atomic_replace(temporary, path, what = "program artifact")
+  verifier(temporary)
+  artifact_atomic_replace(temporary, path, what = what)
   invisible(path)
 }
 
+artifact_atomic_save_rds <- function(value, path) {
+  artifact_atomic_write_file(
+    path = path,
+    writer = function(temporary) artifact_write_rds(value, temporary),
+    verifier = function(temporary) {
+      staged <- tryCatch(
+        readRDS(temporary),
+        error = function(e) {
+          cli::cli_abort(
+            "Could not verify staged program artifact",
+            parent = e,
+            class = "dsprrr_artifact_io_error"
+          )
+        }
+      )
+      artifact_validate_manifest(staged)
+    },
+    what = "program artifact",
+    dir_label = "Artifact",
+    write_error_msg = "Could not write program artifact"
+  )
+}
+
 artifact_atomic_write_lines <- function(lines, path) {
-  path <- artifact_validate_path(path)
-  directory <- dirname(path)
-  if (!dir.exists(directory)) {
-    cli::cli_abort(
-      "Output directory does not exist: {.path {directory}}",
-      class = "dsprrr_artifact_io_error"
-    )
-  }
-  temporary <- artifact_private_stage(path)
-  on.exit(unlink(temporary), add = TRUE)
-  tryCatch(
-    artifact_write_lines(lines, temporary),
-    error = function(e) {
-      cli::cli_abort(
-        "Could not write exported module code",
-        parent = e,
-        class = "dsprrr_artifact_io_error"
+  artifact_atomic_write_file(
+    path = path,
+    writer = function(temporary) artifact_write_lines(lines, temporary),
+    verifier = function(temporary) {
+      parsed <- tryCatch(
+        parse(temporary),
+        error = function(e) {
+          cli::cli_abort(
+            "Generated module code did not parse",
+            parent = e,
+            class = "dsprrr_artifact_io_error"
+          )
+        }
       )
-    }
+      if (length(parsed) == 0L) {
+        cli::cli_abort(
+          "Generated module code was empty",
+          class = "dsprrr_artifact_io_error"
+        )
+      }
+    },
+    what = "exported code",
+    dir_label = "Output",
+    write_error_msg = "Could not write exported module code"
   )
-  parsed <- tryCatch(
-    parse(temporary),
-    error = function(e) {
-      cli::cli_abort(
-        "Generated module code did not parse",
-        parent = e,
-        class = "dsprrr_artifact_io_error"
-      )
-    }
-  )
-  if (length(parsed) == 0L) {
-    cli::cli_abort(
-      "Generated module code was empty",
-      class = "dsprrr_artifact_io_error"
-    )
-  }
-  artifact_atomic_replace(temporary, path, what = "exported code")
-  invisible(path)
 }
 
 artifact_private_stage <- function(path) {

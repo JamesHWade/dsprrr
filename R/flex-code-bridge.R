@@ -533,37 +533,20 @@ flex_code_decode_control <- function(values, nonce) {
     }
     text_values <- unique(text_values)
     text <- paste(text_values, collapse = "\n")
-    prefix_locations <- gregexpr(
-      .flex_code_control_prefix,
-      text,
-      fixed = TRUE
-    )[[1L]]
-    prefix_count <- if (identical(prefix_locations[[1L]], -1L)) {
-      0L
-    } else {
-      length(prefix_locations)
-    }
-    if (prefix_count == 0L) {
+    decoded <- decode_control_frames(
+      text = text,
+      prefix = .flex_code_control_prefix,
+      on_malformed = function() {
+        cli::cli_abort(
+          "Malformed Flex bridge control frame",
+          class = "dsprrr_flex_bridge_protocol_error"
+        )
+      }
+    )
+    if (decoded$count == 0L) {
       return(NULL)
     }
-    pattern <- paste0(.flex_code_control_prefix, "[A-Za-z0-9+/=]+")
-    matches <- regmatches(text, gregexpr(pattern, text, perl = TRUE))[[1L]]
-    if (length(matches) != prefix_count || !all(nzchar(matches))) {
-      cli::cli_abort(
-        "Malformed Flex bridge control frame",
-        class = "dsprrr_flex_bridge_protocol_error"
-      )
-    }
-    envelopes <- lapply(matches, function(match) {
-      token <- sub(.flex_code_control_prefix, "", match, fixed = TRUE)
-      tryCatch(
-        jsonlite::fromJSON(
-          rawToChar(jsonlite::base64_dec(token)),
-          simplifyVector = FALSE
-        ),
-        error = function(error) NULL
-      )
-    })
+    envelopes <- decoded$envelopes
     current <- vapply(envelopes, is_current, logical(1))
     if (sum(current) != 1L) {
       cli::cli_abort(

@@ -328,14 +328,7 @@ history_render_rlm_validated <- function(history) {
 
 
 history_rlm_json <- function(value) {
-  as.character(jsonlite::toJSON(
-    value,
-    auto_unbox = TRUE,
-    null = "null",
-    na = "null",
-    digits = NA,
-    pretty = FALSE
-  ))
+  history_to_json(value)
 }
 
 

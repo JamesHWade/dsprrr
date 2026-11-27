@@ -2028,6 +2028,127 @@ gepa_component_validation_result <- function(
   )
 }
 
+gepa_build_details <- function(
+  teleprompter,
+  program,
+  component_selector,
+  use_merge,
+  max_merge_invocations,
+  merge_invocations,
+  successful_merge_count,
+  track_best_outputs,
+  task_model,
+  task_chat_source,
+  reflection_model,
+  reflection_chat_source,
+  mutable_flex_paths,
+  component_ids,
+  component_semantics,
+  best_candidate,
+  best_candidate_id,
+  best_scores,
+  validation_result = NULL,
+  objective_pareto_front = list(),
+  resume_supported = FALSE,
+  search_state = list(),
+  all_generations = list(),
+  invalid_candidate_count = 0L,
+  optimization_skipped = NULL,
+  skip_reason = NULL
+) {
+  out <- list(
+    selection = teleprompter@selection,
+    population_size = teleprompter@population_size,
+    generations = teleprompter@generations,
+    optimization_mode = "component_candidates",
+    component_selector = gepa_component_selector_label(component_selector),
+    use_merge = use_merge,
+    max_merge_invocations = if (
+      !is.null(max_merge_invocations) && is.infinite(max_merge_invocations)
+    ) {
+      NULL
+    } else {
+      max_merge_invocations
+    },
+    merge_invocations = merge_invocations,
+    successful_merge_count = successful_merge_count,
+    track_best_outputs = track_best_outputs
+  )
+  if (!is.null(optimization_skipped)) {
+    out$optimization_skipped <- optimization_skipped
+  }
+  if (!is.null(skip_reason)) {
+    out$skip_reason <- skip_reason
+  }
+  c(
+    out,
+    list(
+      model_routing = list(
+        task_model = task_model,
+        task_chat_source = task_chat_source,
+        reflection_model = reflection_model,
+        reflection_chat_source = reflection_chat_source,
+        reflection_budget_stages = c(
+          "gepa_reflection",
+          "gepa_flex_reflection"
+        )
+      ),
+      flex_paths = gepa_flex_paths(program, mutable_only = FALSE),
+      mutable_flex_paths = mutable_flex_paths,
+      component_ids = component_ids,
+      component_semantics = component_semantics,
+      best_candidate = best_candidate,
+      best_candidate_id = best_candidate_id,
+      best_scores = best_scores,
+      candidates = if (is.null(validation_result)) {
+        list()
+      } else {
+        validation_result$candidates
+      },
+      parents = if (is.null(validation_result)) {
+        list()
+      } else {
+        validation_result$parents
+      },
+      val_aggregate_scores = if (is.null(validation_result)) {
+        numeric()
+      } else {
+        validation_result$val_aggregate_scores
+      },
+      val_subscores = if (is.null(validation_result)) {
+        list()
+      } else {
+        validation_result$val_subscores
+      },
+      per_val_instance_best_candidates = if (is.null(validation_result)) {
+        list()
+      } else {
+        validation_result$per_val_instance_best_candidates
+      },
+      validation_frontier_scores = if (is.null(validation_result)) {
+        numeric()
+      } else {
+        validation_result$validation_frontier_scores
+      },
+      best_outputs_valset = if (is.null(validation_result)) {
+        if (track_best_outputs) list() else NULL
+      } else {
+        validation_result$best_outputs_valset
+      },
+      discovery_eval_counts = if (is.null(validation_result)) {
+        integer()
+      } else {
+        validation_result$discovery_eval_counts
+      },
+      objective_pareto_front = objective_pareto_front,
+      resume_supported = resume_supported,
+      search_state = search_state,
+      all_generations = all_generations,
+      invalid_candidate_count = invalid_candidate_count
+    )
+  )
+}
+
 compile_gepa_components <- function(
   teleprompter,
   program,
@@ -2097,34 +2218,19 @@ compile_gepa_components <- function(
   if (length(component_specs) == 0L) {
     optimized <- gepa_clone_component_program(program)
     budget_summary <- optimizer_budget_summary(budget)
-    details <- list(
-      selection = teleprompter@selection,
-      population_size = teleprompter@population_size,
-      generations = teleprompter@generations,
-      optimization_mode = "component_candidates",
-      component_selector = gepa_component_selector_label(component_selector),
+    details <- gepa_build_details(
+      teleprompter = teleprompter,
+      program = program,
+      component_selector = component_selector,
       use_merge = use_merge,
-      max_merge_invocations = if (is.infinite(max_merge_invocations)) {
-        NULL
-      } else {
-        max_merge_invocations
-      },
+      max_merge_invocations = max_merge_invocations,
       merge_invocations = 0L,
       successful_merge_count = 0L,
       track_best_outputs = track_best_outputs,
-      optimization_skipped = TRUE,
-      skip_reason = "no_mutable_components",
-      model_routing = list(
-        task_model = gepa_chat_model_name(.llm),
-        task_chat_source = task_chat_source,
-        reflection_model = gepa_chat_model_name(.reflection_llm),
-        reflection_chat_source = reflection_chat_source,
-        reflection_budget_stages = c(
-          "gepa_reflection",
-          "gepa_flex_reflection"
-        )
-      ),
-      flex_paths = gepa_flex_paths(program, mutable_only = FALSE),
+      task_model = gepa_chat_model_name(.llm),
+      task_chat_source = task_chat_source,
+      reflection_model = gepa_chat_model_name(.reflection_llm),
+      reflection_chat_source = reflection_chat_source,
       mutable_flex_paths = character(),
       component_ids = character(),
       component_semantics = gepa_component_semantics(track_best_outputs),
@@ -2134,15 +2240,6 @@ compile_gepa_components <- function(
         rep(NA_real_, length(metrics)),
         metric_names
       ),
-      candidates = list(),
-      parents = list(),
-      val_aggregate_scores = numeric(),
-      val_subscores = list(),
-      per_val_instance_best_candidates = list(),
-      validation_frontier_scores = numeric(),
-      best_outputs_valset = if (track_best_outputs) list() else NULL,
-      discovery_eval_counts = integer(),
-      objective_pareto_front = list(),
       resume_supported = FALSE,
       search_state = list(
         schema_version = 1L,
@@ -2150,8 +2247,8 @@ compile_gepa_components <- function(
         candidate_ids = character(),
         next_generation = 1L
       ),
-      all_generations = list(),
-      invalid_candidate_count = 0L
+      optimization_skipped = TRUE,
+      skip_reason = "no_mutable_components"
     )
     record_optimization_result(
       optimized,
@@ -2496,32 +2593,19 @@ compile_gepa_components <- function(
   )
   semantics <- gepa_component_semantics(track_best_outputs)
   budget_summary <- optimizer_budget_summary(budget)
-  details <- list(
-    selection = teleprompter@selection,
-    population_size = teleprompter@population_size,
-    generations = teleprompter@generations,
-    optimization_mode = "component_candidates",
-    component_selector = gepa_component_selector_label(component_selector),
+  details <- gepa_build_details(
+    teleprompter = teleprompter,
+    program = program,
+    component_selector = component_selector,
     use_merge = use_merge,
-    max_merge_invocations = if (is.infinite(max_merge_invocations)) {
-      NULL
-    } else {
-      max_merge_invocations
-    },
+    max_merge_invocations = max_merge_invocations,
     merge_invocations = merge_invocations,
     successful_merge_count = lineage_merges,
     track_best_outputs = track_best_outputs,
-    model_routing = list(
-      task_model = gepa_chat_model_name(.llm),
-      task_chat_source = task_chat_source,
-      reflection_model = gepa_chat_model_name(.reflection_llm),
-      reflection_chat_source = reflection_chat_source,
-      reflection_budget_stages = c(
-        "gepa_reflection",
-        "gepa_flex_reflection"
-      )
-    ),
-    flex_paths = gepa_flex_paths(program, mutable_only = FALSE),
+    task_model = gepa_chat_model_name(.llm),
+    task_chat_source = task_chat_source,
+    reflection_model = gepa_chat_model_name(.reflection_llm),
+    reflection_chat_source = reflection_chat_source,
     mutable_flex_paths = gepa_flex_paths(program),
     component_ids = names(gepa_program_component_specs(program)),
     component_semantics = semantics,
@@ -2532,14 +2616,7 @@ compile_gepa_components <- function(
     },
     best_candidate_id = best_record$candidate_id %||% NULL,
     best_scores = final_scores,
-    candidates = validation_result$candidates,
-    parents = validation_result$parents,
-    val_aggregate_scores = validation_result$val_aggregate_scores,
-    val_subscores = validation_result$val_subscores,
-    per_val_instance_best_candidates = validation_result$per_val_instance_best_candidates,
-    validation_frontier_scores = validation_result$validation_frontier_scores,
-    best_outputs_valset = validation_result$best_outputs_valset,
-    discovery_eval_counts = validation_result$discovery_eval_counts,
+    validation_result = validation_result,
     objective_pareto_front = objective_frontier,
     resume_supported = FALSE,
     search_state = list(

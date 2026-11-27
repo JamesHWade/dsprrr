@@ -854,16 +854,8 @@ optimizer_eval_candidate <- function(
 }
 
 optimizer_clone_program_leaf_chats <- function(program) {
-  graph <- module_graph(program, boundaries = "cross", cycles = "error")
-  leaf <- vapply(
-    graph$path,
-    function(path) {
-      prefix <- if (identical(path, "$")) "$/" else paste0(path, "/")
-      !any(startsWith(graph$path, prefix))
-    },
-    logical(1)
-  )
-  for (module in graph$module[leaf]) {
+  graph <- module_leaf_nodes(program, cycles = "error")
+  for (module in graph$module) {
     chat <- tryCatch(module$chat, error = function(error) NULL)
     if (!is.null(chat)) {
       module$chat <- clone_ellmer_chat(

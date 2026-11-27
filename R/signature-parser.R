@@ -145,34 +145,12 @@ parse_inputs <- function(inputs_str) {
     type_explicit <- FALSE
 
     # Check for type annotation (e.g., "text: string" or "choices: list[string]")
-    if (grepl(":", spec, fixed = TRUE)) {
-      # Find the first colon not inside brackets
-      chars <- strsplit(spec, "")[[1]]
-      depth <- 0
-      colon_pos <- -1
-      for (i in seq_along(chars)) {
-        if (chars[i] %in% c("[", "(")) {
-          depth <- depth + 1
-        }
-        if (chars[i] %in% c("]", ")")) {
-          depth <- depth - 1
-        }
-        if (chars[i] == ":" && depth == 0) {
-          colon_pos <- i
-          break
-        }
-      }
-
-      if (colon_pos > 0) {
-        name <- trimws(substr(spec, 1, colon_pos - 1))
-        type_str <- trimws(substr(spec, colon_pos + 1, nchar(spec)))
-        # Parse the type string to get the ellmer type
-        type <- parse_type_string(type_str)
-        type_explicit <- TRUE
-      } else {
-        name <- spec
-        type <- NULL
-      }
+    colon_pos <- find_top_level_colon(spec)
+    if (colon_pos > 0L) {
+      name <- trimws(substr(spec, 1, colon_pos - 1))
+      type_str <- trimws(substr(spec, colon_pos + 1, nchar(spec)))
+      type <- parse_type_string(type_str)
+      type_explicit <- TRUE
     } else {
       name <- spec
       type <- NULL # Will default to string
@@ -200,35 +178,16 @@ parse_output <- function(output_str) {
   }
 
   # Original logic for single output with type specification
-  if (grepl(":", output_str, fixed = TRUE)) {
-    # Find the first colon not inside brackets/parens
-    chars <- strsplit(output_str, "")[[1]]
-    depth <- 0
-    colon_pos <- -1
-    for (i in seq_along(chars)) {
-      if (chars[i] %in% c("[", "(")) {
-        depth <- depth + 1
-      }
-      if (chars[i] %in% c("]", ")")) {
-        depth <- depth - 1
-      }
-      if (chars[i] == ":" && depth == 0) {
-        colon_pos <- i
-        break
-      }
-    }
+  colon_pos <- find_top_level_colon(output_str)
+  if (colon_pos > 0L) {
+    output_name <- trimws(substr(output_str, 1, colon_pos - 1))
+    validate_parsed_field_names(output_name, "output")
+    type_str <- trimws(substr(output_str, colon_pos + 1, nchar(output_str)))
 
-    if (colon_pos > 0) {
-      # Single output with type
-      output_name <- trimws(substr(output_str, 1, colon_pos - 1))
-      validate_parsed_field_names(output_name, "output")
-      type_str <- trimws(substr(output_str, colon_pos + 1, nchar(output_str)))
-
-      # Wrap single outputs in an object type for proper field access
-      fields <- list()
-      fields[[output_name]] <- parse_type_string(type_str, output_name)
-      return(do.call(ellmer::type_object, fields))
-    }
+    # Wrap single outputs in an object type for proper field access
+    fields <- list()
+    fields[[output_name]] <- parse_type_string(type_str, output_name)
+    return(do.call(ellmer::type_object, fields))
   }
 
   # Single output case without type annotation

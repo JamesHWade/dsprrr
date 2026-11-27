@@ -130,52 +130,26 @@ MIPROv2 <- S7::new_class(
   "MIPROv2",
   parent = Teleprompter,
   properties = list(
-    task_model = S7::new_property(
-      S7::class_any,
-      default = NULL,
-      validator = function(value) {
-        if (!is.null(value) && !is_ellmer_chat(value)) {
-          return("task_model must be NULL or an ellmer Chat R6 object")
-        }
-        NULL
-      }
-    ),
-    teacher_settings = S7::new_property(
-      S7::class_any,
-      default = NULL,
-      validator = function(value) {
-        if (!is.null(value) && !is.list(value)) {
-          return("teacher_settings must be a list or NULL")
-        }
-        NULL
-      }
-    ),
-    max_bootstrapped_demos = S7::new_property(
-      S7::class_integer,
+    task_model = prop_optional_chat("task_model"),
+    teacher_settings = prop_optional_list("teacher_settings"),
+    max_bootstrapped_demos = prop_scalar_int(
+      "max_bootstrapped_demos",
       default = 4L,
-      validator = function(value) {
-        if (value < 0) {
-          return("max_bootstrapped_demos must be non-negative")
-        }
-        NULL
-      }
+      min = 0L
     ),
-    max_labeled_demos = S7::new_property(
-      S7::class_integer,
+    max_labeled_demos = prop_scalar_int(
+      "max_labeled_demos",
       default = 4L,
-      validator = function(value) {
-        if (value < 0) {
-          return("max_labeled_demos must be non-negative")
-        }
-        NULL
-      }
+      min = 0L
     ),
     auto = S7::new_property(
       S7::class_any,
       default = "light",
       validator = function(value) {
         valid <- c("light", "medium", "heavy")
-        if (!is.null(value) && !value %in% valid) {
+        if (
+          !is.null(value) && (!rlang::is_string(value) || !value %in% valid)
+        ) {
           return("auto must be NULL or one of: light, medium, heavy")
         }
         NULL
@@ -186,53 +160,26 @@ MIPROv2 <- S7::new_class(
       default = NULL,
       validator = function(value) {
         if (!is.null(value)) {
-          if (!is.numeric(value) || length(value) != 1 || value < 1) {
+          if (
+            !is.numeric(value) ||
+              length(value) != 1L ||
+              is.na(value) ||
+              value < 1
+          ) {
             return("num_candidates must be a positive integer or NULL")
           }
         }
         NULL
       }
     ),
-    num_threads = S7::new_property(
-      S7::class_integer,
-      default = 1L,
-      validator = function(value) {
-        if (value < 1) {
-          return("num_threads must be at least 1")
-        }
-        NULL
-      }
-    ),
-    seed = S7::new_property(
-      S7::class_any,
-      default = 9L,
-      validator = function(value) {
-        if (!is.null(value) && (!is.numeric(value) || length(value) != 1)) {
-          return("seed must be a single numeric value or NULL")
-        }
-        NULL
-      }
-    ),
-    track_stats = S7::new_property(
-      S7::class_logical,
+    num_threads = prop_scalar_int("num_threads", default = 1L, min = 1L),
+    seed = prop_optional_seed(default = 9L),
+    track_stats = prop_scalar_bool(
+      "track_stats",
       default = TRUE,
-      validator = function(value) {
-        if (length(value) != 1) {
-          return("track_stats must be a single logical value")
-        }
-        NULL
-      }
+      message = "track_stats must be a single logical value"
     ),
-    log_dir = S7::new_property(
-      S7::class_any,
-      default = NULL,
-      validator = function(value) {
-        if (!is.null(value) && !is.character(value)) {
-          return("log_dir must be a character string or NULL")
-        }
-        NULL
-      }
-    )
+    log_dir = prop_optional_log_dir()
   )
 )
 
@@ -619,11 +566,7 @@ compile_mipro <- function(
     )
   }
 
-  trial_log <- if (!is.null(control@log_dir)) {
-    TrialLog$new(optimizer_name = "MIPROv2", log_dir = control@log_dir)
-  } else {
-    NULL
-  }
+  trial_log <- teleprompter_init_trial_log(control, "MIPROv2")
 
   eval_fn <- function(
     candidate,
@@ -1112,7 +1055,7 @@ generate_mipro_component_instruction_candidates <- function(
 }
 
 summarize_mipro_dataset <- function(trainset, signature) {
-  input_names <- vapply(signature@inputs, function(x) x$name, character(1))
+  input_names <- get_input_names(signature)
   output_col <- find_output_column(trainset, input_names)
 
   input_preview <- if (length(input_names) > 0) {

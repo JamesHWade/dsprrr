@@ -868,22 +868,7 @@ RCodeRunner <- R6::R6Class(
     #'   - `error`: Error message if failed (NULL on success)
     #'   - `duration_ms`: Execution time in milliseconds
     execute = function(code, context = list()) {
-      if (self$closed) {
-        cli::cli_abort(
-          "The R code runner is closed",
-          class = "dsprrr_interpreter_closed_error"
-        )
-      }
-      if (self$terminal) {
-        cli::cli_abort(
-          c(
-            "The R code runner is terminal",
-            "x" = self$terminal_reason %||%
-              "A subprocess or protocol failure occurred."
-          ),
-          class = "dsprrr_interpreter_terminal_error"
-        )
-      }
+      private$assert_usable()
       if (!is.character(code) || length(code) != 1) {
         cli::cli_abort("code must be a single character string")
       }
@@ -1009,48 +994,13 @@ RCodeRunner <- R6::R6Class(
         ))
       }
 
-      if (
-        !is.list(exec_result) ||
-          !is.logical(exec_result$success) ||
-          length(exec_result$success) != 1L ||
-          is.na(exec_result$success)
-      ) {
-        reason <- paste(
-          "The R subprocess returned no valid structured execution result"
-        )
-        private$mark_terminal(reason)
-        return(private$error_result(
-          error = reason,
-          stdout = stdout_content,
-          stderr = stderr_content,
-          duration_ms = duration_ms,
-          error_type = "interpreter"
-        ))
-      }
-
-      # Successful execution - exec_result is the wrapper's return value
-      combine_output <- function(primary, fallback) {
-        values <- c(primary %||% "", fallback %||% "")
-        values <- values[nzchar(values)]
-        if (length(values) == 0L) "" else paste(values, collapse = "\n")
-      }
-      list(
-        success = exec_result$success,
-        result = exec_result$result,
-        stdout = private$truncate_output(combine_output(
-          exec_result$stdout,
-          stdout_content
-        )),
-        stderr = private$truncate_output(combine_output(
-          exec_result$stderr,
-          stderr_content
-        )),
-        messages = private$truncate_output(exec_result$messages %||% ""),
-        warnings = private$truncate_output(exec_result$warnings %||% ""),
-        error = exec_result$error,
-        error_type = if (isTRUE(exec_result$success)) NULL else "execution",
-        retryable = !isTRUE(exec_result$success),
-        duration_ms = round(duration_ms, 2)
+      private$finalize_exec_result(
+        exec_result = exec_result,
+        stdout_content = stdout_content,
+        stderr_content = stderr_content,
+        duration_ms = duration_ms,
+        invalid_reason = "The R subprocess returned no valid structured execution result",
+        on_invalid = private$mark_terminal
       )
     },
 
@@ -1062,22 +1012,7 @@ RCodeRunner <- R6::R6Class(
     #'
     #' @return The runner, invisibly
     start = function() {
-      if (self$closed) {
-        cli::cli_abort(
-          "The R code runner is closed",
-          class = "dsprrr_interpreter_closed_error"
-        )
-      }
-      if (self$terminal) {
-        cli::cli_abort(
-          c(
-            "The R code runner is terminal",
-            "x" = self$terminal_reason %||%
-              "A subprocess or protocol failure occurred."
-          ),
-          class = "dsprrr_interpreter_terminal_error"
-        )
-      }
+      private$assert_usable()
       if (self$started) {
         if (self$persistent && !private$session_is_alive()) {
           reason <- "The persistent R subprocess is no longer running"
@@ -1553,19 +1488,33 @@ RCodeRunner <- R6::R6Class(
         ))
       }
 
-      exec_result <- outcome$result
+      private$finalize_exec_result(
+        exec_result = outcome$result,
+        stdout_content = stdout_content,
+        stderr_content = stderr_content,
+        duration_ms = duration_ms,
+        invalid_reason = "The persistent R subprocess returned no valid structured execution result",
+        on_invalid = private$terminalize_persistent
+      )
+    },
+
+    finalize_exec_result = function(
+      exec_result,
+      stdout_content,
+      stderr_content,
+      duration_ms,
+      invalid_reason,
+      on_invalid
+    ) {
       if (
         !is.list(exec_result) ||
           !is.logical(exec_result$success) ||
           length(exec_result$success) != 1L ||
           is.na(exec_result$success)
       ) {
-        reason <- paste(
-          "The persistent R subprocess returned no valid structured execution result"
-        )
-        private$terminalize_persistent(reason)
+        on_invalid(invalid_reason)
         return(private$error_result(
-          error = reason,
+          error = invalid_reason,
           stdout = stdout_content,
           stderr = stderr_content,
           duration_ms = duration_ms,

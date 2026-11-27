@@ -61,16 +61,7 @@ gepa_checkpoint_chat_identity <- function(chat, path) {
 }
 
 gepa_checkpoint_leaf_modules <- function(program) {
-  graph <- module_graph(program, boundaries = "cross", cycles = "error")
-  leaf <- vapply(
-    graph$path,
-    function(path) {
-      prefix <- if (identical(path, "$")) "$/" else paste0(path, "/")
-      !any(startsWith(graph$path, prefix))
-    },
-    logical(1)
-  )
-  graph[leaf, , drop = FALSE]
+  module_leaf_nodes(program, cycles = "error")
 }
 
 gepa_checkpoint_attach_default_chats <- function(program) {
@@ -487,7 +478,143 @@ gepa_checkpoint_state_fields <- function() {
   )
 }
 
-gepa_checkpoint_state_validate <- function(
+gepa_is_scalar_int <- function(x, min = NULL, max = NULL) {
+  is.integer(x) &&
+    length(x) == 1L &&
+    !is.na(x) &&
+    (is.null(min) || x >= min) &&
+    (is.null(max) || x <= max)
+}
+
+gepa_is_scalar_string <- function(x, nonempty = FALSE, choices = NULL) {
+  is.character(x) &&
+    length(x) == 1L &&
+    !is.na(x) &&
+    (!nonempty || nzchar(x)) &&
+    (is.null(choices) || x %in% choices)
+}
+
+gepa_is_scalar_num <- function(x) {
+  is.numeric(x) && length(x) == 1L
+}
+
+gepa_is_named_record <- function(x, fields) {
+  is.list(x) && identical(names(x), fields)
+}
+
+gepa_checkpoint_malformed <- function(message, record_key = NULL) {
+  cli::cli_abort(
+    message,
+    class = "dsprrr_optimizer_checkpoint_malformed",
+    record_key = record_key
+  )
+}
+
+gepa_checkpoint_same_number <- function(actual, expected) {
+  length(actual) == 1L &&
+    length(expected) == 1L &&
+    if (is.na(actual) || is.na(expected)) {
+      is.na(actual) && is.na(expected)
+    } else {
+      identical(as.numeric(actual), as.numeric(expected))
+    }
+}
+
+gepa_checkpoint_aggregate_score <- function(rows, dataset, path) {
+  if (length(rows) != nrow(dataset)) {
+    gepa_checkpoint_malformed(
+      paste0(path, " does not contain every evaluation row.")
+    )
+  }
+  as.numeric(optimizer_combine_eval_records(rows, dataset)@mean_score)
+}
+
+gepa_checkpoint_sum_metric_calls <- function(rows) {
+  if (length(rows) == 0L) {
+    return(0)
+  }
+  values <- vapply(rows, function(row) row$metric_calls, numeric(1))
+  if (anyNA(values)) NA_real_ else sum(values)
+}
+
+gepa_checkpoint_completed_row_units <- function(budget, unit_id, rows) {
+  if (length(rows) == 0L) {
+    return(TRUE)
+  }
+  all(vapply(
+    rows,
+    function(row) {
+      paste0(unit_id, ":row:", row$row_index) %in% budget$completed_units
+    },
+    logical(1)
+  ))
+}
+
+gepa_validate_state_header <- function(state, component_specs, teleprompter) {
+  valid <- gepa_is_named_record(state, gepa_checkpoint_state_fields()) &&
+    identical(state$schema_version, 1L) &&
+    gepa_is_scalar_string(
+      state$phase,
+      choices = c(
+        "initializing",
+        "evaluating",
+        "selecting",
+        "proposing",
+        "complete"
+      )
+    ) &&
+    gepa_is_scalar_int(
+      state$generation,
+      min = 1L,
+      max = teleprompter@generations + 1L
+    ) &&
+    gepa_is_scalar_int(
+      state$generations_completed,
+      min = 0L,
+      max = teleprompter@generations
+    ) &&
+    is.list(state$population) &&
+    length(state$population) <= teleprompter@population_size &&
+    is.list(state$next_population) &&
+    length(state$next_population) <= teleprompter@population_size &&
+    gepa_is_scalar_int(
+      state$next_proposal_index,
+      min = 1L,
+      max = teleprompter@population_size + 1L
+    ) &&
+    gepa_is_scalar_int(
+      state$candidate_index,
+      min = 1L,
+      max = length(state$population) + 1L
+    ) &&
+    is.character(state$generation_record_keys) &&
+    !anyNA(state$generation_record_keys) &&
+    all(nzchar(state$generation_record_keys)) &&
+    !anyDuplicated(state$generation_record_keys) &&
+    is.list(state$all_records) &&
+    is.list(state$all_generations) &&
+    gepa_is_scalar_int(state$merge_invocations, min = 0L) &&
+    gepa_is_scalar_int(
+      state$lineage_merges,
+      min = 0L,
+      max = state$merge_invocations
+    ) &&
+    rlang::is_bool(state$no_mutable_components) &&
+    (is.null(state$termination) ||
+      gepa_is_scalar_string(state$termination, nonempty = TRUE)) &&
+    (is.null(state$best_record_key) ||
+      gepa_is_scalar_string(state$best_record_key))
+  if (!valid) {
+    gepa_checkpoint_malformed("GEPA checkpoint search state is malformed")
+  }
+  if (!identical(state$no_mutable_components, length(component_specs) == 0L)) {
+    gepa_checkpoint_malformed(
+      "GEPA checkpoint mutable-component scope is incompatible"
+    )
+  }
+}
+
+gepa_validate_committed_records <- function(
   state,
   program,
   component_specs,
@@ -497,150 +624,6 @@ gepa_checkpoint_state_validate <- function(
   teleprompter,
   budget
 ) {
-  required <- gepa_checkpoint_state_fields()
-  if (
-    !is.list(state) ||
-      !identical(names(state), required) ||
-      !identical(state$schema_version, 1L) ||
-      !is.character(state$phase) ||
-      length(state$phase) != 1L ||
-      !state$phase %in%
-        c(
-          "initializing",
-          "evaluating",
-          "selecting",
-          "proposing",
-          "complete"
-        ) ||
-      !is.integer(state$generation) ||
-      length(state$generation) != 1L ||
-      state$generation < 1L ||
-      state$generation > teleprompter@generations + 1L ||
-      !is.integer(state$generations_completed) ||
-      length(state$generations_completed) != 1L ||
-      state$generations_completed < 0L ||
-      state$generations_completed > teleprompter@generations ||
-      !is.list(state$population) ||
-      length(state$population) > teleprompter@population_size ||
-      !is.list(state$next_population) ||
-      length(state$next_population) > teleprompter@population_size ||
-      !is.integer(state$next_proposal_index) ||
-      length(state$next_proposal_index) != 1L ||
-      state$next_proposal_index < 1L ||
-      state$next_proposal_index > teleprompter@population_size + 1L ||
-      !is.integer(state$candidate_index) ||
-      length(state$candidate_index) != 1L ||
-      state$candidate_index < 1L ||
-      state$candidate_index > length(state$population) + 1L ||
-      !is.character(state$generation_record_keys) ||
-      anyNA(state$generation_record_keys) ||
-      !all(nzchar(state$generation_record_keys)) ||
-      anyDuplicated(state$generation_record_keys) ||
-      !is.list(state$all_records) ||
-      !is.list(state$all_generations) ||
-      !is.integer(state$merge_invocations) ||
-      length(state$merge_invocations) != 1L ||
-      state$merge_invocations < 0L ||
-      !is.integer(state$lineage_merges) ||
-      length(state$lineage_merges) != 1L ||
-      state$lineage_merges < 0L ||
-      state$lineage_merges > state$merge_invocations ||
-      !is.logical(state$no_mutable_components) ||
-      length(state$no_mutable_components) != 1L ||
-      is.na(state$no_mutable_components) ||
-      !is.null(state$termination) &&
-        (!is.character(state$termination) ||
-          length(state$termination) != 1L ||
-          is.na(state$termination) ||
-          !nzchar(state$termination)) ||
-      !is.null(state$best_record_key) &&
-        (!is.character(state$best_record_key) ||
-          length(state$best_record_key) != 1L ||
-          is.na(state$best_record_key))
-  ) {
-    cli::cli_abort(
-      "GEPA checkpoint search state is malformed",
-      class = "dsprrr_optimizer_checkpoint_malformed"
-    )
-  }
-  if (!identical(state$no_mutable_components, length(component_specs) == 0L)) {
-    cli::cli_abort(
-      "GEPA checkpoint mutable-component scope is incompatible",
-      class = "dsprrr_optimizer_checkpoint_malformed"
-    )
-  }
-  decode_candidates <- function(values, path) {
-    lapply(seq_along(values), function(index) {
-      tryCatch(
-        gepa_checkpoint_decode_candidate(
-          values[[index]],
-          program,
-          component_specs
-        ),
-        error = function(error) {
-          if (inherits(error, "dsprrr_optimizer_checkpoint_malformed")) {
-            stop(error)
-          }
-          cli::cli_abort(
-            "GEPA checkpoint candidate state is malformed",
-            class = "dsprrr_optimizer_checkpoint_malformed",
-            path = paste0(path, "[[", index, "]"),
-            parent = error
-          )
-        }
-      )
-    })
-  }
-  decode_candidates(state$population, "population")
-  decode_candidates(state$next_population, "next_population")
-  malformed <- function(message, record_key = NULL) {
-    cli::cli_abort(
-      message,
-      class = "dsprrr_optimizer_checkpoint_malformed",
-      record_key = record_key
-    )
-  }
-  same_number <- function(actual, expected) {
-    length(actual) == 1L &&
-      length(expected) == 1L &&
-      if (is.na(actual) || is.na(expected)) {
-        is.na(actual) && is.na(expected)
-      } else {
-        identical(as.numeric(actual), as.numeric(expected))
-      }
-  }
-  aggregate_score <- function(rows, dataset, path) {
-    if (length(rows) != nrow(dataset)) {
-      malformed(
-        paste0(path, " does not contain every evaluation row.")
-      )
-    }
-    as.numeric(optimizer_combine_eval_records(rows, dataset)@mean_score)
-  }
-  sum_metric_calls <- function(rows) {
-    if (length(rows) == 0L) {
-      return(0)
-    }
-    values <- vapply(rows, function(row) row$metric_calls, numeric(1))
-    if (anyNA(values)) {
-      NA_real_
-    } else {
-      sum(values)
-    }
-  }
-  completed_row_units <- function(unit_id, rows) {
-    if (length(rows) == 0L) {
-      return(TRUE)
-    }
-    all(vapply(
-      rows,
-      function(row) {
-        paste0(unit_id, ":row:", row$row_index) %in%
-          budget$completed_units
-      },
-      logical(1)
-    ))
-  }
   record_keys <- names(state$all_records)
   if (length(state$all_records) == 0L) {
     record_keys <- character()
@@ -650,73 +633,59 @@ gepa_checkpoint_state_validate <- function(
       !all(nzchar(record_keys)) ||
       anyDuplicated(record_keys)
   ) {
-    cli::cli_abort(
-      "GEPA checkpoint record keys are malformed",
-      class = "dsprrr_optimizer_checkpoint_malformed"
-    )
+    gepa_checkpoint_malformed("GEPA checkpoint record keys are malformed")
   }
+  fields <- c(
+    "record_key",
+    "candidate",
+    "candidate_id",
+    "parents",
+    "lineage",
+    "candidate_valid",
+    "scores",
+    "metric_rows",
+    "discovery_rows",
+    "discovery_complete",
+    "discovery_metric_calls",
+    "completed_metrics",
+    "complete",
+    "generation",
+    "index"
+  )
   for (key in record_keys) {
     record <- state$all_records[[key]]
-    fields <- c(
-      "record_key",
-      "candidate",
-      "candidate_id",
-      "parents",
-      "lineage",
-      "candidate_valid",
-      "scores",
-      "metric_rows",
-      "discovery_rows",
-      "discovery_complete",
-      "discovery_metric_calls",
-      "completed_metrics",
-      "complete",
-      "generation",
-      "index"
-    )
-    if (
-      !is.list(record) ||
-        !identical(names(record), fields) ||
-        !identical(record$record_key, key) ||
-        !is.character(record$candidate_id) ||
-        length(record$candidate_id) != 1L ||
-        is.na(record$candidate_id) ||
-        !is.character(record$parents) ||
-        !is.list(record$lineage) ||
-        !is.logical(record$candidate_valid) ||
-        length(record$candidate_valid) != 1L ||
-        is.na(record$candidate_valid) ||
-        !is.numeric(record$scores) ||
-        length(record$scores) != length(metric_names) ||
-        !is.list(record$metric_rows) ||
-        length(record$metric_rows) != length(metric_names) ||
-        !identical(names(record$scores), metric_names) ||
-        !is.list(record$discovery_rows) ||
-        !is.logical(record$discovery_complete) ||
-        length(record$discovery_complete) != 1L ||
-        is.na(record$discovery_complete) ||
-        !isTRUE(record$discovery_complete) ||
-        !is.numeric(record$discovery_metric_calls) ||
-        length(record$discovery_metric_calls) != 1L ||
-        !isTRUE(record$complete) ||
-        !is.integer(record$completed_metrics) ||
-        length(record$completed_metrics) != 1L ||
-        record$completed_metrics != length(metric_names) ||
-        !is.logical(record$complete) ||
-        length(record$complete) != 1L ||
-        is.na(record$complete) ||
-        !is.integer(record$generation) ||
-        length(record$generation) != 1L ||
-        record$generation < 1L ||
-        record$generation > teleprompter@generations ||
-        !is.integer(record$index) ||
-        length(record$index) != 1L ||
-        record$index < 1L ||
-        record$index > teleprompter@population_size
-    ) {
-      cli::cli_abort(
+    valid_record <- gepa_is_named_record(record, fields) &&
+      identical(record$record_key, key) &&
+      gepa_is_scalar_string(record$candidate_id) &&
+      is.character(record$parents) &&
+      is.list(record$lineage) &&
+      rlang::is_bool(record$candidate_valid) &&
+      is.numeric(record$scores) &&
+      length(record$scores) == length(metric_names) &&
+      identical(names(record$scores), metric_names) &&
+      is.list(record$metric_rows) &&
+      length(record$metric_rows) == length(metric_names) &&
+      is.list(record$discovery_rows) &&
+      rlang::is_bool(record$discovery_complete) &&
+      isTRUE(record$discovery_complete) &&
+      gepa_is_scalar_num(record$discovery_metric_calls) &&
+      rlang::is_bool(record$complete) &&
+      isTRUE(record$complete) &&
+      gepa_is_scalar_int(record$completed_metrics) &&
+      record$completed_metrics == length(metric_names) &&
+      gepa_is_scalar_int(
+        record$generation,
+        min = 1L,
+        max = teleprompter@generations
+      ) &&
+      gepa_is_scalar_int(
+        record$index,
+        min = 1L,
+        max = teleprompter@population_size
+      )
+    if (!valid_record) {
+      gepa_checkpoint_malformed(
         "GEPA checkpoint candidate record is malformed",
-        class = "dsprrr_optimizer_checkpoint_malformed",
         record_key = key
       )
     }
@@ -741,19 +710,21 @@ gepa_checkpoint_state_validate <- function(
           gepa_checkpoint_record_key(record$generation, record$index)
         )
     ) {
-      cli::cli_abort(
+      gepa_checkpoint_malformed(
         "GEPA checkpoint candidate lineage or identity does not match",
-        class = "dsprrr_optimizer_checkpoint_malformed",
         record_key = key
       )
     }
     for (metric_index in seq_along(metric_names)) {
-      gepa_checkpoint_validate_rows(
-        record$metric_rows[[metric_index]],
-        validation_dataset,
-        paste0("all_records.", key, ".metric_rows[[", metric_index, "]]")
-      )
       metric_rows <- record$metric_rows[[metric_index]]
+      row_path <- paste0(
+        "all_records.",
+        key,
+        ".metric_rows[[",
+        metric_index,
+        "]]"
+      )
+      gepa_checkpoint_validate_rows(metric_rows, validation_dataset, row_path)
       metric_unit <- paste0(
         "gepa:generation:",
         record$generation,
@@ -764,25 +735,29 @@ gepa_checkpoint_state_validate <- function(
       )
       if (
         !metric_unit %in% budget$completed_units ||
-          isTRUE(record$candidate_valid) &&
-            !completed_row_units(metric_unit, metric_rows)
+          (isTRUE(record$candidate_valid) &&
+            !gepa_checkpoint_completed_row_units(
+              budget,
+              metric_unit,
+              metric_rows
+            ))
       ) {
-        malformed(
+        gepa_checkpoint_malformed(
           "GEPA checkpoint candidate metric is not committed in the budget ledger.",
           record_key = key
         )
       }
       if (
-        !same_number(
+        !gepa_checkpoint_same_number(
           record$scores[[metric_index]],
-          aggregate_score(
+          gepa_checkpoint_aggregate_score(
             metric_rows,
             validation_dataset,
-            paste0("all_records.", key, ".metric_rows[[", metric_index, "]]")
+            row_path
           )
         )
       ) {
-        malformed(
+        gepa_checkpoint_malformed(
           "GEPA checkpoint metric score does not match its evaluation rows.",
           record_key = key
         )
@@ -797,15 +772,17 @@ gepa_checkpoint_state_validate <- function(
     if (isTRUE(record$candidate_valid)) {
       if (identical(validation_dataset, discovery_dataset)) {
         if (!identical(record$discovery_rows, record$metric_rows[[1L]])) {
-          malformed(
+          gepa_checkpoint_malformed(
             "GEPA checkpoint discovery rows do not match validation evidence.",
             record_key = key
           )
         }
-        expected_discovery_calls <- sum_metric_calls(record$metric_rows[[1L]])
+        expected_discovery_calls <- gepa_checkpoint_sum_metric_calls(
+          record$metric_rows[[1L]]
+        )
       } else {
         if (length(record$discovery_rows) != nrow(discovery_dataset)) {
-          malformed(
+          gepa_checkpoint_malformed(
             "GEPA checkpoint discovery rows are incomplete.",
             record_key = key
           )
@@ -819,45 +796,53 @@ gepa_checkpoint_state_validate <- function(
         )
         if (
           !discovery_unit %in% budget$completed_units ||
-            !completed_row_units(discovery_unit, record$discovery_rows)
+            !gepa_checkpoint_completed_row_units(
+              budget,
+              discovery_unit,
+              record$discovery_rows
+            )
         ) {
-          malformed(
+          gepa_checkpoint_malformed(
             "GEPA checkpoint discovery evaluation is not committed in the budget ledger.",
             record_key = key
           )
         }
-        expected_discovery_calls <- sum_metric_calls(record$discovery_rows)
+        expected_discovery_calls <- gepa_checkpoint_sum_metric_calls(
+          record$discovery_rows
+        )
       }
     } else if (
       identical(validation_dataset, discovery_dataset) &&
         !identical(record$discovery_rows, record$metric_rows[[1L]])
     ) {
-      malformed(
+      gepa_checkpoint_malformed(
         "GEPA checkpoint invalid-candidate discovery evidence is inconsistent.",
         record_key = key
       )
     }
-    if (!same_number(record$discovery_metric_calls, expected_discovery_calls)) {
-      malformed(
+    if (
+      !gepa_checkpoint_same_number(
+        record$discovery_metric_calls,
+        expected_discovery_calls
+      )
+    ) {
+      gepa_checkpoint_malformed(
         "GEPA checkpoint discovery usage does not match its evaluation rows.",
         record_key = key
       )
     }
   }
-  expected_best_record_key <- gepa_checkpoint_best_record_key(
-    state$all_records,
-    teleprompter@selection,
-    metric_names
-  )
-  if (!identical(state$best_record_key, expected_best_record_key)) {
-    malformed(
-      "GEPA checkpoint best-record key does not match committed evaluation scores."
-    )
-  }
+  record_keys
+}
+
+gepa_validate_generation_summaries <- function(
+  state,
+  record_keys,
+  teleprompter
+) {
   if (!all(state$generation_record_keys %in% record_keys)) {
-    cli::cli_abort(
-      "GEPA checkpoint state references a missing candidate record",
-      class = "dsprrr_optimizer_checkpoint_malformed"
+    gepa_checkpoint_malformed(
+      "GEPA checkpoint state references a missing candidate record"
     )
   }
   if (length(state$generation_record_keys) > 0L) {
@@ -869,9 +854,8 @@ gepa_checkpoint_state_validate <- function(
         logical(1)
       ))
     ) {
-      cli::cli_abort(
-        "GEPA checkpoint current-generation records have invalid linkage",
-        class = "dsprrr_optimizer_checkpoint_malformed"
+      gepa_checkpoint_malformed(
+        "GEPA checkpoint current-generation records have invalid linkage"
       )
     }
   }
@@ -881,7 +865,7 @@ gepa_checkpoint_state_validate <- function(
     logical(1)
   )]
   if (!identical(state$generation_record_keys, expected_current_keys)) {
-    malformed(
+    gepa_checkpoint_malformed(
       "GEPA checkpoint current-generation record order is inconsistent."
     )
   }
@@ -890,32 +874,30 @@ gepa_checkpoint_state_validate <- function(
       is.null(names(state$all_generations)) ||
         anyDuplicated(names(state$all_generations))
     ) {
-      cli::cli_abort(
-        "GEPA checkpoint generation summaries are malformed",
-        class = "dsprrr_optimizer_checkpoint_malformed"
+      gepa_checkpoint_malformed(
+        "GEPA checkpoint generation summaries are malformed"
       )
     }
+    summary_fields <- c(
+      "generation",
+      "record_keys",
+      "n_selectable",
+      "n_invalid"
+    )
     for (generation_name in names(state$all_generations)) {
       summary <- state$all_generations[[generation_name]]
       if (
-        !is.list(summary) ||
-          !identical(
-            names(summary),
-            c("generation", "record_keys", "n_selectable", "n_invalid")
-          ) ||
-          !is.integer(summary$generation) ||
-          length(summary$generation) != 1L ||
+        !gepa_is_named_record(summary, summary_fields) ||
+          !gepa_is_scalar_int(summary$generation) ||
           !is.character(summary$record_keys) ||
           anyNA(summary$record_keys) ||
           !all(summary$record_keys %in% record_keys) ||
-          !is.integer(summary$n_selectable) ||
-          length(summary$n_selectable) != 1L ||
-          summary$n_selectable < 0L ||
-          !is.integer(summary$n_invalid) ||
-          length(summary$n_invalid) != 1L ||
-          summary$n_invalid < 0L
+          !gepa_is_scalar_int(summary$n_selectable, min = 0L) ||
+          !gepa_is_scalar_int(summary$n_invalid, min = 0L)
       ) {
-        malformed("GEPA checkpoint generation summary is malformed.")
+        gepa_checkpoint_malformed(
+          "GEPA checkpoint generation summary is malformed."
+        )
       }
       expected_generation_keys <- record_keys[vapply(
         state$all_records,
@@ -941,7 +923,7 @@ gepa_checkpoint_state_validate <- function(
           !identical(summary$n_selectable, as.integer(expected_selectable)) ||
           !identical(summary$n_invalid, as.integer(expected_invalid))
       ) {
-        malformed(
+        gepa_checkpoint_malformed(
           "GEPA checkpoint generation summary does not match committed records."
         )
       }
@@ -953,7 +935,7 @@ gepa_checkpoint_state_validate <- function(
     TRUE
   ))
   if (!track_stats && length(state$all_generations) > 0L) {
-    malformed(
+    gepa_checkpoint_malformed(
       "GEPA checkpoint contains generation summaries while tracking is disabled."
     )
   }
@@ -964,7 +946,7 @@ gepa_checkpoint_state_validate <- function(
       character()
     }
     if (!all(completed_summary_names %in% names(state$all_generations))) {
-      malformed(
+      gepa_checkpoint_malformed(
         "GEPA checkpoint is missing a completed generation summary."
       )
     }
@@ -973,7 +955,7 @@ gepa_checkpoint_state_validate <- function(
       as.character(state$generation)
     ))
     if (!all(names(state$all_generations) %in% allowed_summary_names)) {
-      malformed(
+      gepa_checkpoint_malformed(
         "GEPA checkpoint has a summary for an uncommitted generation."
       )
     }
@@ -981,356 +963,350 @@ gepa_checkpoint_state_validate <- function(
       if (
         length(state$all_records) == 0L ||
           state$generations_completed !=
-            max(vapply(
-              state$all_records,
-              `[[`,
-              integer(1),
-              "generation"
-            )) ||
+            max(vapply(state$all_records, `[[`, integer(1), "generation")) ||
           !identical(names(state$all_generations), completed_summary_names)
       ) {
-        malformed(
+        gepa_checkpoint_malformed(
           "GEPA checkpoint completed generation history is incomplete."
         )
       }
     }
   }
-  if (
-    !is.null(state$best_record_key) && !state$best_record_key %in% record_keys
-  ) {
-    cli::cli_abort(
-      "GEPA checkpoint best-record key is missing",
-      class = "dsprrr_optimizer_checkpoint_malformed"
+}
+
+gepa_validate_active_candidate <- function(
+  state,
+  program,
+  component_specs,
+  metric_names,
+  validation_dataset,
+  discovery_dataset,
+  budget
+) {
+  active <- state$active_candidate
+  if (is.null(active)) {
+    return(invisible(NULL))
+  }
+  expected_active <- c(
+    "candidate",
+    "generation",
+    "index",
+    "scores",
+    "metric_rows",
+    "discovery_rows",
+    "discovery_complete",
+    "discovery_metric_calls",
+    "completed_metrics",
+    "candidate_valid"
+  )
+  valid <- gepa_is_named_record(active, expected_active) &&
+    identical(active$generation, state$generation) &&
+    identical(active$index, state$candidate_index) &&
+    is.numeric(active$scores) &&
+    length(active$scores) == length(metric_names) &&
+    is.list(active$metric_rows) &&
+    length(active$metric_rows) == length(metric_names) &&
+    is.list(active$discovery_rows) &&
+    rlang::is_bool(active$discovery_complete) &&
+    gepa_is_scalar_num(active$discovery_metric_calls) &&
+    gepa_is_scalar_int(
+      active$completed_metrics,
+      min = 0L,
+      max = length(metric_names)
+    ) &&
+    rlang::is_bool(active$candidate_valid)
+  if (!valid) {
+    gepa_checkpoint_malformed("GEPA checkpoint active candidate is malformed")
+  }
+  for (metric_index in seq_along(metric_names)) {
+    gepa_checkpoint_validate_rows(
+      active$metric_rows[[metric_index]],
+      validation_dataset,
+      paste0("active_candidate.metric_rows[[", metric_index, "]]")
     )
   }
-  if (!is.null(state$active_candidate)) {
-    active <- state$active_candidate
-    expected_active <- c(
-      "candidate",
-      "generation",
-      "index",
-      "scores",
-      "metric_rows",
-      "discovery_rows",
-      "discovery_complete",
-      "discovery_metric_calls",
-      "completed_metrics",
-      "candidate_valid"
+  gepa_checkpoint_validate_rows(
+    active$discovery_rows,
+    discovery_dataset,
+    "active_candidate.discovery_rows"
+  )
+  candidate <- gepa_checkpoint_decode_candidate(
+    active$candidate,
+    program,
+    component_specs
+  )
+  if (
+    !identical(isTRUE(candidate$valid), isTRUE(active$candidate_valid)) ||
+      state$candidate_index > length(state$population) ||
+      !identical(
+        gepa_component_candidate_id(candidate),
+        gepa_component_candidate_id(gepa_checkpoint_decode_candidate(
+          state$population[[state$candidate_index]],
+          program,
+          component_specs
+        ))
+      )
+  ) {
+    gepa_checkpoint_malformed(
+      "GEPA checkpoint active candidate does not match the population cursor"
     )
-    if (
-      !is.list(active) ||
-        !identical(names(active), expected_active) ||
-        !identical(active$generation, state$generation) ||
-        !identical(active$index, state$candidate_index) ||
-        !is.numeric(active$scores) ||
-        length(active$scores) != length(metric_names) ||
-        !is.list(active$metric_rows) ||
-        length(active$metric_rows) != length(metric_names) ||
-        !is.list(active$discovery_rows) ||
-        !is.logical(active$discovery_complete) ||
-        length(active$discovery_complete) != 1L ||
-        is.na(active$discovery_complete) ||
-        !is.numeric(active$discovery_metric_calls) ||
-        length(active$discovery_metric_calls) != 1L ||
-        !is.integer(active$completed_metrics) ||
-        length(active$completed_metrics) != 1L ||
-        active$completed_metrics < 0L ||
-        active$completed_metrics > length(metric_names) ||
-        !is.logical(active$candidate_valid) ||
-        length(active$candidate_valid) != 1L ||
-        is.na(active$candidate_valid)
-    ) {
-      cli::cli_abort(
-        "GEPA checkpoint active candidate is malformed",
-        class = "dsprrr_optimizer_checkpoint_malformed"
-      )
-    }
-    for (metric_index in seq_along(metric_names)) {
-      gepa_checkpoint_validate_rows(
-        active$metric_rows[[metric_index]],
-        validation_dataset,
-        paste0("active_candidate.metric_rows[[", metric_index, "]]")
-      )
-    }
-    gepa_checkpoint_validate_rows(
-      active$discovery_rows,
-      discovery_dataset,
-      "active_candidate.discovery_rows"
+  }
+  if (!identical(names(active$scores), metric_names)) {
+    gepa_checkpoint_malformed(
+      "GEPA checkpoint active metric names are malformed."
     )
-    candidate <- gepa_checkpoint_decode_candidate(
-      active$candidate,
-      program,
-      component_specs
+  }
+  for (metric_index in seq_along(metric_names)) {
+    rows <- active$metric_rows[[metric_index]]
+    metric_unit <- paste0(
+      "gepa:generation:",
+      state$generation,
+      ":candidate:",
+      state$candidate_index,
+      ":metric:",
+      metric_index
     )
-    if (
-      !identical(isTRUE(candidate$valid), isTRUE(active$candidate_valid)) ||
-        state$candidate_index > length(state$population) ||
-        !identical(
-          gepa_component_candidate_id(candidate),
-          gepa_component_candidate_id(gepa_checkpoint_decode_candidate(
-            state$population[[state$candidate_index]],
-            program,
-            component_specs
-          ))
-        )
-    ) {
-      cli::cli_abort(
-        "GEPA checkpoint active candidate does not match the population cursor",
-        class = "dsprrr_optimizer_checkpoint_malformed"
-      )
-    }
-    if (!identical(names(active$scores), metric_names)) {
-      malformed("GEPA checkpoint active metric names are malformed.")
-    }
-    for (metric_index in seq_along(metric_names)) {
-      rows <- active$metric_rows[[metric_index]]
-      metric_unit <- paste0(
-        "gepa:generation:",
-        state$generation,
-        ":candidate:",
-        state$candidate_index,
-        ":metric:",
-        metric_index
-      )
-      if (metric_index <= active$completed_metrics) {
-        if (
-          !metric_unit %in% budget$completed_units ||
-            !same_number(
-              active$scores[[metric_index]],
-              aggregate_score(
-                rows,
-                validation_dataset,
-                paste0("active_candidate.metric_rows[[", metric_index, "]]")
-              )
-            ) ||
-            isTRUE(active$candidate_valid) &&
-              !completed_row_units(metric_unit, rows)
-        ) {
-          malformed(
-            "GEPA checkpoint active metric score or ledger does not match its rows."
-          )
-        }
-      } else if (length(rows) != 0L || !is.na(active$scores[[metric_index]])) {
-        malformed(
-          "GEPA checkpoint contains uncommitted metric evidence."
+    if (metric_index <= active$completed_metrics) {
+      if (
+        !metric_unit %in% budget$completed_units ||
+          !gepa_checkpoint_same_number(
+            active$scores[[metric_index]],
+            gepa_checkpoint_aggregate_score(
+              rows,
+              validation_dataset,
+              paste0("active_candidate.metric_rows[[", metric_index, "]]")
+            )
+          ) ||
+          (isTRUE(active$candidate_valid) &&
+            !gepa_checkpoint_completed_row_units(budget, metric_unit, rows))
+      ) {
+        gepa_checkpoint_malformed(
+          "GEPA checkpoint active metric score or ledger does not match its rows."
         )
       }
+    } else if (length(rows) != 0L || !is.na(active$scores[[metric_index]])) {
+      gepa_checkpoint_malformed(
+        "GEPA checkpoint contains uncommitted metric evidence."
+      )
     }
-    if (isTRUE(active$discovery_complete)) {
+  }
+  if (isTRUE(active$discovery_complete)) {
+    if (
+      identical(validation_dataset, discovery_dataset) &&
+        active$completed_metrics >= 1L
+    ) {
       if (
-        identical(validation_dataset, discovery_dataset) &&
-          active$completed_metrics >= 1L
-      ) {
-        if (
-          !identical(active$discovery_rows, active$metric_rows[[1L]]) ||
-            !same_number(
-              active$discovery_metric_calls,
-              sum_metric_calls(active$metric_rows[[1L]])
-            )
-        ) {
-          malformed(
-            "GEPA checkpoint active discovery evidence is inconsistent."
+        !identical(active$discovery_rows, active$metric_rows[[1L]]) ||
+          !gepa_checkpoint_same_number(
+            active$discovery_metric_calls,
+            gepa_checkpoint_sum_metric_calls(active$metric_rows[[1L]])
           )
-        }
-      } else if (isTRUE(active$candidate_valid)) {
-        if (
-          active$completed_metrics != length(metric_names) ||
-            length(active$discovery_rows) != nrow(discovery_dataset) ||
-            !same_number(
-              active$discovery_metric_calls,
-              sum_metric_calls(active$discovery_rows)
-            )
-        ) {
-          malformed(
-            "GEPA checkpoint active discovery evaluation is incomplete."
-          )
-        }
-      } else if (
-        length(active$discovery_rows) != 0L ||
-          !same_number(active$discovery_metric_calls, 0)
       ) {
-        malformed(
-          "GEPA checkpoint invalid-candidate discovery evidence is inconsistent."
+        gepa_checkpoint_malformed(
+          "GEPA checkpoint active discovery evidence is inconsistent."
+        )
+      }
+    } else if (isTRUE(active$candidate_valid)) {
+      if (
+        active$completed_metrics != length(metric_names) ||
+          length(active$discovery_rows) != nrow(discovery_dataset) ||
+          !gepa_checkpoint_same_number(
+            active$discovery_metric_calls,
+            gepa_checkpoint_sum_metric_calls(active$discovery_rows)
+          )
+      ) {
+        gepa_checkpoint_malformed(
+          "GEPA checkpoint active discovery evaluation is incomplete."
         )
       }
     } else if (
       length(active$discovery_rows) != 0L ||
-        !same_number(active$discovery_metric_calls, 0)
+        !gepa_checkpoint_same_number(active$discovery_metric_calls, 0)
     ) {
-      malformed(
-        "GEPA checkpoint has uncommitted discovery evidence."
+      gepa_checkpoint_malformed(
+        "GEPA checkpoint invalid-candidate discovery evidence is inconsistent."
       )
     }
-  }
-  if (!is.null(state$active_evaluation)) {
-    evaluation <- state$active_evaluation
-    expected_eval <- c("role", "metric_index", "unit_id", "rows")
-    dataset <- if (identical(evaluation$role, "discovery")) {
-      discovery_dataset
-    } else {
-      validation_dataset
-    }
-    if (
-      !is.list(evaluation) ||
-        !identical(names(evaluation), expected_eval) ||
-        !is.character(evaluation$role) ||
-        length(evaluation$role) != 1L ||
-        !evaluation$role %in% c("metric", "discovery") ||
-        !is.integer(evaluation$metric_index) ||
-        length(evaluation$metric_index) != 1L ||
-        evaluation$metric_index < 1L ||
-        evaluation$metric_index > length(metric_names) ||
-        identical(evaluation$role, "discovery") &&
-          evaluation$metric_index != 1L ||
-        !is.character(evaluation$unit_id) ||
-        length(evaluation$unit_id) != 1L ||
-        is.na(evaluation$unit_id) ||
-        !is.list(evaluation$rows)
-    ) {
-      cli::cli_abort(
-        "GEPA checkpoint active evaluation is malformed",
-        class = "dsprrr_optimizer_checkpoint_malformed"
-      )
-    }
-    gepa_checkpoint_validate_rows(
-      evaluation$rows,
-      dataset,
-      "active_evaluation.rows"
+  } else if (
+    length(active$discovery_rows) != 0L ||
+      !gepa_checkpoint_same_number(active$discovery_metric_calls, 0)
+  ) {
+    gepa_checkpoint_malformed(
+      "GEPA checkpoint has uncommitted discovery evidence."
     )
-    active_candidate <- state$active_candidate
-    expected_unit <- if (identical(evaluation$role, "discovery")) {
-      paste0(
-        "gepa:generation:",
-        state$generation,
-        ":candidate:",
-        state$candidate_index,
-        ":discovery"
-      )
-    } else {
-      paste0(
-        "gepa:generation:",
-        state$generation,
-        ":candidate:",
-        state$candidate_index,
-        ":metric:",
-        evaluation$metric_index
-      )
-    }
-    if (
-      is.null(active_candidate) ||
-        !identical(evaluation$unit_id, expected_unit) ||
-        !identical(evaluation$role, "discovery") &&
-          evaluation$metric_index != active_candidate$completed_metrics + 1L ||
-        !if (isTRUE(active_candidate$candidate_valid)) {
-          completed_row_units(evaluation$unit_id, evaluation$rows)
-        } else {
-          length(evaluation$rows) == 0L ||
-            length(evaluation$rows) == nrow(dataset) &&
-              evaluation$unit_id %in% budget$completed_units
-        }
-    ) {
-      cli::cli_abort(
-        "GEPA checkpoint active evaluation cursor is inconsistent",
-        class = "dsprrr_optimizer_checkpoint_malformed"
-      )
-    }
-    if (
-      identical(evaluation$role, "discovery") &&
-        isTRUE(active_candidate$discovery_complete)
-    ) {
-      cli::cli_abort(
-        "GEPA checkpoint discovery evaluation was already committed",
-        class = "dsprrr_optimizer_checkpoint_malformed"
-      )
-    }
   }
-  if (!is.null(state$active_proposal)) {
-    proposal <- state$active_proposal
-    expected_proposal <- c(
-      "kind",
-      "candidate",
-      "parent1_record_key",
-      "parent1_id",
-      "parent2_id",
-      "component_id",
-      "unit_id",
-      "selector_context",
-      "mutation",
-      "merge_invocation_delta",
-      "lineage_merge_delta"
-    )
-    if (
-      !is.list(proposal) ||
-        !identical(names(proposal), expected_proposal) ||
-        !is.character(proposal$kind) ||
-        length(proposal$kind) != 1L ||
-        !proposal$kind %in% c("initial", "generation") ||
-        !is.null(proposal$parent1_record_key) &&
-          (!is.character(proposal$parent1_record_key) ||
-            length(proposal$parent1_record_key) != 1L ||
-            !proposal$parent1_record_key %in% record_keys) ||
-        !is.character(proposal$parent1_id) ||
-        length(proposal$parent1_id) != 1L ||
-        !is.character(proposal$parent2_id) ||
-        length(proposal$parent2_id) != 1L ||
-        !is.logical(proposal$mutation) ||
-        length(proposal$mutation) != 1L ||
-        is.na(proposal$mutation) ||
-        !is.null(proposal$component_id) &&
-          (!is.character(proposal$component_id) ||
-            length(proposal$component_id) != 1L ||
-            !proposal$component_id %in% names(component_specs)) ||
-        isTRUE(proposal$mutation) && is.null(proposal$component_id) ||
-        !isTRUE(proposal$mutation) && !is.null(proposal$component_id) ||
-        !is.character(proposal$unit_id) ||
-        length(proposal$unit_id) != 1L ||
-        is.na(proposal$unit_id) ||
-        isTRUE(proposal$mutation) && !nzchar(proposal$unit_id) ||
-        !isTRUE(proposal$mutation) && nzchar(proposal$unit_id) ||
-        !is.list(proposal$selector_context) ||
-        !is.integer(proposal$merge_invocation_delta) ||
-        length(proposal$merge_invocation_delta) != 1L ||
-        proposal$merge_invocation_delta < 0L ||
-        !is.integer(proposal$lineage_merge_delta) ||
-        length(proposal$lineage_merge_delta) != 1L ||
-        proposal$lineage_merge_delta < 0L ||
-        proposal$lineage_merge_delta > proposal$merge_invocation_delta
-    ) {
-      cli::cli_abort(
-        "GEPA checkpoint active proposal is malformed",
-        class = "dsprrr_optimizer_checkpoint_malformed"
-      )
-    }
-    candidate <- gepa_checkpoint_decode_candidate(
-      proposal$candidate,
-      program,
-      component_specs
-    )
-    if (
-      !identical(gepa_component_candidate_id(candidate), proposal$parent1_id) &&
-        identical(proposal$kind, "initial")
-    ) {
-      cli::cli_abort(
-        "GEPA checkpoint initialization proposal parent is malformed",
-        class = "dsprrr_optimizer_checkpoint_malformed"
-      )
-    }
-    if (
-      identical(proposal$kind, "generation") &&
-        (is.null(proposal$parent1_record_key) ||
-          !identical(
-            state$all_records[[proposal$parent1_record_key]]$candidate_id,
-            proposal$parent1_id
-          ) ||
-          !proposal$parent2_id %in%
-            vapply(state$all_records, `[[`, character(1), "candidate_id"))
-    ) {
-      cli::cli_abort(
-        "GEPA checkpoint proposal parent linkage is malformed",
-        class = "dsprrr_optimizer_checkpoint_malformed"
-      )
-    }
+}
+
+gepa_validate_active_evaluation <- function(
+  state,
+  metric_names,
+  validation_dataset,
+  discovery_dataset,
+  budget
+) {
+  evaluation <- state$active_evaluation
+  if (is.null(evaluation)) {
+    return(invisible(NULL))
   }
+  expected_eval <- c("role", "metric_index", "unit_id", "rows")
+  dataset <- if (identical(evaluation$role, "discovery")) {
+    discovery_dataset
+  } else {
+    validation_dataset
+  }
+  valid <- gepa_is_named_record(evaluation, expected_eval) &&
+    gepa_is_scalar_string(
+      evaluation$role,
+      choices = c("metric", "discovery")
+    ) &&
+    gepa_is_scalar_int(
+      evaluation$metric_index,
+      min = 1L,
+      max = length(metric_names)
+    ) &&
+    (!identical(evaluation$role, "discovery") ||
+      evaluation$metric_index == 1L) &&
+    gepa_is_scalar_string(evaluation$unit_id) &&
+    is.list(evaluation$rows)
+  if (!valid) {
+    gepa_checkpoint_malformed("GEPA checkpoint active evaluation is malformed")
+  }
+  gepa_checkpoint_validate_rows(
+    evaluation$rows,
+    dataset,
+    "active_evaluation.rows"
+  )
+  active_candidate <- state$active_candidate
+  expected_unit <- if (identical(evaluation$role, "discovery")) {
+    paste0(
+      "gepa:generation:",
+      state$generation,
+      ":candidate:",
+      state$candidate_index,
+      ":discovery"
+    )
+  } else {
+    paste0(
+      "gepa:generation:",
+      state$generation,
+      ":candidate:",
+      state$candidate_index,
+      ":metric:",
+      evaluation$metric_index
+    )
+  }
+  rows_consistent <- if (isTRUE(active_candidate$candidate_valid)) {
+    gepa_checkpoint_completed_row_units(
+      budget,
+      evaluation$unit_id,
+      evaluation$rows
+    )
+  } else {
+    length(evaluation$rows) == 0L ||
+      (length(evaluation$rows) == nrow(dataset) &&
+        evaluation$unit_id %in% budget$completed_units)
+  }
+  if (
+    is.null(active_candidate) ||
+      !identical(evaluation$unit_id, expected_unit) ||
+      (!identical(evaluation$role, "discovery") &&
+        evaluation$metric_index != active_candidate$completed_metrics + 1L) ||
+      !rows_consistent
+  ) {
+    gepa_checkpoint_malformed(
+      "GEPA checkpoint active evaluation cursor is inconsistent"
+    )
+  }
+  if (
+    identical(evaluation$role, "discovery") &&
+      isTRUE(active_candidate$discovery_complete)
+  ) {
+    gepa_checkpoint_malformed(
+      "GEPA checkpoint discovery evaluation was already committed"
+    )
+  }
+}
+
+gepa_validate_active_proposal <- function(
+  state,
+  program,
+  component_specs,
+  record_keys
+) {
+  proposal <- state$active_proposal
+  if (is.null(proposal)) {
+    return(invisible(NULL))
+  }
+  expected_proposal <- c(
+    "kind",
+    "candidate",
+    "parent1_record_key",
+    "parent1_id",
+    "parent2_id",
+    "component_id",
+    "unit_id",
+    "selector_context",
+    "mutation",
+    "merge_invocation_delta",
+    "lineage_merge_delta"
+  )
+  valid <- gepa_is_named_record(proposal, expected_proposal) &&
+    gepa_is_scalar_string(
+      proposal$kind,
+      choices = c("initial", "generation")
+    ) &&
+    (is.null(proposal$parent1_record_key) ||
+      (gepa_is_scalar_string(proposal$parent1_record_key) &&
+        proposal$parent1_record_key %in% record_keys)) &&
+    gepa_is_scalar_string(proposal$parent1_id) &&
+    gepa_is_scalar_string(proposal$parent2_id) &&
+    rlang::is_bool(proposal$mutation) &&
+    (is.null(proposal$component_id) ||
+      (gepa_is_scalar_string(proposal$component_id) &&
+        proposal$component_id %in% names(component_specs))) &&
+    identical(isTRUE(proposal$mutation), !is.null(proposal$component_id)) &&
+    gepa_is_scalar_string(proposal$unit_id) &&
+    identical(isTRUE(proposal$mutation), nzchar(proposal$unit_id)) &&
+    is.list(proposal$selector_context) &&
+    gepa_is_scalar_int(proposal$merge_invocation_delta, min = 0L) &&
+    gepa_is_scalar_int(
+      proposal$lineage_merge_delta,
+      min = 0L,
+      max = proposal$merge_invocation_delta
+    )
+  if (!valid) {
+    gepa_checkpoint_malformed("GEPA checkpoint active proposal is malformed")
+  }
+  candidate <- gepa_checkpoint_decode_candidate(
+    proposal$candidate,
+    program,
+    component_specs
+  )
+  if (
+    identical(proposal$kind, "initial") &&
+      !identical(gepa_component_candidate_id(candidate), proposal$parent1_id)
+  ) {
+    gepa_checkpoint_malformed(
+      "GEPA checkpoint initialization proposal parent is malformed"
+    )
+  }
+  if (
+    identical(proposal$kind, "generation") &&
+      (is.null(proposal$parent1_record_key) ||
+        !identical(
+          state$all_records[[proposal$parent1_record_key]]$candidate_id,
+          proposal$parent1_id
+        ) ||
+        !proposal$parent2_id %in%
+          vapply(state$all_records, `[[`, character(1), "candidate_id"))
+  ) {
+    gepa_checkpoint_malformed(
+      "GEPA checkpoint proposal parent linkage is malformed"
+    )
+  }
+}
+
+gepa_validate_phase_cursors <- function(state, teleprompter) {
   if (identical(state$phase, "initializing")) {
     if (
       length(state$population) != state$next_proposal_index - 1L ||
@@ -1338,7 +1314,9 @@ gepa_checkpoint_state_validate <- function(
         length(state$all_records) != 0L ||
         length(state$generation_record_keys) != 0L
     ) {
-      malformed("GEPA checkpoint initialization cursor is inconsistent.")
+      gepa_checkpoint_malformed(
+        "GEPA checkpoint initialization cursor is inconsistent."
+      )
     }
   } else if (identical(state$phase, "proposing")) {
     if (
@@ -1348,46 +1326,131 @@ gepa_checkpoint_state_validate <- function(
         state$candidate_index != 1L ||
         length(state$generation_record_keys) != 0L
     ) {
-      malformed("GEPA checkpoint proposal cursor is inconsistent.")
+      gepa_checkpoint_malformed(
+        "GEPA checkpoint proposal cursor is inconsistent."
+      )
     }
   } else if (state$phase %in% c("evaluating", "selecting")) {
     if (
       length(state$population) != teleprompter@population_size ||
         length(state$generation_record_keys) != state$candidate_index - 1L ||
-        state$phase == "selecting" &&
-          state$candidate_index != length(state$population) + 1L ||
-        state$candidate_index <= length(state$population) &&
+        (state$phase == "selecting" &&
+          state$candidate_index != length(state$population) + 1L) ||
+        (state$candidate_index <= length(state$population) &&
           is.null(state$active_candidate) &&
-          !is.null(state$active_evaluation) ||
-        state$candidate_index > length(state$population) &&
+          !is.null(state$active_evaluation)) ||
+        (state$candidate_index > length(state$population) &&
           (!is.null(state$active_candidate) ||
-            !is.null(state$active_evaluation))
+            !is.null(state$active_evaluation)))
     ) {
-      malformed("GEPA checkpoint evaluation cursor is inconsistent.")
+      gepa_checkpoint_malformed(
+        "GEPA checkpoint evaluation cursor is inconsistent."
+      )
     }
   }
   if (
-    identical(state$phase, "selecting") &&
+    (identical(state$phase, "selecting") &&
       (state$candidate_index <= length(state$population) ||
         !is.null(state$active_candidate) ||
-        !is.null(state$active_evaluation)) ||
-      state$phase %in%
+        !is.null(state$active_evaluation))) ||
+      (state$phase %in%
         c("initializing", "proposing") &&
         (!is.null(state$active_candidate) ||
-          !is.null(state$active_evaluation)) ||
-      identical(state$phase, "complete") &&
+          !is.null(state$active_evaluation))) ||
+      (identical(state$phase, "complete") &&
         (is.null(state$termination) ||
           !is.null(state$active_proposal) ||
           !is.null(state$active_candidate) ||
-          !is.null(state$active_evaluation)) ||
-      identical(state$phase, "proposing") && state$generation < 2L ||
-      identical(state$phase, "initializing") && state$generation != 1L
+          !is.null(state$active_evaluation))) ||
+      (identical(state$phase, "proposing") && state$generation < 2L) ||
+      (identical(state$phase, "initializing") && state$generation != 1L)
   ) {
-    cli::cli_abort(
-      "GEPA checkpoint phase cursors are inconsistent",
-      class = "dsprrr_optimizer_checkpoint_malformed"
+    gepa_checkpoint_malformed(
+      "GEPA checkpoint phase cursors are inconsistent"
     )
   }
+}
+
+gepa_checkpoint_state_validate <- function(
+  state,
+  program,
+  component_specs,
+  metric_names,
+  validation_dataset,
+  discovery_dataset,
+  teleprompter,
+  budget
+) {
+  gepa_validate_state_header(state, component_specs, teleprompter)
+  decode_candidates <- function(values, path) {
+    lapply(seq_along(values), function(index) {
+      tryCatch(
+        gepa_checkpoint_decode_candidate(
+          values[[index]],
+          program,
+          component_specs
+        ),
+        error = function(error) {
+          if (inherits(error, "dsprrr_optimizer_checkpoint_malformed")) {
+            stop(error)
+          }
+          cli::cli_abort(
+            "GEPA checkpoint candidate state is malformed",
+            class = "dsprrr_optimizer_checkpoint_malformed",
+            path = paste0(path, "[[", index, "]"),
+            parent = error
+          )
+        }
+      )
+    })
+  }
+  decode_candidates(state$population, "population")
+  decode_candidates(state$next_population, "next_population")
+
+  record_keys <- gepa_validate_committed_records(
+    state = state,
+    program = program,
+    component_specs = component_specs,
+    metric_names = metric_names,
+    validation_dataset = validation_dataset,
+    discovery_dataset = discovery_dataset,
+    teleprompter = teleprompter,
+    budget = budget
+  )
+  expected_best_record_key <- gepa_checkpoint_best_record_key(
+    state$all_records,
+    teleprompter@selection,
+    metric_names
+  )
+  if (!identical(state$best_record_key, expected_best_record_key)) {
+    gepa_checkpoint_malformed(
+      "GEPA checkpoint best-record key does not match committed evaluation scores."
+    )
+  }
+  gepa_validate_generation_summaries(state, record_keys, teleprompter)
+  if (
+    !is.null(state$best_record_key) && !state$best_record_key %in% record_keys
+  ) {
+    gepa_checkpoint_malformed("GEPA checkpoint best-record key is missing")
+  }
+  gepa_validate_active_candidate(
+    state = state,
+    program = program,
+    component_specs = component_specs,
+    metric_names = metric_names,
+    validation_dataset = validation_dataset,
+    discovery_dataset = discovery_dataset,
+    budget = budget
+  )
+  gepa_validate_active_evaluation(
+    state = state,
+    metric_names = metric_names,
+    validation_dataset = validation_dataset,
+    discovery_dataset = discovery_dataset,
+    budget = budget
+  )
+  gepa_validate_active_proposal(state, program, component_specs, record_keys)
+  gepa_validate_phase_cursors(state, teleprompter)
   invisible(state)
 }
 
@@ -2007,16 +2070,7 @@ gepa_effective_task_models <- function(program, .llm) {
   if (!is.null(.llm)) {
     return(gepa_chat_model_name(.llm))
   }
-  graph <- module_graph(program, boundaries = "cross", cycles = "error")
-  leaf <- vapply(
-    graph$path,
-    function(path) {
-      prefix <- if (identical(path, "$")) "$/" else paste0(path, "/")
-      !any(startsWith(graph$path, prefix))
-    },
-    logical(1)
-  )
-  graph <- graph[leaf, , drop = FALSE]
+  graph <- module_leaf_nodes(program, cycles = "error")
   default_chat <- get_default_chat(create = FALSE)
   models <- lapply(seq_len(nrow(graph)), function(index) {
     module <- graph$module[[index]]
@@ -2073,17 +2127,18 @@ gepa_checkpoint_no_mutable_result <- function(
 ) {
   optimized <- gepa_clone_component_program(program)
   budget_summary <- optimizer_budget_summary(budget)
-  details <- list(
-    selection = teleprompter@selection,
-    population_size = teleprompter@population_size,
-    generations = teleprompter@generations,
-    optimization_mode = "component_candidates",
-    component_selector = gepa_component_selector_label(
-      gepa_teleprompter_property(
-        teleprompter,
-        "component_selector",
-        "round_robin"
-      )
+  track_best_outputs <- isTRUE(gepa_teleprompter_property(
+    teleprompter,
+    "track_best_outputs",
+    TRUE
+  ))
+  details <- gepa_build_details(
+    teleprompter = teleprompter,
+    program = program,
+    component_selector = gepa_teleprompter_property(
+      teleprompter,
+      "component_selector",
+      "round_robin"
     ),
     use_merge = isTRUE(gepa_teleprompter_property(
       teleprompter,
@@ -2097,29 +2152,15 @@ gepa_checkpoint_no_mutable_result <- function(
     ),
     merge_invocations = 0L,
     successful_merge_count = 0L,
-    track_best_outputs = isTRUE(gepa_teleprompter_property(
-      teleprompter,
-      "track_best_outputs",
-      TRUE
-    )),
-    optimization_skipped = TRUE,
-    skip_reason = "no_mutable_components",
-    model_routing = list(
-      task_model = gepa_effective_task_models(program, .llm),
-      task_chat_source = task_chat_source,
-      reflection_model = gepa_chat_model_name(.reflection_llm),
-      reflection_chat_source = reflection_chat_source,
-      reflection_budget_stages = c("gepa_reflection", "gepa_flex_reflection")
-    ),
-    flex_paths = gepa_flex_paths(program, mutable_only = FALSE),
+    track_best_outputs = track_best_outputs,
+    task_model = gepa_effective_task_models(program, .llm),
+    task_chat_source = task_chat_source,
+    reflection_model = gepa_chat_model_name(.reflection_llm),
+    reflection_chat_source = reflection_chat_source,
     mutable_flex_paths = character(),
     component_ids = character(),
     component_semantics = utils::modifyList(
-      gepa_component_semantics(isTRUE(gepa_teleprompter_property(
-        teleprompter,
-        "track_best_outputs",
-        TRUE
-      ))),
+      gepa_component_semantics(track_best_outputs),
       list(
         fine_grained_resume = TRUE,
         note = "No mutable components required provider work; the GEPA checkpoint is terminal."
@@ -2131,25 +2172,6 @@ gepa_checkpoint_no_mutable_result <- function(
       rep(NA_real_, length(metric_names)),
       metric_names
     ),
-    candidates = list(),
-    parents = list(),
-    val_aggregate_scores = numeric(),
-    val_subscores = list(),
-    per_val_instance_best_candidates = list(),
-    validation_frontier_scores = numeric(),
-    best_outputs_valset = if (
-      isTRUE(gepa_teleprompter_property(
-        teleprompter,
-        "track_best_outputs",
-        TRUE
-      ))
-    ) {
-      list()
-    } else {
-      NULL
-    },
-    discovery_eval_counts = integer(),
-    objective_pareto_front = list(),
     resume_supported = TRUE,
     search_state = list(
       schema_version = 1L,
@@ -2158,8 +2180,8 @@ gepa_checkpoint_no_mutable_result <- function(
       candidate_ids = character(),
       next_generation = 1L
     ),
-    all_generations = list(),
-    invalid_candidate_count = 0L
+    optimization_skipped = TRUE,
+    skip_reason = "no_mutable_components"
   )
   record_optimization_result(
     optimized,
@@ -2331,17 +2353,13 @@ gepa_checkpoint_finalize <- function(
   } else {
     as.integer(state$generation)
   }
-  details <- list(
-    selection = teleprompter@selection,
-    population_size = teleprompter@population_size,
-    generations = teleprompter@generations,
-    optimization_mode = "component_candidates",
-    component_selector = gepa_component_selector_label(
-      gepa_teleprompter_property(
-        teleprompter,
-        "component_selector",
-        "round_robin"
-      )
+  details <- gepa_build_details(
+    teleprompter = teleprompter,
+    program = program,
+    component_selector = gepa_teleprompter_property(
+      teleprompter,
+      "component_selector",
+      "round_robin"
     ),
     use_merge = isTRUE(gepa_teleprompter_property(
       teleprompter,
@@ -2356,14 +2374,10 @@ gepa_checkpoint_finalize <- function(
     merge_invocations = state$merge_invocations,
     successful_merge_count = state$lineage_merges,
     track_best_outputs = track_best_outputs,
-    model_routing = list(
-      task_model = gepa_effective_task_models(program, .llm),
-      task_chat_source = task_chat_source,
-      reflection_model = gepa_chat_model_name(.reflection_llm),
-      reflection_chat_source = reflection_chat_source,
-      reflection_budget_stages = c("gepa_reflection", "gepa_flex_reflection")
-    ),
-    flex_paths = gepa_flex_paths(program, mutable_only = FALSE),
+    task_model = gepa_effective_task_models(program, .llm),
+    task_chat_source = task_chat_source,
+    reflection_model = gepa_chat_model_name(.reflection_llm),
+    reflection_chat_source = reflection_chat_source,
     mutable_flex_paths = character(),
     component_ids = names(component_specs),
     component_semantics = semantics,
@@ -2374,14 +2388,7 @@ gepa_checkpoint_finalize <- function(
     },
     best_candidate_id = best_record$candidate_id %||% NULL,
     best_scores = final_scores,
-    candidates = validation_result$candidates,
-    parents = validation_result$parents,
-    val_aggregate_scores = validation_result$val_aggregate_scores,
-    val_subscores = validation_result$val_subscores,
-    per_val_instance_best_candidates = validation_result$per_val_instance_best_candidates,
-    validation_frontier_scores = validation_result$validation_frontier_scores,
-    best_outputs_valset = validation_result$best_outputs_valset,
-    discovery_eval_counts = validation_result$discovery_eval_counts,
+    validation_result = validation_result,
     objective_pareto_front = objective_frontier,
     resume_supported = TRUE,
     search_state = list(
@@ -2602,11 +2609,8 @@ compile_gepa_checkpointed <- function(
     task_runtime = task_runtime,
     reflection_runtime = reflection_runtime
   )
-  if (is.null(trial_log) && !is.null(control@log_dir)) {
-    trial_log <- TrialLog$new(
-      optimizer_name = "GEPA",
-      log_dir = control@log_dir
-    )
+  if (is.null(trial_log)) {
+    trial_log <- teleprompter_init_trial_log(control, "GEPA")
   }
   initial_state <- gepa_checkpoint_initial_state(program, component_specs)
   if (length(component_specs) == 0L) {
@@ -2657,6 +2661,13 @@ compile_gepa_checkpointed <- function(
   write_checkpoint <- function(best_program = context$best_program) {
     gepa_checkpoint_write(context, state, best_program = best_program)
   }
+  save_checkpoint <- function() {
+    write_checkpoint(gepa_checkpoint_best_program(
+      state,
+      program,
+      component_specs
+    ))
+  }
   if (!isTRUE(context$resumed)) {
     write_checkpoint(gepa_clone_component_program(program))
   }
@@ -2672,11 +2683,7 @@ compile_gepa_checkpointed <- function(
         if (state$next_proposal_index > teleprompter@population_size) {
           state$next_proposal_index <- 1L
           state$phase <- "evaluating"
-          write_checkpoint(gepa_checkpoint_best_program(
-            state,
-            program,
-            component_specs
-          ))
+          save_checkpoint()
           next
         }
         index <- state$next_proposal_index
@@ -2701,11 +2708,7 @@ compile_gepa_checkpointed <- function(
             unit_id = paste0("gepa:initial_component_mutation:", index),
             selector_context = context_text
           )
-          write_checkpoint(gepa_checkpoint_best_program(
-            state,
-            program,
-            component_specs
-          ))
+          save_checkpoint()
         }
         plan <- state$active_proposal
       } else if (identical(state$phase, "proposing")) {
@@ -2718,11 +2721,7 @@ compile_gepa_checkpointed <- function(
           state["active_candidate"] <- list(NULL)
           state["active_evaluation"] <- list(NULL)
           state$phase <- "evaluating"
-          write_checkpoint(gepa_checkpoint_best_program(
-            state,
-            program,
-            component_specs
-          ))
+          save_checkpoint()
           next
         }
         index <- state$next_proposal_index
@@ -2749,11 +2748,7 @@ compile_gepa_checkpointed <- function(
           if (is.null(plan)) {
             state$phase <- "complete"
             state$termination <- "no_selectable_candidates"
-            write_checkpoint(gepa_checkpoint_best_program(
-              state,
-              program,
-              component_specs
-            ))
+            save_checkpoint()
             next
           }
           state$merge_invocations <- as.integer(
@@ -2763,21 +2758,13 @@ compile_gepa_checkpointed <- function(
             state$lineage_merges + plan$lineage_merge_delta
           )
           state$active_proposal <- plan
-          write_checkpoint(gepa_checkpoint_best_program(
-            state,
-            program,
-            component_specs
-          ))
+          save_checkpoint()
         }
         plan <- state$active_proposal
       } else if (identical(state$phase, "evaluating")) {
         if (state$candidate_index > length(state$population)) {
           state$phase <- "selecting"
-          write_checkpoint(gepa_checkpoint_best_program(
-            state,
-            program,
-            component_specs
-          ))
+          save_checkpoint()
           next
         }
         if (is.null(state$active_candidate)) {
@@ -2795,11 +2782,7 @@ compile_gepa_checkpointed <- function(
           if (!isTRUE(candidate$valid)) {
             state$active_candidate$discovery_complete <- TRUE
           }
-          write_checkpoint(gepa_checkpoint_best_program(
-            state,
-            program,
-            component_specs
-          ))
+          save_checkpoint()
         }
 
         while (state$active_candidate$completed_metrics < length(metrics)) {
@@ -2822,11 +2805,7 @@ compile_gepa_checkpointed <- function(
               unit_id = unit_id,
               rows = list()
             )
-            write_checkpoint(gepa_checkpoint_best_program(
-              state,
-              program,
-              component_specs
-            ))
+            save_checkpoint()
           }
           candidate <- gepa_checkpoint_decode_candidate(
             state$active_candidate$candidate,
@@ -2846,21 +2825,13 @@ compile_gepa_checkpointed <- function(
             active_evaluation = state$active_evaluation,
             on_progress = function(rows) {
               state$active_evaluation$rows <<- rows
-              write_checkpoint(gepa_checkpoint_best_program(
-                state,
-                program,
-                component_specs
-              ))
+              save_checkpoint()
             },
             failure_score = failure_score
           )
           if (!isTRUE(evaluated$completed)) {
             state$active_evaluation$rows <- evaluated$rows
-            write_checkpoint(gepa_checkpoint_best_program(
-              state,
-              program,
-              component_specs
-            ))
+            save_checkpoint()
             break
           }
           state$active_candidate$metric_rows[[metric_index]] <- evaluated$rows
@@ -2890,11 +2861,7 @@ compile_gepa_checkpointed <- function(
             )
           }
           state["active_evaluation"] <- list(NULL)
-          write_checkpoint(gepa_checkpoint_best_program(
-            state,
-            program,
-            component_specs
-          ))
+          save_checkpoint()
         }
 
         if (
@@ -2927,11 +2894,7 @@ compile_gepa_checkpointed <- function(
               unit_id = unit_id,
               rows = list()
             )
-            write_checkpoint(gepa_checkpoint_best_program(
-              state,
-              program,
-              component_specs
-            ))
+            save_checkpoint()
           }
           candidate <- gepa_checkpoint_decode_candidate(
             state$active_candidate$candidate,
@@ -2951,21 +2914,13 @@ compile_gepa_checkpointed <- function(
             active_evaluation = state$active_evaluation,
             on_progress = function(rows) {
               state$active_evaluation$rows <<- rows
-              write_checkpoint(gepa_checkpoint_best_program(
-                state,
-                program,
-                component_specs
-              ))
+              save_checkpoint()
             },
             failure_score = failure_score
           )
           if (!isTRUE(evaluated$completed)) {
             state$active_evaluation$rows <- evaluated$rows
-            write_checkpoint(gepa_checkpoint_best_program(
-              state,
-              program,
-              component_specs
-            ))
+            save_checkpoint()
             break
           }
           state$active_candidate$discovery_rows <- evaluated$rows
@@ -2974,11 +2929,7 @@ compile_gepa_checkpointed <- function(
             evaluated$eval_result@metric_calls
           )
           state["active_evaluation"] <- list(NULL)
-          write_checkpoint(gepa_checkpoint_best_program(
-            state,
-            program,
-            component_specs
-          ))
+          save_checkpoint()
         }
 
         if (!isTRUE(state$active_candidate$discovery_complete)) {
@@ -3013,11 +2964,7 @@ compile_gepa_checkpointed <- function(
           state,
           teleprompter
         )
-        write_checkpoint(gepa_checkpoint_best_program(
-          state,
-          program,
-          component_specs
-        ))
+        save_checkpoint()
       } else if (identical(state$phase, "selecting")) {
         state <- gepa_checkpoint_update_selection(
           state,
@@ -3029,11 +2976,7 @@ compile_gepa_checkpointed <- function(
           component_specs,
           metric_names
         )
-        write_checkpoint(gepa_checkpoint_best_program(
-          state,
-          program,
-          component_specs
-        ))
+        save_checkpoint()
         if (optimizer_budget_stopped(budget)) {
           break
         }
@@ -3054,21 +2997,13 @@ compile_gepa_checkpointed <- function(
         if (state$generation >= teleprompter@generations) {
           state$phase <- "complete"
           state$termination <- "generation_limit"
-          write_checkpoint(gepa_checkpoint_best_program(
-            state,
-            program,
-            component_specs
-          ))
+          save_checkpoint()
           next
         }
         if (n_selectable == 0L) {
           state$phase <- "complete"
           state$termination <- "no_selectable_candidates"
-          write_checkpoint(gepa_checkpoint_best_program(
-            state,
-            program,
-            component_specs
-          ))
+          save_checkpoint()
           next
         }
         state$generation <- as.integer(state$generation + 1L)
@@ -3079,11 +3014,7 @@ compile_gepa_checkpointed <- function(
         state$generation_record_keys <- character()
         state["active_candidate"] <- list(NULL)
         state["active_evaluation"] <- list(NULL)
-        write_checkpoint(gepa_checkpoint_best_program(
-          state,
-          program,
-          component_specs
-        ))
+        save_checkpoint()
         next
       }
 
@@ -3130,11 +3061,7 @@ compile_gepa_checkpointed <- function(
             !optimizer_budget_unit_completed(budget, plan$unit_id) &&
               optimizer_budget_stopped(budget)
           ) {
-            write_checkpoint(gepa_checkpoint_best_program(
-              state,
-              program,
-              component_specs
-            ))
+            save_checkpoint()
             break
           }
           if (!optimizer_budget_unit_completed(budget, plan$unit_id)) {
@@ -3175,11 +3102,7 @@ compile_gepa_checkpointed <- function(
             state$phase <- "evaluating"
           }
         }
-        write_checkpoint(gepa_checkpoint_best_program(
-          state,
-          program,
-          component_specs
-        ))
+        save_checkpoint()
         next
       }
 
@@ -3217,17 +3140,12 @@ compile_gepa_checkpointed <- function(
     .reflection_llm,
     trial_log
   )
-  checkpoint_best <- gepa_checkpoint_best_program(
-    state,
-    program,
-    component_specs
-  )
-  if (!isTRUE(context$resumed)) {
-    write_checkpoint(checkpoint_best)
-  } else if (!identical(state$phase, context$phase)) {
-    write_checkpoint(checkpoint_best)
-  } else if (!identical(state$phase, "complete")) {
-    write_checkpoint(checkpoint_best)
+  if (
+    !isTRUE(context$resumed) ||
+      !identical(state$phase, context$phase) ||
+      !identical(state$phase, "complete")
+  ) {
+    save_checkpoint()
   }
   result
 }
