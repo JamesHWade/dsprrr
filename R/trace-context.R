@@ -279,6 +279,36 @@ trace_context_resolve <- function(value, supplied, arg = ".trace_context") {
   }
 }
 
+local_trace_context <- function(
+  module,
+  value,
+  supplied,
+  arg = ".trace_context",
+  envir = parent.frame()
+) {
+  trace_context <- trace_context_resolve(value, supplied = supplied, arg = arg)
+  trace_cursor <- evaluation_trace_cursor(module)
+  previous_trace_context <- trace_context_enter(
+    trace_context,
+    program = module,
+    arg = arg,
+    inherit_program_id = !supplied
+  )
+  invocation_trace_fields <- trace_context_fields()
+  withr::defer(
+    {
+      trace_context_restore(previous_trace_context)
+      trace_context_annotate_module_traces(
+        module,
+        trace_cursor,
+        fields = invocation_trace_fields
+      )
+    },
+    envir = envir
+  )
+  invocation_trace_fields
+}
+
 trace_context_fields <- function(
   context = current_trace_context(),
   program_artifact_id = current_trace_program_artifact_id()

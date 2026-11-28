@@ -742,3 +742,107 @@ evaluate_ellmer_wave <- function(plan, call, decoded, .return_format) {
   )
   results
 }
+
+#' Whether ellmer's batch conversion preserves one type's presence
+#'
+#' Basic and enum values have an unambiguous missing sentinel. Objects are
+#' observable only when at least one required property eventually reaches such
+#' a sentinel. Empty arrays, arbitrary JSON, and objects without required
+#' scalar/enum evidence collapse absent and present-empty values together.
+#' @noRd
+ellmer_parallel_presence_observable <- function(type) {
+  if (inherits(type, c("ellmer::TypeBasic", "ellmer::TypeEnum"))) {
+    return(TRUE)
+  }
+  if (!inherits(type, "ellmer::TypeObject")) {
+    return(FALSE)
+  }
+
+  properties <- type@properties
+  required <- properties[vapply(
+    properties,
+    function(property) isTRUE(property@required),
+    logical(1)
+  )]
+  length(required) > 0L &&
+    any(vapply(
+      required,
+      ellmer_parallel_presence_observable,
+      logical(1)
+    ))
+}
+
+#' Whether native ellmer batching can reconstruct a schema without guessing
+#' @noRd
+ellmer_parallel_schema_supported <- function(type, top_level = TRUE) {
+  if (inherits(type, "ellmer::TypeJsonSchema")) {
+    return(FALSE)
+  }
+  if (inherits(type, "ellmer::TypeIgnore")) {
+    return(FALSE)
+  }
+  if (
+    inherits(type, "ellmer::TypeObject") &&
+      !isTRUE(type@required) &&
+      !ellmer_parallel_presence_observable(type)
+  ) {
+    return(FALSE)
+  }
+  if (inherits(type, "ellmer::TypeArray")) {
+    return(ellmer_parallel_schema_supported(type@items, top_level = FALSE))
+  }
+  if (!inherits(type, "ellmer::TypeObject")) {
+    return(TRUE)
+  }
+  if (length(type@properties) == 0L) {
+    return(FALSE)
+  }
+  if (isTRUE(top_level) && ".error" %in% names(type@properties)) {
+    return(FALSE)
+  }
+  if (isTRUE(type@additional_properties)) {
+    return(FALSE)
+  }
+  all(vapply(
+    type@properties,
+    function(property) {
+      ellmer_parallel_schema_supported(property, top_level = FALSE)
+    },
+    logical(1)
+  ))
+}
+
+#' Select a truthful runtime for the output schema before provider work
+#' @noRd
+ellmer_parallel_schema_runtime <- function(module, runtime) {
+  if (
+    !identical(runtime$effective_backend, "ellmer") ||
+      ellmer_parallel_schema_supported(module$signature@output_type)
+  ) {
+    return(runtime)
+  }
+
+  reason <- paste(
+    "ellmer batch conversion cannot preserve absent versus present-empty",
+    "values for this output schema"
+  )
+  may_fallback <- identical(runtime$requested_backend, "auto")
+  if (!may_fallback) {
+    cli::cli_abort(
+      c(
+        "The requested ellmer backend cannot preserve this output schema",
+        "x" = reason,
+        "i" = "Use {.code backend = \"sequential\"} or {.code backend = \"auto\"}."
+      ),
+      class = c(
+        "dsprrr_parallel_schema_unsupported_error",
+        "dsprrr_concurrency_unsupported_error"
+      )
+    )
+  }
+
+  runtime$effective_backend <- "sequential"
+  runtime$effective_workers <- 1L
+  runtime$fallback_reason <- reason
+  runtime
+}

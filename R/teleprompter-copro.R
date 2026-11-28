@@ -88,79 +88,32 @@ COPRO <- S7::new_class(
   "COPRO",
   parent = Teleprompter,
   properties = list(
-    prompt_model = S7::new_property(
-      S7::class_any,
-      default = NULL,
-      validator = function(value) {
-        if (is.null(value)) {
-          return(NULL)
-        }
-        if (is_ellmer_chat(value)) {
-          return(NULL)
-        }
-        "prompt_model must be NULL or an ellmer Chat R6 object"
-      }
-    ),
-    breadth = S7::new_property(
-      S7::class_integer,
-      default = 10L,
-      validator = function(value) {
-        if (value < 1) {
-          return("breadth must be at least 1")
-        }
-        NULL
-      }
-    ),
-    depth = S7::new_property(
-      S7::class_integer,
-      default = 3L,
-      validator = function(value) {
-        if (value < 1) {
-          return("depth must be at least 1")
-        }
-        NULL
-      }
-    ),
+    prompt_model = prop_optional_chat("prompt_model"),
+    breadth = prop_scalar_int("breadth", default = 10L, min = 1L),
+    depth = prop_scalar_int("depth", default = 3L, min = 1L),
     init_temperature = S7::new_property(
       S7::class_numeric,
       default = 1.4,
       validator = function(value) {
-        if (!is.numeric(value) || length(value) != 1 || value <= 0) {
+        if (
+          !is.numeric(value) ||
+            length(value) != 1L ||
+            is.na(value) ||
+            !is.finite(value) ||
+            value <= 0
+        ) {
           return("init_temperature must be a single positive numeric value")
         }
         NULL
       }
     ),
-    track_stats = S7::new_property(
-      S7::class_logical,
+    track_stats = prop_scalar_bool(
+      "track_stats",
       default = TRUE,
-      validator = function(value) {
-        if (length(value) != 1) {
-          return("track_stats must be a single logical value")
-        }
-        NULL
-      }
+      message = "track_stats must be a single logical value"
     ),
-    seed = S7::new_property(
-      S7::class_any,
-      default = 0L,
-      validator = function(value) {
-        if (!is.null(value) && (!is.numeric(value) || length(value) != 1)) {
-          return("seed must be a single numeric value or NULL")
-        }
-        NULL
-      }
-    ),
-    log_dir = S7::new_property(
-      S7::class_any,
-      default = NULL,
-      validator = function(value) {
-        if (!is.null(value) && !is.character(value)) {
-          return("log_dir must be a character string or NULL")
-        }
-        NULL
-      }
-    )
+    seed = prop_optional_seed(default = 0L),
+    log_dir = prop_optional_log_dir()
   )
 )
 
@@ -201,14 +154,7 @@ compile_copro <- function(
   optimizer_require_ledger_only_checkpoint(control, "COPRO")
   budget <- new_optimizer_budget(control)
 
-  trial_log <- if (!is.null(control@log_dir)) {
-    TrialLog$new(
-      optimizer_name = "COPRO",
-      log_dir = control@log_dir
-    )
-  } else {
-    NULL
-  }
+  trial_log <- teleprompter_init_trial_log(control, "COPRO")
 
   # Save and restore RNG state
   if (!is.null(teleprompter@seed) && !is.na(teleprompter@seed)) {

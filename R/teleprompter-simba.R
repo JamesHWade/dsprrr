@@ -96,79 +96,13 @@ SIMBA <- S7::new_class(
   "SIMBA",
   parent = Teleprompter,
   properties = list(
-    bsize = S7::new_property(
-      S7::class_integer,
-      default = 32L,
-      validator = function(value) {
-        if (value < 1) {
-          return("bsize must be at least 1")
-        }
-        NULL
-      }
-    ),
-    num_candidates = S7::new_property(
-      S7::class_integer,
-      default = 6L,
-      validator = function(value) {
-        if (value < 1) {
-          return("num_candidates must be at least 1")
-        }
-        NULL
-      }
-    ),
-    max_steps = S7::new_property(
-      S7::class_integer,
-      default = 8L,
-      validator = function(value) {
-        if (value < 1) {
-          return("max_steps must be at least 1")
-        }
-        NULL
-      }
-    ),
-    max_demos = S7::new_property(
-      S7::class_integer,
-      default = 4L,
-      validator = function(value) {
-        if (value < 0) {
-          return("max_demos must be non-negative")
-        }
-        NULL
-      }
-    ),
-    prompt_model = S7::new_property(
-      S7::class_any,
-      default = NULL,
-      validator = function(value) {
-        if (is.null(value)) {
-          return(NULL)
-        }
-        if (is_ellmer_chat(value)) {
-          return(NULL)
-        }
-        "prompt_model must be NULL or an ellmer Chat R6 object"
-      }
-    ),
-    seed = S7::new_property(
-      S7::class_any,
-      default = 0L,
-      validator = function(value) {
-        if (!is.null(value) && (!is.numeric(value) || length(value) != 1)) {
-          return("seed must be a single numeric value or NULL")
-        }
-        NULL
-      }
-    ),
-    log_dir = S7::new_property(
-      S7::class_any,
-      default = NULL,
-      validator = function(value) {
-        if (!is.null(value) && !is.character(value)) {
-          return("log_dir must be a character string or NULL")
-        }
-        NULL
-      }
-    )
+    bsize = prop_scalar_int("bsize", default = 32L, min = 1L),
+    num_candidates = prop_scalar_int("num_candidates", default = 6L, min = 1L),
+    max_steps = prop_scalar_int("max_steps", default = 8L, min = 1L),
+    max_demos = prop_scalar_int("max_demos", default = 4L, min = 0L),
+    prompt_model = prop_optional_chat("prompt_model"),
+    seed = prop_optional_seed(default = 0L),
+    log_dir = prop_optional_log_dir()
   )
 )
 
@@ -207,14 +141,7 @@ compile_simba <- function(
   optimizer_require_ledger_only_checkpoint(control, "SIMBA")
   budget <- new_optimizer_budget(control)
 
-  trial_log <- if (!is.null(control@log_dir)) {
-    TrialLog$new(
-      optimizer_name = "SIMBA",
-      log_dir = control@log_dir
-    )
-  } else {
-    NULL
-  }
+  trial_log <- teleprompter_init_trial_log(control, "SIMBA")
 
   # Save and restore RNG state to avoid side effects
   if (!is.null(teleprompter@seed) && !is.na(teleprompter@seed)) {

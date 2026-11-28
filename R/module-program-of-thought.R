@@ -98,16 +98,7 @@ program_of_thought <- function(
   )
 
   # Parse signature if string
-  if (is.character(signature)) {
-    signature <- signature(signature)
-  }
-
-  if (!S7::S7_inherits(signature, Signature)) {
-    cli::cli_abort(c(
-      "signature must be a Signature object or string notation",
-      "x" = "You provided: {.cls {class(signature)[1]}}"
-    ))
-  }
+  signature <- as_signature(signature)
   max_iters <- normalize_pot_max_iters(max_iters)
 
   mod <- ProgramOfThoughtModule$new(
@@ -123,20 +114,13 @@ program_of_thought <- function(
 }
 
 normalize_pot_max_iters <- function(value) {
-  valid <- is.numeric(value) &&
-    length(value) == 1L &&
-    !is.na(value) &&
-    is.finite(value) &&
-    value == floor(value) &&
-    value >= 1L &&
-    value <= .Machine$integer.max
-  if (!valid) {
-    cli::cli_abort(
-      "{.arg max_iters} must be one positive integer",
-      class = "dsprrr_pot_bounds_error"
-    )
-  }
-  as.integer(value)
+  validate_integer_bound(
+    value,
+    arg = "max_iters",
+    min = 1L,
+    message = "{.arg max_iters} must be one positive integer",
+    class = "dsprrr_pot_bounds_error"
+  )
 }
 
 
@@ -214,12 +198,7 @@ ProgramOfThoughtModule <- R6::R6Class(
     #' @param ... Additional arguments
     #' @return Tibble with output, chat, metadata columns
     forward = function(batch, .llm = NULL, trace = TRUE, ...) {
-      # Handle inputs
-      if (is.data.frame(batch)) {
-        inputs <- as.list(batch[1, , drop = FALSE])
-      } else {
-        inputs <- batch
-      }
+      inputs <- normalize_forward_batch(batch)
 
       # Get LLM - need to clone for fresh conversation
       base_llm <- resolve_module_llm(self, .llm = .llm)

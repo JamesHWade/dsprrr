@@ -203,12 +203,7 @@ EnsembleModule <- R6::R6Class(
     #' @param ... Additional arguments passed to wrapped modules
     #' @return Tibble with output, chat, metadata columns
     forward = function(batch, .llm = NULL, trace = TRUE, ...) {
-      # Handle both list and data frame inputs
-      if (is.data.frame(batch)) {
-        inputs <- as.list(batch[1, , drop = FALSE])
-      } else {
-        inputs <- batch
-      }
+      inputs <- normalize_forward_batch(batch)
 
       start_time <- Sys.time()
       outputs <- list()
@@ -334,43 +329,20 @@ EnsembleModule <- R6::R6Class(
     #' @param all Logical. If TRUE, return all outputs across all runs
     #' @return A tibble of individual module outputs
     get_individual_outputs = function(all = FALSE) {
-      if (length(self$state$individual_results) == 0) {
-        return(tibble::tibble(
-          run = integer(),
-          module = integer(),
-          output = list()
-        ))
-      }
-
-      if (all) {
-        rows <- list()
-        for (run_idx in seq_along(self$state$individual_results)) {
-          run_results <- self$state$individual_results[[run_idx]]
-          for (mod_idx in seq_along(run_results$outputs)) {
-            rows <- append(
-              rows,
-              list(list(
-                run = run_idx,
-                module = mod_idx,
-                output = list(run_results$outputs[[mod_idx]])
-              ))
-            )
-          }
-        }
-      } else {
-        last_run <- self$state$individual_results[[length(
-          self$state$individual_results
-        )]]
-        rows <- lapply(seq_along(last_run$outputs), function(mod_idx) {
+      rows <- collect_run_records(
+        self$state$individual_results,
+        all = all,
+        extract_items = function(run_results) run_results$outputs,
+        format_row = function(run_idx, output, mod_idx) {
           list(
-            run = length(self$state$individual_results),
+            run = run_idx,
             module = mod_idx,
-            output = list(last_run$outputs[[mod_idx]])
+            output = list(output)
           )
-        })
-      }
+        }
+      )
 
-      if (length(rows) == 0) {
+      if (length(rows) == 0L) {
         return(tibble::tibble(
           run = integer(),
           module = integer(),

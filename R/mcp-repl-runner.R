@@ -1235,43 +1235,20 @@ mcp_repl_inline_flex_control <- function(text, nonce, max_bytes) {
     return(NULL)
   }
 
-  prefix_locations <- gregexpr(
-    .flex_code_control_prefix,
-    text,
-    fixed = TRUE
-  )[[1L]]
+  decoded <- decode_control_frames(
+    text = text,
+    prefix = .flex_code_control_prefix,
+    max_bytes = max_bytes
+  )
   if (
-    identical(prefix_locations[[1L]], -1L) ||
-      length(prefix_locations) != 1L
+    decoded$count != 1L ||
+      isTRUE(decoded$malformed) ||
+      isTRUE(decoded$oversize) ||
+      length(decoded$envelopes) != 1L
   ) {
     return(NULL)
   }
-  frame_pattern <- paste0(
-    .flex_code_control_prefix,
-    "[A-Za-z0-9+/=]+"
-  )
-  frames <- regmatches(text, gregexpr(frame_pattern, text, perl = TRUE))[[1L]]
-  if (
-    length(frames) != 1L ||
-      !nzchar(frames[[1L]]) ||
-      nchar(frames[[1L]], type = "bytes") > max_bytes
-  ) {
-    return(NULL)
-  }
-
-  token <- sub(
-    .flex_code_control_prefix,
-    "",
-    frames[[1L]],
-    fixed = TRUE
-  )
-  envelope <- tryCatch(
-    jsonlite::fromJSON(
-      rawToChar(jsonlite::base64_dec(token)),
-      simplifyVector = FALSE
-    ),
-    error = function(error) NULL
-  )
+  envelope <- decoded$envelopes[[1L]]
 
   # The nonce is a current-step correlation value, not a secret credential.
   # Exact framing, schema validation, and the byte bound are all required.

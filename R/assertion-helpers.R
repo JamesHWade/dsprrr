@@ -6,6 +6,28 @@
 #' @noRd
 NULL
 
+make_field_assertion <- function(
+  field,
+  predicate,
+  msg,
+  type = c("assert", "suggest"),
+  null_value = FALSE
+) {
+  type <- match.arg(type)
+  condition <- function(x) {
+    value <- if (!is.null(field) && is.list(x)) x[[field]] else x
+    if (is.null(value)) {
+      return(null_value)
+    }
+    predicate(value)
+  }
+  if (type == "assert") {
+    assert_output(condition, msg, field = NULL)
+  } else {
+    suggest_output(condition, msg, field = NULL)
+  }
+}
+
 #' Assert the length of an output
 #'
 #' @description
@@ -61,24 +83,15 @@ assert_length <- function(
     msg <- paste0(field, ": ", msg)
   }
 
-  # Build condition function
-  condition <- function(x) {
-    value <- if (!is.null(field) && is.list(x)) x[[field]] else x
-    if (is.null(value)) {
-      return(FALSE)
-    }
-
-    len <- nchar(as.character(value))
-    passes_min <- is.null(min) || len >= min
-    passes_max <- is.null(max) || len <= max
-    passes_min && passes_max
-  }
-
-  if (type == "assert") {
-    assert_output(condition, msg, field = NULL) # field already handled in condition
-  } else {
-    suggest_output(condition, msg, field = NULL)
-  }
+  make_field_assertion(
+    field = field,
+    predicate = function(value) {
+      len <- nchar(as.character(value))
+      (is.null(min) || len >= min) && (is.null(max) || len <= max)
+    },
+    msg = msg,
+    type = type
+  )
 }
 
 #' Assert that an output contains a string
@@ -113,25 +126,19 @@ assert_contains <- function(
     sprintf("Output must contain '%s'", pattern)
   }
 
-  condition <- function(x) {
-    value <- if (!is.null(field) && is.list(x)) x[[field]] else x
-    if (is.null(value)) {
-      return(FALSE)
-    }
-
-    value_str <- as.character(value)
-    if (ignore_case) {
-      grepl(tolower(pattern), tolower(value_str), fixed = TRUE)
-    } else {
-      grepl(pattern, value_str, fixed = TRUE)
-    }
-  }
-
-  if (type == "assert") {
-    assert_output(condition, msg, field = NULL)
-  } else {
-    suggest_output(condition, msg, field = NULL)
-  }
+  make_field_assertion(
+    field = field,
+    predicate = function(value) {
+      value_str <- as.character(value)
+      if (ignore_case) {
+        grepl(tolower(pattern), tolower(value_str), fixed = TRUE)
+      } else {
+        grepl(pattern, value_str, fixed = TRUE)
+      }
+    },
+    msg = msg,
+    type = type
+  )
 }
 
 #' Assert that an output does not contain a string
@@ -164,25 +171,20 @@ assert_not_contains <- function(
     sprintf("Output must not contain '%s'", pattern)
   }
 
-  condition <- function(x) {
-    value <- if (!is.null(field) && is.list(x)) x[[field]] else x
-    if (is.null(value)) {
-      return(TRUE)
-    } # NULL doesn't contain anything
-
-    value_str <- as.character(value)
-    if (ignore_case) {
-      !grepl(tolower(pattern), tolower(value_str), fixed = TRUE)
-    } else {
-      !grepl(pattern, value_str, fixed = TRUE)
-    }
-  }
-
-  if (type == "assert") {
-    assert_output(condition, msg, field = NULL)
-  } else {
-    suggest_output(condition, msg, field = NULL)
-  }
+  make_field_assertion(
+    field = field,
+    predicate = function(value) {
+      value_str <- as.character(value)
+      if (ignore_case) {
+        !grepl(tolower(pattern), tolower(value_str), fixed = TRUE)
+      } else {
+        !grepl(pattern, value_str, fixed = TRUE)
+      }
+    },
+    msg = msg,
+    type = type,
+    null_value = TRUE
+  )
 }
 
 #' Assert that an output matches a regular expression
@@ -223,20 +225,19 @@ assert_matches <- function(
       }
     }
 
-  condition <- function(x) {
-    value <- if (!is.null(field) && is.list(x)) x[[field]] else x
-    if (is.null(value)) {
-      return(FALSE)
-    }
-
-    grepl(pattern, as.character(value), ignore.case = ignore_case, perl = TRUE)
-  }
-
-  if (type == "assert") {
-    assert_output(condition, msg, field = NULL)
-  } else {
-    suggest_output(condition, msg, field = NULL)
-  }
+  make_field_assertion(
+    field = field,
+    predicate = function(value) {
+      grepl(
+        pattern,
+        as.character(value),
+        ignore.case = ignore_case,
+        perl = TRUE
+      )
+    },
+    msg = msg,
+    type = type
+  )
 }
 
 #' Assert that an output does not match a regular expression
@@ -273,20 +274,20 @@ assert_not_matches <- function(
       }
     }
 
-  condition <- function(x) {
-    value <- if (!is.null(field) && is.list(x)) x[[field]] else x
-    if (is.null(value)) {
-      return(TRUE)
-    } # NULL doesn't match anything
-
-    !grepl(pattern, as.character(value), ignore.case = ignore_case, perl = TRUE)
-  }
-
-  if (type == "assert") {
-    assert_output(condition, msg, field = NULL)
-  } else {
-    suggest_output(condition, msg, field = NULL)
-  }
+  make_field_assertion(
+    field = field,
+    predicate = function(value) {
+      !grepl(
+        pattern,
+        as.character(value),
+        ignore.case = ignore_case,
+        perl = TRUE
+      )
+    },
+    msg = msg,
+    type = type,
+    null_value = TRUE
+  )
 }
 
 #' Assert that an output is one of a set of values
@@ -320,25 +321,19 @@ assert_one_of <- function(
     sprintf("Output must be one of: %s", values_str)
   }
 
-  condition <- function(x) {
-    value <- if (!is.null(field) && is.list(x)) x[[field]] else x
-    if (is.null(value)) {
-      return(FALSE)
-    }
-
-    value_str <- as.character(value)
-    if (ignore_case) {
-      tolower(value_str) %in% tolower(values)
-    } else {
-      value_str %in% values
-    }
-  }
-
-  if (type == "assert") {
-    assert_output(condition, msg, field = NULL)
-  } else {
-    suggest_output(condition, msg, field = NULL)
-  }
+  make_field_assertion(
+    field = field,
+    predicate = function(value) {
+      value_str <- as.character(value)
+      if (ignore_case) {
+        tolower(value_str) %in% tolower(values)
+      } else {
+        value_str %in% values
+      }
+    },
+    msg = msg,
+    type = type
+  )
 }
 
 #' Assert a custom condition
@@ -409,21 +404,14 @@ assert_not_empty <- function(field = NULL, type = c("assert", "suggest")) {
     "Output must not be empty"
   }
 
-  condition <- function(x) {
-    value <- if (!is.null(field) && is.list(x)) x[[field]] else x
-    if (is.null(value)) {
-      return(FALSE)
-    }
-
-    trimmed <- trimws(as.character(value))
-    nchar(trimmed) > 0
-  }
-
-  if (type == "assert") {
-    assert_output(condition, msg, field = NULL)
-  } else {
-    suggest_output(condition, msg, field = NULL)
-  }
+  make_field_assertion(
+    field = field,
+    predicate = function(value) {
+      nchar(trimws(as.character(value))) > 0
+    },
+    msg = msg,
+    type = type
+  )
 }
 
 #' Assert that a numeric output is within a range
@@ -467,25 +455,16 @@ assert_range <- function(
     msg <- paste0(field, ": ", msg)
   }
 
-  condition <- function(x) {
-    value <- if (!is.null(field) && is.list(x)) x[[field]] else x
-    if (is.null(value)) {
-      return(FALSE)
-    }
-
-    num <- suppressWarnings(as.numeric(value))
-    if (is.na(num)) {
-      return(FALSE)
-    }
-
-    passes_min <- is.null(min) || num >= min
-    passes_max <- is.null(max) || num <= max
-    passes_min && passes_max
-  }
-
-  if (type == "assert") {
-    assert_output(condition, msg, field = NULL)
-  } else {
-    suggest_output(condition, msg, field = NULL)
-  }
+  make_field_assertion(
+    field = field,
+    predicate = function(value) {
+      num <- suppressWarnings(as.numeric(value))
+      if (is.na(num)) {
+        return(FALSE)
+      }
+      (is.null(min) || num >= min) && (is.null(max) || num <= max)
+    },
+    msg = msg,
+    type = type
+  )
 }

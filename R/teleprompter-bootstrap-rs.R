@@ -94,101 +94,31 @@ BootstrapFewShotWithRandomSearch <- S7::new_class(
   "BootstrapFewShotWithRandomSearch",
   parent = Teleprompter,
   properties = list(
-    num_candidate_programs = S7::new_property(
-      S7::class_integer,
+    num_candidate_programs = prop_scalar_int(
+      "num_candidate_programs",
       default = 16L,
-      validator = function(value) {
-        if (value < 1) {
-          return("num_candidate_programs must be at least 1")
-        }
-        NULL
-      }
+      min = 1L
     ),
-    num_threads = S7::new_property(
-      S7::class_integer,
-      default = 1L,
-      validator = function(value) {
-        if (value < 1) {
-          return("num_threads must be at least 1")
-        }
-        NULL
-      }
-    ),
-    stop_at_score = S7::new_property(
-      S7::class_any,
+    num_threads = prop_scalar_int("num_threads", default = 1L, min = 1L),
+    stop_at_score = prop_unit_double(
+      "stop_at_score",
       default = NULL,
-      validator = function(value) {
-        if (!is.null(value)) {
-          if (!is.numeric(value) || length(value) != 1) {
-            return("stop_at_score must be a single numeric value or NULL")
-          }
-          if (value < 0 || value > 1) {
-            return("stop_at_score must be between 0 and 1")
-          }
-        }
-        NULL
-      }
+      nullable = TRUE
     ),
-    max_bootstrapped_demos = S7::new_property(
-      S7::class_integer,
+    max_bootstrapped_demos = prop_scalar_int(
+      "max_bootstrapped_demos",
       default = 4L,
-      validator = function(value) {
-        if (value < 0) {
-          return("max_bootstrapped_demos must be non-negative")
-        }
-        NULL
-      }
+      min = 0L
     ),
-    max_labeled_demos = S7::new_property(
-      S7::class_integer,
+    max_labeled_demos = prop_scalar_int(
+      "max_labeled_demos",
       default = 16L,
-      validator = function(value) {
-        if (value < 0) {
-          return("max_labeled_demos must be non-negative")
-        }
-        NULL
-      }
+      min = 0L
     ),
-    max_rounds = S7::new_property(
-      S7::class_integer,
-      default = 1L,
-      validator = function(value) {
-        if (value < 1) {
-          return("max_rounds must be at least 1")
-        }
-        NULL
-      }
-    ),
-    teacher_settings = S7::new_property(
-      S7::class_any,
-      default = NULL,
-      validator = function(value) {
-        if (!is.null(value) && !is.list(value)) {
-          return("teacher_settings must be a list or NULL")
-        }
-        NULL
-      }
-    ),
-    seed = S7::new_property(
-      S7::class_any,
-      default = NULL,
-      validator = function(value) {
-        if (!is.null(value) && (!is.numeric(value) || length(value) != 1)) {
-          return("seed must be a single numeric value or NULL")
-        }
-        NULL
-      }
-    ),
-    log_dir = S7::new_property(
-      S7::class_any,
-      default = NULL,
-      validator = function(value) {
-        if (!is.null(value) && !is.character(value)) {
-          return("log_dir must be a character string or NULL")
-        }
-        NULL
-      }
-    )
+    max_rounds = prop_scalar_int("max_rounds", default = 1L, min = 1L),
+    teacher_settings = prop_optional_list("teacher_settings"),
+    seed = prop_optional_seed(default = NULL),
+    log_dir = prop_optional_log_dir()
   )
 )
 
@@ -272,14 +202,10 @@ compile_bootstrap_rs <- function(
   effective_seed <- control@seed %||% teleprompter@seed
 
   # Initialize trial logging if log_dir specified
-  trial_log <- if (!is.null(control@log_dir)) {
-    TrialLog$new(
-      optimizer_name = "BootstrapFewShotWithRandomSearch",
-      log_dir = control@log_dir
-    )
-  } else {
-    NULL
-  }
+  trial_log <- teleprompter_init_trial_log(
+    control,
+    "BootstrapFewShotWithRandomSearch"
+  )
 
   # Set seed for reproducibility
   if (!is.null(effective_seed)) {

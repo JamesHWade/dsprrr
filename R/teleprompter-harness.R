@@ -5,25 +5,17 @@
 
 harness_common_properties <- function() {
   list(
-    max_iterations = S7::new_property(
-      S7::class_integer,
+    max_iterations = prop_scalar_int(
+      "max_iterations",
       default = 20L,
-      validator = function(value) {
-        if (length(value) != 1L || is.na(value) || value < 1L) {
-          return("max_iterations must be a positive integer")
-        }
-        NULL
-      }
+      min = 1L,
+      message = "max_iterations must be a positive integer"
     ),
-    patience = S7::new_property(
-      S7::class_integer,
+    patience = prop_scalar_int(
+      "patience",
       default = 6L,
-      validator = function(value) {
-        if (length(value) != 1L || is.na(value) || value < 1L) {
-          return("patience must be a positive integer")
-        }
-        NULL
-      }
+      min = 1L,
+      message = "patience must be a positive integer"
     ),
     target_score = S7::new_property(
       S7::class_any,
@@ -41,90 +33,35 @@ harness_common_properties <- function() {
         NULL
       }
     ),
-    max_context_examples = S7::new_property(
-      S7::class_integer,
+    max_context_examples = prop_scalar_int(
+      "max_context_examples",
       default = 20L,
-      validator = function(value) {
-        if (length(value) != 1L || is.na(value) || value < 1L) {
-          return("max_context_examples must be a positive integer")
-        }
-        NULL
-      }
+      min = 1L,
+      message = "max_context_examples must be a positive integer"
     ),
-    max_feedback_examples = S7::new_property(
-      S7::class_integer,
+    max_feedback_examples = prop_scalar_int(
+      "max_feedback_examples",
       default = 8L,
-      validator = function(value) {
-        if (length(value) != 1L || is.na(value) || value < 1L) {
-          return("max_feedback_examples must be a positive integer")
-        }
-        NULL
-      }
+      min = 1L,
+      message = "max_feedback_examples must be a positive integer"
     ),
-    max_agent_steps = S7::new_property(
-      S7::class_integer,
+    max_agent_steps = prop_scalar_int(
+      "max_agent_steps",
       default = 4L,
-      validator = function(value) {
-        if (length(value) != 1L || is.na(value) || value < 1L) {
-          return("max_agent_steps must be a positive integer")
-        }
-        NULL
-      }
+      min = 1L,
+      message = "max_agent_steps must be a positive integer"
     ),
-    sandbox = S7::new_property(
-      S7::class_logical,
-      default = TRUE,
-      validator = function(value) {
-        if (length(value) != 1L || is.na(value)) {
-          return("sandbox must be TRUE or FALSE")
-        }
-        NULL
-      }
-    ),
-    seed = S7::new_property(
-      S7::class_any,
+    sandbox = prop_scalar_bool("sandbox", default = TRUE),
+    seed = prop_optional_seed(
       default = NULL,
-      validator = function(value) {
-        if (
-          !is.null(value) &&
-            (!is.numeric(value) ||
-              length(value) != 1L ||
-              is.na(value) ||
-              !is.finite(value) ||
-              value != trunc(value) ||
-              abs(value) > .Machine$integer.max)
-        ) {
-          return("seed must be one whole number in the R integer range or NULL")
-        }
-        NULL
-      }
+      whole_number = TRUE,
+      message = "seed must be one whole number in the R integer range or NULL"
     ),
-    log_dir = S7::new_property(
-      S7::class_any,
-      default = NULL,
-      validator = function(value) {
-        if (
-          !is.null(value) &&
-            (!is.character(value) ||
-              length(value) != 1L ||
-              is.na(value) ||
-              !nzchar(value))
-        ) {
-          return("log_dir must be one non-empty string or NULL")
-        }
-        NULL
-      }
+    log_dir = prop_optional_log_dir(
+      require_nonempty = TRUE,
+      message = "log_dir must be one non-empty string or NULL"
     ),
-    verbose = S7::new_property(
-      S7::class_logical,
-      default = TRUE,
-      validator = function(value) {
-        if (length(value) != 1L || is.na(value)) {
-          return("verbose must be TRUE or FALSE")
-        }
-        NULL
-      }
-    )
+    verbose = prop_scalar_bool("verbose", default = TRUE)
   )
 }
 
@@ -297,29 +234,48 @@ MetaHarness <- S7::new_class(
   properties = c(
     harness_common_properties(),
     list(
-      max_candidates_per_iteration = S7::new_property(
-        S7::class_integer,
+      max_candidates_per_iteration = prop_scalar_int(
+        "max_candidates_per_iteration",
         default = 4L,
-        validator = function(value) {
-          if (length(value) != 1L || is.na(value) || value < 1L) {
-            return("max_candidates_per_iteration must be a positive integer")
-          }
-          NULL
-        }
+        min = 1L,
+        message = "max_candidates_per_iteration must be a positive integer"
       ),
-      frontier_size = S7::new_property(
-        S7::class_integer,
+      frontier_size = prop_scalar_int(
+        "frontier_size",
         default = 8L,
-        validator = function(value) {
-          if (length(value) != 1L || is.na(value) || value < 1L) {
-            return("frontier_size must be a positive integer")
-          }
-          NULL
-        }
+        min = 1L,
+        message = "frontier_size must be a positive integer"
       )
     )
   )
 )
+
+harness_run_baseline <- function(setup, state, program, best_program, stage) {
+  if (isTRUE(state$baseline_complete)) {
+    return(list(state = state, best_program = best_program))
+  }
+  baseline <- harness_evaluate_snapshot(
+    setup = setup,
+    state = state,
+    snapshot = harness_program_snapshot(program),
+    parent_id = NULL,
+    name = "baseline",
+    rationale = "Unmodified seed program.",
+    iteration = 0L,
+    best_program = best_program,
+    stage = stage
+  )
+  state <- baseline$state
+  best_program <- baseline$best_program
+  state$baseline_complete <- TRUE
+  harness_checkpoint(
+    setup$checkpoint,
+    "baseline",
+    state,
+    best_program
+  )
+  list(state = state, best_program = best_program)
+}
 
 #' Compile method for AutoResearch
 #' @noRd
@@ -352,30 +308,15 @@ compile_autoresearch <- function(
   )
   on.exit(harness_save_trial_log(setup$trial_log), add = TRUE)
 
-  state <- setup$state
-  best_program <- setup$best_program
-  if (!isTRUE(state$baseline_complete)) {
-    baseline <- harness_evaluate_snapshot(
-      setup = setup,
-      state = state,
-      snapshot = harness_program_snapshot(program),
-      parent_id = NULL,
-      name = "baseline",
-      rationale = "Unmodified seed program.",
-      iteration = 0L,
-      best_program = best_program,
-      stage = "autoresearch_baseline"
-    )
-    state <- baseline$state
-    best_program <- baseline$best_program
-    state$baseline_complete <- TRUE
-    harness_checkpoint(
-      setup$checkpoint,
-      "baseline",
-      state,
-      best_program
-    )
-  }
+  baseline <- harness_run_baseline(
+    setup = setup,
+    state = setup$state,
+    program = program,
+    best_program = setup$best_program,
+    stage = "autoresearch_baseline"
+  )
+  state <- baseline$state
+  best_program <- baseline$best_program
 
   agent <- harness_agent_instance(setup$agent)
   no_eval_steps <- 0L
@@ -393,12 +334,10 @@ compile_autoresearch <- function(
     state$agent_steps <- step
 
     if (!is.null(response$condition)) {
-      state$events <- append(
-        state$events,
-        list(harness_event(
-          "agent_error",
-          message = conditionMessage(response$condition)
-        ))
+      state <- harness_push_event(
+        state,
+        "agent_error",
+        message = conditionMessage(response$condition)
       )
       no_eval_steps <- no_eval_steps + 1L
       if (
@@ -417,12 +356,10 @@ compile_autoresearch <- function(
 
     action <- harness_normalize_action(response$value)
     if (identical(action$action, "finish")) {
-      state$events <- append(
-        state$events,
-        list(harness_event(
-          "agent_finish",
-          rationale = action$rationale
-        ))
+      state <- harness_push_event(
+        state,
+        "agent_finish",
+        rationale = action$rationale
       )
       state$termination <- "agent_finished"
       break
@@ -450,12 +387,10 @@ compile_autoresearch <- function(
     }
 
     if (!identical(action$action, "propose")) {
-      state$events <- append(
-        state$events,
-        list(harness_event(
-          "invalid_action",
-          message = "The research agent returned an unknown action."
-        ))
+      state <- harness_push_event(
+        state,
+        "invalid_action",
+        message = "The research agent returned an unknown action."
       )
       no_eval_steps <- no_eval_steps + 1L
       if (no_eval_steps >= teleprompter@max_agent_steps) {
@@ -466,12 +401,10 @@ compile_autoresearch <- function(
 
     proposals <- action$candidates
     if (length(proposals) == 0L) {
-      state$events <- append(
-        state$events,
-        list(harness_event(
-          "invalid_action",
-          message = "The research agent proposed no candidate."
-        ))
+      state <- harness_push_event(
+        state,
+        "invalid_action",
+        message = "The research agent proposed no candidate."
       )
       no_eval_steps <- no_eval_steps + 1L
       if (no_eval_steps >= teleprompter@max_agent_steps) {
@@ -559,30 +492,15 @@ compile_meta_harness <- function(
   )
   on.exit(harness_save_trial_log(setup$trial_log), add = TRUE)
 
-  state <- setup$state
-  best_program <- setup$best_program
-  if (!isTRUE(state$baseline_complete)) {
-    baseline <- harness_evaluate_snapshot(
-      setup = setup,
-      state = state,
-      snapshot = harness_program_snapshot(program),
-      parent_id = NULL,
-      name = "baseline",
-      rationale = "Unmodified seed program.",
-      iteration = 0L,
-      best_program = best_program,
-      stage = "meta_harness_baseline"
-    )
-    state <- baseline$state
-    best_program <- baseline$best_program
-    state$baseline_complete <- TRUE
-    harness_checkpoint(
-      setup$checkpoint,
-      "baseline",
-      state,
-      best_program
-    )
-  }
+  baseline <- harness_run_baseline(
+    setup = setup,
+    state = setup$state,
+    program = program,
+    best_program = setup$best_program,
+    stage = "meta_harness_baseline"
+  )
+  state <- baseline$state
+  best_program <- baseline$best_program
 
   while (!harness_search_done(state, teleprompter, setup$budget)) {
     state$iteration <- as.integer(state$iteration + 1L)
@@ -606,13 +524,11 @@ compile_meta_harness <- function(
       state$agent_steps <- as.integer(state$agent_steps + 1L)
 
       if (!is.null(response$condition)) {
-        state$events <- append(
-          state$events,
-          list(harness_event(
-            "agent_error",
-            iteration = iteration,
-            message = conditionMessage(response$condition)
-          ))
+        state <- harness_push_event(
+          state,
+          "agent_error",
+          iteration = iteration,
+          message = conditionMessage(response$condition)
         )
         action <- NULL
         break
@@ -654,25 +570,21 @@ compile_meta_harness <- function(
       next
     }
     if (identical(action$action, "finish")) {
-      state$events <- append(
-        state$events,
-        list(harness_event(
-          "agent_finish",
-          iteration = iteration,
-          rationale = action$rationale
-        ))
+      state <- harness_push_event(
+        state,
+        "agent_finish",
+        iteration = iteration,
+        rationale = action$rationale
       )
       state$termination <- "agent_finished"
       break
     }
     if (!identical(action$action, "propose")) {
-      state$events <- append(
-        state$events,
-        list(harness_event(
-          "invalid_action",
-          iteration = iteration,
-          message = "The proposer did not submit a candidate batch."
-        ))
+      state <- harness_push_event(
+        state,
+        "invalid_action",
+        iteration = iteration,
+        message = "The proposer did not submit a candidate batch."
       )
       state$no_improvement <- as.integer(state$no_improvement + 1L)
       harness_checkpoint(
@@ -689,13 +601,11 @@ compile_meta_harness <- function(
       teleprompter@max_candidates_per_iteration
     )
     if (length(proposals) == 0L) {
-      state$events <- append(
-        state$events,
-        list(harness_event(
-          "invalid_action",
-          iteration = iteration,
-          message = "The proposer submitted an empty candidate batch."
-        ))
+      state <- harness_push_event(
+        state,
+        "invalid_action",
+        iteration = iteration,
+        message = "The proposer submitted an empty candidate batch."
       )
       state$no_improvement <- as.integer(state$no_improvement + 1L)
       harness_checkpoint(
@@ -835,11 +745,7 @@ harness_setup <- function(
     best_program = checkpoint$best_program,
     objective = objective %||% "",
     eval_args = eval_args,
-    trial_log = if (!is.null(control@log_dir)) {
-      TrialLog$new(optimizer_name = name, log_dir = control@log_dir)
-    } else {
-      NULL
-    }
+    trial_log = teleprompter_init_trial_log(control, name)
   )
 }
 
@@ -1276,25 +1182,24 @@ harness_candidate_from_proposal <- function(state, proposal) {
   )
 }
 
-harness_candidate_by_id <- function(candidates, id) {
-  if (is.null(id) || !nzchar(id)) {
-    return(NULL)
-  }
+harness_find_candidate <- function(candidates, field, value) {
   index <- which(vapply(
     candidates,
-    function(candidate) identical(candidate$id, id),
+    function(candidate) identical(candidate[[field]], value),
     logical(1)
   ))
   if (length(index) == 0L) NULL else candidates[[index[[1L]]]]
 }
 
+harness_candidate_by_id <- function(candidates, id) {
+  if (is.null(id) || !nzchar(id)) {
+    return(NULL)
+  }
+  harness_find_candidate(candidates, "id", id)
+}
+
 harness_candidate_by_fingerprint <- function(candidates, fingerprint) {
-  index <- which(vapply(
-    candidates,
-    function(candidate) identical(candidate$fingerprint, fingerprint),
-    logical(1)
-  ))
-  if (length(index) == 0L) NULL else candidates[[index[[1L]]]]
+  harness_find_candidate(candidates, "fingerprint", fingerprint)
 }
 
 harness_evaluate_proposal <- function(
@@ -1310,13 +1215,11 @@ harness_evaluate_proposal <- function(
     error = function(e) e
   )
   if (inherits(candidate, "error")) {
-    state$events <- append(
-      state$events,
-      list(harness_event(
-        "candidate_rejected",
-        iteration = iteration,
-        message = conditionMessage(candidate)
-      ))
+    state <- harness_push_event(
+      state,
+      "candidate_rejected",
+      iteration = iteration,
+      message = conditionMessage(candidate)
     )
     return(list(state = state, best_program = best_program))
   }
@@ -1326,14 +1229,12 @@ harness_evaluate_proposal <- function(
     candidate$fingerprint
   )
   if (!is.null(duplicate)) {
-    state$events <- append(
-      state$events,
-      list(harness_event(
-        "candidate_duplicate",
-        iteration = iteration,
-        candidate_id = duplicate$id,
-        rationale = candidate$rationale
-      ))
+    state <- harness_push_event(
+      state,
+      "candidate_duplicate",
+      iteration = iteration,
+      candidate_id = duplicate$id,
+      rationale = candidate$rationale
     )
     return(list(state = state, best_program = best_program))
   }
@@ -1415,7 +1316,7 @@ harness_evaluate_snapshot <- function(
     ),
     snapshot = snapshot
   )
-  state$candidates <- append(state$candidates, list(record))
+  state$candidates[[length(state$candidates) + 1L]] <- record
   if (iteration == 0L) {
     state$baseline_score <- score
   }
@@ -1432,15 +1333,13 @@ harness_evaluate_snapshot <- function(
       8L
     }
   )
-  state$events <- append(
-    state$events,
-    list(harness_event(
-      "candidate_evaluated",
-      iteration = iteration,
-      candidate_id = candidate_id,
-      score = score,
-      improved = isTRUE(improved)
-    ))
+  state <- harness_push_event(
+    state,
+    "candidate_evaluated",
+    iteration = iteration,
+    candidate_id = candidate_id,
+    score = score,
+    improved = isTRUE(improved)
   )
   harness_log_evaluation(setup$trial_log, record, eval_result)
 
@@ -1580,37 +1479,31 @@ harness_frontier <- function(state) {
 
 harness_run_sandbox <- function(setup, state, code, rationale) {
   if (is.null(setup$runner)) {
-    state$events <- append(
-      state$events,
-      list(harness_event(
-        "sandbox_rejected",
-        rationale = rationale,
-        message = "Sandbox execution is disabled."
-      ))
+    state <- harness_push_event(
+      state,
+      "sandbox_rejected",
+      rationale = rationale,
+      message = "Sandbox execution is disabled."
     )
     return(list(state = state, result = NULL))
   }
   if (
     !is.character(code) || length(code) != 1L || is.na(code) || !nzchar(code)
   ) {
-    state$events <- append(
-      state$events,
-      list(harness_event(
-        "sandbox_rejected",
-        rationale = rationale,
-        message = "Sandbox action did not contain R code."
-      ))
+    state <- harness_push_event(
+      state,
+      "sandbox_rejected",
+      rationale = rationale,
+      message = "Sandbox action did not contain R code."
     )
     return(list(state = state, result = NULL))
   }
   if (nchar(code) > 12000L) {
-    state$events <- append(
-      state$events,
-      list(harness_event(
-        "sandbox_rejected",
-        rationale = rationale,
-        message = "Sandbox code exceeded the 12,000 character limit."
-      ))
+    state <- harness_push_event(
+      state,
+      "sandbox_rejected",
+      rationale = rationale,
+      message = "Sandbox code exceeded the 12,000 character limit."
     )
     return(list(state = state, result = NULL))
   }
@@ -1650,15 +1543,13 @@ harness_run_sandbox <- function(setup, state, code, rationale) {
     if (isTRUE(result$success)) result$result else result$error,
     max_chars = 4000L
   )
-  state$events <- append(
-    state$events,
-    list(harness_event(
-      "sandbox",
-      rationale = rationale,
-      success = isTRUE(result$success),
-      output = output,
-      duration_ms = result$duration_ms %||% NA_real_
-    ))
+  state <- harness_push_event(
+    state,
+    "sandbox",
+    rationale = rationale,
+    success = isTRUE(result$success),
+    output = output,
+    duration_ms = result$duration_ms %||% NA_real_
   )
   list(state = state, result = result)
 }
@@ -1779,6 +1670,11 @@ harness_event <- function(type, ...) {
   )
 }
 
+harness_push_event <- function(state, type, ...) {
+  state$events[[length(state$events) + 1L]] <- harness_event(type, ...)
+  state
+}
+
 harness_checkpoint <- function(context, phase, state, best_program) {
   optimizer_checkpoint_write(
     context,
@@ -1793,26 +1689,7 @@ harness_score_improved <- function(current, previous) {
 }
 
 harness_search_done <- function(state, teleprompter, budget) {
-  if (!is.null(state$termination)) {
-    return(TRUE)
-  }
-  if (optimizer_budget_stopped(budget)) {
-    return(TRUE)
-  }
-  if (state$iteration >= teleprompter@max_iterations) {
-    return(TRUE)
-  }
-  if (state$no_improvement >= teleprompter@patience) {
-    return(TRUE)
-  }
-  if (
-    !is.null(teleprompter@target_score) &&
-      !is.na(state$best_score) &&
-      state$best_score >= teleprompter@target_score
-  ) {
-    return(TRUE)
-  }
-  FALSE
+  !identical(harness_termination(state, teleprompter, budget), "completed")
 }
 
 harness_termination <- function(state, teleprompter, budget) {

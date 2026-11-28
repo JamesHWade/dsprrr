@@ -73,16 +73,7 @@ KNNFewShot <- S7::new_class(
   "KNNFewShot",
   parent = Teleprompter,
   properties = list(
-    k = S7::new_property(
-      S7::class_integer,
-      default = 3L,
-      validator = function(value) {
-        if (value < 1) {
-          return("k must be at least 1")
-        }
-        NULL
-      }
-    ),
+    k = prop_scalar_int("k", default = 3L, min = 1L),
     vectorizer = S7::new_property(
       S7::class_function,
       validator = function(value) {
@@ -102,14 +93,8 @@ KNNFewShot <- S7::new_class(
         NULL
       }
     ),
-    cache_embeddings = S7::new_property(
-      S7::class_logical,
-      default = TRUE
-    ),
-    merge_demos = S7::new_property(
-      S7::class_logical,
-      default = FALSE
-    )
+    cache_embeddings = prop_scalar_bool("cache_embeddings", default = TRUE),
+    merge_demos = prop_scalar_bool("merge_demos", default = FALSE)
   )
 )
 
@@ -131,12 +116,7 @@ compile_knn <- function(teleprompter, program, trainset, .llm = NULL, ...) {
   }
 
   # Get input names from signature
-
-  input_names <- vapply(
-    program$signature@inputs,
-    function(x) x$name,
-    character(1)
-  )
+  input_names <- get_input_names(program$signature)
 
   # Build input_text function if not provided
   input_text_fn <- teleprompter@input_text

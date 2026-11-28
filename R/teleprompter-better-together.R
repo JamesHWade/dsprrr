@@ -129,25 +129,16 @@ BetterTogether <- S7::new_class(
         NULL
       }
     ),
-    valset_ratio = S7::new_property(
-      S7::class_numeric,
+    valset_ratio = prop_unit_double(
+      "valset_ratio",
       default = 0.1,
-      validator = function(value) {
-        if (length(value) != 1 || is.na(value) || value < 0 || value >= 1) {
-          return("valset_ratio must be a single number in [0, 1)")
-        }
-        NULL
-      }
+      upper_open = TRUE,
+      type_message = "valset_ratio must be a single number in [0, 1)",
+      range_message = "valset_ratio must be a single number in [0, 1)"
     ),
-    shuffle_trainset_between_steps = S7::new_property(
-      S7::class_logical,
-      default = TRUE,
-      validator = function(value) {
-        if (length(value) != 1 || is.na(value)) {
-          return("shuffle_trainset_between_steps must be TRUE or FALSE")
-        }
-        NULL
-      }
+    shuffle_trainset_between_steps = prop_scalar_bool(
+      "shuffle_trainset_between_steps",
+      default = TRUE
     ),
     seed = S7::new_property(
       S7::class_any,
@@ -160,16 +151,7 @@ BetterTogether <- S7::new_class(
         NULL
       }
     ),
-    verbose = S7::new_property(
-      S7::class_logical,
-      default = TRUE,
-      validator = function(value) {
-        if (length(value) != 1 || is.na(value)) {
-          return("verbose must be TRUE or FALSE")
-        }
-        NULL
-      }
-    )
+    verbose = prop_scalar_bool("verbose", default = TRUE)
   ),
   constructor = function(
     metric = NULL,

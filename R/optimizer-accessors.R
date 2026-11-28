@@ -261,6 +261,17 @@ top_trials <- function(x, k = 5L, objective = c("maximize", "minimize")) {
   UseMethod("top_trials")
 }
 
+slice_top_trials <- function(trials, score_col, k, objective) {
+  trials <- trials[
+    order(
+      trials[[score_col]],
+      decreasing = identical(objective, "maximize"),
+      na.last = TRUE
+    ),
+  ]
+  trials[seq_len(min(k, nrow(trials))), ]
+}
+
 #' @export
 top_trials.Module <- function(
   x,
@@ -287,16 +298,7 @@ top_trials.Module <- function(
     ))
   }
 
-  # Sort by score
-  if (objective == "maximize") {
-    trials <- trials[order(trials$score, decreasing = TRUE, na.last = TRUE), ]
-  } else {
-    trials <- trials[order(trials$score, decreasing = FALSE, na.last = TRUE), ]
-  }
-
-  # Take top k
-  n <- min(k, nrow(trials))
-  trials[seq_len(n), ]
+  slice_top_trials(trials, "score", k, objective)
 }
 
 #' @export
@@ -315,20 +317,7 @@ top_trials.TrialLog <- function(
     return(trials_tbl)
   }
 
-  # Sort by mean_score
-  if (objective == "maximize") {
-    trials_tbl <- trials_tbl[
-      order(trials_tbl$mean_score, decreasing = TRUE, na.last = TRUE),
-    ]
-  } else {
-    trials_tbl <- trials_tbl[
-      order(trials_tbl$mean_score, decreasing = FALSE, na.last = TRUE),
-    ]
-  }
-
-  # Take top k
-  n <- min(k, nrow(trials_tbl))
-  trials_tbl[seq_len(n), ]
+  slice_top_trials(trials_tbl, "mean_score", k, objective)
 }
 
 

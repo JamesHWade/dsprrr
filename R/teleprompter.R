@@ -1,3 +1,187 @@
+# Shared S7 property factories for Teleprompter subclasses
+
+prop_scalar_int <- function(name, default, min = NULL, message = NULL) {
+  if (is.null(message)) {
+    message <- if (identical(min, 0L)) {
+      paste(name, "must be non-negative")
+    } else if (identical(min, 1L)) {
+      paste(name, "must be at least 1")
+    } else if (!is.null(min)) {
+      paste(name, "must be at least", min)
+    } else {
+      paste(name, "must be a single integer")
+    }
+  }
+  S7::new_property(
+    S7::class_integer,
+    default = default,
+    validator = function(value) {
+      if (
+        length(value) != 1L ||
+          is.na(value) ||
+          (!is.null(min) && value < min)
+      ) {
+        return(message)
+      }
+      NULL
+    }
+  )
+}
+
+prop_scalar_bool <- function(
+  name,
+  default = TRUE,
+  message = paste(name, "must be TRUE or FALSE")
+) {
+  S7::new_property(
+    S7::class_logical,
+    default = default,
+    validator = function(value) {
+      if (!rlang::is_bool(value)) {
+        return(message)
+      }
+      NULL
+    }
+  )
+}
+
+prop_unit_double <- function(
+  name,
+  default,
+  lower_open = FALSE,
+  upper_open = FALSE,
+  nullable = FALSE,
+  type_message = NULL,
+  range_message = NULL
+) {
+  if (is.null(type_message)) {
+    type_message <- if (nullable) {
+      paste(name, "must be a single numeric value or NULL")
+    } else {
+      paste(name, "must be a single numeric value")
+    }
+  }
+  if (is.null(range_message)) {
+    range_message <- paste(name, "must be between 0 and 1")
+  }
+  S7::new_property(
+    if (nullable) S7::class_any else S7::class_numeric,
+    default = default,
+    validator = function(value) {
+      if (nullable && is.null(value)) {
+        return(NULL)
+      }
+      if (
+        !is.numeric(value) ||
+          length(value) != 1L ||
+          is.na(value) ||
+          !is.finite(value)
+      ) {
+        return(type_message)
+      }
+      too_low <- if (lower_open) value <= 0 else value < 0
+      too_high <- if (upper_open) value >= 1 else value > 1
+      if (too_low || too_high) {
+        return(range_message)
+      }
+      NULL
+    }
+  )
+}
+
+prop_optional_seed <- function(
+  default = NULL,
+  whole_number = FALSE,
+  min = NULL,
+  message = NULL
+) {
+  if (is.null(message)) {
+    message <- "seed must be a single numeric value or NULL"
+  }
+  S7::new_property(
+    S7::class_any,
+    default = default,
+    validator = function(value) {
+      if (is.null(value)) {
+        return(NULL)
+      }
+      valid <- is.numeric(value) &&
+        length(value) == 1L &&
+        !is.na(value) &&
+        is.finite(value)
+      if (valid && isTRUE(whole_number)) {
+        valid <- value == trunc(value) &&
+          abs(value) <= .Machine$integer.max
+      }
+      if (valid && !is.null(min)) {
+        valid <- value >= min
+      }
+      if (!valid) {
+        return(message)
+      }
+      NULL
+    }
+  )
+}
+
+prop_optional_log_dir <- function(
+  default = NULL,
+  require_nonempty = FALSE,
+  message = "log_dir must be a character string or NULL"
+) {
+  S7::new_property(
+    S7::class_any,
+    default = default,
+    validator = function(value) {
+      if (is.null(value)) {
+        return(NULL)
+      }
+      if (!rlang::is_string(value) || (require_nonempty && !nzchar(value))) {
+        return(message)
+      }
+      NULL
+    }
+  )
+}
+
+prop_optional_chat <- function(name, default = NULL) {
+  S7::new_property(
+    S7::class_any,
+    default = default,
+    validator = function(value) {
+      if (is.null(value) || is_ellmer_chat(value)) {
+        return(NULL)
+      }
+      paste(name, "must be NULL or an ellmer Chat R6 object")
+    }
+  )
+}
+
+prop_optional_list <- function(name, default = NULL) {
+  S7::new_property(
+    S7::class_any,
+    default = default,
+    validator = function(value) {
+      if (!is.null(value) && !is.list(value)) {
+        return(paste(name, "must be a list or NULL"))
+      }
+      NULL
+    }
+  )
+}
+
+teleprompter_init_trial_log <- function(control_or_dir, optimizer_name) {
+  log_dir <- if (S7::S7_inherits(control_or_dir, OptimizerControl)) {
+    control_or_dir@log_dir
+  } else {
+    control_or_dir
+  }
+  if (is.null(log_dir)) {
+    return(NULL)
+  }
+  TrialLog$new(optimizer_name = optimizer_name, log_dir = log_dir)
+}
+
 #' Arguments shared by all optimizers
 #'
 #' @description
@@ -64,31 +248,12 @@ Teleprompter <- S7::new_class(
         NULL
       }
     ),
-    metric_threshold = S7::new_property(
-      S7::class_any,
+    metric_threshold = prop_unit_double(
+      "metric_threshold",
       default = NULL,
-      validator = function(value) {
-        if (!is.null(value)) {
-          if (!is.numeric(value) || length(value) != 1) {
-            return("metric_threshold must be a single numeric value or NULL")
-          }
-          if (value < 0 || value > 1) {
-            return("metric_threshold must be between 0 and 1")
-          }
-        }
-        NULL
-      }
+      nullable = TRUE
     ),
-    max_errors = S7::new_property(
-      S7::class_integer,
-      default = 5L,
-      validator = function(value) {
-        if (!is.null(value) && value < 0) {
-          return("max_errors must be non-negative")
-        }
-        NULL
-      }
-    )
+    max_errors = prop_scalar_int("max_errors", default = 5L, min = 0L)
   )
 )
 
@@ -153,31 +318,17 @@ LabeledFewShot <- S7::new_class(
   "LabeledFewShot",
   parent = Teleprompter,
   properties = list(
-    k = S7::new_property(
-      S7::class_integer,
-      default = 4L,
-      validator = function(value) {
-        if (value < 0) {
-          return("k must be non-negative")
-        }
-        NULL
-      }
-    ),
-    sample = S7::new_property(
-      S7::class_logical,
+    k = prop_scalar_int("k", default = 4L, min = 0L),
+    sample = prop_scalar_bool(
+      "sample",
       default = TRUE,
-      validator = function(value) {
-        if (length(value) != 1) {
-          return("sample must be a single logical value")
-        }
-        NULL
-      }
+      message = "sample must be a single logical value"
     ),
     seed = S7::new_property(
       S7::class_integer,
       default = 123L,
       validator = function(value) {
-        if (!is.null(value) && !is.na(value) && value < 0) {
+        if (length(value) != 1L || (!is.na(value) && value < 0L)) {
           return("seed must be non-negative or NULL")
         }
         NULL
@@ -392,30 +543,14 @@ GridSearchTeleprompter <- S7::new_class(
         NULL
       }
     ),
-    k = S7::new_property(
-      S7::class_integer,
-      default = 2L,
-      validator = function(value) {
-        if (value < 0) {
-          return("k must be non-negative")
-        }
-        NULL
-      }
-    ),
-    eval_sample_size = S7::new_property(
-      S7::class_integer,
+    k = prop_scalar_int("k", default = 2L, min = 0L),
+    eval_sample_size = prop_scalar_int(
+      "eval_sample_size",
       default = 50L,
-      validator = function(value) {
-        if (value < 1) {
-          return("eval_sample_size must be positive")
-        }
-        NULL
-      }
+      min = 1L,
+      message = "eval_sample_size must be positive"
     ),
-    verbose = S7::new_property(
-      S7::class_logical,
-      default = TRUE
-    )
+    verbose = prop_scalar_bool("verbose", default = TRUE)
   )
 )
 
@@ -700,7 +835,7 @@ format_trainset_as_demos <- function(trainset, signature, output_col = NULL) {
   demos <- list()
 
   # Get input names from signature
-  input_names <- vapply(signature@inputs, function(x) x$name, character(1))
+  input_names <- get_input_names(signature)
 
   # Detect where output values come from
   output_source <- detect_output_source(trainset, output_col, input_names)

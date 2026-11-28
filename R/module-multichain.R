@@ -118,12 +118,7 @@ MultiChainComparisonModule <- R6::R6Class(
     #' @param ... Additional arguments
     #' @return Tibble with output, chat, metadata columns
     forward = function(batch, .llm = NULL, trace = TRUE, ...) {
-      # Handle both list and data frame inputs
-      if (is.data.frame(batch)) {
-        inputs <- as.list(batch[1, , drop = FALSE])
-      } else {
-        inputs <- batch
-      }
+      inputs <- normalize_forward_batch(batch)
 
       start_time <- Sys.time()
       attempts <- list()
@@ -259,41 +254,19 @@ MultiChainComparisonModule <- R6::R6Class(
     #' @param all Logical. If TRUE, return all attempts across all runs
     #' @return A tibble of attempts
     get_attempts = function(all = FALSE) {
-      if (length(self$state$attempts) == 0) {
-        return(tibble::tibble(
-          run = integer(),
-          attempt = integer(),
-          prediction = list()
-        ))
-      }
-
-      if (all) {
-        rows <- list()
-        for (run_idx in seq_along(self$state$attempts)) {
-          run_attempts <- self$state$attempts[[run_idx]]
-          for (a in run_attempts) {
-            rows <- append(
-              rows,
-              list(list(
-                run = run_idx,
-                attempt = a$attempt,
-                prediction = list(a$prediction)
-              ))
-            )
-          }
-        }
-      } else {
-        last_run <- self$state$attempts[[length(self$state$attempts)]]
-        rows <- lapply(last_run, function(a) {
+      rows <- collect_run_records(
+        self$state$attempts,
+        all = all,
+        format_row = function(run_idx, a, idx) {
           list(
-            run = length(self$state$attempts),
+            run = run_idx,
             attempt = a$attempt,
             prediction = list(a$prediction)
           )
-        })
-      }
+        }
+      )
 
-      if (length(rows) == 0) {
+      if (length(rows) == 0L) {
         return(tibble::tibble(
           run = integer(),
           attempt = integer(),

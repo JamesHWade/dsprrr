@@ -770,3 +770,139 @@ trace_response_html <- function(trace) {
     NA_character_
   }
 }
+
+#' Normalize a single-row data frame or named list batch into a named list
+#' @noRd
+normalize_forward_batch <- function(batch) {
+  if (is.data.frame(batch)) {
+    as.list(batch[1, , drop = FALSE])
+  } else {
+    batch
+  }
+}
+
+#' Coerce a signature string or Signature object to a Signature
+#' @noRd
+as_signature <- function(sig, arg = "signature", call = rlang::caller_env()) {
+  if (is.character(sig)) {
+    sig <- signature(sig)
+  }
+  if (!S7::S7_inherits(sig, Signature)) {
+    cli::cli_abort(
+      c(
+        "{arg} must be a Signature object or string notation",
+        "x" = "You provided: {.cls {class(sig)[1]}}"
+      ),
+      call = call
+    )
+  }
+  sig
+}
+
+#' Validate and coerce a scalar integer bound
+#' @noRd
+validate_integer_bound <- function(
+  value,
+  arg,
+  min = 1L,
+  message = NULL,
+  class = NULL,
+  call = rlang::caller_env()
+) {
+  valid <- is.numeric(value) &&
+    length(value) == 1L &&
+    !is.na(value) &&
+    is.finite(value) &&
+    value == floor(value) &&
+    value >= min &&
+    value <= .Machine$integer.max
+  if (!valid) {
+    msg <- message %||%
+      if (min == 1L) {
+        paste0("{.arg ", arg, "} must be one positive integer")
+      } else if (min == 0L) {
+        paste0("{.arg ", arg, "} must be one non-negative integer")
+      } else {
+        paste0("{.arg ", arg, "} must be an integer of at least ", min)
+      }
+    cli::cli_abort(msg, class = class, call = call)
+  }
+  as.integer(value)
+}
+
+#' Collect per-run records from module state history
+#' @noRd
+collect_run_records <- function(
+  runs,
+  all = FALSE,
+  extract_items = function(run) run,
+  format_row
+) {
+  if (length(runs) == 0L) {
+    return(list())
+  }
+  run_indices <- if (isTRUE(all)) seq_along(runs) else length(runs)
+  nested <- lapply(run_indices, function(run_idx) {
+    items <- extract_items(runs[[run_idx]])
+    lapply(seq_along(items), function(item_idx) {
+      format_row(run_idx, items[[item_idx]], item_idx)
+    })
+  })
+  unlist(nested, recursive = FALSE)
+}
+
+#' Extract and base64/JSON-decode prefixed control frames from text
+#' @noRd
+decode_control_frames <- function(
+  text,
+  prefix,
+  max_bytes = NULL,
+  on_malformed = NULL,
+  on_oversize = NULL
+) {
+  prefix_locations <- gregexpr(prefix, text, fixed = TRUE)[[1L]]
+  prefix_count <- if (identical(prefix_locations[[1L]], -1L)) {
+    0L
+  } else {
+    length(prefix_locations)
+  }
+  if (prefix_count == 0L) {
+    return(list(count = 0L, envelopes = list()))
+  }
+
+  pattern <- paste0(prefix, "[A-Za-z0-9+/=]+")
+  matches <- regmatches(text, gregexpr(pattern, text, perl = TRUE))[[1L]]
+  if (length(matches) != prefix_count || !all(nzchar(matches))) {
+    if (is.function(on_malformed)) {
+      on_malformed()
+    }
+    return(list(count = prefix_count, malformed = TRUE, envelopes = list()))
+  }
+
+  if (!is.null(max_bytes)) {
+    frame_bytes <- nchar(matches, type = "bytes")
+    if (any(frame_bytes > max_bytes)) {
+      if (is.function(on_oversize)) {
+        on_oversize(max(frame_bytes), max_bytes)
+      }
+      return(list(count = prefix_count, oversize = TRUE, envelopes = list()))
+    }
+  }
+
+  envelopes <- lapply(matches, function(match) {
+    token <- sub(prefix, "", match, fixed = TRUE)
+    tryCatch(
+      jsonlite::fromJSON(
+        rawToChar(jsonlite::base64_dec(token)),
+        simplifyVector = FALSE
+      ),
+      error = function(e) NULL
+    )
+  })
+  list(
+    count = prefix_count,
+    malformed = FALSE,
+    oversize = FALSE,
+    envelopes = envelopes
+  )
+}

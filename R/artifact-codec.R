@@ -44,20 +44,19 @@ artifact_sanitize_value <- function(
     artifact_record_exclusion(exclusions, path, "chat")
     return(artifact_omit())
   }
+  encode_runtime <- function() {
+    artifact_envelope(
+      "runtime",
+      artifact_encode_runtime(value, path, registry, trusted)
+    )
+  }
+
   if (inherits(value, "ellmer::Content")) {
     content <- artifact_encode_content(value, path)
     if (!is.null(content)) {
       return(artifact_envelope("content", content))
     }
-    return(artifact_envelope(
-      "runtime",
-      artifact_encode_runtime(
-        value,
-        path,
-        registry,
-        trusted
-      )
-    ))
+    return(encode_runtime())
   }
   if (
     is.function(value) ||
@@ -66,15 +65,7 @@ artifact_sanitize_value <- function(
       is.language(value) ||
       is.expression(value)
   ) {
-    return(artifact_envelope(
-      "runtime",
-      artifact_encode_runtime(
-        value,
-        path,
-        registry,
-        trusted
-      )
-    ))
+    return(encode_runtime())
   }
   if (is.atomic(value)) {
     sanitized <- tryCatch(
@@ -89,38 +80,14 @@ artifact_sanitize_value <- function(
     if (!inherits(sanitized, "condition")) {
       return(sanitized)
     }
-    return(artifact_envelope(
-      "runtime",
-      artifact_encode_runtime(
-        value,
-        path,
-        registry,
-        trusted
-      )
-    ))
+    return(encode_runtime())
   }
   if (!is.list(value)) {
-    return(artifact_envelope(
-      "runtime",
-      artifact_encode_runtime(
-        value,
-        path,
-        registry,
-        trusted
-      )
-    ))
+    return(encode_runtime())
   }
   value_attributes <- attributes(value)
   if (is.data.frame(value) && !artifact_is_supported_data_frame(value)) {
-    return(artifact_envelope(
-      "runtime",
-      artifact_encode_runtime(
-        value,
-        path,
-        registry,
-        trusted
-      )
-    ))
+    return(encode_runtime())
   }
   allowed_list_attributes <- if (is.data.frame(value)) {
     c("class", "names", "row.names")
@@ -135,15 +102,7 @@ artifact_sanitize_value <- function(
     length(unknown_attributes) > 0L ||
       (!is.data.frame(value) && !is.null(attr(value, "class")))
   ) {
-    return(artifact_envelope(
-      "runtime",
-      artifact_encode_runtime(
-        value,
-        path,
-        registry,
-        trusted
-      )
-    ))
+    return(encode_runtime())
   }
 
   item_names <- names(value)

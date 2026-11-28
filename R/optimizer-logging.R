@@ -349,79 +349,7 @@ trial_log_stable_device_inode <- function(path) {
 }
 
 trial_log_audit_parent_capability <- function(target) {
-  if (!cache_private_modes_supported()) {
-    return(list(ok = TRUE))
-  }
-  effective_owner <- cache_effective_owner_id()
-  if (is.na(effective_owner)) {
-    return(list(
-      ok = FALSE,
-      reason = "the effective user ID could not be established"
-    ))
-  }
-
-  child <- target
-  current <- dirname(target)
-  writable_mask <- as.integer(as.octmode("0022"))
-  sticky_mask <- as.integer(as.octmode("1000"))
-  repeat {
-    if (dir.exists(current)) {
-      mode <- cache_path_permission_bits(current)
-      if (is.na(mode)) {
-        return(list(
-          ok = FALSE,
-          reason = paste0(
-            "ancestor permissions could not be inspected: ",
-            current
-          )
-        ))
-      }
-      owner <- cache_path_owner_id(current)
-      if (is.na(owner) || !owner %in% c(0L, effective_owner)) {
-        return(list(
-          ok = FALSE,
-          reason = paste0(
-            "a trial log ancestor is not owned by the effective user or root: ",
-            current
-          )
-        ))
-      }
-      if (bitwAnd(mode, writable_mask) != 0L) {
-        if (bitwAnd(mode, sticky_mask) == 0L) {
-          return(list(
-            ok = FALSE,
-            reason = paste0(
-              "a non-sticky trial log ancestor is writable: ",
-              current
-            )
-          ))
-        }
-        if (file.exists(child) || dir.exists(child)) {
-          child_owner <- cache_path_owner_id(child)
-          if (
-            is.na(child_owner) ||
-              !child_owner %in% c(0L, effective_owner)
-          ) {
-            return(list(
-              ok = FALSE,
-              reason = paste0(
-                "a sticky writable trial log ancestor has a child not ",
-                "owned by the effective user or root: ",
-                child
-              )
-            ))
-          }
-        }
-      }
-    }
-    parent <- dirname(current)
-    if (identical(parent, current)) {
-      break
-    }
-    child <- current
-    current <- parent
-  }
-  list(ok = TRUE)
+  private_storage_audit_existing_ancestors(target, label = "trial log")
 }
 
 trial_log_directory_identity <- function(path) {
@@ -710,20 +638,9 @@ trial_log_file_identity <- function(path, guard) {
     return(cache_private_file_identity(path, guard$trust))
   }
 
-  info <- trial_log_path_info(path)
-  stable <- trial_log_stable_device_inode(path)
-  if (is.null(info) || nrow(info) != 1L || is.null(stable)) {
-    return(list(ok = FALSE, reason = "the file identity is unavailable"))
-  }
-  list(
-    ok = TRUE,
-    identity = list(
-      device_id = stable$device_id,
-      inode = stable$inode,
-      size = as.numeric(info$size[[1L]]),
-      modification_time = as.numeric(info$modification_time[[1L]]),
-      change_time = as.numeric(info$change_time[[1L]])
-    )
+  private_storage_non_posix_file_identity(
+    path,
+    unavailable_reason = "the file identity is unavailable"
   )
 }
 
@@ -789,14 +706,11 @@ trial_log_identity_value <- function(
   include_content = FALSE,
   include_change_time = TRUE
 ) {
-  fields <- c("device_id", "inode", "owner_id", "mode")
-  if (isTRUE(include_content)) {
-    fields <- c(fields, "size", "modification_time")
-    if (isTRUE(include_change_time)) {
-      fields <- c(fields, "change_time")
-    }
-  }
-  identity[intersect(fields, names(identity))]
+  private_storage_identity_fields(
+    identity,
+    include_content = include_content,
+    include_change_time = include_change_time
+  )
 }
 
 trial_log_assert_same_file <- function(
@@ -807,17 +721,11 @@ trial_log_assert_same_file <- function(
   include_change_time = TRUE
 ) {
   if (
-    !identical(
-      trial_log_identity_value(
-        before,
-        include_content = content,
-        include_change_time = include_change_time
-      ),
-      trial_log_identity_value(
-        after,
-        include_content = content,
-        include_change_time = include_change_time
-      )
+    !private_storage_same_file(
+      before,
+      after,
+      include_content = content,
+      include_change_time = include_change_time
     )
   ) {
     trial_log_trust_abort(message)
@@ -837,15 +745,6 @@ trial_log_with_lock <- function(
     expected_trust = expected_trust,
     private = private_directory
   )
-  timeout <- getOption("dsprrr.trial_log_lock_timeout", 10)
-  if (
-    length(timeout) != 1L ||
-      !is.numeric(timeout) ||
-      is.na(timeout) ||
-      timeout < 0
-  ) {
-    timeout <- 10
-  }
   lock_path <- file.path(guard$path, ".trials.lock")
   if (cache_path_is_symlink(lock_path)) {
     trial_log_trust_abort("the trial log lock is a symbolic link")
@@ -856,56 +755,54 @@ trial_log_with_lock <- function(
     before_lock <- trial_log_file_identity(lock_path, guard)$identity
   }
 
-  old_umask <- Sys.umask("0077")
-  on.exit(Sys.umask(old_umask), add = TRUE)
-  lock <- tryCatch(
-    filelock::lock(lock_path, timeout = timeout * 1000),
-    error = function(e) e
+  private_storage_with_lock(
+    lock_path = lock_path,
+    timeout_option = "dsprrr.trial_log_lock_timeout",
+    on_error = function(lock) {
+      cli::cli_abort(
+        c(
+          "Failed to acquire the trial log lock",
+          "x" = "Lock: {.path {lock_path}}",
+          "i" = "Error: {conditionMessage(lock)}"
+        ),
+        parent = lock,
+        class = "dsprrr_trial_log_lock_error"
+      )
+    },
+    on_timeout = function() {
+      cli::cli_abort(
+        c(
+          "Timed out waiting for the trial log lock",
+          "x" = "Lock: {.path {lock_path}}",
+          "i" = "Another process may still be publishing this log."
+        ),
+        class = "dsprrr_trial_log_lock_error"
+      )
+    },
+    code = function() {
+      trial_log_assert_parent(guard)
+      trial_log_assert_private_file(lock_path, "trial log lock", guard)
+      locked_identity <- trial_log_file_identity(lock_path, guard)
+      if (!isTRUE(locked_identity$ok)) {
+        trial_log_trust_abort(locked_identity$reason)
+      }
+      if (!is.null(before_lock)) {
+        trial_log_assert_same_file(
+          before_lock,
+          locked_identity$identity,
+          "the trial log lock changed while it was being acquired"
+        )
+      }
+      hook <- getOption("dsprrr.trial_log_lock_hook")
+      if (is.function(hook)) {
+        hook()
+      }
+      trial_log_assert_parent(guard)
+      result <- code(guard)
+      trial_log_assert_parent(guard)
+      result
+    }
   )
-  Sys.umask(old_umask)
-  if (inherits(lock, "condition")) {
-    cli::cli_abort(
-      c(
-        "Failed to acquire the trial log lock",
-        "x" = "Lock: {.path {lock_path}}",
-        "i" = "Error: {conditionMessage(lock)}"
-      ),
-      parent = lock,
-      class = "dsprrr_trial_log_lock_error"
-    )
-  }
-  if (is.null(lock)) {
-    cli::cli_abort(
-      c(
-        "Timed out waiting for the trial log lock",
-        "x" = "Lock: {.path {lock_path}}",
-        "i" = "Another process may still be publishing this log."
-      ),
-      class = "dsprrr_trial_log_lock_error"
-    )
-  }
-  on.exit(filelock::unlock(lock), add = TRUE)
-  trial_log_assert_parent(guard)
-  trial_log_assert_private_file(lock_path, "trial log lock", guard)
-  locked_identity <- trial_log_file_identity(lock_path, guard)
-  if (!isTRUE(locked_identity$ok)) {
-    trial_log_trust_abort(locked_identity$reason)
-  }
-  if (!is.null(before_lock)) {
-    trial_log_assert_same_file(
-      before_lock,
-      locked_identity$identity,
-      "the trial log lock changed while it was being acquired"
-    )
-  }
-  hook <- getOption("dsprrr.trial_log_lock_hook")
-  if (is.function(hook)) {
-    hook()
-  }
-  trial_log_assert_parent(guard)
-  result <- code(guard)
-  trial_log_assert_parent(guard)
-  result
 }
 
 trial_log_verified_read <- function(path, what, guard, reader) {
@@ -977,110 +874,74 @@ trial_log_atomic_publish <- function(path, what, guard, writer, verifier) {
     }
   }
 
-  temporary <- artifact_private_stage(path)
-  on.exit(unlink(temporary, force = TRUE), add = TRUE)
-  staged_empty <- trial_log_file_identity(temporary, guard)
-  if (!isTRUE(staged_empty$ok)) {
-    trial_log_trust_abort(staged_empty$reason)
-  }
-  staging_hold <- tryCatch(
-    artifact_file_hold(temporary),
-    error = function(e) e
-  )
-  on.exit(artifact_file_hold_release(staging_hold), add = TRUE)
-  if (inherits(staging_hold, "condition")) {
-    trial_log_trust_abort(
-      paste0(what, " staging identity could not be held"),
-      parent = staging_hold
-    )
-  }
-  trial_log_publication_hook("stage_created", path, temporary, what)
-  writer(temporary)
-  staged_written <- trial_log_file_identity(temporary, guard)
-  if (!isTRUE(staged_written$ok)) {
-    trial_log_trust_abort(staged_written$reason)
-  }
-  trial_log_assert_same_file(
-    staged_empty$identity,
-    staged_written$identity,
-    paste0(what, " staging file changed while it was being written")
-  )
-  verifier(temporary)
-  staged_verified <- trial_log_file_identity(temporary, guard)
-  if (!isTRUE(staged_verified$ok)) {
-    trial_log_trust_abort(staged_verified$reason)
-  }
-  trial_log_assert_same_file(
-    staged_written$identity,
-    staged_verified$identity,
-    paste0(what, " staging file changed while it was being verified"),
-    content = TRUE
-  )
-
-  trial_log_publication_hook("before_publish", path, temporary, what)
-  trial_log_assert_parent(guard)
-  if (is.null(existing)) {
-    if (file.exists(path) || cache_path_is_symlink(path)) {
-      trial_log_trust_abort(
-        paste0(what, " target appeared during publication")
-      )
-    }
-  } else {
-    current <- trial_log_file_identity(path, guard)
-    if (!isTRUE(current$ok)) {
-      trial_log_trust_abort(current$reason)
-    }
-    trial_log_assert_same_file(
-      existing,
-      current$identity,
-      paste0(what, " target changed before publication"),
-      content = TRUE
-    )
-  }
-
-  artifact_file_hold_release(staging_hold)
-  staging_hold <- NULL
-  artifact_file_hold_release(existing_hold)
-  existing_hold <- NULL
-  tryCatch(
-    artifact_atomic_replace(temporary, path, what = what),
-    error = function(e) {
+  private_storage_atomic_publish(
+    path = path,
+    what = what,
+    existing = existing,
+    existing_hold = existing_hold,
+    get_identity = function(candidate) {
+      trial_log_file_identity(candidate, guard)
+    },
+    assert_parent = function() trial_log_assert_parent(guard),
+    abort_trust = trial_log_trust_abort,
+    writer = writer,
+    verifier = verifier,
+    post_verifier = verifier,
+    hook = trial_log_publication_hook,
+    replace_error = function(e) {
       cli::cli_abort(
         "Could not atomically publish {what}",
         parent = e,
         class = "dsprrr_trial_log_io_error"
       )
-    }
+    },
+    hold_staging_msg = paste0(what, " staging identity could not be held"),
+    written_msg = paste0(
+      what,
+      " staging file changed while it was being written"
+    ),
+    verified_msg = paste0(
+      what,
+      " staging file changed while it was being verified"
+    ),
+    appeared_msg = paste0(what, " target appeared during publication"),
+    changed_before_msg = paste0(what, " target changed before publication"),
+    mismatch_msg = paste0(
+      "the published ",
+      what,
+      " is not the verified staging file"
+    ),
+    post_changed_msg = paste0(
+      "the published ",
+      what,
+      " changed during final verification"
+    ),
+    check_symlink_on_absent = TRUE
   )
-  trial_log_publication_hook("after_publish", path, temporary, what)
-  trial_log_assert_parent(guard)
-  installed <- trial_log_file_identity(path, guard)
-  if (!isTRUE(installed$ok)) {
-    trial_log_trust_abort(installed$reason)
-  }
-  trial_log_assert_same_file(
-    staged_verified$identity,
-    installed$identity,
-    paste0("the published ", what, " is not the verified staging file"),
-    content = TRUE,
-    include_change_time = FALSE
-  )
-  verifier(path)
-  final <- trial_log_file_identity(path, guard)
-  if (!isTRUE(final$ok)) {
-    trial_log_trust_abort(final$reason)
-  }
-  trial_log_assert_same_file(
-    installed$identity,
-    final$identity,
-    paste0("the published ", what, " changed during final verification"),
-    content = TRUE
-  )
+  existing_hold <- NULL
   invisible(path)
 }
 
-trial_log_validate_raw_journal <- function(path, guard) {
-  raw <- trial_log_read_raw(path, guard)
+trial_log_raw_to_lines <- function(raw, path = NULL) {
+  if (length(raw) == 0L) {
+    return(character())
+  }
+  if (any(raw == as.raw(0L))) {
+    if (!is.null(path)) {
+      trial_log_abort_corrupt(
+        path,
+        "The trial log contains an invalid JSON record"
+      )
+    }
+    return(character())
+  }
+  text <- rawToChar(raw)
+  Encoding(text) <- "UTF-8"
+  lines <- strsplit(text, "\n", fixed = TRUE)[[1L]]
+  sub("\r$", "", lines)
+}
+
+trial_log_validate_raw_bytes <- function(raw, path) {
   if (
     length(raw) > 0L &&
       !identical(raw[[length(raw)]], charToRaw("\n")[[1L]])
@@ -1092,12 +953,7 @@ trial_log_validate_raw_journal <- function(path, guard) {
     )
   }
 
-  lines <- trial_log_verified_read(
-    path,
-    "trial log journal",
-    guard,
-    function(candidate) readLines(candidate, warn = FALSE)
-  )
+  lines <- trial_log_raw_to_lines(raw, path = path)
   if (!all(nzchar(trimws(lines)))) {
     trial_log_abort_corrupt(path, "The trial log contains an empty record")
   }
@@ -1106,12 +962,7 @@ trial_log_validate_raw_journal <- function(path, guard) {
   }
 
   trials <- withCallingHandlers(
-    trial_log_verified_read(
-      path,
-      "trial log journal",
-      guard,
-      trial_log_parse_jsonl_file
-    ),
+    trial_log_parse_jsonl_lines(lines, path = path),
     dsprrr_parse_warning = function(w) {
       trial_log_abort_corrupt(
         path,
@@ -1137,6 +988,11 @@ trial_log_validate_raw_journal <- function(path, guard) {
   trial_log_merge_unique(list(), trials, source = path)
 }
 
+trial_log_validate_raw_journal <- function(path, guard) {
+  raw <- trial_log_read_raw(path, guard)
+  trial_log_validate_raw_bytes(raw, path)
+}
+
 trial_log_atomic_write_raw <- function(value, path, guard) {
   trial_log_atomic_publish(
     path = path,
@@ -1154,7 +1010,7 @@ trial_log_atomic_write_raw <- function(value, path, guard) {
           class = "dsprrr_trial_log_verification_error"
         )
       }
-      trial_log_validate_raw_journal(candidate, guard)
+      trial_log_validate_raw_bytes(actual, candidate)
     }
   )
 }
@@ -1181,13 +1037,8 @@ trial_log_append_verified <- function(trials, path, existing, guard) {
   }
   expected <- trial_log_merge_unique(existing, trials, source = path)
   new_lines <- vapply(trials, trial_json_line, character(1))
-  before_lines <- trial_log_verified_read(
-    path,
-    "trial log journal",
-    guard,
-    function(candidate) readLines(candidate, warn = FALSE)
-  )
   before_raw <- trial_log_read_raw(path, guard)
+  before_lines <- trial_log_raw_to_lines(before_raw, path = path)
   expected_lines <- c(before_lines, new_lines)
   payload <- paste0(paste(new_lines, collapse = "\n"), "\n")
   next_raw <- c(before_raw, charToRaw(enc2utf8(payload)))
@@ -1195,13 +1046,9 @@ trial_log_append_verified <- function(trials, path, existing, guard) {
   failure <- tryCatch(
     {
       trial_log_atomic_write_raw(next_raw, path, guard)
-      verified <- trial_log_read_journal(path, guard)
-      verified_lines <- trial_log_verified_read(
-        path,
-        "trial log journal",
-        guard,
-        function(candidate) readLines(candidate, warn = FALSE)
-      )
+      verified_raw <- trial_log_read_raw(path, guard)
+      verified <- trial_log_validate_raw_bytes(verified_raw, path)
+      verified_lines <- trial_log_raw_to_lines(verified_raw, path = path)
       if (!identical(verified_lines, expected_lines)) {
         cli::cli_abort(
           "The appended trial log bytes did not match the requested records",
@@ -2318,15 +2165,49 @@ write_trials_jsonl <- function(trials, path, append = FALSE) {
   invisible(original_path)
 }
 
-trial_log_parse_jsonl_file <- function(path) {
-  if (!file.exists(path)) {
-    cli::cli_abort("File not found: {.path {path}}")
+trial_log_simplify_json_value <- function(x) {
+  if (!is.list(x) || length(x) == 0L) {
+    return(x)
   }
+  if (!is.null(names(x))) {
+    return(lapply(x, trial_log_simplify_json_value))
+  }
+  all_scalar <- all(vapply(
+    x,
+    function(el) is.null(el) || (is.atomic(el) && length(el) == 1L),
+    logical(1)
+  ))
+  if (!all_scalar) {
+    return(lapply(x, trial_log_simplify_json_value))
+  }
+  non_null <- Filter(Negate(is.null), x)
+  if (length(non_null) == 0L) {
+    return(x)
+  }
+  types <- unique(vapply(non_null, typeof, character(1)))
+  if (
+    length(types) == 1L ||
+      (length(types) == 2L && all(types %in% c("integer", "double")))
+  ) {
+    na_val <- if ("character" %in% types) {
+      NA_character_
+    } else if ("double" %in% types) {
+      NA_real_
+    } else if ("integer" %in% types) {
+      NA_integer_
+    } else {
+      NA
+    }
+    return(unlist(
+      lapply(x, function(el) if (is.null(el)) na_val else el),
+      use.names = FALSE
+    ))
+  }
+  x
+}
 
-  lines <- readLines(path, warn = FALSE)
-  lines <- lines[nzchar(trimws(lines))] # Remove empty lines
-
-  if (length(lines) == 0) {
+trial_log_parse_jsonl_lines <- function(lines, path) {
+  if (length(lines) == 0L) {
     return(list())
   }
 
@@ -2335,15 +2216,15 @@ trial_log_parse_jsonl_file <- function(path) {
     !is.null(x) && length(x) > 0 && !is.na(x) && nzchar(x)
   }
 
-  # Parse each line with error handling
+  # Parse each line once with simplifyVector = FALSE so schema validation and
+  # trace_context_validate() receive exact JSON structure.
   parsed_trials <- lapply(seq_along(lines), function(i) {
     line <- lines[[i]]
 
     tryCatch(
       {
-        data <- jsonlite::fromJSON(line)
-        trace_data <- jsonlite::fromJSON(line, simplifyVector = FALSE)
-        validate_trial_record(trace_data)
+        data <- jsonlite::fromJSON(line, simplifyVector = FALSE)
+        validate_trial_record(data)
 
         # Parse timestamps
         start_time <- if (is_valid_timestamp(data$start_time)) {
@@ -2358,7 +2239,9 @@ trial_log_parse_jsonl_file <- function(path) {
           NULL
         }
 
-        cost_summary <- as.list(data$cost_summary)
+        cost_summary <- as.list(trial_log_simplify_json_value(
+          data$cost_summary
+        ))
         if ("total_cost" %in% names(cost_summary)) {
           cost_summary$total_cost <- normalize_trial_cost(
             cost_summary$total_cost
@@ -2388,14 +2271,16 @@ trial_log_parse_jsonl_file <- function(path) {
         Trial(
           trial_id = data$trial_id,
           optimizer_name = data$optimizer_name,
-          params = as.list(data$params),
-          metric_summary = as.list(data$metric_summary),
+          params = as.list(trial_log_simplify_json_value(data$params)),
+          metric_summary = as.list(
+            trial_log_simplify_json_value(data$metric_summary)
+          ),
           cost_summary = cost_summary,
           start_time = start_time,
           end_time = end_time,
           notes = data$notes,
           trace_context = trace_context_validate(
-            trace_data$trace_context,
+            data$trace_context,
             arg = "trace_context"
           ),
           status = data$status
@@ -2439,6 +2324,16 @@ trial_log_parse_jsonl_file <- function(path) {
     )
   }
   trials
+}
+
+trial_log_parse_jsonl_file <- function(path) {
+  if (!file.exists(path)) {
+    cli::cli_abort("File not found: {.path {path}}")
+  }
+
+  lines <- readLines(path, warn = FALSE)
+  lines <- lines[nzchar(trimws(lines))] # Remove empty lines
+  trial_log_parse_jsonl_lines(lines, path = path)
 }
 
 #' Read trial records from a JSON Lines file

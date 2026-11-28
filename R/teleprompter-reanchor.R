@@ -115,25 +115,17 @@ ReAnchor <- S7::new_class(
         NULL
       }
     ),
-    folds = S7::new_property(
-      S7::class_integer,
+    folds = prop_scalar_int(
+      "folds",
       default = 5L,
-      validator = function(value) {
-        if (length(value) != 1L || is.na(value) || value < 2L) {
-          return("folds must be a single integer of at least 2")
-        }
-        NULL
-      }
+      min = 2L,
+      message = "folds must be a single integer of at least 2"
     ),
-    max_candidates = S7::new_property(
-      S7::class_integer,
+    max_candidates = prop_scalar_int(
+      "max_candidates",
       default = 40L,
-      validator = function(value) {
-        if (length(value) != 1L || is.na(value) || value < 3L) {
-          return("max_candidates must be a single integer of at least 3")
-        }
-        NULL
-      }
+      min = 3L,
+      message = "max_candidates must be a single integer of at least 3"
     )
   )
 )

@@ -1049,40 +1049,17 @@ decode_rlm_control <- function(
   }
 
   text <- paste(x[!is.na(x)], collapse = "\n")
-  prefix <- rlm_control_prefix()
-  prefix_locations <- gregexpr(prefix, text, fixed = TRUE)[[1L]]
-  prefix_count <- if (identical(prefix_locations[[1L]], -1L)) {
-    0L
-  } else {
-    length(prefix_locations)
-  }
-  if (prefix_count == 0L) {
+  decoded <- decode_control_frames(
+    text = text,
+    prefix = rlm_control_prefix(),
+    max_bytes = max_bytes,
+    on_malformed = function() abort_rlm_control("Malformed RLM control frame"),
+    on_oversize = abort_rlm_control_frame_size
+  )
+  if (decoded$count == 0L) {
     return(NULL)
   }
-
-  pattern <- paste0(prefix, "[A-Za-z0-9+/=]+")
-  matches <- regmatches(text, gregexpr(pattern, text, perl = TRUE))[[1L]]
-  if (
-    length(matches) != prefix_count ||
-      !all(nzchar(matches))
-  ) {
-    abort_rlm_control("Malformed RLM control frame")
-  }
-  if (!is.null(max_bytes)) {
-    frame_bytes <- nchar(matches, type = "bytes")
-    if (any(frame_bytes > max_bytes)) {
-      abort_rlm_control_frame_size(max(frame_bytes), max_bytes)
-    }
-  }
-  envelopes <- lapply(matches, function(match) {
-    token <- sub(prefix, "", match, fixed = TRUE)
-    envelope <- tryCatch(
-      {
-        json <- rawToChar(jsonlite::base64_dec(token))
-        jsonlite::fromJSON(json, simplifyVector = FALSE)
-      },
-      error = function(e) NULL
-    )
+  envelopes <- lapply(decoded$envelopes, function(envelope) {
     valid_version <- is.list(envelope) &&
       is.numeric(envelope$version) &&
       length(envelope$version) == 1L &&

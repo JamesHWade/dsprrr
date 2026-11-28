@@ -510,6 +510,17 @@ metric_detect_pattern <- function(
   )
 }
 
+empty_vitals_cost <- function() {
+  tibble::tibble(
+    source = character(0),
+    provider = character(0),
+    model = character(0),
+    input = integer(0),
+    output = integer(0),
+    price = character(0)
+  )
+}
+
 #' Report dsprrr costs in the vitals format
 #'
 #' @description
@@ -562,14 +573,7 @@ as_vitals_cost <- function(x, source = "solver", ...) {
 #' @export
 as_vitals_cost.dsprrr_session_cost <- function(x, source = "solver", ...) {
   if (nrow(x$by_model) == 0) {
-    return(tibble::tibble(
-      source = character(0),
-      provider = character(0),
-      model = character(0),
-      input = integer(0),
-      output = integer(0),
-      price = character(0)
-    ))
+    return(empty_vitals_cost())
   }
 
   tibble::tibble(
@@ -594,14 +598,7 @@ as_vitals_cost.dsprrr_session_cost <- function(x, source = "solver", ...) {
 as_vitals_cost.dsprrr_cost_summary <- function(x, source = "solver", ...) {
   # Cost summary doesn't have per-model breakdown, aggregate to single row
   if (nrow(x$costs) == 0 || isTRUE(x$total == 0)) {
-    return(tibble::tibble(
-      source = character(0),
-      provider = character(0),
-      model = character(0),
-      input = integer(0),
-      output = integer(0),
-      price = character(0)
-    ))
+    return(empty_vitals_cost())
   }
 
   tibble::tibble(
@@ -633,14 +630,7 @@ as_vitals_cost.data.frame <- function(x, source = "solver", ...) {
   }
 
   if (nrow(x) == 0) {
-    return(tibble::tibble(
-      source = character(0),
-      provider = character(0),
-      model = character(0),
-      input = integer(0),
-      output = integer(0),
-      price = character(0)
-    ))
+    return(empty_vitals_cost())
   }
 
   # Aggregate by model

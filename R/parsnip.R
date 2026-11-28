@@ -133,17 +133,35 @@ register_dsprrr_engine <- function() {
   parsnip::set_model_mode("llm_predict", "regression")
 
   # Register dsprrr engine
-  parsnip::set_model_engine(
-    model = "llm_predict",
-    mode = "classification",
-    eng = "dsprrr"
-  )
-
-  parsnip::set_model_engine(
-    model = "llm_predict",
-    mode = "regression",
-    eng = "dsprrr"
-  )
+  for (mode in c("classification", "regression")) {
+    parsnip::set_model_engine(
+      model = "llm_predict",
+      mode = mode,
+      eng = "dsprrr"
+    )
+    parsnip::set_encoding(
+      model = "llm_predict",
+      eng = "dsprrr",
+      mode = mode,
+      options = list(
+        predictor_indicators = "none",
+        compute_intercept = FALSE,
+        remove_intercept = FALSE,
+        allow_sparse_x = FALSE
+      )
+    )
+    parsnip::set_fit(
+      model = "llm_predict",
+      eng = "dsprrr",
+      mode = mode,
+      value = list(
+        interface = "data.frame",
+        protect = c("x", "y"),
+        func = c(pkg = "dsprrr", fun = "fit_llm_predict"),
+        defaults = list()
+      )
+    )
+  }
 
   # Register arguments
   parsnip::set_model_arg(
@@ -171,46 +189,6 @@ register_dsprrr_engine <- function() {
     original = "top_p",
     func = list(pkg = "dsprrr", fun = "top_p"),
     has_submodel = FALSE
-  )
-
-  # Register encodings (text columns are passed directly without dummy coding)
-  for (mode in c("classification", "regression")) {
-    parsnip::set_encoding(
-      model = "llm_predict",
-      eng = "dsprrr",
-      mode = mode,
-      options = list(
-        predictor_indicators = "none",
-        compute_intercept = FALSE,
-        remove_intercept = FALSE,
-        allow_sparse_x = FALSE
-      )
-    )
-  }
-
-  # Register fit function
-  parsnip::set_fit(
-    model = "llm_predict",
-    eng = "dsprrr",
-    mode = "classification",
-    value = list(
-      interface = "data.frame",
-      protect = c("x", "y"),
-      func = c(pkg = "dsprrr", fun = "fit_llm_predict"),
-      defaults = list()
-    )
-  )
-
-  parsnip::set_fit(
-    model = "llm_predict",
-    eng = "dsprrr",
-    mode = "regression",
-    value = list(
-      interface = "data.frame",
-      protect = c("x", "y"),
-      func = c(pkg = "dsprrr", fun = "fit_llm_predict"),
-      defaults = list()
-    )
   )
 
   # Register predict function
@@ -351,10 +329,7 @@ fit_llm_predict <- function(
   mod
 }
 
-#' @rdname fit_llm_predict
-#' @export
-predict_llm_class <- function(object, new_data, ...) {
-  # Validate inputs
+predict_llm_extract <- function(object, new_data) {
   if (!inherits(object, "Module")) {
     cli::cli_abort(c(
       "{.arg object} must be a dsprrr Module",
@@ -369,11 +344,7 @@ predict_llm_class <- function(object, new_data, ...) {
     ))
   }
 
-  # Get predictions using the module
   input_names <- attr(object, "input_names") %||% names(new_data)
-
-  # Check that required columns exist
-
   missing_cols <- setdiff(input_names, names(new_data))
   if (length(missing_cols) > 0) {
     cli::cli_abort(c(
@@ -400,29 +371,29 @@ predict_llm_class <- function(object, new_data, ...) {
     }
   )
 
-  # Extract predictions with error handling
-  preds <- vapply(
-    results$result,
-    function(x) {
-      if (is.list(x)) {
-        val <- if (!is.null(x$output)) {
-          x$output
-        } else if (length(x) >= 1L) {
-          x[[1L]]
-        } else {
-          NA_character_
-        }
-        if (length(val) == 0L || is.na(val[[1L]])) {
-          NA_character_
-        } else {
-          as.character(val[[1L]])
-        }
-      } else if (length(x) == 0L || is.na(x[[1L]])) {
-        NA_character_
+  lapply(results$result, function(x) {
+    raw <- if (is.list(x)) {
+      if (!is.null(x$output)) {
+        x$output
+      } else if (length(x) >= 1L) {
+        x[[1L]]
       } else {
-        as.character(x[[1L]])
+        NULL
       }
-    },
+    } else {
+      x
+    }
+    if (length(raw) == 0L || is.na(raw[[1L]])) NULL else raw[[1L]]
+  })
+}
+
+#' @rdname fit_llm_predict
+#' @export
+predict_llm_class <- function(object, new_data, ...) {
+  raw_preds <- predict_llm_extract(object, new_data)
+  preds <- vapply(
+    raw_preds,
+    function(val) if (is.null(val)) NA_character_ else as.character(val),
     character(1)
   )
 
@@ -439,73 +410,18 @@ predict_llm_class <- function(object, new_data, ...) {
 #' @rdname fit_llm_predict
 #' @export
 predict_llm_numeric <- function(object, new_data, ...) {
-  # Validate inputs
-  if (!inherits(object, "Module")) {
-    cli::cli_abort(c(
-      "{.arg object} must be a dsprrr Module",
-      "x" = "Got {.cls {class(object)[1]}}"
-    ))
-  }
-
-  if (!is.data.frame(new_data)) {
-    cli::cli_abort(c(
-      "{.arg new_data} must be a data frame",
-      "x" = "Got {.cls {class(new_data)[1]}}"
-    ))
-  }
-
-  input_names <- attr(object, "input_names") %||% names(new_data)
-
-  # Check that required columns exist
-  missing_cols <- setdiff(input_names, names(new_data))
-  if (length(missing_cols) > 0) {
-    cli::cli_abort(c(
-      "Required columns missing from {.arg new_data}",
-      "x" = "Missing: {.field {missing_cols}}"
-    ))
-  }
-
-  results <- tryCatch(
-    run_dataset(
-      object,
-      new_data[input_names],
-      .progress = FALSE,
-      .return_format = "simple"
-    ),
-    error = function(e) {
-      cli::cli_abort(
-        c(
-          "Failed to generate predictions",
-          "x" = conditionMessage(e)
-        ),
-        parent = e
-      )
-    }
-  )
-
-  # Extract numeric predictions with error handling
+  raw_preds <- predict_llm_extract(object, new_data)
   preds <- vapply(
-    seq_along(results$result),
+    seq_along(raw_preds),
     function(i) {
-      x <- results$result[[i]]
-      raw <- if (is.list(x)) {
-        if (!is.null(x$output)) {
-          x$output
-        } else if (length(x) >= 1L) {
-          x[[1L]]
-        } else {
-          NA_real_
-        }
-      } else {
-        x
-      }
-      if (length(raw) == 0L || is.na(raw[[1L]])) {
+      raw <- raw_preds[[i]]
+      if (is.null(raw)) {
         return(NA_real_)
       }
-      val <- suppressWarnings(as.numeric(raw[[1L]]))
+      val <- suppressWarnings(as.numeric(raw))
       if (is.na(val)) {
         cli::cli_warn(
-          "Could not convert LLM output to numeric for row {i}: {.val {raw[[1L]]}}"
+          "Could not convert LLM output to numeric for row {i}: {.val {raw}}"
         )
         NA_real_
       } else {

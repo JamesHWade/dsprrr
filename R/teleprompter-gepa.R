@@ -203,46 +203,14 @@ GEPA <- S7::new_class(
         NULL
       }
     ),
-    population_size = S7::new_property(
-      S7::class_integer,
+    population_size = prop_scalar_int(
+      "population_size",
       default = 20L,
-      validator = function(value) {
-        if (value < 2L) {
-          return("population_size must be at least 2")
-        }
-        NULL
-      }
+      min = 2L
     ),
-    generations = S7::new_property(
-      S7::class_integer,
-      default = 10L,
-      validator = function(value) {
-        if (value < 1L) {
-          return("generations must be at least 1")
-        }
-        NULL
-      }
-    ),
-    mutation_rate = S7::new_property(
-      S7::class_numeric,
-      default = 0.1,
-      validator = function(value) {
-        if (length(value) != 1 || value < 0 || value > 1) {
-          return("mutation_rate must be between 0 and 1")
-        }
-        NULL
-      }
-    ),
-    crossover_rate = S7::new_property(
-      S7::class_numeric,
-      default = 0.7,
-      validator = function(value) {
-        if (length(value) != 1 || value < 0 || value > 1) {
-          return("crossover_rate must be between 0 and 1")
-        }
-        NULL
-      }
-    ),
+    generations = prop_scalar_int("generations", default = 10L, min = 1L),
+    mutation_rate = prop_unit_double("mutation_rate", default = 0.1),
+    crossover_rate = prop_unit_double("crossover_rate", default = 0.7),
     selection = S7::new_property(
       S7::class_character,
       default = "pareto",
@@ -270,86 +238,25 @@ GEPA <- S7::new_class(
         NULL
       }
     ),
-    use_merge = S7::new_property(
-      S7::class_logical,
-      default = TRUE,
-      validator = function(value) {
-        if (length(value) != 1L || is.na(value)) {
-          return("use_merge must be TRUE or FALSE")
-        }
-        NULL
-      }
-    ),
-    max_merge_invocations = S7::new_property(
-      S7::class_any,
+    use_merge = prop_scalar_bool("use_merge", default = TRUE),
+    max_merge_invocations = prop_optional_seed(
       default = 5L,
-      validator = function(value) {
-        valid <- is.null(value) ||
-          (is.numeric(value) &&
-            length(value) == 1L &&
-            !is.na(value) &&
-            is.finite(value) &&
-            value == floor(value) &&
-            value >= 0L &&
-            value <= .Machine$integer.max)
-        if (!valid) {
-          return(
-            "max_merge_invocations must be a non-negative integer or NULL"
-          )
-        }
-        NULL
-      }
+      whole_number = TRUE,
+      min = 0L,
+      message = "max_merge_invocations must be a non-negative integer or NULL"
     ),
-    seed = S7::new_property(
-      S7::class_any,
+    seed = prop_optional_seed(
       default = NULL,
-      validator = function(value) {
-        valid <- is.null(value) ||
-          (is.numeric(value) &&
-            length(value) == 1L &&
-            !is.na(value) &&
-            is.finite(value) &&
-            value == floor(value) &&
-            value >= 0 &&
-            value <= .Machine$integer.max)
-        if (!valid) {
-          return(
-            "seed must be one non-missing whole number in R's integer range, or NULL"
-          )
-        }
-        NULL
-      }
+      whole_number = TRUE,
+      min = 0L,
+      message = "seed must be one non-missing whole number in R's integer range, or NULL"
     ),
-    log_dir = S7::new_property(
-      S7::class_any,
-      default = NULL,
-      validator = function(value) {
-        if (!is.null(value)) {
-          if (!is.character(value) || length(value) != 1) {
-            return("log_dir must be a single character string or NULL")
-          }
-        }
-        NULL
-      }
+    log_dir = prop_optional_log_dir(
+      message = "log_dir must be a single character string or NULL"
     ),
-    verbose = S7::new_property(
-      S7::class_logical,
-      default = TRUE
-    ),
-    track_stats = S7::new_property(
-      S7::class_logical,
-      default = TRUE
-    ),
-    track_best_outputs = S7::new_property(
-      S7::class_logical,
-      default = FALSE,
-      validator = function(value) {
-        if (length(value) != 1L || is.na(value)) {
-          return("track_best_outputs must be TRUE or FALSE")
-        }
-        NULL
-      }
-    )
+    verbose = prop_scalar_bool("verbose", default = TRUE),
+    track_stats = prop_scalar_bool("track_stats", default = TRUE),
+    track_best_outputs = prop_scalar_bool("track_best_outputs", default = FALSE)
   )
 )
 
@@ -464,11 +371,7 @@ compile_gepa <- function(
 
   budget <- new_optimizer_budget(control)
 
-  trial_log <- if (!is.null(control@log_dir)) {
-    TrialLog$new(optimizer_name = "GEPA", log_dir = control@log_dir)
-  } else {
-    NULL
-  }
+  trial_log <- teleprompter_init_trial_log(control, "GEPA")
 
   return(compile_gepa_components(
     teleprompter = teleprompter,
