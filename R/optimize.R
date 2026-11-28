@@ -824,6 +824,34 @@ module_metrics <- function(
     enum_levels <- as.character(out_type@properties[[1L]]@values)
   }
 
+  resolve_estimate_vector <- function(
+    eval,
+    eval_data,
+    estimate_col,
+    truth_col
+  ) {
+    has_preds <- !is.null(eval$predictions) &&
+      length(eval$predictions) == nrow(eval_data)
+    preds_have_field <- has_preds &&
+      any(vapply(
+        eval$predictions,
+        function(p) is.list(p) && estimate_col %in% names(p),
+        logical(1)
+      ))
+    if (
+      has_preds &&
+        (identical(estimate_col, truth_col) ||
+          !(estimate_col %in% names(eval_data)) ||
+          preds_have_field)
+    ) {
+      extract_prediction_vector(eval$predictions, estimate_col)
+    } else if (estimate_col %in% names(eval_data)) {
+      coerce_col(eval_data[[estimate_col]])
+    } else {
+      NULL
+    }
+  }
+
   trial_evals <- lapply(seq_len(nrow(trials)), lookup_eval)
 
   global_class_levels <- enum_levels
@@ -846,16 +874,7 @@ module_metrics <- function(
           ))
         }
       }
-      ev <- if (estimate_col %in% names(eval_data)) {
-        coerce_col(eval_data[[estimate_col]])
-      } else if (
-        !is.null(eval$predictions) &&
-          length(eval$predictions) == nrow(eval_data)
-      ) {
-        extract_prediction_vector(eval$predictions, estimate_col)
-      } else {
-        NULL
-      }
+      ev <- resolve_estimate_vector(eval, eval_data, estimate_col, truth_col)
       if (!is.null(ev)) {
         if (is.factor(ev)) {
           global_class_levels <- unique(c(global_class_levels, levels(ev)))
@@ -909,41 +928,31 @@ module_metrics <- function(
       data <- eval_data
       estimate_col <- rlang::as_string(estimate_sym)
       truth_col <- rlang::as_string(truth_sym)
-
-      if (
-        !(estimate_col %in% names(data)) &&
-          !is.null(eval$predictions) &&
-          length(eval$predictions) == nrow(data)
-      ) {
-        data[[estimate_col]] <- extract_prediction_vector(
-          eval$predictions,
-          estimate_col
-        )
-      } else if (estimate_col %in% names(data)) {
-        data[[estimate_col]] <- coerce_col(data[[estimate_col]])
-      }
+      est_vec <- resolve_estimate_vector(eval, data, estimate_col, truth_col)
 
       if (!(truth_col %in% names(data))) {
         cli::cli_warn(
           "Truth column '{truth_col}' not found in evaluation dataset for trial {trials$trial_id[[i]]}."
         )
-      } else if (!(estimate_col %in% names(data))) {
+      } else if (is.null(est_vec)) {
         cli::cli_warn(
           "Estimate column '{estimate_col}' not found in evaluation dataset for trial {trials$trial_id[[i]]}."
         )
       } else {
         truth_vec <- coerce_col(data[[truth_col]])
-        est_vec <- coerce_col(data[[estimate_col]])
+        est_vec <- coerce_col(est_vec)
         both_numeric <- is.numeric(truth_vec) && is.numeric(est_vec)
+        est_name <- ".dsprrr_estimate"
+        est_sym <- rlang::sym(est_name)
 
         if (both_numeric) {
           data[[truth_col]] <- as.numeric(truth_vec)
-          data[[estimate_col]] <- as.numeric(est_vec)
+          data[[est_name]] <- as.numeric(est_vec)
           yardstick_results <- tryCatch(
             yardstick_metrics(
               data,
               truth = !!truth_sym,
-              estimate = !!estimate_sym,
+              estimate = !!est_sym,
               ...
             ),
             error = function(e) {
@@ -967,13 +976,13 @@ module_metrics <- function(
             yardstick_results <- NULL
           } else {
             data[[truth_col]] <- factor(truth_chr, levels = levels_union)
-            data[[estimate_col]] <- factor(est_chr, levels = levels_union)
+            data[[est_name]] <- factor(est_chr, levels = levels_union)
 
             yardstick_results <- tryCatch(
               yardstick_metrics(
                 data,
                 truth = !!truth_sym,
-                estimate = !!estimate_sym,
+                estimate = !!est_sym,
                 ...
               ),
               error = function(e) {

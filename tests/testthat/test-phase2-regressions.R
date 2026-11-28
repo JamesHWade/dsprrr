@@ -394,3 +394,60 @@ test_that("format_search_results handles data frames with list columns", {
   expect_match(out, "\\[Result 1\\]")
   expect_match(out, "\\[Result 2\\]")
 })
+
+test_that("module_metrics extracts predictions even when estimate name matches truth column", {
+  skip_if_not_installed("yardstick")
+
+  mod <- module_fn(
+    "text -> sentiment",
+    function(text) list(sentiment = "positive")
+  )
+  devset <- tibble::tibble(
+    text = c("good", "bad"),
+    sentiment = c("positive", "negative")
+  )
+  optimize_grid(
+    mod,
+    data = devset,
+    metric = metric_exact_match(field = "sentiment"),
+    grid = tibble::tibble(id = 1L),
+    control = list(progress = FALSE)
+  )
+
+  m <- module_metrics(
+    mod,
+    metrics = yardstick::metric_set(yardstick::accuracy),
+    truth = sentiment,
+    estimate = sentiment
+  )
+  expect_s3_class(m$yardstick[[1]], "tbl_df")
+  expect_equal(m$yardstick[[1]]$.estimate, 0.5)
+})
+
+test_that("session_cost preserves unknown NA costs in per-model breakdown", {
+  env <- dsprrr:::.dsprrr_env
+  old_history <- env$prompt_history
+  on.exit(env$prompt_history <- old_history, add = TRUE)
+
+  env$prompt_history <- list(
+    list(
+      model = "unknown-price-model",
+      tokens_in = 10L,
+      tokens_out = 5L,
+      cost = NA_real_
+    ),
+    list(
+      model = "known-price-model",
+      tokens_in = 20L,
+      tokens_out = 10L,
+      cost = 0.05
+    )
+  )
+
+  sc <- session_cost()
+  expect_true(is.na(sc$cost))
+  unknown_row <- sc$by_model[sc$by_model$model == "unknown-price-model", ]
+  known_row <- sc$by_model[sc$by_model$model == "known-price-model", ]
+  expect_true(is.na(unknown_row$cost))
+  expect_equal(known_row$cost, 0.05)
+})

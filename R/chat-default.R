@@ -1027,7 +1027,7 @@ session_cost <- function() {
     ),
     cost = vapply(
       unique_models,
-      function(m) sum(cost_vec[models == m], na.rm = TRUE),
+      function(m) sum(cost_vec[models == m]),
       numeric(1),
       USE.NAMES = FALSE
     )
