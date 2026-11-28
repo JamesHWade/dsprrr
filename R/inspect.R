@@ -107,8 +107,11 @@ inspect_history <- function(
 
   # Get the last n entries (or all if fewer)
   n_available <- length(history)
-  n_to_get <- min(n, n_available)
-  start_idx <- n_available - n_to_get + 1
+  if (length(n) != 1L || is.na(n) || n <= 0) {
+    return(tibble::tibble())
+  }
+  n_to_get <- as.integer(min(n, n_available))
+  start_idx <- n_available - n_to_get + 1L
   entries <- history[start_idx:n_available]
 
   if (!is.null(file)) {
@@ -201,7 +204,7 @@ write_history_transcript <- function(entries, file) {
     return(invisible(file))
   }
 
-  if (!is.character(file) || length(file) != 1 || !nzchar(file)) {
+  if (!rlang::is_string(file) || !nzchar(file)) {
     cli::cli_abort("{.arg file} must be a file path or writable connection")
   }
 
@@ -513,12 +516,20 @@ format_output_for_history <- function(output) {
 
   tryCatch(
     {
-      if (is.character(output) && length(output) == 1) {
+      if (is.character(output) && length(output) == 1L) {
         output
       } else if (is.list(output)) {
-        jsonlite::toJSON(output, auto_unbox = TRUE, pretty = FALSE)
-      } else {
+        as.character(jsonlite::toJSON(
+          output,
+          auto_unbox = TRUE,
+          pretty = FALSE
+        ))
+      } else if (length(output) == 0L) {
+        NA_character_
+      } else if (length(output) == 1L) {
         as.character(output)
+      } else {
+        paste(as.character(output), collapse = ", ")
       }
     },
     error = function(e) {
@@ -530,7 +541,10 @@ format_output_for_history <- function(output) {
           .frequency_id = "format_output_error"
         )
       }
-      tryCatch(as.character(output), error = function(e2) NA_character_)
+      tryCatch(
+        paste(as.character(output), collapse = ", "),
+        error = function(e2) NA_character_
+      )
     }
   )
 }

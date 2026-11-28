@@ -358,7 +358,7 @@ Module <- R6::R6Class(
           "{.arg metric} must be a function",
           "x" = "Got {.cls {class(metric)[1]}}",
           "i" = "Use a built-in metric: {.code metric_exact_match()}, {.code metric_contains()}",
-          "i" = "Or wrap yardstick metrics: {.code as_dsprrr_metric(yardstick::accuracy)}"
+          "i" = "Or wrap vitals scorers: {.code as_dsprrr_metric(vitals::detect_includes())}"
         ))
       }
 
@@ -380,6 +380,7 @@ Module <- R6::R6Class(
       }
 
       progress_id <- NULL
+      msg_score <- "..."
       if (isTRUE(control$progress) && n_candidates > 1) {
         progress_id <- cli::cli_progress_bar(
           format = "Optimizing {cli::pb_current}/{cli::pb_total} | Score: {msg_score}",
@@ -747,7 +748,14 @@ Module <- R6::R6Class(
           cli::cli_text("  {length(config_names)} settings configured")
         } else {
           for (name in config_names) {
-            cli::cli_text("  {name}: {self$config[[name]]}")
+            val <- self$config[[name]]
+            if (is.null(val)) {
+              cli::cli_text("  {name}: {.val NULL}")
+            } else if (is.atomic(val) && length(val) == 1L) {
+              cli::cli_text("  {name}: {val}")
+            } else {
+              cli::cli_text("  {name}: {.cls {class(val)[1]}}")
+            }
           }
         }
       }
@@ -1333,7 +1341,7 @@ run_factory_interpreter_batch <- function(
             metadata = forwarded$metadata[[1L]]
           )
         },
-        interrupt = function(condition) stop(condition),
+        interrupt = function(condition) resignal_condition(condition),
         error = function(condition) condition
       )
       reconcile_dataset_row_observability(
@@ -1444,7 +1452,7 @@ run_factory_interpreter_batch <- function(
             trace = trace
           )
         },
-        interrupt = function(condition) stop(condition),
+        interrupt = function(condition) resignal_condition(condition),
         error = function(condition) {
           list(
             ok = FALSE,

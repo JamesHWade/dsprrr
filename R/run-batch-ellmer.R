@@ -527,7 +527,7 @@ call_ellmer_wave <- function(plan) {
       cli::cli_abort(
         c(
           "Parallel LLM call failed",
-          "x" = e$message,
+          "x" = "{e$message}",
           "i" = "Try {.code .concurrency = concurrency_control(backend = \"sequential\")}"
         ),
         parent = e

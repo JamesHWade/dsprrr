@@ -13,9 +13,8 @@ as_vitals_cost(x, source = "solver", ...)
 \item a traces data frame, such as \code{\link[=export_traces]{export_traces()}} output, with \code{model},
 \code{input_tokens}, \code{output_tokens} and \code{cost} columns (one row per model);
 \item a cost summary from \code{\link[=get_cost]{get_cost()}} or an \code{\link[=evaluate]{evaluate()}} result (a single
-row with the total price, and model and token counts unknown). This
-currently fails when the total cost is unknown, for example for a
-model without price data.
+row with the total price, and model and token counts unknown). When the
+total cost is \code{NA}, \code{price} is formatted as \code{"$0.00"}.
 }}
 
 \item{source}{Label for the \code{source} column (default \code{"solver"}, the

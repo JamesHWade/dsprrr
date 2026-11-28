@@ -921,7 +921,12 @@ cache_content_fingerprint <- function(content) {
       class = content_class,
       type = content@type,
       data = cache_opaque_value(content@data),
-      filename = cache_opaque_value(content@filename)
+      filename = cache_opaque_value(content@filename),
+      url = if (S7::prop_exists(content, "url")) {
+        cache_opaque_value(content@url)
+      } else {
+        NULL
+      }
     ))
   }
 
@@ -1285,7 +1290,7 @@ create_disk_cache <- function(disk_path, config) {
                 private_guard,
                 conditionMessage(error)
               )
-              stop(error)
+              rlang::cnd_signal(error)
             }
           )
         }
@@ -2325,9 +2330,7 @@ verify_private_cache_write <- function(disk_path) {
 #' Prepare a cache directory and establish its privacy status
 #' @noRd
 prepare_cache_directory <- function(disk_path, private = TRUE) {
-  if (
-    !is.character(disk_path) || length(disk_path) != 1L || !nzchar(disk_path)
-  ) {
+  if (!rlang::is_string(disk_path) || !nzchar(disk_path)) {
     return(list(
       ok = FALSE,
       path = "<invalid>",
@@ -2602,6 +2605,14 @@ cache_replay_content <- function(content) {
     ))
   }
   if (inherits(content, "ellmer::ContentPDF")) {
+    if (S7::prop_exists(content, "url")) {
+      return(ellmer::ContentPDF(
+        type = cache_replay_value(content@type),
+        data = cache_replay_value(content@data),
+        filename = cache_replay_value(content@filename),
+        url = cache_replay_value(content@url)
+      ))
+    }
     return(ellmer::ContentPDF(
       type = cache_replay_value(content@type),
       data = cache_replay_value(content@data),
@@ -2976,7 +2987,7 @@ cached_chat_structured <- function(
       cli::cli_warn(
         c(
           "Cannot safely identify this LLM request; bypassing the cache",
-          "x" = conditionMessage(fingerprint),
+          "x" = "{conditionMessage(fingerprint)}",
           "i" = "The request will still be sent normally."
         ),
         .frequency = "once",
@@ -3032,7 +3043,7 @@ cached_chat_structured <- function(
     cli::cli_warn(
       c(
         "Cannot safely replay this Chat; bypassing the cache",
-        "x" = conditionMessage(before)
+        "x" = "{conditionMessage(before)}"
       ),
       .frequency = "once",
       .frequency_id = "cache-turn-replay-unavailable"
@@ -3049,7 +3060,7 @@ cached_chat_structured <- function(
     cli::cli_warn(
       c(
         "LLM response was not cached because its turn history is not replayable",
-        "x" = conditionMessage(turn_delta)
+        "x" = "{conditionMessage(turn_delta)}"
       ),
       .frequency = "once",
       .frequency_id = "cache-turn-delta-unavailable"
@@ -3070,7 +3081,7 @@ cached_chat_structured <- function(
     cli::cli_warn(
       c(
         "The LLM response could not be cached",
-        "x" = conditionMessage(set_error),
+        "x" = "{conditionMessage(set_error)}",
         "i" = "The provider result is still being returned."
       ),
       class = "dsprrr_cache_write_warning"

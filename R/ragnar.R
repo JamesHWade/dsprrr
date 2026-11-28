@@ -110,9 +110,29 @@ format_search_results <- function(results) {
   } else if ("content" %in% names(results)) {
     results$content
   } else {
-    apply(results, 1, function(row) {
-      paste(names(row), ":", row, collapse = "; ")
-    })
+    col_names <- names(results)
+    vapply(
+      seq_len(nrow(results)),
+      function(i) {
+        parts <- vapply(
+          col_names,
+          function(nm) {
+            val <- results[[nm]][[i]]
+            val_str <- if (is.null(val) || length(val) == 0L) {
+              ""
+            } else if (is.atomic(val)) {
+              paste(as.character(val), collapse = ", ")
+            } else {
+              as.character(jsonlite::toJSON(val, auto_unbox = TRUE))
+            }
+            paste(nm, ":", val_str)
+          },
+          character(1)
+        )
+        paste(parts, collapse = "; ")
+      },
+      character(1)
+    )
   }
 
   formatted <- vapply(

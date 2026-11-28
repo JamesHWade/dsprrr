@@ -481,8 +481,6 @@ PipelineModule <- R6::R6Class(
         mod <- step@module
         new_mod <- if (is.function(mod$deepcopy)) {
           mod$deepcopy()
-        } else if (is.function(mod$reset_copy)) {
-          mod$reset_copy()
         } else {
           mod$copy(deep = TRUE)
         }

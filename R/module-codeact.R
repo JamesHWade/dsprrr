@@ -407,7 +407,7 @@ CodeActModule <- R6::R6Class(
                   inherits(e, "dsprrr_codeact_iteration_limit") ||
                     is_terminal_interpreter_condition(e)
                 ) {
-                  stop(e)
+                  rlang::cnd_signal(e)
                 }
                 consecutive_failures <<- consecutive_failures + 1
                 cli::cli_warn(c(

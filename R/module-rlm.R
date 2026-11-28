@@ -1975,7 +1975,7 @@ Code:
             value = do.call(self$tools[[request$name]], request$arguments),
             error = NULL
           ),
-          interrupt = function(condition) stop(condition),
+          interrupt = function(condition) resignal_condition(condition),
           error = function(condition) {
             list(
               success = FALSE,
@@ -2126,10 +2126,10 @@ Code:
         },
         error = function(e) {
           if (inherits(e, "dsprrr_rlm_sub_lm_response_error")) {
-            stop(e)
+            resignal_condition(e)
           }
           if (!is_rlm_provider_error(e)) {
-            stop(e)
+            resignal_condition(e)
           }
           cli::cli_warn(c(
             "Recursive LLM query failed",
@@ -2295,7 +2295,7 @@ Code:
             on_error = "continue"
           )
         },
-        interrupt = function(i) stop(i),
+        interrupt = function(i) resignal_condition(i),
         error = function(e) {
           e
         }
@@ -2369,10 +2369,10 @@ Code:
           },
           error = function(e) {
             if (inherits(e, "dsprrr_rlm_sub_lm_response_error")) {
-              stop(e)
+              resignal_condition(e)
             }
             if (!is_rlm_provider_error(e)) {
-              stop(e)
+              resignal_condition(e)
             }
             query_failed <<- TRUE
             errors <<- c(errors, paste0("Query ", i, ": ", e$message))

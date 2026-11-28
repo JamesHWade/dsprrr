@@ -650,7 +650,11 @@ optimizer_eval_known_sum <- function(records, field, integer = FALSE) {
   if (integer) as.integer(sum(values)) else sum(values)
 }
 
-optimizer_combine_eval_records <- function(records, dataset) {
+optimizer_combine_eval_records <- function(
+  records,
+  dataset,
+  input_signature = NULL
+) {
   if (length(records) == 0L) {
     return(EvalResult(
       examples = tibble::tibble(),
@@ -701,7 +705,11 @@ optimizer_combine_eval_records <- function(records, dataset) {
       character(1)
     )
   }
-  input_names <- intersect(names(dataset), names(dataset))
+  input_names <- if (!is.null(input_signature)) {
+    intersect(get_input_names(input_signature), names(dataset))
+  } else {
+    names(dataset)
+  }
   for (name in input_names) {
     examples[[paste0("input_", name)]] <- dataset[[name]][row_indices]
   }

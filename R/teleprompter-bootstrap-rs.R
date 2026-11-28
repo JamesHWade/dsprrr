@@ -746,7 +746,7 @@ compile_candidate <- function(
     tp <- LabeledFewShot(
       k = config$max_labeled_demos,
       sample = TRUE,
-      seed = config$seed %||% 123L
+      seed = as.integer(config$seed %||% 123L)
     )
     compiled <- compile(program, tp, trainset)
     compiled$config$candidate_type <- "labeled"

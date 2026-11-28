@@ -230,7 +230,7 @@ trace_context_program_artifact_id <- function(
       if (artifact_error) {
         return(NA_character_)
       }
-      stop(error)
+      rlang::cnd_signal(error)
     }
   )
 }

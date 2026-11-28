@@ -310,7 +310,7 @@ mcp_repl_tool <- function(
       if (inherits(cleanup_error, "condition")) {
         attr(condition, "dsprrr_interpreter_close_error") <- cleanup_error
       }
-      stop(condition)
+      resignal_condition(condition)
     }
   )
   tool_names <- vapply(
@@ -958,7 +958,7 @@ McpReplRunner <- R6::R6Class(
         interrupt = function(condition) {
           # The abandoned reply could still arrive and answer a later request.
           private$mark_terminal("An mcp-repl request was interrupted")
-          stop(condition)
+          resignal_condition(condition)
         },
         error = function(e) e
       )
@@ -1051,7 +1051,10 @@ McpReplRunner <- R6::R6Class(
     },
 
     finalize = function() {
-      try(self$shutdown(), silent = TRUE)
+      # Do not call processx teardown from an R garbage-collection finalizer;
+      # re-entering processx from GC can crash the host R process. Callers
+      # should close runners via `with_code_runner_lease()` or `$shutdown()`.
+      invisible(NULL)
     }
   )
 )

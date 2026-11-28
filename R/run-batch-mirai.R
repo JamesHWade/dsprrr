@@ -477,7 +477,7 @@ schedule_mirai_batch <- function(
       cli::cli_abort(
         c(
           "Could not create the dsprrr mirai worker pool",
-          "x" = conditionMessage(error)
+          "x" = "{conditionMessage(error)}"
         ),
         class = "dsprrr_concurrency_backend_error",
         parent = error
@@ -552,15 +552,14 @@ schedule_mirai_batch <- function(
   launch_one <- function(index) {
     task_started_at[[index]] <<- Sys.time()
     task_started_elapsed[[index]] <<- concurrency_elapsed()
-    i <- index
     output_type <- module$signature@output_type
     worker <- mirai_batch_worker
+    row_requests <- list(requests[[index]])
     tasks[[index]] <<- mirai::mirai(
-      .expr = worker(i, requests, output_type, llm_template),
+      .expr = worker(1L, requests, output_type, llm_template),
       .args = list(
         worker = worker,
-        i = i,
-        requests = requests,
+        requests = row_requests,
         output_type = output_type,
         llm_template = llm_template
       ),
@@ -823,7 +822,7 @@ schedule_mirai_batch <- function(
 
   # Emit accumulated warnings
   for (warning_msg in warnings_to_emit) {
-    cli::cli_warn(warning_msg)
+    cli::cli_warn("{warning_msg}")
   }
 
   results

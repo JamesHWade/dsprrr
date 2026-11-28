@@ -396,10 +396,10 @@ execute_code_runner <- function(
   }
   result <- tryCatch(
     do.call(runner$execute, execute_args),
-    interrupt = function(condition) stop(condition),
+    interrupt = function(condition) resignal_condition(condition),
     error = function(condition) {
       if (is_terminal_interpreter_condition(condition)) {
-        stop(condition)
+        resignal_condition(condition)
       }
       cli::cli_abort(
         c(
@@ -559,7 +559,7 @@ start_factory_interpreter <- function(runner, module_name) {
       start()
       invisible(runner)
     },
-    interrupt = function(e) stop(e),
+    interrupt = function(e) resignal_condition(e),
     error = function(e) {
       cli::cli_abort(
         "{module_name} could not start its invocation-owned interpreter",
@@ -655,7 +655,7 @@ acquire_code_runner <- function(runner, interpreter_factory, module_name) {
       attr(validation, "dsprrr_interpreter_close_error") <- close_error
     }
     if (inherits(validation, "interrupt")) {
-      stop(validation)
+      resignal_condition(validation)
     }
     cli::cli_abort(
       "{.arg interpreter_factory} returned an invalid runner",
@@ -674,7 +674,7 @@ acquire_code_runner <- function(runner, interpreter_factory, module_name) {
     if (inherits(cleanup_error, "condition")) {
       attr(cleanup, "dsprrr_interpreter_close_error") <- cleanup_error
     }
-    rlang::cnd_signal(cleanup)
+    resignal_condition(cleanup)
   }
 
   start_error <- tryCatch(
@@ -697,7 +697,7 @@ acquire_code_runner <- function(runner, interpreter_factory, module_name) {
     if (inherits(cleanup_error, "condition")) {
       attr(start_error, "dsprrr_interpreter_close_error") <- cleanup_error
     }
-    stop(start_error)
+    resignal_condition(start_error)
   }
 
   list(
@@ -755,7 +755,7 @@ with_code_runner_lease <- function(
     if (inherits(close_error, "condition")) {
       attr(outcome$condition, "dsprrr_interpreter_close_error") <- close_error
     }
-    stop(outcome$condition)
+    resignal_condition(outcome$condition)
   }
   if (inherits(close_error, "condition")) {
     cli::cli_abort(
@@ -1375,7 +1375,7 @@ RCodeRunner <- R6::R6Class(
       }
       try(session$cleanup(), silent = TRUE)
       if (inherits(close_condition, "interrupt")) {
-        stop(close_condition)
+        resignal_condition(close_condition)
       }
       invisible(NULL)
     },
@@ -1469,7 +1469,7 @@ RCodeRunner <- R6::R6Class(
           private$terminalize_persistent(
             "Persistent R execution was interrupted"
           )
-          stop(condition)
+          resignal_condition(condition)
         },
         error = function(condition) {
           list(ok = FALSE, error = conditionMessage(condition))
@@ -1508,7 +1508,7 @@ RCodeRunner <- R6::R6Class(
         },
         interrupt = function(condition) {
           private$terminalize_persistent("Persistent R startup was interrupted")
-          stop(condition)
+          resignal_condition(condition)
         },
         error = function(condition) {
           list(ok = FALSE, error = conditionMessage(condition))

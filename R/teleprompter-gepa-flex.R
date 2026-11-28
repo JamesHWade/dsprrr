@@ -434,6 +434,7 @@ gepa_clone_component_program <- function(program) {
         class = "dsprrr_optimizer_invariant_error"
       )
     }
+    cloned <- artifact_copy_runtime(module, cloned)
     assign(id, cloned, envir = clones)
 
     original_adapter <- module_graph_child_adapter(module)
@@ -514,7 +515,7 @@ gepa_materialize_component_candidate <- function(
   )
   if (!is.null(validation_error)) {
     if (!inherits(validation_error, "dsprrr_gepa_candidate_error")) {
-      stop(validation_error)
+      rlang::cnd_signal(validation_error)
     }
     return(gepa_failed_materialization(
       candidate,
@@ -568,7 +569,7 @@ gepa_materialize_component_candidate <- function(
     )
     if (!is.null(bind_error)) {
       if (!inherits(bind_error, "dsprrr_flex_source_error")) {
-        stop(bind_error)
+        rlang::cnd_signal(bind_error)
       }
       break
     }
@@ -1146,7 +1147,7 @@ gepa_propose_flex_source <- function(
     # The budget ledger has already recorded this provider outcome. Re-signal
     # the original condition so infrastructure outages cannot masquerade as a
     # valid unchanged candidate.
-    stop(provider_condition)
+    rlang::cnd_signal(provider_condition)
   }
 
   raw_source <- gepa_flex_response_source(result)
@@ -1175,7 +1176,7 @@ gepa_propose_flex_source <- function(
   )
   if (!is.null(bind_error)) {
     if (!inherits(bind_error, "dsprrr_flex_source_error")) {
-      stop(bind_error)
+      rlang::cnd_signal(bind_error)
     }
     return(gepa_flex_proposal(
       "invalid_proposal",
@@ -1263,7 +1264,7 @@ gepa_propose_component_instructions <- function(
       return(instruction)
     }
     if (!is.null(request$condition)) {
-      stop(request$condition)
+      rlang::cnd_signal(request$condition)
     }
     result <- request$value
   }
@@ -2072,7 +2073,7 @@ compile_gepa_components <- function(
   track_best_outputs <- isTRUE(gepa_teleprompter_property(
     teleprompter,
     "track_best_outputs",
-    TRUE
+    FALSE
   ))
   if (is.null(max_merge_invocations)) {
     max_merge_invocations <- Inf

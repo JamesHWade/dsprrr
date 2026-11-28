@@ -529,38 +529,16 @@ parse_type_string <- function(type_str, field_name = NULL) {
 
   # Number with bounds
   # number[0, 100]
-  # float(0, 1)
+  # float(0, 1) - bounds syntax is accepted for DSPy compatibility;
+  # ellmer::type_number() does not carry min/max constraints.
   if (grepl("(number|float|numeric)\\s*[\\[\\(]", type_str)) {
-    bounds_match <- regmatches(
-      type_str,
-      regexpr("[\\[\\(]([^\\]\\)]+)[\\]\\)]", type_str)
-    )
-    if (length(bounds_match) > 0) {
-      bounds_str <- gsub("[\\[\\(\\]\\)]", "", bounds_match)
-      bounds <- as.numeric(strsplit(bounds_str, "\\s*,\\s*")[[1]])
-      if (length(bounds) == 2) {
-        return(ellmer::type_number(minimum = bounds[1], maximum = bounds[2]))
-      }
-    }
     return(ellmer::type_number())
   }
 
-  # String with length constraints
-  # string[50, 200]
+  # String with length constraints, e.g. string[50, 200] - accepted for
+  # DSPy compatibility; ellmer::type_string() does not carry length bounds.
   if (grepl("string\\s*\\[", type_str)) {
-    bounds_match <- regmatches(type_str, regexpr("\\[([^\\]]+)\\]", type_str))
-    if (length(bounds_match) > 0) {
-      bounds_str <- gsub("[\\[\\]]", "", bounds_match)
-      bounds <- as.numeric(strsplit(bounds_str, "\\s*,\\s*")[[1]])
-      if (length(bounds) == 1) {
-        return(ellmer::type_string(max_length = bounds[1]))
-      } else if (length(bounds) == 2) {
-        return(ellmer::type_string(
-          min_length = bounds[1],
-          max_length = bounds[2]
-        ))
-      }
-    }
+    return(ellmer::type_string())
   }
 
   # Object types (simplified for now)

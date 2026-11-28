@@ -177,7 +177,7 @@ react_run_async <- function(
       )
     }
     if (!is.null(first_error)) {
-      stop(first_error)
+      rlang::cnd_signal(first_error)
     }
     invisible(NULL)
   }
@@ -196,7 +196,7 @@ react_run_async <- function(
     release_async_chat(llm, reservation)
     control$.settle()
     if (inherits(first_error, "condition")) {
-      stop(first_error)
+      rlang::cnd_signal(first_error)
     }
     invisible(NULL)
   }
@@ -415,7 +415,6 @@ react_run_async <- function(
         cli::cli_warn(
           "Could not write async ReAct failure history: {conditionMessage(trace_result$error)}"
         ),
-        warning = function(warning) NULL,
         error = function(error) NULL
       )
     }
@@ -457,7 +456,7 @@ react_run_async <- function(
     emit("complete", list(termination_reason = termination), "completion")
     trace_result <- commit_async_trace_transaction(module, trace)
     if (!is.null(trace_result$error)) {
-      stop(trace_result$error)
+      rlang::cnd_signal(trace_result$error)
     }
     trace_recorded$value <- isTRUE(trace_result$committed)
     result
@@ -698,7 +697,7 @@ react_run_async <- function(
         !inherits(error, "dsprrr_react_submit_completed") ||
         !identical(error$invocation_marker, submit_invocation_marker)
     ) {
-      stop(error)
+      rlang::cnd_signal(error)
     }
     react_async_check_cancelled(control, "completion", trace_fields)
     submit_result <- react_submit_complete(llm, error$request, error$value)
@@ -765,14 +764,14 @@ react_run_async <- function(
           if (inherits(error, "dsprrr_react_submit_completed")) {
             on_submit_rejection(error)
           } else {
-            stop(error)
+            rlang::cnd_signal(error)
           }
         })
       }
     ),
     error = function(error) {
       record_failure(error, error_stage(error))
-      stop(error)
+      rlang::cnd_signal(error)
     }
   )
   result <- promises::then(
@@ -781,7 +780,7 @@ react_run_async <- function(
     onRejected = function(error) {
       with_context(function() {
         record_failure(error, error_stage(error))
-        stop(error)
+        rlang::cnd_signal(error)
       })
     }
   )
@@ -791,7 +790,7 @@ react_run_async <- function(
       cleanup_error <- tryCatch(cleanup(), error = identity)
       if (inherits(cleanup_error, "condition")) {
         record_failure(cleanup_error, "cleanup")
-        stop(cleanup_error)
+        rlang::cnd_signal(cleanup_error)
       }
       value
     },
@@ -802,11 +801,10 @@ react_run_async <- function(
           cli::cli_warn(
             "ReAct async cleanup also failed: {conditionMessage(cleanup_error)}"
           ),
-          warning = function(warning) NULL,
           error = function(error) NULL
         )
       }
-      stop(error)
+      rlang::cnd_signal(error)
     }
   )
   attr(result, "dsprrr_trace_context") <- trace_fields

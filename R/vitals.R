@@ -99,8 +99,25 @@ as_vitals_solver <- function(
       }
     })
 
-    # Build data frame from rows
-    data <- tibble::as_tibble(do.call(rbind, lapply(rows, as.data.frame)))
+    # Build tibble column-wise so list/S7 Content cells are preserved safely
+    cols <- stats::setNames(
+      lapply(sig_input_names, function(col_name) {
+        vals <- lapply(rows, function(row) row[[col_name]])
+        if (
+          all(vapply(
+            vals,
+            function(v) is.atomic(v) && !is.null(v) && length(v) == 1L,
+            logical(1)
+          ))
+        ) {
+          unlist(vals, recursive = FALSE, use.names = FALSE)
+        } else {
+          vals
+        }
+      }),
+      sig_input_names
+    )
+    data <- tibble::new_tibble(cols, nrow = length(rows))
 
     # Each batch gets an independent, history-free Chat.
     ch <- clone_ellmer_chat(
@@ -505,9 +522,8 @@ metric_detect_pattern <- function(
 #'   * a traces data frame, such as [export_traces()] output, with `model`,
 #'     `input_tokens`, `output_tokens` and `cost` columns (one row per model);
 #'   * a cost summary from [get_cost()] or an [evaluate()] result (a single
-#'     row with the total price, and model and token counts unknown). This
-#'     currently fails when the total cost is unknown, for example for a
-#'     model without price data.
+#'     row with the total price, and model and token counts unknown). When the
+#'     total cost is `NA`, `price` is formatted as `"$0.00"`.
 #' @param source Label for the `source` column (default `"solver"`, the
 #'   vitals convention; vitals also uses `"scorer"`).
 #' @param ... Unused.
@@ -577,7 +593,7 @@ as_vitals_cost.dsprrr_session_cost <- function(x, source = "solver", ...) {
 #' @export
 as_vitals_cost.dsprrr_cost_summary <- function(x, source = "solver", ...) {
   # Cost summary doesn't have per-model breakdown, aggregate to single row
-  if (nrow(x$costs) == 0 || x$total == 0) {
+  if (nrow(x$costs) == 0 || isTRUE(x$total == 0)) {
     return(tibble::tibble(
       source = character(0),
       provider = character(0),
@@ -1167,6 +1183,7 @@ summarize_traces_df <- function(traces) {
         total_latency_ms = 0,
         avg_latency_ms = NA_real_,
         avg_tokens_per_request = NA_real_,
+        token_breakdown = list(input = 0L, output = 0L, ratio = NA_real_),
         model_usage = data.frame(model = character(0), n_requests = integer(0))
       ),
       class = "dsprrr_trace_summary"

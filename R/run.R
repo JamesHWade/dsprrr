@@ -1768,7 +1768,7 @@ run_predict_scalar <- function(
     module = module,
     llm = llm,
     index = 1L,
-    .verbose = .verbose,
+    .verbose = FALSE,
     .return_format = "structured",
     .cache = .cache,
     backend = "sequential",
@@ -1783,7 +1783,7 @@ run_predict_scalar <- function(
   item$chat <- llm
 
   if (!is.null(error)) {
-    stop(error)
+    rlang::cnd_signal(error)
   }
 
   if (.verbose && !is.null(item$metadata$prompt)) {

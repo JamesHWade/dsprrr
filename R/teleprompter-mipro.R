@@ -861,7 +861,7 @@ generate_mipro_demo_candidates <- function(
     labeled_tp <- LabeledFewShot(
       k = teleprompter@max_labeled_demos,
       sample = TRUE,
-      seed = teleprompter@seed %||% 123L
+      seed = as.integer(teleprompter@seed %||% 123L)
     )
     labeled_module <- compile_labeled(
       labeled_tp,

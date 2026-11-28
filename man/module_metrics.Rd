@@ -2,18 +2,21 @@
 % Please edit documentation in R/optimize.R
 \name{module_metrics}
 \alias{module_metrics}
-\title{Per-trial rows from a grid search}
+\title{Per-trial metrics from a grid search}
 \usage{
 module_metrics(module, metrics = NULL, truth = NULL, estimate = NULL, ...)
 }
 \arguments{
 \item{module}{A module.}
 
-\item{metrics}{Optional yardstick metric or metric set. Currently never
-computed; see Details.}
+\item{metrics}{Optional yardstick metric function, list of yardstick metric
+functions, or \code{yardstick::metric_set()}.}
 
-\item{truth, estimate}{Column names for the yardstick metrics. Required when
-\code{metrics} is supplied.}
+\item{truth, estimate}{Column names (as strings or bare symbols) for the
+yardstick metrics. Required when \code{metrics} is supplied. If \code{estimate} is
+not a column in the evaluation data frame, predictions are extracted from
+\code{evaluation$predictions} (looking up a matching output field name when
+predictions are named lists).}
 
 \item{...}{Passed to the yardstick metrics.}
 }
@@ -25,15 +28,17 @@ parameters), \code{scores} and \code{yardstick}.
 }
 \description{
 \code{module_metrics()} returns one row per grid-search trial recorded on a
-module by \code{\link[=optimize_grid]{optimize_grid()}} (or \code{\link[=GridSearchTeleprompter]{GridSearchTeleprompter()}}). Like
-\code{\link[=module_trials]{module_trials()}}, it reads only \code{module$state$trials}.
+module by \code{\link[=optimize_grid]{optimize_grid()}} (or \code{\link[=GridSearchTeleprompter]{GridSearchTeleprompter()}}), summarizing
+per-example scores and optionally computing yardstick metrics on each
+trial's predictions.
 }
 \details{
-The per-example evaluation results are not kept with the trials, so
-\code{median_score}, \code{std_dev}, \code{n_evaluated} and \code{n_errors} are \code{NA}, \code{scores}
-is empty, and the yardstick metrics requested with \code{metrics} are not
-computed: the \code{yardstick} column is always \code{NULL}. Use \code{\link[=module_trials]{module_trials()}} or
-\code{\link[=top_trials]{top_trials()}} for trial scores.
+In-session grid-search runs store per-example evaluation results in
+\code{module$state$optimization_history}, allowing \code{module_metrics()} to compute
+\code{median_score}, \code{std_dev}, \code{n_evaluated}, \code{n_errors}, \code{scores}, and
+\code{yardstick} metrics for each trial. Programs restored from disk artifacts do
+not retain per-example evaluation objects, so those columns fall back to
+\code{NA}, empty numeric vectors, or \code{NULL}.
 }
 \examples{
 # Without trials the result is an empty tibble with these columns

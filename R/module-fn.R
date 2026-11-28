@@ -199,6 +199,19 @@ FnModule <- R6::R6Class(
       new_module$state <- lapply(self$state, function(x) x)
 
       artifact_copy_runtime(self, new_module)
+    },
+
+    #' @description
+    #' Create a reset copy of this function module
+    #' @return New FnModule with fresh state and empty config
+    reset_copy = function() {
+      new_module <- FnModule$new(
+        signature = self$signature,
+        forward_fn = private$.forward_fn,
+        chat = self$chat,
+        config = list()
+      )
+      artifact_copy_runtime(self, new_module)
     }
   )
 )
